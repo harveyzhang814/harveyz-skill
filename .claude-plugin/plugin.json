@@ -1,0 +1,12 @@
+{
+  "name": "harvey-skills",
+  "version": "1.0.0",
+  "description": "Harvey's personal Claude Code skills collection",
+  "author": {
+    "name": "harveyzhang",
+    "url": "https://github.com/harveyzhang814"
+  },
+  "repository": "https://github.com/harveyzhang814/my-skill-repository",
+  "keywords": ["skills", "personal", "productivity"],
+  "skills": "./skills"
+}
