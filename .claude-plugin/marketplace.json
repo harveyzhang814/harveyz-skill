@@ -1,0 +1,31 @@
+{
+  "name": "harvey-skills",
+  "displayName": "Harvey Skills Collection",
+  "description": "Harvey's personal Claude Code skills collection — plain language rewriting and more",
+  "version": "1.0.0",
+  "owner": {
+    "name": "harveyzhang",
+    "url": "https://github.com/harveyzhang814"
+  },
+  "repository": "https://github.com/harveyzhang814/my-skill-repository",
+  "license": "UNLICENSED",
+  "keywords": [
+    "skills",
+    "personal",
+    "productivity",
+    "writing",
+    "clarity"
+  ],
+  "categories": [
+    "Productivity",
+    "Content Creation"
+  ],
+  "plugins": [
+    {
+      "name": "harvey-skills",
+      "description": "Harvey's personal Claude Code skills collection",
+      "version": "1.0.0",
+      "source": "./"
+    }
+  ]
+}
