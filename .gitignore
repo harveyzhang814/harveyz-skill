@@ -19,9 +19,7 @@
 !skills/**/
 !skills/**/*
 
-# 保留 skill-analyzer
-!skill-analyzer/
-!skill-analyzer/**
+
 
 # 排除构建产物
 node_modules/
