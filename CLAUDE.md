@@ -1,68 +1,74 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code when working with code in this repository.
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 ## Overview
 
-This is a personal Claude Code skills repository for Harvey. Each skill is a self-contained directory that can be installed to `~/.claude/skills/` to extend Claude Code's capabilities.
+Personal Claude Code skills repository for Harvey. Skills are self-contained directories installed to `~/.claude/skills/` to extend Claude Code's capabilities.
 
-## Repository Structure
+## Installation
 
-```
-my-skill-repository/
-├── .claude-plugin/
-│   └── plugin.json       # Claude Code plugin manifest
-├── skills/               # All skills live here
-│   └── harvey-*/         # Each skill is a prefixed directory
-│       ├── SKILL.md      # Skill definition
-│       ├── references/   # (optional) Reference docs
-│       ├── assets/       # (optional) Templates, scripts
-│       └── scripts/      # (optional) Helper scripts
-├── scripts/              # (optional) Shared scripts across skills
-├── README.md
-└── .gitignore
+```bash
+# Install all skills
+mkdir -p ~/.claude/skills
+cp -r skills/* ~/.claude/skills/
+
+# Install git branch-protection hooks (optional, for this repo)
+bash scripts/git/install-git-hooks.sh
 ```
 
-## Skill Format
+The git hooks block direct commits to `main` and `staging` — use feature/fix/chore/doc branches merged via staging.
 
-Each `SKILL.md` starts with YAML frontmatter:
+## Skill Structure
+
+Skills live under `skills/`. Two patterns exist:
+
+**Flat skill** (`skills/harvey-plain/`):
+```
+harvey-plain/
+├── SKILL.md        # Skill definition — sole entry point
+└── references/     # (optional) reference docs
+```
+
+**Skill group** (`skills/superpowers/`): subdirectory containing multiple related skills, each with their own `SKILL.md`.
+
+The `skill-analyzer` skill uses an extended layout with a `research/` directory holding iteration records and analysis — it tracks its own development history.
+
+## SKILL.md Format
+
+Standard frontmatter (required for Claude Code to register the skill):
 
 ```yaml
 ---
 name: skill-name
-description: "What this skill does. Use when user says..."
+description: "What this skill does. Trigger phrases..."
 user_invocable: true|false
 version: "x.x.x"
 ---
 ```
 
-## Installation
+The `skill-analyzer` skill omits this frontmatter (uses a custom header instead) — this is intentional but non-standard.
 
-Copy skills to Claude Code's skills directory:
+## Naming Convention
 
-```bash
-mkdir -p ~/.claude/skills
-cp -r skills/* ~/.claude/skills/
-```
+- Flat skills: `harvey-` prefix (e.g., `harvey-plain`)
+- Skill groups: group name as directory, skills inside use `harvey-{group}-{name}` (e.g., `harvey-superpowers-brainstorming`)
 
-## Skill Naming Convention
+## Shared Output Conventions
 
-Prefix: `harvey-` (e.g., `harvey-plain`, `harvey-paper`)
+Skills that produce org-mode output follow these rules:
 
-## Shared Conventions
+**Org-mode syntax:**
+- Bold: `*text*` (single asterisk — never `**text**`)
+- Headings start at `*`, no skipped levels
 
-**Org-mode output:**
-- Bold: `*text*` (single asterisk)
-- Filenames: `{timestamp}--{title}__{type}.org`
-- Output directory: `~/Documents/notes/`
-- Timestamps: `date +%Y%m%dT%H%M%S`
+**Denote file naming:** `{YYYYMMDDTHHMMSS}--{title}__{type}.org`  
+**Output directory:** `~/Documents/notes/`  
+**Timestamp command:** `date +%Y%m%dT%H%M%S`
 
-**ASCII Art:**
-- Allowed: `+ - | / \ > < v ^ * = ~ . : # [ ] ( ) _ , ; ! ' "`
-- Forbidden: Unicode box-drawing characters
+**ASCII art** — allowed: `+ - | / \ > < v ^ * = ~ . : # [ ] ( ) _ , ; ! ' "`  
+Forbidden: Unicode box-drawing characters (e.g., `┌ │ └`)
 
-## Development Guidelines
+## Plugin Manifest
 
-- Skills are atomic — each skill directory is self-contained
-- Version numbers are manually maintained in SKILL.md frontmatter
-- External dependencies are declared in SKILL.md or a `references/deps.md`
+`.claude-plugin/plugin.json` declares the plugin metadata for Claude Code's skill discovery. The `"skills": "./skills"` field points to the skills directory.
