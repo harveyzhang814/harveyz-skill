@@ -10,7 +10,7 @@ PM 任务派发的标准流程。
 ## 工作流
 
 ```
-1. 理解任务 → 2. 需求澄清 → 3. 分析细化 → 4. 创建任务文档 → 5. 派发任务 → 6. 追踪反馈
+1. 理解任务 → 2. 需求澄清 → 3. 分析细化 → 4. 创建任务文档 → 5. 派发任务
 ```
 
 ---
@@ -54,9 +54,7 @@ Harvey 给了模糊指令？
 
 **Step 3 内容：**
 
-1. **确定项目**：已有项目 vs 新项目
-   - 已有项目 → 更新 `projects.md` + 项目 `project.md`
-   - 新项目 → 创建项目目录结构和 `project.md`
+1. **确定项目**：确认任务属于哪个项目（已有项目填项目名，新项目先命名）
 2. **拆分任务**：将任务拆为具体的 subtask
 3. **匹配 Agent**：根据任务类型匹配执行 Agent（见 `references/agent-mapping.md`）
 4. **确认验收标准**：如何确认任务完成？
@@ -68,13 +66,9 @@ Harvey 给了模糊指令？
 详见 `references/task-template.md`
 
 **路径规则：**
-- Task 文件：`~/Projects/project-management/tasks/<id>-<slug>.md`
+- Task 文件夹：`~/Projects/project-management/tasks/<id>/`
+- Task 文件：`~/Projects/project-management/tasks/<id>/task.md`
 - Issue 文件：`projects/{project}/issues/{open|closed}/<id>-<slug>.md`
-
-**命名规范：**
-- `\` `/` `:` → 移除
-- `.` 开头 → 移除
-- 空格 → 替换为 `-`
 
 ---
 
@@ -87,12 +81,9 @@ sessions_send({
   sessionKey: "agent:{target-agent}:discord:channel:{channel-id}",
   message: "📋 新任务派发\n\n" +
     "**任务编号：** {id}\n" +
-    "**任务文件：** tasks/{文件名}.md\n\n" +
-    "请读取任务文件，根据文件内容执行任务。\n" +
-    "完成后在 #notification（1484647806127050753）发送完成通知，格式：\n" +
-    "```json\n" +
-    "{ \"type\": \"task_complete\", \"task_id\": \"{id}\", \"status\": \"done\" }\n" +
-    "```",
+    "**任务文件夹：** tasks/{id}/\n\n" +
+    "请读取 tasks/{id}/task.md，根据文件内容执行任务。\n" +
+    "完成后使用 task-acceptance skill 进行收尾。",
   timeoutSeconds: 0    // 必须为 0
 })
 ```
@@ -107,16 +98,6 @@ sessions_send({
 - `使用工具` → 可用工具列表（可选）
 - `评估标准` → 验收标准（可选）
 - `资料管理` → 相关资料（可选）
-
----
-
-## Step 6：追踪反馈
-
-| 追踪方式 | 操作 |
-|----------|------|
-| 通知查询 | 查 #notification（1484647806127050753）`task_complete` 消息 |
-| 直接查询 | `sessions_history({ sessionKey: "agent:{target}:...", limit: 3 })` |
-| 状态判断 | `stopReason: stop` = 完成，`toolUse` = 进行中 |
 
 ---
 
@@ -144,7 +125,7 @@ sessions_send 返回 error？
 
 ```
 收到重复任务指令？
-  ├── 检查 tasks/ 目录是否已有相同 id 的任务文件
+  ├── 检查 tasks/ 目录是否已有相同 id 的任务文件夹
   ├── 已有且 status ≠ done → 跳过派发，告知 Harvey
   └── 已有但 Harvey 要求重新执行 → 更新任务文件后重新派发
 ```

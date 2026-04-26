@@ -2,13 +2,17 @@
 
 > 参考：`methodology/multiagent-task/SPEC.md`
 
-## 文件命名
+## 目录结构
+
+每个任务创建独立文件夹，文件夹以任务号命名：
 
 ```
-<id>-<简短slug>.md
+tasks/
+└── <id>/
+    └── task.md
 ```
 
-示例：`T001-cocoscribe-api-client.md`
+示例：`tasks/T001/task.md`
 
 id 全局唯一，全局递增。
 
@@ -23,7 +27,7 @@ id 全局唯一，全局递增。
 | `assignee` | `openclaw/<agent>` 或 `<外部AI>` | ✅ | 派发目标 |
 | `assigner` | `openclaw/<agent>` | ✅ | 派发者 |
 | `priority` | low / medium / high / xhigh | ✅ | |
-| `status` | open / in_progress / done | ✅ | |
+| `status` | open / done | ✅ | |
 
 ### assignee 格式规范
 
@@ -37,7 +41,7 @@ id 全局唯一，全局递增。
 ### status 流转
 
 ```
-open → in_progress → done
+open → done
 ```
 
 ---
@@ -116,6 +120,7 @@ status: open
 
 ## 资料管理
 
+- 任务目录：`~/Projects/project-management/tasks/T003/`
 - 项目目录：`~/Projects/project-management/projects/openclaw-voice-commands/`
 - 灵感记录：`memory/2026-04-04.md`
 ```

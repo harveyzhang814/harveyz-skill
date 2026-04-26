@@ -4,21 +4,20 @@
 
 ---
 
-## 验收报告模板
+## completion-report.md 模板
 
 ```markdown
+---
+task_id: <id>
+completed: YYYY-MM-DD
+---
+
 ## 验收报告
 
 - [x] <验收项1> - 验证方法：<具体执行了什么>
 - [x] <验收项2> - 验证方法：<具体执行了什么>
 - [ ] <验收项3> - 未通过原因：<如实记录>
-```
 
----
-
-## 任务总结模板
-
-```markdown
 ## 任务总结
 
 ### 实现方案
@@ -33,13 +32,7 @@
 
 - <产出物1>：<路径或说明>
 - <产出物2>：<路径或说明>
-```
 
----
-
-## Reference 章节模板
-
-```markdown
 ## Reference
 
 | 文档 | 功能 | 路径 |
@@ -51,8 +44,10 @@
 
 ## lessons-learned.md 模板
 
+只记录实际存在的内容，没有的章节直接省略。
+
 ```markdown
-# <任务ID> <任务名称> - 复盘总结
+# <任务ID> 复盘
 
 ## 问题与对策
 
@@ -68,43 +63,14 @@
 
 ## 经验教训
 
-1. <经验1>
-2. <经验2>
+<自由文本，记录下次可以改进的点>
 ```
 
 ---
 
-## 任务文件 frontmatter 模板
+## task.md frontmatter 更新（收尾时只改这两个字段）
 
 ```yaml
----
-id: <TXXX>
-project: <project-name>
-assignee: openclaw/<agent-name>
-assigner: openclaw/product-manager
-priority: <low|medium|high|xhigh>
 status: done
 completed: YYYY-MM-DD
----
-
-## 主要目标
-
-<任务的核心目标>
-
-## 关键约束
-
-<任务约束条件>
-
-## 评估标准
-
-- [ ] <评估项1>
-- [ ] <评估项2>
-
-## 任务总结
-
-<收尾时填入>
-
-## Reference
-
-<收尾时填入>
 ```

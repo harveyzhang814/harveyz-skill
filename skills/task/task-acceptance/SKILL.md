@@ -10,8 +10,10 @@ description: 任务收尾技能。当 Agent 完成接受的任务后自触发，
 ## 路径约定
 
 ```
-任务文件：~/Projects/project-management/tasks/<id>-<slug>.md
-任务文件夹：~/Projects/project-management/tasks/<id>-<slug>/
+任务文件夹：    ~/Projects/project-management/tasks/<id>/
+任务文件：      ~/Projects/project-management/tasks/<id>/task.md         （PM 写，Agent 只更新 frontmatter）
+完成报告：      ~/Projects/project-management/tasks/<id>/completion-report.md  （Agent 写）
+问题记录：      ~/Projects/project-management/tasks/<id>/lessons-learned.md    （Agent 写，可选）
 ```
 
 ## 触发条件
@@ -24,7 +26,7 @@ Agent 已实际完成任务，满足以下任一条件：
 ## 工作流
 
 ```
-1. 任务验收 → 2. 任务总结 → 3. 文档归档 → 4. 问题记录
+1. 任务验收 → 2. 任务总结 → 3. 文档归档 → 4. 问题记录 → 5. 发送完成通知
 ```
 
 ---
@@ -35,9 +37,13 @@ Agent 已实际完成任务，满足以下任一条件：
 
 ### 读取任务文件
 
-尝试读取任务文件（`~/Projects/project-management/tasks/<id>-<slug>.md`）。
+读取任务文件（`~/Projects/project-management/tasks/<id>/task.md`）。
 
-**文件不存在时：** 根据 Agent 接受的任务信息自行创建任务文件，包含主要目标、关键约束、评估标准（自动生成）、任务总结和 Reference 章节。
+**文件不存在时：** 停止收尾流程，向 Harvey 或 PM 报告：
+```
+任务文件 tasks/<id>/task.md 不存在，无法执行收尾。
+请确认任务编号是否正确，或由 PM 补充任务文件后重试。
+```
 
 ### 生成评估标准（如任务文件无评估标准章节）
 
@@ -63,15 +69,15 @@ Agent 根据任务主要目标，设计合理的评估标准：
 
 ### 输出验收报告
 
-在任务文件中写入验收报告（详见 [output-templates.md](references/output-templates.md)）。
+创建 `completion-report.md`，写入验收报告（详见 [output-templates.md](references/output-templates.md)）。
 
 ---
 
 ## Step 2：任务总结
 
-在任务文件中追加任务总结章节（详见 [output-templates.md](references/output-templates.md)）。
+在 `completion-report.md` 中追加任务总结章节（详见 [output-templates.md](references/output-templates.md)）。
 
-更新 frontmatter：
+更新 `task.md` frontmatter（仅此两个字段，其他内容不动）：
 
 ```yaml
 ---
@@ -95,28 +101,40 @@ completed: YYYY-MM-DD
 
 1. 扫描任务过程中产生的文档
 2. 评估每份文档的价值
-3. 必要文档保存到任务文件夹（`tasks/<task-id>/`）
-4. 在任务文件中更新 Reference 章节（总索引表，包含所有任务相关文档）
+3. 必要文档保存到任务文件夹（`tasks/<id>/`）
+4. 在 `completion-report.md` 中更新 Reference 章节（总索引表，包含所有任务相关文档）
 
 ---
 
 ## Step 4：问题记录
 
-在任务文件夹中创建 `lessons-learned.md`（详见 [output-templates.md](references/output-templates.md)）。
+判断是否有内容可记录（遇到问题、做了关键决策、有经验教训）：
 
-路径同步更新到任务文件 Reference 章节。
+- **有内容** → 创建 `~/Projects/project-management/tasks/<id>/lessons-learned.md`，记录实际有价值的内容，跳过空表格（详见 [output-templates.md](references/output-templates.md)）。路径同步更新到 `completion-report.md` Reference 章节。
+- **没有内容** → 跳过，不创建文件。
+
+---
+
+## Step 5：发送完成通知
+
+收尾全部完成后，在 Agent 自己绑定的 Discord channel 发送任务完成消息：
+
+```
+任务 <id> 已完成。
+任务文件：tasks/<id>/task.md
+```
 
 ---
 
 ## 输出清单
 
-完成收尾后，任务文件应包含：
+完成收尾后，任务文件夹应包含：
 
-- [x] frontmatter：`status: done`、`completed: YYYY-MM-DD`
-- [x] 验收报告（评估标准逐项验证结果）
-- [x] 任务总结（实现方案、执行结果、产出清单）
-- [x] Reference 章节（所有任务相关文档清单，含 lessons-learned.md 路径）
-- [x] lessons-learned.md（问题记录，已保存到任务文件夹）
+| 文件 | 内容 | 必须 |
+|------|------|------|
+| `task.md` | frontmatter 更新为 `status: done`、`completed: YYYY-MM-DD` | ✅ |
+| `completion-report.md` | 验收报告 + 任务总结 + Reference 章节 | ✅ |
+| `lessons-learned.md` | 问题记录（有内容才创建） | 可选 |
 
 ---
 
