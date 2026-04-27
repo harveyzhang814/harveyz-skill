@@ -68,7 +68,11 @@ console.log('')
 const summary = await installSkills(skills, targets, forceFlag)
 
 console.log('')
-console.log(chalk.green('✔ 安装完成：'))
-for (const [target, names] of Object.entries(summary)) {
-  console.log(`  ${chalk.bold(target)} ← ${names.join(', ')}`)
+if (Object.keys(summary).length === 0) {
+  console.log(chalk.yellow('  没有 skill 被安装。'))
+} else {
+  console.log(chalk.green('✔ 安装完成：'))
+  for (const [target, names] of Object.entries(summary)) {
+    console.log(`  ${chalk.bold(target)} ← ${names.join(', ')}`)
+  }
 }
