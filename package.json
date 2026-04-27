@@ -4,7 +4,7 @@
   "description": "One-click skill installer for Claude Code, Cursor, and Codex",
   "type": "module",
   "bin": {
-    "harveyz-skill": "./bin/cli.js"
+    "harveyz-skill": "bin/cli.js"
   },
   "scripts": {
     "prepack": "node scripts/generate-npmignore.js"
@@ -36,7 +36,7 @@
   "author": "harveyzhang",
   "repository": {
     "type": "git",
-    "url": "https://github.com/harveyzhang814/harveyz-skill"
+    "url": "git+https://github.com/harveyzhang814/harveyz-skill.git"
   },
   "license": "MIT"
 }
