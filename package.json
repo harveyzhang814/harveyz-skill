@@ -6,11 +6,47 @@
   "bin": {
     "harveyz-skill": "./bin/cli.js"
   },
+  "scripts": {
+    "prepack": "node scripts/generate-npmignore.js"
+  },
   "files": [
     "bin/",
     "lib/",
-    "skills/",
-    "bundles.json"
+    "bundles.json",
+    "skills-index.json",
+    "skills/analysis/skill-analyzer/",
+    "skills/document/diataxis-docs/",
+    "skills/harness/full-stack-debug-env/",
+    "skills/superpowers-fork/brainstorming/",
+    "skills/superpowers-fork/executing-plans/",
+    "skills/superpowers-fork/systematic-debugging/",
+    "skills/superpowers-fork/using-git-worktrees/",
+    "skills/superpowers-fork/writing-plans/",
+    "skills/task/pm-task-dispatch/",
+    "skills/task/task-close/",
+    "skills/.gitkeep",
+    "skills/analysis/skill-analyzer/",
+    "skills/document/diataxis-docs/",
+    "skills/harness/full-stack-debug-env/",
+    "skills/superpowers-fork/brainstorming/",
+    "skills/superpowers-fork/executing-plans/",
+    "skills/superpowers-fork/systematic-debugging/",
+    "skills/superpowers-fork/using-git-worktrees/",
+    "skills/superpowers-fork/writing-plans/",
+    "skills/task/pm-task-dispatch/",
+    "skills/task/task-close/",
+    "skills/.gitkeep",
+    "skills/analysis/skill-analyzer/",
+    "skills/document/diataxis-docs/",
+    "skills/harness/full-stack-debug-env/",
+    "skills/superpowers-fork/brainstorming/",
+    "skills/superpowers-fork/executing-plans/",
+    "skills/superpowers-fork/systematic-debugging/",
+    "skills/superpowers-fork/using-git-worktrees/",
+    "skills/superpowers-fork/writing-plans/",
+    "skills/task/pm-task-dispatch/",
+    "skills/task/task-close/",
+    "skills/.gitkeep"
   ],
   "engines": {
     "node": ">=18"

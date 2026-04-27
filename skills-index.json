@@ -1,0 +1,12 @@
+[
+  "analysis/skill-analyzer",
+  "document/diataxis-docs",
+  "harness/full-stack-debug-env",
+  "superpowers-fork/brainstorming",
+  "superpowers-fork/executing-plans",
+  "superpowers-fork/systematic-debugging",
+  "superpowers-fork/using-git-worktrees",
+  "superpowers-fork/writing-plans",
+  "task/pm-task-dispatch",
+  "task/task-close"
+]
