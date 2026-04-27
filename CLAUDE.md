@@ -52,7 +52,7 @@ The `skill-analyzer` skill omits this frontmatter (uses a custom header instead)
 ## Naming Convention
 
 - Flat skills: `harvey-` prefix (e.g., `harvey-plain`)
-- Skill groups: group name as directory, skills inside use `harvey-{group}-{name}` (e.g., `harvey-superpowers-brainstorming`)
+- Skill groups: group name as directory, skills inside use plain `{name}` (e.g., `brainstorming` inside `superpowers-fork/`)
 
 ## Shared Output Conventions
 
