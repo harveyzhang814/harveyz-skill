@@ -1,0 +1,43 @@
+{
+  "eval_id": 4,
+  "eval_name": "normal-closure",
+  "run": "with_skill",
+  "expectations": [
+    {
+      "text": "创建了 tasks/T200/completion-report.md",
+      "passed": true,
+      "evidence": "~/Projects/project-management/tasks/T200/completion-report.md exists on disk"
+    },
+    {
+      "text": "completion-report.md 包含 ## 验收报告 章节",
+      "passed": true,
+      "evidence": "T200/completion-report.md contains '## 验收报告' section"
+    },
+    {
+      "text": "completion-report.md 包含 ## 任务总结 章节",
+      "passed": true,
+      "evidence": "T200/completion-report.md contains '## 任务总结' section"
+    },
+    {
+      "text": "task.md frontmatter status 更新为 done",
+      "passed": true,
+      "evidence": "T200/task.md frontmatter contains 'status: done'"
+    },
+    {
+      "text": "task.md frontmatter 包含 completed 日期字段",
+      "passed": true,
+      "evidence": "T200/task.md frontmatter contains 'completed: 2026-04-26'"
+    },
+    {
+      "text": "task.md 原始任务内容（主要目标章节）未被删除",
+      "passed": true,
+      "evidence": "T200/task.md still contains '## 主要目标' section with original content intact"
+    }
+  ],
+  "summary": {
+    "pass_rate": 1.0,
+    "passed": 6,
+    "failed": 0,
+    "total": 6
+  }
+}

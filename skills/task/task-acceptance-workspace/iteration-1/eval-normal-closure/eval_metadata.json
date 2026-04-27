@@ -1,0 +1,37 @@
+{
+  "eval_id": 4,
+  "eval_name": "normal-closure",
+  "prompt": "任务 T200 已完成，请执行收尾。",
+  "assertions": [
+    {
+      "id": "completion-report-created",
+      "text": "创建了 tasks/T200/completion-report.md",
+      "check": "file_exists: ~/Projects/project-management/tasks/T200/completion-report.md"
+    },
+    {
+      "id": "has-acceptance-report",
+      "text": "completion-report.md 包含 ## 验收报告 章节",
+      "check": "file_contains: tasks/T200/completion-report.md, ## 验收报告"
+    },
+    {
+      "id": "has-task-summary",
+      "text": "completion-report.md 包含 ## 任务总结 章节",
+      "check": "file_contains: tasks/T200/completion-report.md, ## 任务总结"
+    },
+    {
+      "id": "task-status-done",
+      "text": "task.md frontmatter status 更新为 done",
+      "check": "file_contains: tasks/T200/task.md, status: done"
+    },
+    {
+      "id": "task-completed-date",
+      "text": "task.md frontmatter 包含 completed 日期字段",
+      "check": "file_contains: tasks/T200/task.md, completed:"
+    },
+    {
+      "id": "task-content-intact",
+      "text": "task.md 原始任务内容（主要目标章节）未被删除",
+      "check": "file_contains: tasks/T200/task.md, ## 主要目标"
+    }
+  ]
+}

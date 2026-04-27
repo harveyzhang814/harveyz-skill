@@ -1,0 +1,33 @@
+{
+  "eval_id": 5,
+  "eval_name": "missing-task-stop",
+  "run": "with_skill",
+  "expectations": [
+    {
+      "text": "没有创建 tasks/T999/completion-report.md",
+      "passed": true,
+      "evidence": "T999 directory does not exist at all; response.md confirms 'No files were created during this execution'"
+    },
+    {
+      "text": "没有创建 tasks/T999/ 文件夹",
+      "passed": true,
+      "evidence": "~/Projects/project-management/tasks/T999/ does not exist on disk"
+    },
+    {
+      "text": "response.md 包含错误报告（task.md 不存在）",
+      "passed": true,
+      "evidence": "response.md contains '任务文件 tasks/T999/task.md 不存在，无法执行收尾' and explicitly states the file was not found"
+    },
+    {
+      "text": "response.md 明确说明停止了收尾流程",
+      "passed": true,
+      "evidence": "response.md contains '无法执行收尾' and states 'the closure workflow was immediately stopped'; all subsequent steps were skipped"
+    }
+  ],
+  "summary": {
+    "pass_rate": 1.0,
+    "passed": 4,
+    "failed": 0,
+    "total": 4
+  }
+}

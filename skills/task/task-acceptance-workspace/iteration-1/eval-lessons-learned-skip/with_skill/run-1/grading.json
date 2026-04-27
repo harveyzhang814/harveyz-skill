@@ -1,0 +1,33 @@
+{
+  "eval_id": 6,
+  "eval_name": "lessons-learned-skip",
+  "run": "with_skill",
+  "expectations": [
+    {
+      "text": "创建了 tasks/T201/completion-report.md",
+      "passed": true,
+      "evidence": "~/Projects/project-management/tasks/T201/completion-report.md exists on disk"
+    },
+    {
+      "text": "没有创建 lessons-learned.md（任务顺利，无内容可记录）",
+      "passed": true,
+      "evidence": "T201 directory contains only task.md and completion-report.md; no lessons-learned.md was created"
+    },
+    {
+      "text": "task.md status 更新为 done",
+      "passed": true,
+      "evidence": "T201/task.md frontmatter contains 'status: done'"
+    },
+    {
+      "text": "response.md 解释了跳过 lessons-learned 的原因",
+      "passed": true,
+      "evidence": "response.md contains '不创建 lessons-learned.md，符合技能规则「没有内容 → 跳过，不创建文件」' and provides 4 explicit reasons for skipping"
+    }
+  ],
+  "summary": {
+    "pass_rate": 1.0,
+    "passed": 4,
+    "failed": 0,
+    "total": 4
+  }
+}

@@ -1,0 +1,27 @@
+{
+  "eval_id": 6,
+  "eval_name": "lessons-learned-skip",
+  "prompt": "任务 T201 已完成，一切顺利没有遇到任何问题，请执行收尾。",
+  "assertions": [
+    {
+      "id": "completion-report-created",
+      "text": "创建了 tasks/T201/completion-report.md",
+      "check": "file_exists: ~/Projects/project-management/tasks/T201/completion-report.md"
+    },
+    {
+      "id": "no-lessons-learned",
+      "text": "没有创建 lessons-learned.md（任务顺利，无内容可记录）",
+      "check": "file_not_exists: ~/Projects/project-management/tasks/T201/lessons-learned.md"
+    },
+    {
+      "id": "task-status-done",
+      "text": "task.md status 更新为 done",
+      "check": "file_contains: tasks/T201/task.md, status: done"
+    },
+    {
+      "id": "explains-skip-reason",
+      "text": "response.md 解释了跳过 lessons-learned 的原因",
+      "check": "response_contains: 跳过 OR skip OR 无内容 OR 没有问题 OR no issues"
+    }
+  ]
+}

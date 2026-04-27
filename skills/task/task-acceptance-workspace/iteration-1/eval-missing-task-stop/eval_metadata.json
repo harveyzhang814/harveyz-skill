@@ -1,0 +1,27 @@
+{
+  "eval_id": 5,
+  "eval_name": "missing-task-stop",
+  "prompt": "任务 T999 已完成，请执行收尾。",
+  "assertions": [
+    {
+      "id": "no-completion-report",
+      "text": "没有创建 tasks/T999/completion-report.md",
+      "check": "file_not_exists: ~/Projects/project-management/tasks/T999/completion-report.md"
+    },
+    {
+      "id": "no-task-folder",
+      "text": "没有创建 tasks/T999/ 文件夹",
+      "check": "dir_not_exists: ~/Projects/project-management/tasks/T999/"
+    },
+    {
+      "id": "reports-error",
+      "text": "response.md 包含错误报告（task.md 不存在）",
+      "check": "response_contains: 不存在 OR not exist OR missing OR T999"
+    },
+    {
+      "id": "stops-workflow",
+      "text": "response.md 明确说明停止了收尾流程",
+      "check": "response_contains: 停止 OR stop OR 无法执行 OR cannot"
+    }
+  ]
+}

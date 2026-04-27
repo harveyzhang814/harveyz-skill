@@ -1,0 +1,26 @@
+{
+  "skill_name": "pm-task-dispatch",
+  "evals": [
+    {
+      "id": 1,
+      "name": "clear-task-dispatch",
+      "prompt": "Harvey 说：派一个任务给 coding-master，让他用 Python 写一个命令行工具，读取 CSV 文件并输出统计摘要（行数、列名、每列的均值/最大/最小）。优先级 medium，项目是 data-tools。任务ID 用 T100。",
+      "expected_output": "在 ~/Projects/project-management/tasks/T100/ 创建 task.md，包含完整 frontmatter 和任务描述章节",
+      "files": []
+    },
+    {
+      "id": 2,
+      "name": "vague-task-brainstorm",
+      "prompt": "Harvey 说：研究一下 AI 这个方向",
+      "expected_output": "触发澄清流程，向 Harvey 提问，不立即创建任务文件",
+      "files": []
+    },
+    {
+      "id": 3,
+      "name": "duplicate-task-skip",
+      "prompt": "Harvey 说：派发任务 T120 给 research-scientist 研究 LLM 评估方法，项目 eval-research，优先级 high。",
+      "expected_output": "检测到 T120 已存在（status: open），报告跳过，不覆盖文件",
+      "files": []
+    }
+  ]
+}

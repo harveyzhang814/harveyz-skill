@@ -1,0 +1,26 @@
+{
+  "skill_name": "task-acceptance",
+  "evals": [
+    {
+      "id": 4,
+      "name": "normal-closure",
+      "prompt": "任务 {TASK_ID} 已完成，请执行收尾。",
+      "expected_output": "创建 completion-report.md（含验收报告+任务总结），更新 task.md frontmatter status=done",
+      "files": []
+    },
+    {
+      "id": 5,
+      "name": "missing-task-stop",
+      "prompt": "任务 T999 已完成，请执行收尾。",
+      "expected_output": "检测到 task.md 不存在，停止并报告错误，不创建任何文件",
+      "files": []
+    },
+    {
+      "id": 6,
+      "name": "lessons-learned-skip",
+      "prompt": "任务 {TASK_ID} 已完成，一切顺利没有遇到任何问题，请执行收尾。",
+      "expected_output": "创建 completion-report.md，不创建 lessons-learned.md",
+      "files": []
+    }
+  ]
+}

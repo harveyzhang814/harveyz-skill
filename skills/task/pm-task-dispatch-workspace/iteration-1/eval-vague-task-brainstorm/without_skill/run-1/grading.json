@@ -1,0 +1,33 @@
+{
+  "eval_id": 2,
+  "eval_name": "vague-task-brainstorm",
+  "run": "without_skill",
+  "expectations": [
+    {
+      "text": "没有立即创建任务文件（没有在 tasks/ 下新建文件夹）",
+      "passed": true,
+      "evidence": "response.md states 'No task file was created.' No new task folder was created."
+    },
+    {
+      "text": "response.md 中包含向 Harvey 提出的澄清问题",
+      "passed": false,
+      "evidence": "response.md explicitly says 'No clarifying questions were asked. Default behavior was applied.' The questions listed are framed as hypothetical ('If clarifying questions had been appropriate') and were not actually asked."
+    },
+    {
+      "text": "澄清问题覆盖了任务范围（研究什么具体方向）",
+      "passed": false,
+      "evidence": "No actual clarifying questions were directed at Harvey; only hypothetical questions mentioned. The assertion requires questions be posed, not listed as examples."
+    },
+    {
+      "text": "澄清问题覆盖了任务目的（选型/学习/实现）",
+      "passed": false,
+      "evidence": "Same issue — the hypothetical list mentions 'personal learning goal, business decision, product direction' but these were not presented as actual questions to Harvey."
+    }
+  ],
+  "summary": {
+    "pass_rate": 0.25,
+    "passed": 1,
+    "failed": 3,
+    "total": 4
+  }
+}

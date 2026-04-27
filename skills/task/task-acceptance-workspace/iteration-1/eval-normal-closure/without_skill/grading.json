@@ -1,0 +1,37 @@
+{
+  "eval_id": 4,
+  "eval_name": "normal-closure",
+  "run": "without_skill",
+  "expectations": [
+    {
+      "text": "创建了 tasks/T200/completion-report.md",
+      "passed": false,
+      "evidence": "without_skill used T210; T210 directory only contains task.md and csv_summary.py — no completion-report.md was created"
+    },
+    {
+      "text": "completion-report.md 包含 ## 验收报告 章节",
+      "passed": false,
+      "evidence": "T210/completion-report.md does not exist, so this section cannot exist"
+    },
+    {
+      "text": "completion-report.md 包含 ## 任务总结 章节",
+      "passed": false,
+      "evidence": "T210/completion-report.md does not exist, so this section cannot exist"
+    },
+    {
+      "text": "task.md frontmatter status 更新为 done",
+      "passed": true,
+      "evidence": "T210/task.md frontmatter contains 'status: done'"
+    },
+    {
+      "text": "task.md frontmatter 包含 completed 日期字段",
+      "passed": false,
+      "evidence": "T210/task.md frontmatter does not contain a 'completed:' field — only id, project, assignee, priority, and status are present"
+    },
+    {
+      "text": "task.md 原始任务内容（主要目标章节）未被删除",
+      "passed": true,
+      "evidence": "T210/task.md still contains '## 主要目标' section with original content intact"
+    }
+  ]
+}
