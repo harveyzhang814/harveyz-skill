@@ -1,6 +1,6 @@
 {
   "name": "harveyz-skill",
-  "version": "1.0.0",
+  "version": "0.1.0",
   "description": "One-click skill installer for Claude Code, Cursor, and Codex",
   "type": "module",
   "bin": {
