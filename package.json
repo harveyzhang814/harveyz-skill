@@ -20,5 +20,10 @@
     "fs-extra": "^11.2.0",
     "inquirer": "^9.2.0"
   },
+  "author": "harveyzhang",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/harveyzhang814/harveyz-skill"
+  },
   "license": "MIT"
 }
