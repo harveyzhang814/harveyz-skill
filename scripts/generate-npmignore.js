@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { readFileSync, writeFileSync, readdirSync } from 'fs'
+import { readFileSync, writeFileSync, readdirSync, existsSync } from 'fs'
 import path from 'path'
 import { fileURLToPath } from 'url'
 
@@ -26,6 +26,9 @@ for (const entry of index) {
   } else {
     // 展开直接子项，排除指定子目录
     const excludeSet = new Set(entry.exclude.map(e => e.replace(/\/$/, '')))
+    if (!existsSync(skillDir)) {
+      throw new Error(`skills-index.json references "${entry.path}" but directory does not exist: ${skillDir}`)
+    }
     const items = readdirSync(skillDir, { withFileTypes: true })
     for (const item of items) {
       if (excludeSet.has(item.name)) continue

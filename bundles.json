@@ -19,12 +19,6 @@
   {
     "name": "all",
     "description": "全部 skill",
-    "skills": [
-      "superpowers-fork/brainstorming",
-      "superpowers-fork/writing-plans",
-      "superpowers-fork/executing-plans",
-      "superpowers-fork/systematic-debugging",
-      "superpowers-fork/using-git-worktrees"
-    ]
+    "dynamic": true
   }
 ]
