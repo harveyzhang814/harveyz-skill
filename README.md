@@ -13,17 +13,30 @@ Harvey 的个人 Claude Code 技能仓库。
 
 ## 安装
 
-### 全部安装
+### 推荐：npx 一键安装
+
+```bash
+npx harveyz-skill
+```
+
+交互式选择 bundle 和目标工具（Claude Code / Cursor / Codex）。
+
+**无交互模式：**
+```bash
+npx harveyz-skill --bundle brainstorming --target claude
+npx harveyz-skill --bundle brainstorming,dev --target all
+```
+
+**查看可用 bundle：**
+```bash
+npx harveyz-skill list
+```
+
+### 手动安装（从源码）
 
 ```bash
 mkdir -p ~/.claude/skills
 cp -r skills/* ~/.claude/skills/
-```
-
-### 安装依赖（如有）
-
-```bash
-bash scripts/install.sh
 ```
 
 ## 工作流
