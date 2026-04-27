@@ -1,0 +1,12 @@
+{
+  "eval_id": 2,
+  "eval_name": "with-claude-md",
+  "prompt": "我的项目在 /tmp/gwi-test-claudemd，已经 git init 完成，目录里有一个 CLAUDE.md 文件。请完整运行 git 工作流初始化：安装分支保护 hooks、生成工作流文档，并在 CLAUDE.md 中追加对 git 文档的索引引用。",
+  "assertions": [
+    "pre-commit hook 已安装在 .githooks/ 目录",
+    "core.hooksPath 已设置为 .githooks",
+    "docs/reference/git-workflow.md 已创建",
+    "CLAUDE.md 中追加了对 docs/reference/git-workflow.md 的链接引用",
+    "CLAUDE.md 的引用只是索引链接，没有把完整 git 规范内容写进去"
+  ]
+}

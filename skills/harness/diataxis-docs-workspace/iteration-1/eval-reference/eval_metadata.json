@@ -1,0 +1,27 @@
+{
+  "eval_id": 2,
+  "eval_name": "eval-reference",
+  "prompt": "帮我写一篇 API 文档，记录用户相关的两个接口：POST /api/users（创建用户，参数有 username/email/password/role，返回用户对象，有 201 和 400 两种响应）和 GET /api/users/:id（获取用户，返回 200 或 404）。需要包含请求参数类型、是否必填、响应示例、错误码说明。",
+  "assertions": [
+    {
+      "id": "correct-subdir",
+      "text": "文件创建在 reference/ 子目录下（非 how-to/ 或根目录）"
+    },
+    {
+      "id": "has-table",
+      "text": "文档包含参数表格（Markdown 表格格式）"
+    },
+    {
+      "id": "has-response-examples",
+      "text": "文档包含 JSON 响应示例（代码块）"
+    },
+    {
+      "id": "index-updated",
+      "text": "INDEX.md 被更新，包含新文件条目"
+    },
+    {
+      "id": "no-steps",
+      "text": "文档不包含操作步骤（无 ### 1. 或步骤序号），纯参考格式"
+    }
+  ]
+}

@@ -1,0 +1,36 @@
+{
+  "eval_id": 1,
+  "eval_name": "eval-how-to",
+  "configuration": "without_skill",
+  "expectations": [
+    {
+      "text": "文件创建在 how-to/ 子目录下，而非 docs 根目录",
+      "passed": false,
+      "evidence": "文件路径为 docs/local-dev-setup.md（根目录，无子目录）"
+    },
+    {
+      "text": "文档包含编号步骤（### 1. 或有序列表）",
+      "passed": false,
+      "evidence": "使用代码块内单行命令，无步骤结构，无前提条件说明"
+    },
+    {
+      "text": "INDEX.md 被更新，包含新文件的条目",
+      "passed": false,
+      "evidence": "INDEX.md 未被更新"
+    },
+    {
+      "text": "文档标题是 how-to 格式（如何…），而非教程或参考格式",
+      "passed": false,
+      "evidence": "标题为「本地开发环境配置」（描述性，非 how-to 格式）"
+    }
+  ],
+  "pass_count": 0,
+  "total_count": 4,
+  "pass_rate": 0.0,
+  "summary": {
+    "passed": 0,
+    "failed": 4,
+    "total": 4,
+    "pass_rate": 0.0
+  }
+}

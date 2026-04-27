@@ -1,0 +1,43 @@
+{
+  "skill_name": "git-workflow-init",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "我刚在 /tmp/gwi-test-basic 创建了一个新的 Python 项目目录，已经 git init 了。请帮我配置好 git 分支管理规范：安装 hooks 保护 main 和 staging 分支不被直接提交，并生成工作流文档。不需要更新 AI 配置文件。",
+      "expected_output": "在 /tmp/gwi-test-basic 中：.githooks/pre-commit 已创建，core.hooksPath 已设置为 .githooks，docs/reference/git-workflow.md 已生成",
+      "files": [],
+      "expectations": [
+        "pre-commit hook 文件存在且内容包含对 main 和 staging 分支的保护逻辑",
+        "hook 安装在 .githooks/ 目录（而非 .git/hooks/），说明使用了 core.hooksPath 方案",
+        "git config core.hooksPath 已设置为 .githooks",
+        "docs/reference/git-workflow.md 已创建（路径包含 reference/ 子目录）",
+        "工作流文档内容完整，包含分支命名规范、保护规则、提交信息格式"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "我的项目在 /tmp/gwi-test-claudemd，已经 git init 完成，目录里有一个内容为 '# My Project\\n\\n这是一个 Node.js 项目。' 的 CLAUDE.md 文件。请完整运行 git 工作流初始化：安装分支保护 hooks、生成工作流文档，并在 CLAUDE.md 中追加对 git 文档的索引引用。",
+      "expected_output": "hooks 已安装，docs/reference/git-workflow.md 已创建，CLAUDE.md 末尾追加了 Git Workflow 引用段落（只是索引链接，非完整内容）",
+      "files": [],
+      "expectations": [
+        "pre-commit hook 已安装在 .githooks/ 目录",
+        "core.hooksPath 已设置为 .githooks",
+        "docs/reference/git-workflow.md 已创建",
+        "CLAUDE.md 中追加了对 docs/reference/git-workflow.md 的链接引用",
+        "CLAUDE.md 的引用只是索引链接，没有把完整 git 规范内容写进去"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "帮我配置 git 分支管理规范。我当前目录是 /tmp/gwi-test-nogit（目录存在但没有 git init 过）。",
+      "expected_output": "skill 检测到不在 git 仓库中，向用户说明情况并询问是否先执行 git init，而不是直接报错退出或静默跳过",
+      "files": [],
+      "expectations": [
+        "skill 执行了 git rev-parse --show-toplevel 或等效命令来检测 git 仓库",
+        "skill 检测到非 git 仓库后，没有静默跳过，也没有直接崩溃报错",
+        "skill 向用户询问是否先执行 git init（而不是自动执行）",
+        "用户拒绝后 skill 优雅停止，没有留下半完成的状态"
+      ]
+    }
+  ]
+}

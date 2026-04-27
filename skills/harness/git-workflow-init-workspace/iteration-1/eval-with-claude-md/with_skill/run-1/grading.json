@@ -1,0 +1,76 @@
+{
+  "expectations": [
+    {
+      "text": "pre-commit hook 已安装在 .githooks/ 目录",
+      "passed": true,
+      "evidence": "outputs/pre-commit exists with full branch-protection logic. response.md Step 2 confirms install-git-hooks.sh ran and produced 'core.hooksPath = .githooks'. metrics.json files_created lists '.githooks/pre-commit'."
+    },
+    {
+      "text": "core.hooksPath 已设置为 .githooks",
+      "passed": true,
+      "evidence": "response.md: 'git config --list | grep -i hook → core.hookspath=.githooks'."
+    },
+    {
+      "text": "docs/reference/git-workflow.md 已创建",
+      "passed": true,
+      "evidence": "response.md Step 3: 'docs/reference/git-workflow.md 已创建 ✅'. metrics.json files_created lists 'docs/reference/git-workflow.md'. outputs/git-workflow.md is present and complete."
+    },
+    {
+      "text": "CLAUDE.md 中追加了对 docs/reference/git-workflow.md 的链接引用",
+      "passed": true,
+      "evidence": "outputs/CLAUDE.md contains appended section: '## Git 工作流\n分支命名规范、保护规则与合并流程详见 [docs/reference/git-workflow.md](docs/reference/git-workflow.md)。' — a link to the correct path."
+    },
+    {
+      "text": "CLAUDE.md 的引用只是索引链接，没有把完整 git 规范内容写进去",
+      "passed": true,
+      "evidence": "outputs/CLAUDE.md appended section is 2 lines: a heading and a single sentence with a link. No branch tables, hook instructions, or commit format content was inlined into CLAUDE.md. The full content lives in git-workflow.md."
+    }
+  ],
+  "summary": {
+    "passed": 5,
+    "failed": 0,
+    "total": 5,
+    "pass_rate": 1.0
+  },
+  "execution_metrics": {
+    "tool_calls": {
+      "Bash": 7,
+      "Write": 2,
+      "Read": 3
+    },
+    "total_tool_calls": 12,
+    "total_steps": 5,
+    "errors_encountered": 0,
+    "output_chars": 3800,
+    "transcript_chars": 900
+  },
+  "timing": {},
+  "claims": [
+    {
+      "claim": "User was asked before updating CLAUDE.md and confirmed",
+      "type": "process",
+      "verified": true,
+      "evidence": "response.md Step 4: '用户确认更新 CLAUDE.md → 追加 \"## Git 工作流\" 引用段落（仅索引，无完整内容）✅'"
+    },
+    {
+      "claim": "The pre-commit hook content is identical to the with_skill run in eval-basic-setup",
+      "type": "factual",
+      "verified": true,
+      "evidence": "Comparing both pre-commit files: same script with merge-aware logic for main (staging/release/*) and staging (feature/*, fix/*, chore/*, doc/*). Consistent use of the canonical template."
+    }
+  ],
+  "user_notes_summary": {
+    "uncertainties": [],
+    "needs_review": [],
+    "workarounds": []
+  },
+  "eval_feedback": {
+    "suggestions": [
+      {
+        "assertion": "CLAUDE.md 中追加了对 docs/reference/git-workflow.md 的链接引用",
+        "reason": "This assertion checks that a link exists, but not that the original CLAUDE.md content was preserved. A buggy implementation could replace the file rather than append. Consider adding an assertion that the original content ('这是一个 Node.js 项目。') is still present in the updated CLAUDE.md."
+      }
+    ],
+    "overall": "Evals are solid. The distinction between 'link only' vs 'full content inlined' (assertion 5) is appropriately discriminating. One minor gap: no assertion verifies the existing CLAUDE.md content was not clobbered during the append."
+  }
+}

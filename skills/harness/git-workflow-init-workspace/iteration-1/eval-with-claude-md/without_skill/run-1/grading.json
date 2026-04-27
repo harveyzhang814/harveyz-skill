@@ -1,0 +1,75 @@
+{
+  "expectations": [
+    {
+      "text": "pre-commit hook 已安装在 .githooks/ 目录",
+      "passed": false,
+      "evidence": "response.md Step 2: '.git/hooks/pre-commit 写入（不版本控制）'. metrics.json files_created lists '.git/hooks/pre-commit'. The .githooks/ approach was not used."
+    },
+    {
+      "text": "core.hooksPath 已设置为 .githooks",
+      "passed": false,
+      "evidence": "response.md: 'git config --list | grep -i hook → （无输出 — 未设置 core.hooksPath）'."
+    },
+    {
+      "text": "docs/reference/git-workflow.md 已创建",
+      "passed": false,
+      "evidence": "response.md Step 3: 'docs/git-workflow.md（路径不含 reference/，内容简略）'. metrics.json files_created lists 'docs/git-workflow.md'. The required reference/ subdirectory is absent."
+    },
+    {
+      "text": "CLAUDE.md 中追加了对 docs/reference/git-workflow.md 的链接引用",
+      "passed": false,
+      "evidence": "outputs/CLAUDE.md appended section links to 'docs/git-workflow.md' (not docs/reference/git-workflow.md): 'See [docs/git-workflow.md](docs/git-workflow.md) for branch management rules.' The link target is wrong."
+    },
+    {
+      "text": "CLAUDE.md 的引用只是索引链接，没有把完整 git 规范内容写进去",
+      "passed": true,
+      "evidence": "outputs/CLAUDE.md appended section is one sentence with a link. No branch tables or detailed rules were inlined into CLAUDE.md itself — the link-only pattern was followed, even if it points to the wrong destination."
+    }
+  ],
+  "summary": {
+    "passed": 1,
+    "failed": 4,
+    "total": 5,
+    "pass_rate": 0.2
+  },
+  "execution_metrics": {
+    "tool_calls": {
+      "Bash": 6,
+      "Write": 3
+    },
+    "total_tool_calls": 9,
+    "total_steps": 4,
+    "errors_encountered": 0,
+    "output_chars": 420,
+    "transcript_chars": 350
+  },
+  "timing": {},
+  "claims": [
+    {
+      "claim": "The workflow doc is minimal (one sentence)",
+      "type": "quality",
+      "verified": true,
+      "evidence": "outputs/git-workflow.md is 3 lines: title, branch protection note, and one workflow line. Clearly insufficient as a reference document."
+    },
+    {
+      "claim": "CLAUDE.md link points to the wrong path",
+      "type": "factual",
+      "verified": true,
+      "evidence": "outputs/CLAUDE.md links to 'docs/git-workflow.md' instead of 'docs/reference/git-workflow.md', creating an inconsistency between assertion 3 (doc path) and assertion 4 (link target)."
+    }
+  ],
+  "user_notes_summary": {
+    "uncertainties": [],
+    "needs_review": [],
+    "workarounds": []
+  },
+  "eval_feedback": {
+    "suggestions": [
+      {
+        "assertion": "CLAUDE.md 的引用只是索引链接，没有把完整 git 规范内容写进去",
+        "reason": "This assertion passes even though the linked document barely exists (3 lines). The assertion correctly checks that CLAUDE.md isn't bloated, but a passing assertion 5 alongside failing assertion 3 gives a misleading partial-pass impression. Consider coupling the link-only check with a minimum-content check on the linked doc."
+      }
+    ],
+    "overall": "The evals correctly surface the systematic failures of the no-skill run. The pass on assertion 5 is technically correct but could mask the fact that the linked doc itself is nearly empty."
+  }
+}
