@@ -5,6 +5,16 @@
 !.gitignore
 !README.md
 !CLAUDE.md
+!package.json
+!package-lock.json
+!bundles.json
+!.npmignore
+
+# 保留 npm 包目录
+!bin/
+!bin/**
+!lib/
+!lib/**
 
 # 保留插件清单
 !.claude-plugin/

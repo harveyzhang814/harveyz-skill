@@ -1,0 +1,7 @@
+docs/
+scripts/
+.worktrees/
+.claude/
+evals/
+*.sh
+CLAUDE.md
