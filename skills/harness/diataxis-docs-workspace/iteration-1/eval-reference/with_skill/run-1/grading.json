@@ -1,0 +1,41 @@
+{
+  "eval_id": 2,
+  "eval_name": "eval-reference",
+  "configuration": "with_skill",
+  "expectations": [
+    {
+      "text": "文件创建在 reference/ 子目录下（非 how-to/ 或根目录）",
+      "passed": true,
+      "evidence": "文件路径为 reference/api-endpoints.md"
+    },
+    {
+      "text": "文档包含参数表格（Markdown 表格格式）",
+      "passed": true,
+      "evidence": "包含请求参数表格（参数/类型/必填/说明）和错误码表格"
+    },
+    {
+      "text": "文档包含 JSON 响应示例（代码块）",
+      "passed": true,
+      "evidence": "包含 201 Created 和 400 Bad Request 的 JSON 响应代码块"
+    },
+    {
+      "text": "INDEX.md 被更新，包含新文件条目",
+      "passed": true,
+      "evidence": "INDEX.md reference/ 节包含 api-endpoints.md 条目"
+    },
+    {
+      "text": "文档不包含操作步骤（无 ### 1. 或步骤序号），纯参考格式",
+      "passed": true,
+      "evidence": "文档结构为端点 → 参数表 → 响应示例 → 错误码，无操作步骤"
+    }
+  ],
+  "pass_count": 5,
+  "total_count": 5,
+  "pass_rate": 1.0,
+  "summary": {
+    "passed": 5,
+    "failed": 0,
+    "total": 5,
+    "pass_rate": 1.0
+  }
+}

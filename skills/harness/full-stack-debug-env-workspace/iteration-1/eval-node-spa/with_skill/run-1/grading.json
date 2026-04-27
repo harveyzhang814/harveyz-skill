@@ -1,0 +1,49 @@
+{
+  "eval_id": 1,
+  "eval_name": "eval-node-spa",
+  "configuration": "with_skill",
+  "expectations": [
+    {
+      "id": "verify-script-created",
+      "text": "创建了 harness/debug/verify-logs.sh（路径符合 skill 约定）",
+      "passed": true,
+      "evidence": "文件已创建于 harness/debug/verify-logs.sh"
+    },
+    {
+      "id": "both-sources-covered",
+      "text": "verify-logs.sh 包含 backend.log 和 browser.log 两个来源检查",
+      "passed": true,
+      "evidence": "grep 确认包含 check_source backend.log 和 check_source browser.log"
+    },
+    {
+      "id": "iso8601-check",
+      "text": "verify-logs.sh 检查 ISO 8601 时间戳格式",
+      "passed": true,
+      "evidence": "包含 ISO8601_PATTERN='^[0-9]{4}-[0-9]{2}-[0-9]{2}T...' 并用 grep -qE 检验"
+    },
+    {
+      "id": "ok-missing-fail-output",
+      "text": "verify-logs.sh 输出包含逐项 OK/MISSING/NO_NEW_OUTPUT，而非只有汇总结论",
+      "passed": true,
+      "evidence": "脚本 echo OK / MISSING / NO_NEW_OUTPUT 逐项输出，最后有汇总 PASS/FAIL/SKIP 统计"
+    },
+    {
+      "id": "readme-created",
+      "text": "创建了 harness/debug/README.md（Reference 文档）",
+      "passed": true,
+      "evidence": "harness/debug/README.md 存在，包含日志目录、接入方式、查询命令"
+    },
+    {
+      "id": "howto-created",
+      "text": "创建了 docs/how-to/debug-env.md（How-to 文档）",
+      "passed": true,
+      "evidence": "docs/how-to/debug-env.md 存在，包含启动步骤、排查问题、关闭环境"
+    }
+  ],
+  "summary": {
+    "passed": 6,
+    "failed": 0,
+    "total": 6,
+    "pass_rate": 1.0
+  }
+}

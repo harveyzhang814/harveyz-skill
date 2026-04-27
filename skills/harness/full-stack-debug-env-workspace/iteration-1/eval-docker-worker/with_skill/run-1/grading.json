@@ -1,0 +1,49 @@
+{
+  "eval_id": 2,
+  "eval_name": "eval-docker-worker",
+  "configuration": "with_skill",
+  "expectations": [
+    {
+      "id": "three-sources-planned",
+      "text": "规划了至少三个独立日志来源（api.log、worker.log、db.log 或等效命名）",
+      "passed": true,
+      "evidence": "verify-logs.sh 中包含 api.log、worker.log、db.log 三个 check_source 调用"
+    },
+    {
+      "id": "worker-task-driven",
+      "text": "worker 被识别为任务驱动型（verify-logs.sh 中对 worker.log 报 SKIP 而非 FAIL）",
+      "passed": true,
+      "evidence": "check_source \"worker.log (Celery Worker)\" \"worker.log\" \"任务驱动型\" — 文件不存在或为空时 echo SKIP 而非 FAIL"
+    },
+    {
+      "id": "docker-compose-logs-used",
+      "text": "接入方式使用 docker compose logs 而非直接读 /var/log",
+      "passed": true,
+      "evidence": "README.md 使用 docker compose logs -f api/worker；db 使用 docker compose exec + tail"
+    },
+    {
+      "id": "verify-script-created",
+      "text": "创建了 harness/debug/verify-logs.sh",
+      "passed": true,
+      "evidence": "文件已创建于 harness/debug/verify-logs.sh"
+    },
+    {
+      "id": "readme-created",
+      "text": "创建了 harness/debug/README.md，包含停止捕获的命令",
+      "passed": true,
+      "evidence": "README.md 存在，包含「停止捕获」章节，使用 for 循环 kill pid 文件"
+    },
+    {
+      "id": "howto-created",
+      "text": "创建了 docs/how-to/debug-env.md，解释任务驱动型来源的含义",
+      "passed": true,
+      "evidence": "debug-env.md 明确说明「worker.log 是任务驱动型，验证脚本报 SKIP 属正常」"
+    }
+  ],
+  "summary": {
+    "passed": 6,
+    "failed": 0,
+    "total": 6,
+    "pass_rate": 1.0
+  }
+}

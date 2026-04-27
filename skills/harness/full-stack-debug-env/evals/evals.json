@@ -1,0 +1,22 @@
+{
+  "skill_name": "full-stack-debug-env",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "这个项目是一个 Node.js Express 后端 + React SPA 前端的 Web 应用。后端入口是 server.js，前端用 Vite 开发服务器。没有 Docker，没有 worker，没有外部 API 调用。请帮我搭建全栈调试环境，让我在运行 Agent 测试之前能精准查询每一层的日志。",
+      "expected_output": "应创建 tmp/logs/ 目录，至少包含 backend.log 和 browser.log 两个来源规划；创建 harness/debug/verify-logs.sh；生成 harness/debug/README.md 和 docs/how-to/debug-env.md",
+      "files": [
+        "/tmp/fsd-test-node-spa/package.json",
+        "/tmp/fsd-test-node-spa/server.js"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "这个项目用 Docker Compose 运行三个容器：api（Node.js）、worker（Python Celery）、db（PostgreSQL）。我需要在运行 Agent 测试场景前搭建全栈调试环境，让我能同时查看 API 服务、后台 Worker 和数据库的日志。",
+      "expected_output": "应规划 api.log/worker.log/db.log 三个独立日志来源；worker 被识别为异步/任务驱动型来源；verify-logs.sh 中 worker.log 应报 SKIP 而非 FAIL；生成完整文档",
+      "files": [
+        "/tmp/fsd-test-docker/docker-compose.yml"
+      ]
+    }
+  ]
+}

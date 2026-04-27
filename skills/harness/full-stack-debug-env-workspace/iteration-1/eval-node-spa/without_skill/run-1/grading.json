@@ -1,0 +1,49 @@
+{
+  "eval_id": 1,
+  "eval_name": "eval-node-spa",
+  "configuration": "without_skill",
+  "expectations": [
+    {
+      "id": "verify-script-created",
+      "text": "创建了 harness/debug/verify-logs.sh（路径符合 skill 约定）",
+      "passed": false,
+      "evidence": "无 verify-logs.sh，只有 debug-notes.md（非脚本）"
+    },
+    {
+      "id": "both-sources-covered",
+      "text": "verify-logs.sh 包含 backend.log 和 browser.log 两个来源检查",
+      "passed": false,
+      "evidence": "无验证脚本；debug-notes.md 只提到 app.log，完全忽略浏览器 console"
+    },
+    {
+      "id": "iso8601-check",
+      "text": "verify-logs.sh 检查 ISO 8601 时间戳格式",
+      "passed": false,
+      "evidence": "无验证脚本，无时间戳检查"
+    },
+    {
+      "id": "ok-missing-fail-output",
+      "text": "verify-logs.sh 输出包含逐项 OK/MISSING/NO_NEW_OUTPUT，而非只有汇总结论",
+      "passed": false,
+      "evidence": "无验证脚本"
+    },
+    {
+      "id": "readme-created",
+      "text": "创建了 harness/debug/README.md（Reference 文档）",
+      "passed": false,
+      "evidence": "无 harness/ 目录；debug-notes.md 放在项目根目录"
+    },
+    {
+      "id": "howto-created",
+      "text": "创建了 docs/how-to/debug-env.md（How-to 文档）",
+      "passed": false,
+      "evidence": "无 docs/ 目录；debug-notes.md 未遵循 Diátaxis 结构"
+    }
+  ],
+  "summary": {
+    "passed": 0,
+    "failed": 6,
+    "total": 6,
+    "pass_rate": 0.0
+  }
+}

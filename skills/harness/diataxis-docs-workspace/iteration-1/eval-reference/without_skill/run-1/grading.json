@@ -1,0 +1,41 @@
+{
+  "eval_id": 2,
+  "eval_name": "eval-reference",
+  "configuration": "without_skill",
+  "expectations": [
+    {
+      "text": "文件创建在 reference/ 子目录下（非 how-to/ 或根目录）",
+      "passed": false,
+      "evidence": "文件路径为 docs/api-users.md（根目录）"
+    },
+    {
+      "text": "文档包含参数表格（Markdown 表格格式）",
+      "passed": false,
+      "evidence": "使用无序列表（- username: 用户名）而非表格，无类型/必填信息"
+    },
+    {
+      "text": "文档包含 JSON 响应示例（代码块）",
+      "passed": false,
+      "evidence": "无响应示例，仅有「返回创建成功的用户对象」描述"
+    },
+    {
+      "text": "INDEX.md 被更新，包含新文件条目",
+      "passed": false,
+      "evidence": "INDEX.md 未被更新"
+    },
+    {
+      "text": "文档不包含操作步骤（无 ### 1. 或步骤序号），纯参考格式",
+      "passed": true,
+      "evidence": "无操作步骤，按端点组织"
+    }
+  ],
+  "pass_count": 1,
+  "total_count": 5,
+  "pass_rate": 0.2,
+  "summary": {
+    "passed": 1,
+    "failed": 4,
+    "total": 5,
+    "pass_rate": 0.2
+  }
+}

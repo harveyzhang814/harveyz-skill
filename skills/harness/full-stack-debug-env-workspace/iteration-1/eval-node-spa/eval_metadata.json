@@ -1,0 +1,31 @@
+{
+  "eval_id": 1,
+  "eval_name": "eval-node-spa",
+  "prompt": "这个项目是一个 Node.js Express 后端 + React SPA 前端的 Web 应用。后端入口是 server.js，前端用 Vite 开发服务器。没有 Docker，没有 worker，没有外部 API 调用。请帮我搭建全栈调试环境，让我在运行 Agent 测试之前能精准查询每一层的日志。",
+  "assertions": [
+    {
+      "id": "verify-script-created",
+      "text": "创建了 harness/debug/verify-logs.sh（路径符合 skill 约定）"
+    },
+    {
+      "id": "both-sources-covered",
+      "text": "verify-logs.sh 包含 backend.log 和 browser.log 两个来源检查"
+    },
+    {
+      "id": "iso8601-check",
+      "text": "verify-logs.sh 检查 ISO 8601 时间戳格式"
+    },
+    {
+      "id": "ok-missing-fail-output",
+      "text": "verify-logs.sh 输出包含逐项 OK/MISSING/NO_NEW_OUTPUT，而非只有汇总结论"
+    },
+    {
+      "id": "readme-created",
+      "text": "创建了 harness/debug/README.md（Reference 文档）"
+    },
+    {
+      "id": "howto-created",
+      "text": "创建了 docs/how-to/debug-env.md（How-to 文档）"
+    }
+  ]
+}
