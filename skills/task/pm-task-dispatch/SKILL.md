@@ -83,7 +83,7 @@ sessions_send({
     "**任务编号：** {id}\n" +
     "**任务文件夹：** tasks/{id}/\n\n" +
     "请读取 tasks/{id}/task.md，根据文件内容执行任务。\n" +
-    "完成后使用 task-acceptance skill 进行收尾。",
+    "完成后使用 task-close skill 进行收尾。",
   timeoutSeconds: 0    // 必须为 0
 })
 ```
