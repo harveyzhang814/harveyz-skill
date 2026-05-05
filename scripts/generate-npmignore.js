@@ -6,11 +6,11 @@ import { fileURLToPath } from 'url'
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const root = path.join(__dirname, '..')
 
-const rawIndex = JSON.parse(readFileSync(path.join(root, 'skills-index.json'), 'utf8'))
+const { skills: rawSkills } = JSON.parse(readFileSync(path.join(root, 'skills-index.json'), 'utf8'))
 const skillsDir = path.join(root, 'skills')
 
 // 规范化索引条目
-const index = rawIndex.map(entry =>
+const index = rawSkills.map(entry =>
   typeof entry === 'string' ? { path: entry, exclude: [] } : { exclude: [], ...entry }
 )
 const indexedPaths = new Set(index.map(e => e.path))

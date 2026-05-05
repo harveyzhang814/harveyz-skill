@@ -16,10 +16,15 @@ const targetArg = targetIdx !== -1 ? args[targetIdx + 1] : undefined
 if (args[0] === 'list') {
   const { createRequire } = await import('module')
   const require = createRequire(import.meta.url)
-  const bundles = require('../bundles.json')
-  for (const b of bundles) {
-    console.log(chalk.bold(b.name) + ' — ' + b.description)
-    if (b.skills) for (const s of b.skills) console.log('  ' + s)
+  const { bundleMeta, skills } = require('../skills-index.json')
+  const byBundle = {}
+  for (const s of skills) {
+    if (!byBundle[s.bundle]) byBundle[s.bundle] = []
+    byBundle[s.bundle].push(s.path)
+  }
+  for (const [name, paths] of Object.entries(byBundle)) {
+    console.log(chalk.bold(name) + ' — ' + (bundleMeta[name] ?? name))
+    for (const p of paths) console.log('  ' + p)
   }
   process.exit(0)
 }
