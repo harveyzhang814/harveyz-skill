@@ -23,7 +23,8 @@
     "skills/superpowers-fork/using-git-worktrees/",
     "skills/superpowers-fork/writing-plans/",
     "skills/task/pm-task-dispatch/",
-    "skills/task/task-close/"
+    "skills/task/task-close/",
+    "skills/web-fetch/article-fetcher/"
   ],
   "engines": {
     "node": ">=18"

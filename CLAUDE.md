@@ -75,3 +75,32 @@ Forbidden: Unicode box-drawing characters (e.g., `┌ │ └`)
 ## Plugin Manifest
 
 `.claude-plugin/plugin.json` declares the plugin metadata for Claude Code's skill discovery. The `"skills": "./skills"` field points to the skills directory.
+
+## Development Workflow
+
+**Run the CLI locally:**
+```bash
+node bin/cli.js                          # interactive mode
+node bin/cli.js --bundle dev --target claude   # non-interactive
+node bin/cli.js list                     # list available bundles
+```
+
+**Publish a new skill** — two steps:
+1. Create the skill under `skills/<category>/<skill-name>/SKILL.md`
+2. Add an entry to `skills-index.json` under `skills[]`, specifying `path` and `bundle`:
+   ```json
+   { "path": "web-fetch/my-skill", "bundle": "web-fetch" }
+   ```
+   If the bundle is new, also add it to `bundleMeta` with a description. `skills-index.json` is the single source of truth — no other file needs updating.
+
+**Before `npm publish`:**
+```bash
+node scripts/generate-npmignore.js   # updates package.json `files` + .npmignore from skills-index.json
+```
+This is run automatically via the `prepack` hook.
+
+**Install targets:** `claude` → `~/.claude/skills/`, `cursor` → `~/.cursor/skills/`, `codex` → `~/.codex/skills/`
+
+## Skills Not Yet Published
+
+Skills present in `skills/` but absent from `skills-index.json` are excluded from npm. The `generate-npmignore.js` script enforces this by generating `.npmignore` entries for all unlisted skill directories.
