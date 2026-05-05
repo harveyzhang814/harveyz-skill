@@ -1,0 +1,12 @@
+[
+  {
+    "name": "VAULT_PATH",
+    "description": "Obsidian Reading 目录完整路径（例如 /Users/you/Vault/Product/Reading）",
+    "default": "{{HOME}}/Vault/Product/Reading"
+  },
+  {
+    "name": "SKILL_DIR",
+    "description": "article-fetcher skill 安装后的完整路径",
+    "default": "{{HOME}}/.claude/skills/article-fetcher"
+  }
+]
