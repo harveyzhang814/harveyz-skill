@@ -6,7 +6,7 @@
   },
   {
     "name": "SKILL_DIR",
-    "description": "article-fetcher skill 安装后的完整路径",
+    "description": "article-fetcher skill 安装后的完整路径（用于定位辅助脚本和数据库文件）",
     "default": "{{HOME}}/.claude/skills/article-fetcher"
   }
 ]
