@@ -1,6 +1,6 @@
 ---
 name: article-fetcher
-description: 从指定 URL 抓取文章内容，翻译成简体中文并保存到指定目录。PDF 按需单独生成，不在抓取流程中自动执行。触发条件：(1) 提供 1 个 URL 并要求抓取，(2) 提供多个 URL 并要求批量/并行抓取，(3) 说"抓取文章"、"翻译保存"等
+description: "Use for the fetch-URL → translate → save-to-Obsidian workflow. Trigger whenever a user has a web URL (article, blog post, tweet, newsletter) and wants it fetched, translated into Chinese, and saved locally — even if they say it obliquely (e.g. \"存到 obsidian\", \"抓取\", \"save this\", \"translate and archive\"). Handles single URLs and batch lists, and X.com / Twitter (Playwright + Chrome Profile). Skip only if: no URL is present (user pasting raw text to translate), user wants a summary without archiving, or user is asking about a site's tech stack without wanting to save anything."
 ---
 
 # Article Fetcher
@@ -73,8 +73,11 @@ URL: <URL>
 
 【校验代码】：（见下方校验代码块）
 
-完成后报告格式：
-抓取完成：{标题} | {block数} blocks | {图片数} images | {origin_path}
+完成后报告格式（用换行分隔，避免标题含 `|` 时解析出错）：
+```
+ORIGIN_PATH: {origin_path}
+抓取完成：{标题} ({block数} blocks, {图片数} images)
+```
 " \
   --runtime "subagent" \
   --mode "run"
@@ -82,7 +85,7 @@ URL: <URL>
 
 ### 步骤 2：等待 Subagent 1 完成
 
-收到 Subagent 1 的完成通知后，检查 origin_path 是否有效。
+收到 Subagent 1 的完成通知后，从报告中提取 `ORIGIN_PATH:` 开头的那行，取其值作为 origin_path。检查文件是否存在。
 
 ### 步骤 3：派发 Subagent 2（翻译）
 
@@ -135,16 +138,20 @@ if rem_art:
 else:
     record_issues(url, "")
 
-# 写 SQLite
+# 写 SQLite（用 yaml.safe_load 解析 frontmatter，避免含冒号的值被截断）
+import yaml
 db_path = os.path.expanduser("{{SKILL_DIR}}/scripts/url-index.db")
 conn = sqlite3.connect(db_path)
 with open(article_path, encoding='utf-8') as f:
     content = f.read()
 fm = {}
-for line in content.split('\n'):
-    if ':' in line and not line.startswith('  -'):
-        k, v = line.split(':', 1)
-        fm[k.strip()] = v.strip()
+if content.startswith('---'):
+    parts = content.split('---', 2)
+    if len(parts) >= 3:
+        try:
+            fm = yaml.safe_load(parts[1]) or {}
+        except Exception:
+            pass
 conn.execute("""INSERT OR REPLACE INTO url_index (url, title, fetched_at, issues, category, origin_path, article_path) VALUES (?,?,?,?,?,?,?)""",
     (url, os.path.basename(article_path), fetch_date, '', fm.get('category',''), origin_path, article_path))
 conn.commit()
@@ -178,7 +185,16 @@ print(f"翻译完成：{article_path}")
 **步骤 2**：逐一派发 Subagent 1（抓取），每完成一个立即派发对应的 Subagent 2（翻译）
 
 ```
-Subagent 1 (抓取) → Subagent 2 (翻译) → Subagent 1 (抓取) → Subagent 2 (翻译) → ...
+Subagent 1 (抓取) → Subagent 2 (翻译) → [等待] → Subagent 1 (抓取) → Subagent 2 (翻译) → ...
+```
+
+每篇 Subagent 2 完成后，**在主 session 中用以下代码随机等待**再发下一篇：
+
+```python
+import time, random
+wait = random.randint(60, 180)
+print(f"等待 {wait} 秒后继续下一篇...")
+time.sleep(wait)
 ```
 
 ---
@@ -201,7 +217,7 @@ from article_utils import infer_ext
 save_dir = "{{VAULT_PATH}}/Image"
 
 with sync_playwright() as p:
-    ctx = p.chromium.launch_persistent_context(user_data_dir=chrome_profile, headless=True)
+    ctx = p.chromium.launch_persistent_context(user_data_dir=chrome_profile, headless=False)
     page = ctx.pages[0] if ctx.pages else ctx.new_page()
     page.goto(url, timeout=30000)
     page.wait_for_timeout(8000)
@@ -403,9 +419,163 @@ print(f"Blocks: {len(blocks)}, Images: {len(images)}")
 
 ## 其他网站抓取流程
 
-Step 1：`web_fetch` 提取正文内容
+### Step 1：web_fetch 提取原始 HTML
 
-Step 2：Playwright 加载 HTML 文件 + DOM 遍历提取内容 + 下载图片（一体化脚本，见原 SKILL.md）
+```python
+# Subagent 1 内执行
+import subprocess, os
+result = subprocess.run(
+    ['python3', '-c',
+     f"import urllib.request; req=urllib.request.Request('{url}', headers={{'User-Agent':'Mozilla/5.0'}}); resp=urllib.request.urlopen(req,timeout=30); open('/tmp/fetched_page.html','wb').write(resp.read())"],
+    capture_output=True, text=True
+)
+# 若 web_fetch 工具可用，直接用工具调用更佳
+```
+
+也可直接调用 `web_fetch` 工具获取 HTML，保存到 `/tmp/fetched_page.html`。
+
+### Step 2：Playwright DOM 提取 + 图片下载
+
+```python
+from playwright.sync_api import sync_playwright
+import os, json, urllib.request, hashlib, re
+from datetime import datetime, timezone, timedelta
+
+import sys
+sys.path.insert(0, '{{SKILL_DIR}}/references')
+from article_utils import infer_ext
+
+url = "<URL>"
+url_hash = hashlib.md5(url.encode()).hexdigest()[:8]
+save_dir = "{{VAULT_PATH}}/Image"
+html_path = "/tmp/fetched_page.html"
+
+with open(html_path, encoding='utf-8', errors='replace') as f:
+    html = f.read()
+
+with sync_playwright() as p:
+    browser = p.chromium.launch(headless=True)
+    page = browser.new_page()
+    page.set_content(html, wait_until="domcontentloaded")
+
+    result = page.evaluate(r"""() => {
+        const skipTags = new Set(['SCRIPT','STYLE','NAV','FOOTER','HEADER','ASIDE','BUTTON','FORM']);
+        const contentUnits = [];
+        const imageBlocks = [];
+
+        // Extract title
+        const titleEl = document.querySelector('h1') || document.querySelector('title');
+        const title = titleEl ? titleEl.innerText.replace(/\s+/g, ' ').trim() : 'Untitled';
+
+        // Extract publish date from common meta tags
+        const dateMeta = document.querySelector('meta[property="article:published_time"]')
+            || document.querySelector('meta[name="date"]')
+            || document.querySelector('time');
+        const publishDate = dateMeta
+            ? (dateMeta.getAttribute('content') || dateMeta.getAttribute('datetime') || '')
+            : '';
+
+        // Extract author
+        const authorMeta = document.querySelector('meta[name="author"]')
+            || document.querySelector('[rel="author"]');
+        const author = authorMeta
+            ? (authorMeta.getAttribute('content') || authorMeta.innerText || '').trim()
+            : '';
+
+        // Walk main content area
+        const main = document.querySelector('main') || document.querySelector('article') || document.body;
+        const walker = document.createTreeWalker(main, NodeFilter.SHOW_ELEMENT);
+        let node;
+        while (node = walker.nextNode()) {
+            if (skipTags.has(node.tagName.toUpperCase())) continue;
+            const tag = node.tagName.toUpperCase();
+
+            if (tag === 'IMG') {
+                const src = node.src || node.getAttribute('data-src') || '';
+                if (src && !src.startsWith('data:') && src.startsWith('http')) {
+                    imageBlocks.push({ src, alt: node.alt || '', afterBlock: contentUnits.length - 1 });
+                }
+            } else if (['H1','H2','H3','P','LI','BLOCKQUOTE','PRE','CODE'].includes(tag)) {
+                const t = node.innerText.replace(/\s+/g, ' ').trim();
+                if (t && t.length > 10) {
+                    contentUnits.push({ tag: tag.toLowerCase(), content: t });
+                }
+            }
+        }
+
+        return { title, author, publishDate, blocks: contentUnits, imageBlocks };
+    }""")
+    browser.close()
+
+# Download images
+downloaded = []
+for i, img in enumerate(result.get('imageBlocks', [])):
+    ext = infer_ext(img['src'])
+    fname = f"{url_hash}_img_{i+1}{ext}"
+    fpath = os.path.join(save_dir, fname)
+    try:
+        req = urllib.request.Request(img['src'], headers={'User-Agent': 'Mozilla/5.0'})
+        with urllib.request.urlopen(req, timeout=15) as resp:
+            data = resp.read()
+        with open(fpath, 'wb') as f:
+            f.write(data)
+        downloaded.append({**img, 'filename': fname})
+    except Exception as e:
+        print(f"  Image {i+1} failed: {e}")
+        downloaded.append({**img, 'filename': fname})
+
+# Build origin file
+HEADING_PREFIX = {'h1': '# ', 'h2': '## ', 'h3': '### '}
+
+def fmt(block):
+    tag, content = block['tag'], block['content']
+    if tag in HEADING_PREFIX:
+        return HEADING_PREFIX[tag] + content
+    if tag == 'pre':
+        return f'```\n{content}\n```'
+    if tag == 'li':
+        return f'- {content}'
+    return content
+
+blocks = result['blocks']
+title = result.get('title', 'Untitled')
+author = result.get('author', '')
+publish_date = (result.get('publishDate') or '')[:10]
+fetch_date = datetime.now(timezone(timedelta(hours=8))).strftime('%Y-%m-%d')
+
+# 文件名：移除特殊字符
+origin_filename = re.sub(r'[\\/:*?<>|".]', '', title) + '.md'
+origin_path = f'{{VAULT_PATH}}/Origin/{origin_filename}'
+
+body_units = []
+for i, block in enumerate(blocks):
+    parts = [fmt(block)]
+    for img in downloaded:
+        if img.get('afterBlock') == i:
+            parts.append(f'![](Image/{img["filename"]})')
+    body_units.append('\n'.join(parts))
+
+body = '\n\n'.join(body_units)
+
+origin_content = f"""---
+publish_date: {publish_date}
+fetch_date: {fetch_date}
+author: {author}
+source_url: {url}
+origin_title: "{title}"
+---
+
+# {title}
+
+{body}
+"""
+
+with open(origin_path, 'w', encoding='utf-8') as f:
+    f.write(origin_content)
+
+print(f"Origin saved: {origin_path}")
+print(f"Blocks: {len(blocks)}, Images: {len(downloaded)}")
+```
 
 ---
 
@@ -439,10 +609,12 @@ print(f"校验通过：{origin_path}")
 
 ## 文件命名规则
 
-| 特殊字符 | 处理 |
-|----------|------|
-| `\` `/` `:` | 移除 |
-| `.` 开头 | 移除 |
+```python
+import re
+origin_filename = re.sub(r'[\\/:*?<>|".]', '', title) + '.md'
+```
+
+移除字符：`\ / : * ? < > | " .`（与 file-format.md 保持一致）。
 
 ---
 
