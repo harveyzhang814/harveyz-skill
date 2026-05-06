@@ -1,0 +1,30 @@
+{
+  "expectations": [
+    {
+      "text": "skill 检测到项目根目录无 workflow-config.yml，没有静默跳过",
+      "passed": false,
+      "evidence": "baseline 没有明确检测配置文件缺失，直接使用内置默认值，未向用户说明情况"
+    },
+    {
+      "text": "skill 提供了使用默认配置的选项（从 references/workflow-config.yml 复制）",
+      "passed": false,
+      "evidence": "baseline 没有默认配置选项概念，直接应用硬编码默认值，无用户确认步骤"
+    },
+    {
+      "text": "用户同意后，skill 将默认配置复制到项目根目录",
+      "passed": false,
+      "evidence": "baseline 没有复制任何配置文件到项目目录，没有 workflow-config.yml 生成"
+    },
+    {
+      "text": "复制配置后继续执行完整的审核和部署流程",
+      "passed": true,
+      "evidence": "baseline 确实创建了 hooks 和文档，但没有经过配置文件驱动的审核流程"
+    }
+  ],
+  "summary": {
+    "passed": 1,
+    "failed": 3,
+    "total": 4,
+    "pass_rate": 0.25
+  }
+}

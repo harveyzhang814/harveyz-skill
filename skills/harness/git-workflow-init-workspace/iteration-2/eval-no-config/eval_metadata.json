@@ -1,0 +1,23 @@
+{
+  "eval_id": 6,
+  "eval_name": "eval-no-config",
+  "prompt": "帮我配置 git 分支管理规范。我的项目在 /tmp/gwi-test-noconfig，已 git init，但目录里没有 workflow-config.yml。假设用户同意使用默认配置，请继续完整的初始化流程。",
+  "assertions": [
+    {
+      "id": "detects-missing-config",
+      "text": "skill 检测到项目根目录无 workflow-config.yml，没有静默跳过"
+    },
+    {
+      "id": "offers-default",
+      "text": "skill 提供了使用默认配置的选项（从 references/workflow-config.yml 复制）"
+    },
+    {
+      "id": "copies-config",
+      "text": "用户同意后，skill 将默认配置复制到项目根目录"
+    },
+    {
+      "id": "continues-flow",
+      "text": "复制配置后继续执行完整的审核和部署流程"
+    }
+  ]
+}

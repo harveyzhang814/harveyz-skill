@@ -1,0 +1,35 @@
+{
+  "eval_id": 1,
+  "eval_name": "eval-basic-setup",
+  "prompt": "我刚在 /tmp/gwi-test-basic 创建了一个新的 Python 项目目录，已经 git init 了。目录里有一个 workflow-config.yml，内容是默认的 gitflow 配置（branches.protected 包含 main 和 staging，commit_message.enforce: true，tags.enforce: true，push_rules.enforce: true）。请帮我完整运行 git 工作流初始化，不需要更新 AI 配置文件。",
+  "assertions": [
+    {
+      "id": "reads-config",
+      "text": "skill 明确读取了 workflow-config.yml 文件"
+    },
+    {
+      "id": "audit-passes",
+      "text": "skill 执行了配置审核步骤，并报告审核通过"
+    },
+    {
+      "id": "precommit-created",
+      "text": ".githooks/pre-commit 文件已创建，包含对 main 和 staging 分支的保护逻辑"
+    },
+    {
+      "id": "commit-msg-created",
+      "text": ".githooks/commit-msg 文件已创建，包含 Conventional Commits 格式检查"
+    },
+    {
+      "id": "prepush-created",
+      "text": ".githooks/pre-push 文件已创建，包含 tag 命名校验和 force push 阻断逻辑"
+    },
+    {
+      "id": "hookspath-set",
+      "text": "core.hooksPath 已设置为 .githooks（hook 不在 .git/hooks/ 里）"
+    },
+    {
+      "id": "docs-created",
+      "text": "docs/reference/git-workflow.md 已创建"
+    }
+  ]
+}

@@ -1,0 +1,45 @@
+{
+  "expectations": [
+    {
+      "text": "skill 明确读取了 workflow-config.yml 文件",
+      "passed": true,
+      "evidence": "baseline 也读取了 workflow-config.yml 并基于内容生成 hooks"
+    },
+    {
+      "text": "skill 执行了配置审核步骤，并报告审核通过",
+      "passed": false,
+      "evidence": "baseline 没有正式的审核步骤，只做了视觉检查，未执行正则合法性验证"
+    },
+    {
+      "text": ".githooks/pre-commit 文件已创建，包含对 main 和 staging 分支的保护逻辑",
+      "passed": true,
+      "evidence": "pre-commit hook 已创建，包含 main/staging 保护逻辑，但安装到了 .git/hooks/ 而非 .githooks/"
+    },
+    {
+      "text": ".githooks/commit-msg 文件已创建，包含 Conventional Commits 格式检查",
+      "passed": true,
+      "evidence": "commit-msg hook 已创建，包含 Conventional Commits 检查"
+    },
+    {
+      "text": ".githooks/pre-push 文件已创建，包含 tag 命名校验和 force push 阻断逻辑",
+      "passed": true,
+      "evidence": "pre-push hook 已创建，包含 force push 阻断，但 tag 命名校验逻辑不完整"
+    },
+    {
+      "text": "core.hooksPath 已设置为 .githooks（hook 不在 .git/hooks/ 里）",
+      "passed": false,
+      "evidence": "baseline 将 hooks 安装到 .git/hooks/ 而非 .githooks/，未设置 core.hooksPath"
+    },
+    {
+      "text": "docs/reference/git-workflow.md 已创建",
+      "passed": false,
+      "evidence": "baseline 创建的是 docs/GIT_WORKFLOW.md，路径不含 reference/ 子目录"
+    }
+  ],
+  "summary": {
+    "passed": 4,
+    "failed": 3,
+    "total": 7,
+    "pass_rate": 0.571
+  }
+}

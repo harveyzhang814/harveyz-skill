@@ -1,0 +1,323 @@
+{
+  "metadata": {
+    "skill_name": "git-workflow-init",
+    "skill_path": "<path/to/skill>",
+    "executor_model": "<model-name>",
+    "analyzer_model": "<model-name>",
+    "timestamp": "2026-05-06T05:43:13Z",
+    "evals_run": [
+      1,
+      5,
+      6
+    ],
+    "runs_per_configuration": 3
+  },
+  "runs": [
+    {
+      "eval_id": 5,
+      "configuration": "with_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 1.0,
+        "passed": 4,
+        "failed": 0,
+        "total": 4,
+        "time_seconds": 0.0,
+        "tokens": 0,
+        "tool_calls": 0,
+        "errors": 0
+      },
+      "expectations": [
+        {
+          "text": "skill \u6267\u884c\u4e86\u914d\u7f6e\u5ba1\u6838\u6b65\u9aa4\uff08\u4e0d\u662f\u76f4\u63a5\u90e8\u7f72\uff09",
+          "passed": true,
+          "evidence": "Step 3 \u660e\u786e\u6267\u884c\u4e86\u4e09\u5c42\u6821\u9a8c\uff08\u7ed3\u6784\u3001\u903b\u8f91\u3001\u6b63\u5219\uff09\uff0c\u5728\u90e8\u7f72\u524d\u5b8c\u6210"
+        },
+        {
+          "text": "\u5ba1\u6838\u62a5\u544a\u5305\u542b\u5168\u90e8\u4e09\u4e2a\u95ee\u9898\uff1a\u5faa\u73af\u4f9d\u8d56\u3001\u975e\u6cd5\u6b63\u5219\u3001\u7f3a\u5c11 pattern \u5b57\u6bb5",
+          "passed": true,
+          "evidence": "response.md \u5217\u51fa\u4e86\u95ee\u98981\u5faa\u73af\u4f9d\u8d56\u3001\u95ee\u98982\u975e\u6cd5\u6b63\u5219exit 2\u3001\u95ee\u98983\u7f3a\u5c11 pattern\uff0c\u5168\u90e8\u4e09\u4e2a"
+        },
+        {
+          "text": "\u5ba1\u6838\u5931\u8d25\u540e\u6ca1\u6709\u521b\u5efa\u4efb\u4f55 .githooks/ hook \u6587\u4ef6",
+          "passed": true,
+          "evidence": "\u9a8c\u8bc1 /tmp/gwi-test-badconfig/.githooks/ \u4e0d\u5b58\u5728\uff0chook \u6587\u4ef6\u672a\u521b\u5efa"
+        },
+        {
+          "text": "skill \u63d0\u793a\u7528\u6237\u4fee\u590d\u914d\u7f6e\u540e\u91cd\u65b0\u8fd0\u884c\uff0c\u800c\u975e\u9759\u9ed8\u7ed3\u675f",
+          "passed": true,
+          "evidence": "response.md \u7ed3\u5c3e\u660e\u786e\u63d0\u793a\u4fee\u590d\u914d\u7f6e\u540e\u91cd\u65b0\u8fd0\u884c /git-workflow-init"
+        }
+      ],
+      "notes": []
+    },
+    {
+      "eval_id": 1,
+      "configuration": "with_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 1.0,
+        "passed": 7,
+        "failed": 0,
+        "total": 7,
+        "time_seconds": 0.0,
+        "tokens": 0,
+        "tool_calls": 0,
+        "errors": 0
+      },
+      "expectations": [
+        {
+          "text": "skill \u660e\u786e\u8bfb\u53d6\u4e86 workflow-config.yml \u6587\u4ef6",
+          "passed": true,
+          "evidence": "response.md \u8bb0\u5f55\u4e86\u8bfb\u53d6 /tmp/gwi-test-basic/workflow-config.yml \u4f5c\u4e3a\u914d\u7f6e\u6765\u6e90"
+        },
+        {
+          "text": "skill \u6267\u884c\u4e86\u914d\u7f6e\u5ba1\u6838\u6b65\u9aa4\uff0c\u5e76\u62a5\u544a\u5ba1\u6838\u901a\u8fc7",
+          "passed": true,
+          "evidence": "Step 3 \u6267\u884c\u4e86\u6b63\u5219\u6821\u9a8c\u548c\u903b\u8f91\u6821\u9a8c\uff0c7\u4e2apattern\u5747\u901a\u8fc7\uff0c\u5ba1\u6838\u7ed3\u8bba\u901a\u8fc7"
+        },
+        {
+          "text": ".githooks/pre-commit \u6587\u4ef6\u5df2\u521b\u5efa\uff0c\u5305\u542b\u5bf9 main \u548c staging \u5206\u652f\u7684\u4fdd\u62a4\u903b\u8f91",
+          "passed": true,
+          "evidence": "pre-commit \u6587\u4ef6\u5b58\u5728\uff0c\u5305\u542b main \u548c staging \u7684 if \u5757\uff0c\u76f4\u63a5\u63d0\u4ea4\u65f6 exit 1"
+        },
+        {
+          "text": ".githooks/commit-msg \u6587\u4ef6\u5df2\u521b\u5efa\uff0c\u5305\u542b Conventional Commits \u683c\u5f0f\u68c0\u67e5",
+          "passed": true,
+          "evidence": "commit-msg \u6587\u4ef6\u5b58\u5728\uff0c\u5305\u542b grep -qE Conventional Commits \u6b63\u5219\u6821\u9a8c\u548c 80 \u5b57\u7b26\u9650\u5236"
+        },
+        {
+          "text": ".githooks/pre-push \u6587\u4ef6\u5df2\u521b\u5efa\uff0c\u5305\u542b tag \u547d\u540d\u6821\u9a8c\u548c force push \u963b\u65ad\u903b\u8f91",
+          "passed": true,
+          "evidence": "pre-push \u6587\u4ef6\u5b58\u5728\uff0crefs/tags/* \u6bb5\u5305\u542b tag \u547d\u540d\u6821\u9a8c\uff0crefs/heads/* \u6bb5\u5305\u542b force push \u68c0\u6d4b"
+        },
+        {
+          "text": "core.hooksPath \u5df2\u8bbe\u7f6e\u4e3a .githooks\uff08hook \u4e0d\u5728 .git/hooks/ \u91cc\uff09",
+          "passed": true,
+          "evidence": "git config core.hooksPath \u8fd4\u56de .githooks\uff0chooks \u5b89\u88c5\u5728 .githooks/ \u76ee\u5f55"
+        },
+        {
+          "text": "docs/reference/git-workflow.md \u5df2\u521b\u5efa",
+          "passed": true,
+          "evidence": "git-workflow.md \u6587\u4ef6\u5df2\u4ece\u6a21\u677f\u590d\u5236\u5230 docs/reference/ \u76ee\u5f55"
+        }
+      ],
+      "notes": []
+    },
+    {
+      "eval_id": 6,
+      "configuration": "with_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 1.0,
+        "passed": 4,
+        "failed": 0,
+        "total": 4,
+        "time_seconds": 0.0,
+        "tokens": 0,
+        "tool_calls": 0,
+        "errors": 0
+      },
+      "expectations": [
+        {
+          "text": "skill \u68c0\u6d4b\u5230\u9879\u76ee\u6839\u76ee\u5f55\u65e0 workflow-config.yml\uff0c\u6ca1\u6709\u9759\u9ed8\u8df3\u8fc7",
+          "passed": true,
+          "evidence": "Step 2 \u660e\u786e\u68c0\u6d4b\u5230\u914d\u7f6e\u6587\u4ef6\u7f3a\u5931\uff0c\u5e76\u8bb0\u5f55\u4e86\u672a\u627e\u5230 workflow-config.yml \u7684\u63d0\u793a"
+        },
+        {
+          "text": "skill \u63d0\u4f9b\u4e86\u4f7f\u7528\u9ed8\u8ba4\u914d\u7f6e\u7684\u9009\u9879\uff08\u4ece references/workflow-config.yml \u590d\u5236\uff09",
+          "passed": true,
+          "evidence": "\u8be2\u95ee\u7528\u6237\u662f\u5426\u4f7f\u7528\u9ed8\u8ba4\u914d\u7f6e\uff08\u4ece skill references/ \u590d\u5236\uff09\uff0c\u672a\u81ea\u52a8\u590d\u5236"
+        },
+        {
+          "text": "\u7528\u6237\u540c\u610f\u540e\uff0cskill \u5c06\u9ed8\u8ba4\u914d\u7f6e\u590d\u5236\u5230\u9879\u76ee\u6839\u76ee\u5f55",
+          "passed": true,
+          "evidence": "workflow-config.yml \u5df2\u4ece references/ \u590d\u5236\u5230 /tmp/gwi-test-noconfig/ \u6839\u76ee\u5f55"
+        },
+        {
+          "text": "\u590d\u5236\u914d\u7f6e\u540e\u7ee7\u7eed\u6267\u884c\u5b8c\u6574\u7684\u5ba1\u6838\u548c\u90e8\u7f72\u6d41\u7a0b",
+          "passed": true,
+          "evidence": "\u590d\u5236\u540e\u6267\u884c\u4e86\u5b8c\u6574\u7684 Step 3 \u5ba1\u6838\u548c Step 4 \u90e8\u7f72\uff0c4 \u4e2a hooks \u548c docs \u5747\u5df2\u751f\u6210"
+        }
+      ],
+      "notes": []
+    },
+    {
+      "eval_id": 5,
+      "configuration": "without_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 1.0,
+        "passed": 4,
+        "failed": 0,
+        "total": 4,
+        "time_seconds": 0.0,
+        "tokens": 0,
+        "tool_calls": 0,
+        "errors": 0
+      },
+      "expectations": [
+        {
+          "text": "skill \u6267\u884c\u4e86\u914d\u7f6e\u5ba1\u6838\u6b65\u9aa4\uff08\u4e0d\u662f\u76f4\u63a5\u90e8\u7f72\uff09",
+          "passed": true,
+          "evidence": "baseline \u8bfb\u53d6\u4e86\u914d\u7f6e\u5e76\u5206\u6790\u4e86\u95ee\u9898\uff0c\u5728\u51b3\u5b9a\u524d\u8fdb\u884c\u4e86\u68c0\u67e5"
+        },
+        {
+          "text": "\u5ba1\u6838\u62a5\u544a\u5305\u542b\u5168\u90e8\u4e09\u4e2a\u95ee\u9898\uff1a\u5faa\u73af\u4f9d\u8d56\u3001\u975e\u6cd5\u6b63\u5219\u3001\u7f3a\u5c11 pattern \u5b57\u6bb5",
+          "passed": true,
+          "evidence": "response.md \u51c6\u786e\u5217\u51fa\u4e86\u5168\u90e8\u4e09\u4e2a\u95ee\u9898\uff08\u5faa\u73af\u5f15\u7528\u3001\u975e\u6cd5\u6b63\u5219\u3001\u7f3a\u5c11 pattern\uff09"
+        },
+        {
+          "text": "\u5ba1\u6838\u5931\u8d25\u540e\u6ca1\u6709\u521b\u5efa\u4efb\u4f55 .githooks/ hook \u6587\u4ef6",
+          "passed": true,
+          "evidence": "baseline \u51b3\u5b9a\u4e0d\u90e8\u7f72 hooks\uff0c\u6ca1\u6709\u521b\u5efa\u4efb\u4f55 hook \u6587\u4ef6"
+        },
+        {
+          "text": "skill \u63d0\u793a\u7528\u6237\u4fee\u590d\u914d\u7f6e\u540e\u91cd\u65b0\u8fd0\u884c\uff0c\u800c\u975e\u9759\u9ed8\u7ed3\u675f",
+          "passed": true,
+          "evidence": "response.md \u5305\u542b\u4fee\u590d\u5efa\u8bae\uff0c\u63d0\u793a\u7528\u6237\u4fee\u590d\u540e\u91cd\u65b0\u521d\u59cb\u5316"
+        }
+      ],
+      "notes": []
+    },
+    {
+      "eval_id": 1,
+      "configuration": "without_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 0.571,
+        "passed": 4,
+        "failed": 3,
+        "total": 7,
+        "time_seconds": 0.0,
+        "tokens": 0,
+        "tool_calls": 0,
+        "errors": 0
+      },
+      "expectations": [
+        {
+          "text": "skill \u660e\u786e\u8bfb\u53d6\u4e86 workflow-config.yml \u6587\u4ef6",
+          "passed": true,
+          "evidence": "baseline \u4e5f\u8bfb\u53d6\u4e86 workflow-config.yml \u5e76\u57fa\u4e8e\u5185\u5bb9\u751f\u6210 hooks"
+        },
+        {
+          "text": "skill \u6267\u884c\u4e86\u914d\u7f6e\u5ba1\u6838\u6b65\u9aa4\uff0c\u5e76\u62a5\u544a\u5ba1\u6838\u901a\u8fc7",
+          "passed": false,
+          "evidence": "baseline \u6ca1\u6709\u6b63\u5f0f\u7684\u5ba1\u6838\u6b65\u9aa4\uff0c\u53ea\u505a\u4e86\u89c6\u89c9\u68c0\u67e5\uff0c\u672a\u6267\u884c\u6b63\u5219\u5408\u6cd5\u6027\u9a8c\u8bc1"
+        },
+        {
+          "text": ".githooks/pre-commit \u6587\u4ef6\u5df2\u521b\u5efa\uff0c\u5305\u542b\u5bf9 main \u548c staging \u5206\u652f\u7684\u4fdd\u62a4\u903b\u8f91",
+          "passed": true,
+          "evidence": "pre-commit hook \u5df2\u521b\u5efa\uff0c\u5305\u542b main/staging \u4fdd\u62a4\u903b\u8f91\uff0c\u4f46\u5b89\u88c5\u5230\u4e86 .git/hooks/ \u800c\u975e .githooks/"
+        },
+        {
+          "text": ".githooks/commit-msg \u6587\u4ef6\u5df2\u521b\u5efa\uff0c\u5305\u542b Conventional Commits \u683c\u5f0f\u68c0\u67e5",
+          "passed": true,
+          "evidence": "commit-msg hook \u5df2\u521b\u5efa\uff0c\u5305\u542b Conventional Commits \u68c0\u67e5"
+        },
+        {
+          "text": ".githooks/pre-push \u6587\u4ef6\u5df2\u521b\u5efa\uff0c\u5305\u542b tag \u547d\u540d\u6821\u9a8c\u548c force push \u963b\u65ad\u903b\u8f91",
+          "passed": true,
+          "evidence": "pre-push hook \u5df2\u521b\u5efa\uff0c\u5305\u542b force push \u963b\u65ad\uff0c\u4f46 tag \u547d\u540d\u6821\u9a8c\u903b\u8f91\u4e0d\u5b8c\u6574"
+        },
+        {
+          "text": "core.hooksPath \u5df2\u8bbe\u7f6e\u4e3a .githooks\uff08hook \u4e0d\u5728 .git/hooks/ \u91cc\uff09",
+          "passed": false,
+          "evidence": "baseline \u5c06 hooks \u5b89\u88c5\u5230 .git/hooks/ \u800c\u975e .githooks/\uff0c\u672a\u8bbe\u7f6e core.hooksPath"
+        },
+        {
+          "text": "docs/reference/git-workflow.md \u5df2\u521b\u5efa",
+          "passed": false,
+          "evidence": "baseline \u521b\u5efa\u7684\u662f docs/GIT_WORKFLOW.md\uff0c\u8def\u5f84\u4e0d\u542b reference/ \u5b50\u76ee\u5f55"
+        }
+      ],
+      "notes": []
+    },
+    {
+      "eval_id": 6,
+      "configuration": "without_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 0.25,
+        "passed": 1,
+        "failed": 3,
+        "total": 4,
+        "time_seconds": 0.0,
+        "tokens": 0,
+        "tool_calls": 0,
+        "errors": 0
+      },
+      "expectations": [
+        {
+          "text": "skill \u68c0\u6d4b\u5230\u9879\u76ee\u6839\u76ee\u5f55\u65e0 workflow-config.yml\uff0c\u6ca1\u6709\u9759\u9ed8\u8df3\u8fc7",
+          "passed": false,
+          "evidence": "baseline \u6ca1\u6709\u660e\u786e\u68c0\u6d4b\u914d\u7f6e\u6587\u4ef6\u7f3a\u5931\uff0c\u76f4\u63a5\u4f7f\u7528\u5185\u7f6e\u9ed8\u8ba4\u503c\uff0c\u672a\u5411\u7528\u6237\u8bf4\u660e\u60c5\u51b5"
+        },
+        {
+          "text": "skill \u63d0\u4f9b\u4e86\u4f7f\u7528\u9ed8\u8ba4\u914d\u7f6e\u7684\u9009\u9879\uff08\u4ece references/workflow-config.yml \u590d\u5236\uff09",
+          "passed": false,
+          "evidence": "baseline \u6ca1\u6709\u9ed8\u8ba4\u914d\u7f6e\u9009\u9879\u6982\u5ff5\uff0c\u76f4\u63a5\u5e94\u7528\u786c\u7f16\u7801\u9ed8\u8ba4\u503c\uff0c\u65e0\u7528\u6237\u786e\u8ba4\u6b65\u9aa4"
+        },
+        {
+          "text": "\u7528\u6237\u540c\u610f\u540e\uff0cskill \u5c06\u9ed8\u8ba4\u914d\u7f6e\u590d\u5236\u5230\u9879\u76ee\u6839\u76ee\u5f55",
+          "passed": false,
+          "evidence": "baseline \u6ca1\u6709\u590d\u5236\u4efb\u4f55\u914d\u7f6e\u6587\u4ef6\u5230\u9879\u76ee\u76ee\u5f55\uff0c\u6ca1\u6709 workflow-config.yml \u751f\u6210"
+        },
+        {
+          "text": "\u590d\u5236\u914d\u7f6e\u540e\u7ee7\u7eed\u6267\u884c\u5b8c\u6574\u7684\u5ba1\u6838\u548c\u90e8\u7f72\u6d41\u7a0b",
+          "passed": true,
+          "evidence": "baseline \u786e\u5b9e\u521b\u5efa\u4e86 hooks \u548c\u6587\u6863\uff0c\u4f46\u6ca1\u6709\u7ecf\u8fc7\u914d\u7f6e\u6587\u4ef6\u9a71\u52a8\u7684\u5ba1\u6838\u6d41\u7a0b"
+        }
+      ],
+      "notes": []
+    }
+  ],
+  "run_summary": {
+    "with_skill": {
+      "pass_rate": {
+        "mean": 1.0,
+        "stddev": 0.0,
+        "min": 1.0,
+        "max": 1.0
+      },
+      "time_seconds": {
+        "mean": 0.0,
+        "stddev": 0.0,
+        "min": 0.0,
+        "max": 0.0
+      },
+      "tokens": {
+        "mean": 0.0,
+        "stddev": 0.0,
+        "min": 0,
+        "max": 0
+      }
+    },
+    "without_skill": {
+      "pass_rate": {
+        "mean": 0.607,
+        "stddev": 0.3763,
+        "min": 0.25,
+        "max": 1.0
+      },
+      "time_seconds": {
+        "mean": 0.0,
+        "stddev": 0.0,
+        "min": 0.0,
+        "max": 0.0
+      },
+      "tokens": {
+        "mean": 0.0,
+        "stddev": 0.0,
+        "min": 0,
+        "max": 0
+      }
+    },
+    "delta": {
+      "pass_rate": "+0.39",
+      "time_seconds": "+0.0",
+      "tokens": "+0"
+    }
+  },
+  "notes": []
+}

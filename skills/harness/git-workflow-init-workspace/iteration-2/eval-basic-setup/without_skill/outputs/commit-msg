@@ -1,0 +1,39 @@
+#!/bin/sh
+# commit-msg: enforce Conventional Commits format
+# Generated from workflow-config.yml (commit_message.conventional)
+# Types: feat, fix, chore, docs, refactor, test, style, perf
+# Max subject length: 80 characters
+
+COMMIT_MSG_FILE="$1"
+COMMIT_MSG=$(head -1 "$COMMIT_MSG_FILE")
+
+# Skip merge commits
+if echo "$COMMIT_MSG" | grep -qE '^Merge '; then
+  exit 0
+fi
+
+# Conventional commit pattern: type(scope)?: subject
+PATTERN="^(feat|fix|chore|docs|refactor|test|style|perf)(\(.+\))?: .+"
+if ! echo "$COMMIT_MSG" | grep -qE "$PATTERN"; then
+  echo "ERROR: Commit message does not follow Conventional Commits format."
+  echo ""
+  echo "Expected format:  <type>(<scope>): <subject>"
+  echo "Allowed types:    feat, fix, chore, docs, refactor, test, style, perf"
+  echo ""
+  echo "Examples:"
+  echo "  feat: add user authentication"
+  echo "  fix(api): handle null response"
+  echo "  chore: update dependencies"
+  echo ""
+  echo "Your message: $COMMIT_MSG"
+  exit 1
+fi
+
+# Check max subject length (80 chars)
+MSG_LENGTH=${#COMMIT_MSG}
+if [ "$MSG_LENGTH" -gt 80 ]; then
+  echo "ERROR: Commit subject too long ($MSG_LENGTH chars). Max is 80."
+  exit 1
+fi
+
+exit 0

@@ -1,0 +1,43 @@
+#!/bin/sh
+# pre-push: block force pushes to protected branches + validate tag format
+# Generated from workflow-config.yml (push_rules, tags)
+
+REMOTE="$1"
+URL="$2"
+
+# Tag patterns from workflow-config.yml
+TAG_PATTERN="^v[0-9]+\.[0-9]+\.[0-9]+$"
+TAG_PATTERN_PRERELEASE="^v[0-9]+\.[0-9]+\.[0-9]+-.+$"
+
+while read local_ref local_sha remote_ref remote_sha; do
+  # Detect force push: local_sha is non-zero but remote_sha would be overwritten
+  # (git passes zero SHA as 0000000000000000000000000000000000000000 for deletes)
+  ZERO_SHA="0000000000000000000000000000000000000000"
+
+  BRANCH=$(echo "$remote_ref" | sed 's|refs/heads/||')
+  TAG=$(echo "$remote_ref" | sed 's|refs/tags/||')
+
+  # Block force push to main and staging
+  if [ "$BRANCH" = "main" ] || [ "$BRANCH" = "staging" ]; then
+    if [ "$remote_sha" != "$ZERO_SHA" ] && [ "$local_sha" != "$ZERO_SHA" ]; then
+      # Check if it's a non-fast-forward (force) push
+      if ! git merge-base --is-ancestor "$remote_sha" "$local_sha" 2>/dev/null; then
+        echo "ERROR: Force push to '$BRANCH' is blocked by workflow policy."
+        echo "Remote: $REMOTE ($URL)"
+        exit 1
+      fi
+    fi
+  fi
+
+  # Validate tag format if pushing a tag
+  if echo "$remote_ref" | grep -q '^refs/tags/'; then
+    if ! echo "$TAG" | grep -qE "$TAG_PATTERN" && ! echo "$TAG" | grep -qE "$TAG_PATTERN_PRERELEASE"; then
+      echo "ERROR: Tag '$TAG' does not match allowed patterns."
+      echo "Allowed: v<major>.<minor>.<patch> or v<major>.<minor>.<patch>-<suffix>"
+      echo "Examples: v1.0.0, v2.3.1-beta.1"
+      exit 1
+    fi
+  fi
+done
+
+exit 0

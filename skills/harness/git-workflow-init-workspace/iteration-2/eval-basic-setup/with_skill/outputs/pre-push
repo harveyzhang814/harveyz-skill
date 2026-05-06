@@ -1,0 +1,36 @@
+#!/bin/sh
+while IFS=' ' read -r local_ref local_sha remote_ref remote_sha; do
+
+    case "$remote_ref" in
+        refs/tags/*)
+            tag_name="${remote_ref#refs/tags/}"
+            VALID=0
+            printf '%s\n' "$tag_name" | grep -qE "^v[0-9]+\.[0-9]+\.[0-9]+$" && VALID=1
+            printf '%s\n' "$tag_name" | grep -qE "^v[0-9]+\.[0-9]+\.[0-9]+-.+$" && VALID=1
+            if [ "$VALID" -eq 0 ]; then
+                echo "❌ Tag 名称不符合命名规范：'$tag_name'"
+                echo "   允许格式：v1.2.3 或 v1.2.3-rc.1"
+                exit 1
+            fi
+            if [ "$(git cat-file -t "$local_sha" 2>/dev/null)" != "tag" ]; then
+                echo "❌ 请使用 annotated tag：git tag -a $tag_name -m '<描述>'"
+                exit 1
+            fi
+            ;;
+
+        refs/heads/*)
+            branch="${remote_ref#refs/heads/}"
+            case "$branch" in
+                main|staging)
+                    if [ "$remote_sha" != "0000000000000000000000000000000000000000" ]; then
+                        if ! git merge-base --is-ancestor "$remote_sha" "$local_sha" 2>/dev/null; then
+                            echo "❌ 禁止强制推送到 $branch"
+                            exit 1
+                        fi
+                    fi
+                    ;;
+            esac
+            ;;
+    esac
+done
+exit 0

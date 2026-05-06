@@ -1,0 +1,30 @@
+{
+  "expectations": [
+    {
+      "text": "skill 检测到项目根目录无 workflow-config.yml，没有静默跳过",
+      "passed": true,
+      "evidence": "Step 2 明确检测到配置文件缺失，并记录了未找到 workflow-config.yml 的提示"
+    },
+    {
+      "text": "skill 提供了使用默认配置的选项（从 references/workflow-config.yml 复制）",
+      "passed": true,
+      "evidence": "询问用户是否使用默认配置（从 skill references/ 复制），未自动复制"
+    },
+    {
+      "text": "用户同意后，skill 将默认配置复制到项目根目录",
+      "passed": true,
+      "evidence": "workflow-config.yml 已从 references/ 复制到 /tmp/gwi-test-noconfig/ 根目录"
+    },
+    {
+      "text": "复制配置后继续执行完整的审核和部署流程",
+      "passed": true,
+      "evidence": "复制后执行了完整的 Step 3 审核和 Step 4 部署，4 个 hooks 和 docs 均已生成"
+    }
+  ],
+  "summary": {
+    "passed": 4,
+    "failed": 0,
+    "total": 4,
+    "pass_rate": 1.0
+  }
+}
