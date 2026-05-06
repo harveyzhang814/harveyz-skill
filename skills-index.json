@@ -10,7 +10,7 @@
   },
   "skills": [
     { "path": "analysis/skill-analyzer", "bundle": "analysis", "exclude": ["research/"] },
-    { "path": "document/diataxis-docs", "bundle": "document" },
+    { "path": "harness/diataxis-docs", "bundle": "document" },
     { "path": "harness/full-stack-debug-env", "bundle": "harness" },
     { "path": "superpowers-fork/brainstorming", "bundle": "brainstorming" },
     { "path": "superpowers-fork/executing-plans", "bundle": "dev" },
