@@ -42,6 +42,9 @@
 
 
 
+# 排除 eval workspace
+**/*-workspace/
+
 # 排除构建产物
 node_modules/
 .DS_Store
