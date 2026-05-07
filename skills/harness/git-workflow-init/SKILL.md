@@ -416,26 +416,28 @@ git config core.hooksPath .githooks
 
 #### 7a. 读取模板并渲染各占位符
 
-读取 `references/git-workflow-template.md`，用 python3 将以下占位符替换为从配置生成的内容：
+使用 `references/render_docs.py` 完成渲染：
+
+```bash
+python3 <skill-path>/references/render_docs.py \
+  workflow-config.yml \
+  <skill-path>/references/git-workflow-template.md \
+  docs/reference/git-workflow.md
+# 输出 NEW / UPDATED / UNCHANGED
+```
+
+脚本读取 `references/git-workflow-template.md`，将以下占位符替换为从配置生成的内容：
 
 ---
 
 **`{{BRANCH_TOPOLOGY_ASCII}}`** — ASCII 分支拓扑树
 
-从 `branches.protected` 生成。拓扑构建规则：
-1. 顶层节点 = 不出现在任何分支 `merge_from` 中的受保护分支（通常是 `main`）
-2. 对顶层节点，其 `merge_from` 中列出的每个受保护分支作为二级节点，缩进 2 格并加 `<-` 前缀
-3. 对二级节点，其 `merge_from` 中的非受保护分支（如 `feature/*`）作为三级节点，缩进 8 格
-4. 递归处理多层结构
+从 `branches.protected` 生成，第一个受保护分支为根节点，其 `merge_from` 分支为子节点，以此类推。
 
-示例（main ← staging ← feature/*，main ← develop ← feature/*）：
+示例（main ← staging ← feature/*）：
 ```
 main
   <- staging
-        <- feature/*
-        <- fix/*
-        <- chore/*
-  <- develop
         <- feature/*
         <- fix/*
   <- release/*
@@ -448,10 +450,8 @@ main
 表头固定为 `| 分支 | 用途 | 合并目标 |`。
 
 行生成规则：
-- `branches.protected` 中的每个分支生成一行，用途根据分支名推断（main→生产就绪代码，staging→集成/预发布，develop→开发集成）
+- `branches.protected` 中的每个分支生成一行，用途根据分支名推断（main→生产就绪代码，staging→集成/预发布，develop→开发集成，release/*→发版准备）
 - `branch_naming.allowed_patterns` 中的每个 pattern 额外生成一行，前缀从正则中提取（`^feature/.+` → `feature/<名称>`），用途同样按约定推断
-- 合并目标列：找出哪个受保护分支的 `merge_from` 包含该分支名，该分支即为合并目标；若无则填 `—`
-- `release/*` pattern 的合并目标为 `main`（从 main 的 merge_from 推断）
 
 ---
 
