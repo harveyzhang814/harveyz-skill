@@ -406,7 +406,10 @@ BRANCH=$(git symbolic-ref --short HEAD 2>/dev/null)
 ```bash
 chmod +x .githooks/*
 git config core.hooksPath .githooks
+git config merge.ff false
 ```
+
+`merge.ff false` 禁止 fast-forward 合并，确保每次合并都产生 merge commit，pre-commit 钩子才能检查合并来源分支。
 
 ---
 
