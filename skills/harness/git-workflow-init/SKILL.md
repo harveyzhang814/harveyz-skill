@@ -81,6 +81,45 @@ echo "" | grep -E "<pattern>" > /dev/null 2>&1; echo $?
 - tags.allowed_patterns 删除: ^v[0-9]+\.[0-9]+\.[0-9]+-rc\.[0-9]+$
 ```
 
+**YAML 分支名提取规则（重要）：**
+
+不要用宽泛的 `grep "name:"` 提取分支名——YAML 文件中多个层级都可能含有 `name:` 字段，会导致误匹配。
+
+正确方式：用 `python3` 精确解析 YAML，避免依赖缩进层级的文本匹配：
+
+```bash
+# 从 workflow-config.yml 提取 branches.protected 下的分支名
+python3 -c "
+import sys, re
+content = open('workflow-config.yml').read()
+# 提取 branches.protected 块内所有 '- name: <value>' 条目
+in_protected = False
+for line in content.splitlines():
+    if 'protected:' in line:
+        in_protected = True
+        continue
+    if in_protected:
+        m = re.match(r'\s+- name:\s+(\S+)', line)
+        if m:
+            print(m.group(1))
+        elif line.strip() and not line.startswith(' '):
+            break
+"
+```
+
+同理，从 lock 文件提取分支名：
+
+```bash
+python3 -c "
+import re
+content = open('.githooks/.workflow-config.lock.yml').read()
+for line in content.splitlines():
+    m = re.match(r'\s+- name:\s+(\S+)', line)
+    if m:
+        print(m.group(1))
+"
+```
+
 这份摘要用于后续冲突检测的输入。
 
 #### 4b. MANAGED 块 hash 校验 — 用户是否手改了生成的代码
@@ -201,7 +240,31 @@ mkdir -p .githooks
 
 2. **用户代码区（MANAGED 块外）**：永远不覆盖，原样保留
 
-3. **差量写入**：生成全文后与磁盘文件对比
+3. **写入 MANAGED 块内容时，禁止用 awk `-v` 传多行 shell 脚本**。多行字符串含换行符时 awk 会报错。正确方式是先将块内容写入临时文件，再用 `python3` 或 `perl` 完成插入替换：
+
+   ```bash
+   # 将新 MANAGED 块内容写入临时文件
+   TMPBLOCK=$(mktemp)
+   cat > "$TMPBLOCK" << 'BLOCKEOF'
+   # --- BEGIN MANAGED: branches.protected/develop (hash:PLACEHOLDER) ---
+   if [ "$BRANCH" = "develop" ]; then
+       ...
+   fi
+   # --- END MANAGED: branches.protected/develop ---
+   BLOCKEOF
+
+   # 用 python3 将临时文件内容插入目标位置（在 exit 0 之前）
+   python3 - "$HOOKFILE" "$TMPBLOCK" << 'PYEOF'
+   import sys
+   hook = open(sys.argv[1]).read()
+   block = open(sys.argv[2]).read()
+   hook = hook.replace('\nexit 0\n', '\n' + block + '\nexit 0\n', 1)
+   open(sys.argv[1], 'w').write(hook)
+   PYEOF
+   rm "$TMPBLOCK"
+   ```
+
+4. **差量写入**：生成全文后与磁盘文件对比
    - 内容相同 → 跳过，标记 `UNCHANGED`
    - 内容不同 → 覆盖写入，标记 `UPDATED`
    - 文件不存在 → 新建，标记 `NEW`
