@@ -104,3 +104,7 @@ This is run automatically via the `prepack` hook.
 ## Skills Not Yet Published
 
 Skills present in `skills/` but absent from `skills-index.json` are excluded from npm. The `generate-npmignore.js` script enforces this by generating `.npmignore` entries for all unlisted skill directories.
+
+## Git 工作流
+
+分支命名规范、保护规则与合并流程详见 [docs/reference/git-workflow.md](docs/reference/git-workflow.md)。
