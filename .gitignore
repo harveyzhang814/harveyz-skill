@@ -10,6 +10,11 @@
 !bundles.json
 !skills-index.json
 !.npmignore
+!workflow-config.yml
+
+# 保留 git hooks
+!.githooks/
+!.githooks/**
 
 # 保留 npm 包目录
 !bin/
@@ -36,6 +41,9 @@
 !docs/**/*
 
 
+
+# 排除 eval workspace
+**/*-workspace/
 
 # 排除构建产物
 node_modules/

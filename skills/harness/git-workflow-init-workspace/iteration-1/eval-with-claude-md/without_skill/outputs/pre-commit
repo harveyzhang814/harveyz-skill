@@ -1,6 +1,0 @@
-#!/bin/sh
-branch=$(git symbolic-ref --short HEAD 2>/dev/null)
-if [ "$branch" = "main" ] || [ "$branch" = "staging" ]; then
-  echo "❌ Direct commits to '$branch' not allowed."
-  exit 1
-fi
