@@ -410,12 +410,117 @@ git config core.hooksPath .githooks
 
 ---
 
-### Step 7 — 写入工作流文档（差量）
+### Step 7 — 从配置渲染并写入工作流文档（差量）
+
+每次运行都根据当前 `workflow-config.yml` 的最终状态重新渲染文档，确保文档与配置始终一致。
+
+#### 7a. 读取模板并渲染各占位符
+
+读取 `references/git-workflow-template.md`，用 python3 将以下占位符替换为从配置生成的内容：
+
+---
+
+**`{{BRANCH_TOPOLOGY_ASCII}}`** — ASCII 分支拓扑树
+
+从 `branches.protected` 生成，第一个受保护分支为根节点，其 `merge_from` 分支为子节点，以此类推。
+
+示例（main ← staging ← feature/*）：
+```
+main
+  <- staging
+        <- feature/*
+        <- fix/*
+  <- release/*
+```
+
+---
+
+**`{{BRANCH_TABLE}}`** — 分支说明 Markdown 表格
+
+表头固定为 `| 分支 | 用途 | 合并目标 |`。
+
+行生成规则：
+- `branches.protected` 中的每个分支生成一行，用途根据分支名推断（main→生产就绪代码，staging→集成/预发布，develop→开发集成，release/*→发版准备）
+- `branch_naming.allowed_patterns` 中的每个 pattern 额外生成一行，前缀从正则中提取（`^feature/.+` → `feature/<名称>`），用途同样按约定推断
+
+---
+
+**`{{PROTECTION_RULES}}`** — 分支保护规则列表
+
+对 `branches.protected` 中每个分支生成一条 bullet：
+```
+- **`<name>`** — 禁止直接提交。只接受来自 `<merge_from[0]>` 或 `<merge_from[1]>` 的合并。
+```
+若 `allow_direct_commit: true` 则改为"直接提交时仅发出警告"。
+
+---
+
+**`{{WORKFLOW_CHECKOUT_EXAMPLE}}`** / **`{{WORKFLOW_MERGE_EXAMPLE}}`** / **`{{WORKFLOW_RELEASE_EXAMPLE}}`** — 开发流程示例命令
+
+从 `branches.protected` 推断：
+- 集成分支 = 非 main、非 release/* 且最多被 main 合并的分支（通常是 staging 或 develop）
+- 主分支 = main（或 `merge_from` 中没有其他受保护分支的顶层分支）
+
+生成对应的 `git checkout` / `git merge` / `git push` 示例命令。
+
+---
+
+**`{{NAMING_TABLE}}`** — 分支命名规范表格
+
+表头：`| 前缀 | 适用场景 | 示例 |`
+
+对 `branch_naming.allowed_patterns` 中每个 pattern 生成一行：
+- 从正则提取前缀（`^feature/.+` → `feature/`）
+- 用途按约定推断（feature→新功能，fix→Bug 修复，chore→非功能性变更，doc/docs→文档，release→发版切点）
+- 示例生成两个具体名称（`feature/user-auth`、`feature/dark-mode`）
+
+---
+
+**`{{NAMING_EXEMPT}}`** — 豁免分支
+
+将 `branch_naming.exempt` 列表拼接为 `` `main`、`staging` `` 格式。
+
+---
+
+**`{{COMMIT_FORMAT_SECTION}}`** — 提交信息格式说明
+
+根据 `commit_message.format` 生成不同内容：
+
+- `format: conventional`：
+  ```
+  遵循 Conventional Commits 规范：<类型>(<范围>): <描述>
+  **类型：** `feat` | `fix` | `chore` | ...（从 types 列表生成）
+  **首行长度限制：** <max_subject_length> 个字符
+  ```
+
+- `format: regex`：
+  ```
+  提交信息首行必须匹配正则：`<pattern>`
+  **首行长度限制：** <max_subject_length> 个字符
+  ```
+
+- `format: none`：
+  ```
+  本项目无提交信息格式要求。
+  ```
+
+---
+
+**`{{FAQ_SECTION}}`** — 常见问题动态部分
+
+根据实际分支名生成对应 FAQ 条目：
+- 若存在集成分支（如 staging）：生成"在 staging 上提交被拒绝怎么办"
+- 若存在 release/* 分支规则：生成"紧急热修复怎么办"
+
+---
+
+#### 7b. 差量写入
 
 1. 若 `docs/reference/` 不存在则创建
-2. 读取 `references/git-workflow-template.md`，填入实际配置内容
-3. 与现有 `docs/reference/git-workflow.md` 对比，内容相同则跳过
-4. 若 `docs/INDEX.md` 存在，追加索引行（已存在则跳过）
+2. 将渲染后的内容与现有 `docs/reference/git-workflow.md` 对比
+   - 内容相同 → 跳过，标记 `UNCHANGED`
+   - 内容不同或文件不存在 → 写入，标记 `UPDATED` 或 `NEW`
+3. 若 `docs/INDEX.md` 存在，追加索引行（已存在则跳过）
 
 ---
 
