@@ -1,0 +1,82 @@
+[
+  {
+    "query": "帮我把这篇文章抓下来翻译一下：https://lilianweng.github.io/posts/2023-06-23-agent/",
+    "should_trigger": true
+  },
+  {
+    "query": "fetch and translate this article for me: https://www.anthropic.com/news/claude-3-5-sonnet",
+    "should_trigger": true
+  },
+  {
+    "query": "https://simonwillison.net/2024/Jun/10/llms-reading-code/ 这篇抓一下存到 obsidian",
+    "should_trigger": true
+  },
+  {
+    "query": "批量抓取这几篇文章并翻译保存：\nhttps://arxiv.org/abs/2309.00864\nhttps://arxiv.org/abs/2401.12966\nhttps://arxiv.org/abs/2402.01301",
+    "should_trigger": true
+  },
+  {
+    "query": "这个推文帮我存一下 https://x.com/karpathy/status/1849535016234983744",
+    "should_trigger": true
+  },
+  {
+    "query": "我看到一篇很好的关于 agentic AI 的文章，链接是 https://huggingface.co/blog/smolagents，帮我抓取翻译保存",
+    "should_trigger": true
+  },
+  {
+    "query": "translate and save this blog post to my vault",
+    "should_trigger": true
+  },
+  {
+    "query": "把今天读到的这几个链接都存到 obsidian 里：https://blog.langchain.dev/reflection-agents/ 和 https://www.deeplearning.ai/the-batch/agentic-design-patterns/",
+    "should_trigger": true
+  },
+  {
+    "query": "抓文章 https://eugeneyan.com/writing/llm-patterns/",
+    "should_trigger": true
+  },
+  {
+    "query": "帮我抓一篇英文文章翻译成中文，链接是 https://newsletter.pragmaticengineer.com/p/how-to-architect-ai-applications",
+    "should_trigger": true
+  },
+  {
+    "query": "帮我总结一下这篇文章的要点 https://lilianweng.github.io/posts/2023-06-23-agent/",
+    "should_trigger": false
+  },
+  {
+    "query": "帮我翻译这段文字：Large language models (LLMs) are increasingly used as the backbone of AI agents.",
+    "should_trigger": false
+  },
+  {
+    "query": "我想用 Python 写一个爬虫抓取新闻网站，怎么实现？",
+    "should_trigger": false
+  },
+  {
+    "query": "帮我写一篇关于 AI Agent 架构设计的技术文章",
+    "should_trigger": false
+  },
+  {
+    "query": "这个 PDF 文件怎么转成 markdown 格式？/Users/harveyzhang96/Downloads/paper.pdf",
+    "should_trigger": false
+  },
+  {
+    "query": "推荐几篇关于 RAG 的好文章",
+    "should_trigger": false
+  },
+  {
+    "query": "我的 Obsidian 同步插件不工作了，怎么修复？",
+    "should_trigger": false
+  },
+  {
+    "query": "帮我读一下 ~/Documents/notes.md 这个文件的内容",
+    "should_trigger": false
+  },
+  {
+    "query": "这个网站用了什么技术栈 https://vercel.com",
+    "should_trigger": false
+  },
+  {
+    "query": "帮我把这段代码的注释翻译成中文：// This function fetches data from the API",
+    "should_trigger": false
+  }
+]
