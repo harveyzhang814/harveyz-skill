@@ -108,3 +108,5 @@ Skills present in `skills/` but absent from `skills-index.json` are excluded fro
 ## Git 工作流
 
 分支命名规范、保护规则与合并流程详见 [docs/reference/git-workflow.md](docs/reference/git-workflow.md)。
+
+**分支使用规范：** 一个功能或迭代使用一个分支，在该分支上积累所有相关改动，只在用户明确说"合并"或"完成"时才 merge 到 staging。不要为每次 commit 单独创建新分支。

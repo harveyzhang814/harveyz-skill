@@ -77,5 +77,28 @@
         "随后继续完整的审核和部署流程"
       ]
     }
+  ],
+  "v4_evals": [
+    {
+      "id": 7,
+      "name": "hash-check",
+      "prompt": "这个项目的 git hooks 已经安装过（有 MANAGED 块和 hash 标记），但我手动修改了 pre-commit 里 main 分支 MANAGED 块的错误提示文字，没有更新 hash。现在重新运行 git-workflow-init，处理这个变更。",
+      "expected_output": "skill 重算 MANAGED 块 hash，发现与标记不符，报告 type C 冲突（手改冲突），展示 diff，询问用户保留修改还是用新配置覆盖，按用户决策处理。",
+      "assertions": []
+    },
+    {
+      "id": 8,
+      "name": "lock-diff-add-branch",
+      "prompt": "我在 workflow-config.yml 里新增了 develop 分支保护规则（merge_from: feature/*）。上次安装时的 lock 文件里没有 develop。现在重新运行 git-workflow-init，同步变更。",
+      "expected_output": "skill 对比 lock 文件与当前配置，检测到 develop 是新增分支，在 pre-commit 插入对应 MANAGED 块，更新 lock 文件，报告 pre-commit 状态为 UPDATED。",
+      "assertions": []
+    },
+    {
+      "id": 9,
+      "name": "conflict-scanner",
+      "prompt": "我在 pre-commit 的 MANAGED 块外手写了 develop 分支的保护逻辑。现在 workflow-config.yml 也把 develop 加入了 branches.protected。重新运行 git-workflow-init。",
+      "expected_output": "skill 扫描 MANAGED 块外的用户代码，发现 develop 分支在用户代码和新配置中都有处理，报告 type A 冲突（条件重叠），提供三个选项让用户决策后再写入。",
+      "assertions": []
+    }
   ]
 }
