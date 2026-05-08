@@ -1,4 +1,10 @@
 {
+  "toolBundleMeta": {
+    "shell-tools": "终端工具（p-launch 项目启动器）"
+  },
+  "tools": [
+    { "name": "p-launch", "bundle": "shell-tools" }
+  ],
   "bundleMeta": {
     "analysis": "分析工具（skill-analyzer）",
     "brainstorming": "设计与规划工具（brainstorming + writing-plans）",
