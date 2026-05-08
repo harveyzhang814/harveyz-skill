@@ -1,7 +1,9 @@
 #!/usr/bin/env zsh
 # p-launch — interactive project launcher
-# Usage: p-launch            launch picker
+# Usage: p-launch              launch picker
+#        p-launch --config     set project directories
 #        p-launch --uninstall  remove everything
+#        p-launch --help       show help
 
 # ── Config ─────────────────────────────────────────────────────────────────
 PROJECT_DIRS=()
@@ -138,8 +140,89 @@ _uninstall() {
   printf "  ${C[dim]}done. run: source ~/.zshrc${C[rs]}\n\n"
 }
 
+# ── Config ───────────────────────────────────────────────────────────────────
+_config() {
+  local config_file="$HOME/.config/p-launch/config.zsh"
+
+  printf '\n'
+  printf "  ${C[bd]}p-launch config${C[rs]}\n\n"
+
+  # Show current dirs
+  if [[ -f "$config_file" ]]; then
+    printf "  ${C[cy]}Current PROJECT_DIRS:${C[rs]}\n"
+    source "$config_file"
+    if (( ${#PROJECT_DIRS[@]} > 0 )); then
+      for d in "${PROJECT_DIRS[@]}"; do
+        printf "    ${C[dim]}%s${C[rs]}\n" "$d"
+      done
+    else
+      printf "    ${C[dim]}(none)${C[rs]}\n"
+    fi
+  else
+    printf "  ${C[yl]}No config file found.${C[rs]}\n"
+  fi
+
+  printf '\n'
+  printf "  Enter project dirs, one per line. Empty line when done.\n"
+  printf "  ${C[dim]}(leave blank to keep current)${C[rs]}\n\n"
+
+  local -a new_dirs=()
+  local line
+  local idx=1
+  while true; do
+    printf "  Dir %d: " "$idx"
+    read -r line
+    [[ -z "$line" ]] && break
+    new_dirs+=("$line")
+    (( idx++ ))
+  done
+
+  if (( ${#new_dirs[@]} == 0 )); then
+    printf '\n  No changes made.\n\n'
+    return
+  fi
+
+  mkdir -p "${config_file:h}"
+  {
+    printf 'PROJECT_DIRS=(\n'
+    for d in "${new_dirs[@]}"; do
+      printf '  "%s"\n' "$d"
+    done
+    printf ')\n'
+  } > "$config_file"
+
+  printf '\n'
+  printf "  ${C[gr]}✓${C[rs]} Saved to ${config_file/$HOME/~}\n"
+  printf '\n'
+  printf "  ${C[cy]}New PROJECT_DIRS:${C[rs]}\n"
+  for d in "${new_dirs[@]}"; do
+    printf "    ${C[dim]}%s${C[rs]}\n" "$d"
+  done
+  printf '\n'
+}
+
 # ── Main ─────────────────────────────────────────────────────────────────────
 main() {
+  if [[ "$1" == "--help" || "$1" == "-h" ]]; then
+    printf '\n'
+    printf "  ${C[bd]}p-launch${C[rs]} — interactive project launcher\n\n"
+    printf "  ${C[cy]}Usage:${C[rs]}\n"
+    printf "    p-launch               open project picker\n"
+    printf "    p-launch --config      set project directories\n"
+    printf "    p-launch --uninstall   remove all installed files\n"
+    printf "    p-launch --help        show this help\n\n"
+    printf "  ${C[cy]}Config:${C[rs]}\n"
+    printf "    ~/.config/p-launch/config.zsh   define PROJECT_DIRS\n\n"
+    printf "  ${C[cy]}Dependencies:${C[rs]}\n"
+    printf "    fzf   brew install fzf\n\n"
+    return
+  fi
+
+  if [[ "$1" == "--config" || "$1" == "config" ]]; then
+    _config
+    return
+  fi
+
   if [[ "$1" == "--uninstall" || "$1" == "uninstall" ]]; then
     _uninstall
     return
