@@ -1,6 +1,6 @@
 {
   "name": "harveyz-skill",
-  "version": "0.1.2",
+  "version": "0.2.1",
   "description": "One-click skill installer for Claude Code, Cursor, and Codex",
   "type": "module",
   "bin": {
@@ -13,9 +13,10 @@
     "bin/",
     "lib/",
     "bundles.json",
+    "skills-index.json",
     "skills/analysis/skill-analyzer/CHANGELOG.md",
     "skills/analysis/skill-analyzer/SKILL.md",
-    "skills/document/diataxis-docs/",
+    "skills/harness/diataxis-docs/",
     "skills/harness/full-stack-debug-env/",
     "skills/superpowers-fork/brainstorming/",
     "skills/superpowers-fork/executing-plans/",
@@ -24,7 +25,9 @@
     "skills/superpowers-fork/writing-plans/",
     "skills/task/pm-task-dispatch/",
     "skills/task/task-close/",
-    "skills/web-fetch/article-fetcher/"
+    "skills/web-fetch/article-fetcher/",
+    "skills/writing/mermaid-diagram/",
+    "tools/p-launch/"
   ],
   "engines": {
     "node": ">=18"

@@ -6,8 +6,9 @@ import { fileURLToPath } from 'url'
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const root = path.join(__dirname, '..')
 
-const { skills: rawSkills } = JSON.parse(readFileSync(path.join(root, 'skills-index.json'), 'utf8'))
+const { skills: rawSkills, tools: rawTools = [] } = JSON.parse(readFileSync(path.join(root, 'skills-index.json'), 'utf8'))
 const skillsDir = path.join(root, 'skills')
+const toolsDir  = path.join(root, 'tools')
 
 // 规范化索引条目
 const index = rawSkills.map(entry =>
@@ -16,7 +17,7 @@ const index = rawSkills.map(entry =>
 const indexedPaths = new Set(index.map(e => e.path))
 
 // 构建 files 数组
-const baseFiles = ['bin/', 'lib/', 'bundles.json']
+const baseFiles = ['bin/', 'lib/', 'bundles.json', 'skills-index.json']
 const skillFiles = []
 
 for (const entry of index) {
@@ -37,10 +38,13 @@ for (const entry of index) {
   }
 }
 
+// 收集 tools 文件
+const toolFiles = rawTools.map(t => `tools/${t.name}/`)
+
 // 更新 package.json files 字段
 const pkgPath = path.join(root, 'package.json')
 const pkg = JSON.parse(readFileSync(pkgPath, 'utf8'))
-pkg.files = [...baseFiles, ...skillFiles]
+pkg.files = [...baseFiles, ...skillFiles, ...toolFiles]
 writeFileSync(pkgPath, JSON.stringify(pkg, null, 2) + '\n')
 
 // 生成 .npmignore excluded block（排除非索引 skill 目录）

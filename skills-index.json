@@ -1,4 +1,10 @@
 {
+  "toolBundleMeta": {
+    "shell-tools": "终端工具（p-launch 项目启动器）"
+  },
+  "tools": [
+    { "name": "p-launch", "bundle": "shell-tools" }
+  ],
   "bundleMeta": {
     "analysis": "分析工具（skill-analyzer）",
     "brainstorming": "设计与规划工具（brainstorming + writing-plans）",
@@ -6,7 +12,8 @@
     "document": "文档工具（diataxis-docs）",
     "harness": "测试工具（full-stack-debug-env）",
     "task": "任务管理（pm-task-dispatch + task-close）",
-    "web-fetch": "网页抓取工具（article-fetcher）"
+    "web-fetch": "网页抓取工具（article-fetcher）",
+    "writing": "写作工具（mermaid-diagram）"
   },
   "skills": [
     { "path": "analysis/skill-analyzer", "bundle": "analysis", "exclude": ["research/"] },
@@ -19,6 +26,7 @@
     { "path": "superpowers-fork/writing-plans", "bundle": "brainstorming" },
     { "path": "task/pm-task-dispatch", "bundle": "task" },
     { "path": "task/task-close", "bundle": "task" },
-    { "path": "web-fetch/article-fetcher", "bundle": "web-fetch" }
+    { "path": "web-fetch/article-fetcher", "bundle": "web-fetch" },
+    { "path": "writing/mermaid-diagram", "bundle": "writing" }
   ]
 }
