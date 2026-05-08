@@ -10,6 +10,7 @@ branches_protected:
     merge_from: ["feature/*", "fix/*", "chore/*", "doc/*"]
 commit_message:
   format: conventional
+  skip_merge_commits: true
   types: [feat, fix, chore, docs, refactor, test, style, perf]
   max_subject_length: 80
 branch_naming:

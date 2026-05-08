@@ -5,7 +5,8 @@ SUBJECT=$(printf '%s\n' "$MSG" | head -1)
 SUBJECT=$(printf '%s\n' "$SUBJECT" | sed '/^#/d' | sed 's/^[[:space:]]*//')
 [ -z "$SUBJECT" ] && exit 0
 
-# --- BEGIN MANAGED: commit-msg/format (hash:86b45547) ---
+# --- BEGIN MANAGED: commit-msg/format (hash:4ad3f612) ---
+[ -f "$(git rev-parse --git-dir)/MERGE_HEAD" ] && exit 0
 if ! printf '%s\n' "$SUBJECT" | grep -qE "^(feat|fix|chore|docs|refactor|test|style|perf)(\(.+\))?: .+"; then
     echo "❌ 提交信息不符合 Conventional Commits 规范"
     echo "   格式：<类型>(<范围>): <描述>"
