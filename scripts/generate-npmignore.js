@@ -17,7 +17,7 @@ const index = rawSkills.map(entry =>
 const indexedPaths = new Set(index.map(e => e.path))
 
 // 构建 files 数组
-const baseFiles = ['bin/', 'lib/', 'bundles.json']
+const baseFiles = ['bin/', 'lib/', 'bundles.json', 'skills-index.json']
 const skillFiles = []
 
 for (const entry of index) {

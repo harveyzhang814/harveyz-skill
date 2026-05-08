@@ -13,6 +13,7 @@
     "bin/",
     "lib/",
     "bundles.json",
+    "skills-index.json",
     "skills/analysis/skill-analyzer/CHANGELOG.md",
     "skills/analysis/skill-analyzer/SKILL.md",
     "skills/harness/diataxis-docs/",
