@@ -146,7 +146,10 @@ try {
         console.log(`  ${chalk.bold('~/.local/bin')} ← ${name}`)
       }
       console.log('')
-      console.log(chalk.dim('  提示：确保 ~/.local/bin 已加入 PATH，然后可添加别名：alias p=p-launch'))
+      console.log(chalk.bold.yellow('  ⚡ 运行以下命令使配置立即生效：'))
+      console.log('')
+      console.log(`     ${chalk.bold.cyan('source ~/.zshrc')}`)
+      console.log('')
     }
   }
 } catch (err) {
