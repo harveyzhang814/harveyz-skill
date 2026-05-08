@@ -1,7 +1,11 @@
 #!/usr/bin/env node
 import { checkbox } from '@inquirer/prompts'
 import chalk from 'chalk'
-import { BUNDLE_CHOICES, resolveSkills, TOOL_BUNDLE_CHOICES, resolveTools } from '../lib/bundles.js'
+import {
+  buildAllChoices, getAllSkillItems, getAllToolItems,
+  resolveSkills, resolveTools,
+  TOOL_BUNDLE_CHOICES,
+} from '../lib/bundles.js'
 import { TARGET_CHOICES, resolveTargets, TARGETS } from '../lib/targets.js'
 import { installSkills, installTools } from '../lib/installer.js'
 
@@ -29,55 +33,73 @@ if (args[0] === 'list') {
   if (tools.length > 0) {
     console.log('')
     console.log(chalk.bold('shell tools:'))
-    const byToolBundle = {}
-    for (const t of tools) {
-      if (!byToolBundle[t.bundle]) byToolBundle[t.bundle] = []
-      byToolBundle[t.bundle].push(t.name)
-    }
-    for (const [name, names] of Object.entries(byToolBundle)) {
-      console.log(chalk.bold(name) + ' — ' + (toolBundleMeta[name] ?? name))
-      for (const n of names) console.log('  ' + n)
-    }
+    for (const t of tools) console.log('  ' + t.name)
   }
   process.exit(0)
 }
 
-// 统一选项：skills + tools 放在同一个列表
-const ALL_CHOICES = [
-  ...BUNDLE_CHOICES.filter(c => c.value !== 'all'),
-  ...(TOOL_BUNDLE_CHOICES.length > 0
-    ? [
-        { type: 'separator', separator: '── shell tools ──' },
-        ...TOOL_BUNDLE_CHOICES,
-      ]
-    : []),
-  { name: `${'all'.padEnd(16)} — 全部 skill（不含 shell 工具）`, value: 'all' },
-]
-
-// 区分 tool bundles 与 skill bundles
 const TOOL_BUNDLE_VALUES = new Set(TOOL_BUNDLE_CHOICES.map(c => c.value))
 
+// 交互式选择列表：单个 skill + shell tools + all
+function buildInteractiveChoices() {
+  const toolItems = getAllToolItems()
+  return [
+    ...buildAllChoices(),
+    ...(toolItems.length > 0
+      ? [
+          { type: 'separator', separator: '── shell tools ──' },
+          ...toolItems.map(t => ({ name: t.toolName, value: t })),
+        ]
+      : []),
+    { type: 'separator', separator: '────────────────' },
+    { name: 'all skills', value: 'all' },
+  ]
+}
+
 try {
-  let selected
+  let skillItems = []  // [{ kind:'skill', skillName, srcPath }]
+  let toolItems  = []  // [{ kind:'tool',  toolName,  srcPath }]
+
   if (bundleArg) {
-    selected = bundleArg.split(',').map(s => s.trim()).filter(Boolean)
+    // --bundle 保持 bundle 粒度，自动路由 skill vs tool
+    const bundles = bundleArg.split(',').map(s => s.trim()).filter(Boolean)
+    const skillBundles = bundles.filter(b => !TOOL_BUNDLE_VALUES.has(b))
+    const toolBundles  = bundles.filter(b =>  TOOL_BUNDLE_VALUES.has(b))
+    if (skillBundles.length) skillItems = resolveSkills(skillBundles).map(s => ({ kind: 'skill', ...s }))
+    if (toolBundles.length)  toolItems  = resolveTools(toolBundles).map(t => ({ kind: 'tool', ...t }))
   } else {
-    selected = await checkbox({
-      message: '选择要安装的 bundle（空格多选）:',
-      choices: ALL_CHOICES,
+    const selected = await checkbox({
+      message: '选择要安装的内容（空格多选）:',
+      choices: buildInteractiveChoices(),
+    })
+
+    if (!selected.length) {
+      console.log(chalk.yellow('  未选择任何内容，退出。'))
+      process.exit(0)
+    }
+
+    const hasAll = selected.includes('all')
+    const items  = selected.filter(s => s !== 'all')
+
+    // 展开 all → 全部 skill（不含 tools）
+    const selectedSkills = hasAll ? getAllSkillItems() : items.filter(s => s.kind === 'skill')
+    toolItems = items.filter(s => s.kind === 'tool')
+
+    // 去重
+    const seen = new Set()
+    skillItems = selectedSkills.filter(s => {
+      if (seen.has(s.skillName)) return false
+      seen.add(s.skillName); return true
     })
   }
 
-  if (!selected.length) {
-    console.log(chalk.yellow('  未选择任何 bundle，退出。'))
+  if (!skillItems.length && !toolItems.length) {
+    console.log(chalk.yellow('  未选择任何内容，退出。'))
     process.exit(0)
   }
 
-  const skillBundles = selected.filter(b => !TOOL_BUNDLE_VALUES.has(b))
-  const toolBundles  = selected.filter(b =>  TOOL_BUNDLE_VALUES.has(b))
-
-  // ── Skills ──────────────────────────────────────────────────────────────
-  if (skillBundles.length > 0) {
+  // ── 安装 skills ─────────────────────────────────────────────────────────────
+  if (skillItems.length > 0) {
     let selectedTargets
     if (targetArg) {
       selectedTargets = targetArg === 'all' ? Object.keys(TARGETS) : [targetArg]
@@ -92,10 +114,9 @@ try {
     }
 
     if (selectedTargets.length > 0) {
-      const skills  = resolveSkills(skillBundles)
       const targets = resolveTargets(selectedTargets)
       console.log('')
-      const summary = await installSkills(skills, targets, forceFlag)
+      const summary = await installSkills(skillItems, targets, forceFlag)
       console.log('')
       if (Object.keys(summary).length === 0) {
         console.log(chalk.yellow('  没有 skill 被安装。'))
@@ -108,11 +129,14 @@ try {
     }
   }
 
-  // ── Shell Tools ──────────────────────────────────────────────────────────
-  if (toolBundles.length > 0) {
-    const tools = resolveTools(toolBundles)
+  // ── 安装 shell tools ────────────────────────────────────────────────────────
+  if (toolItems.length > 0) {
     console.log('')
-    const installed = await installTools(tools, TARGETS.shell, forceFlag)
+    const installed = await installTools(
+      toolItems.map(t => ({ toolName: t.toolName, srcPath: t.srcPath })),
+      TARGETS.shell,
+      forceFlag,
+    )
     console.log('')
     if (installed.length === 0) {
       console.log(chalk.yellow('  没有 shell 工具被安装。'))
