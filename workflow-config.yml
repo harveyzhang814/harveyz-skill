@@ -59,6 +59,7 @@ branch_naming:
 #   none         → 不检查格式（但若 enforce: true 会安装空 hook）
 commit_message:
   enforce: true
+  skip_merge_commits: true
   format: conventional
   # format: regex 时启用此行：
   # pattern: "^(JIRA-\\d+|NOJIRA): .{1,80}"
