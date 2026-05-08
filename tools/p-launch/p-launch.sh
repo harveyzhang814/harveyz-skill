@@ -42,12 +42,24 @@ _collect() {
 
 # ── fzf Display Formatting ───────────────────────────────────────────────────
 # Input:  one path per line
-# Output: "NAME \t PATH \t DISPLAY_PARENT" per line
+# Output: "PADDED_NAME \t PATH \t DISPLAY_PARENT" per line (name padded for alignment)
 _format() {
+  local -a names=() paths=() parents=()
   while IFS= read -r p; do
-    local name="${p:t}"
-    local parent="${${p:h}/$HOME/~}"
-    printf '%s\t%s\t%s\n' "$name" "$p" "$parent"
+    names+=("${p:t}")
+    paths+=("$p")
+    parents+=("${${p:h}/$HOME/~}")
+  done
+
+  local maxlen=0
+  local n
+  for n in "${names[@]}"; do
+    (( ${#n} > maxlen )) && maxlen=${#n}
+  done
+
+  local i
+  for (( i = 1; i <= ${#names}; i++ )); do
+    printf "%-${maxlen}s\t%s\t%s\n" "${names[$i]}" "${paths[$i]}" "${parents[$i]}"
   done
 }
 
