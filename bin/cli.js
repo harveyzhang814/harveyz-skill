@@ -42,19 +42,42 @@ if (args[0] === 'list') {
   process.exit(0)
 }
 
+// 统一选项：skills + tools 放在同一个列表
+const ALL_CHOICES = [
+  ...BUNDLE_CHOICES.filter(c => c.value !== 'all'),
+  ...(TOOL_BUNDLE_CHOICES.length > 0
+    ? [
+        { type: 'separator', separator: '── shell tools ──' },
+        ...TOOL_BUNDLE_CHOICES,
+      ]
+    : []),
+  { name: `${'all'.padEnd(16)} — 全部 skill（不含 shell 工具）`, value: 'all' },
+]
+
+// 区分 tool bundles 与 skill bundles
+const TOOL_BUNDLE_VALUES = new Set(TOOL_BUNDLE_CHOICES.map(c => c.value))
+
 try {
-  // ── Skills ─────────────────────────────────────────────────────────────────
-  let selectedBundles
+  let selected
   if (bundleArg) {
-    selectedBundles = bundleArg.split(',').map(s => s.trim()).filter(Boolean)
+    selected = bundleArg.split(',').map(s => s.trim()).filter(Boolean)
   } else {
-    selectedBundles = await checkbox({
-      message: '选择要安装的 skill bundle（空格多选）:',
-      choices: BUNDLE_CHOICES,
+    selected = await checkbox({
+      message: '选择要安装的 bundle（空格多选）:',
+      choices: ALL_CHOICES,
     })
   }
 
-  if (selectedBundles.length > 0) {
+  if (!selected.length) {
+    console.log(chalk.yellow('  未选择任何 bundle，退出。'))
+    process.exit(0)
+  }
+
+  const skillBundles = selected.filter(b => !TOOL_BUNDLE_VALUES.has(b))
+  const toolBundles  = selected.filter(b =>  TOOL_BUNDLE_VALUES.has(b))
+
+  // ── Skills ──────────────────────────────────────────────────────────────
+  if (skillBundles.length > 0) {
     let selectedTargets
     if (targetArg) {
       selectedTargets = targetArg === 'all' ? Object.keys(TARGETS) : [targetArg]
@@ -69,7 +92,7 @@ try {
     }
 
     if (selectedTargets.length > 0) {
-      const skills = resolveSkills(selectedBundles)
+      const skills  = resolveSkills(skillBundles)
       const targets = resolveTargets(selectedTargets)
       console.log('')
       const summary = await installSkills(skills, targets, forceFlag)
@@ -85,28 +108,21 @@ try {
     }
   }
 
-  // ── Shell Tools ────────────────────────────────────────────────────────────
-  if (TOOL_BUNDLE_CHOICES.length > 0) {
-    const selectedToolBundles = await checkbox({
-      message: '选择要安装的 shell 工具（空格多选，可跳过）:',
-      choices: TOOL_BUNDLE_CHOICES,
-    })
-
-    if (selectedToolBundles.length > 0) {
-      const tools = resolveTools(selectedToolBundles)
-      console.log('')
-      const installed = await installTools(tools, TARGETS.shell, forceFlag)
-      console.log('')
-      if (installed.length === 0) {
-        console.log(chalk.yellow('  没有 shell 工具被安装。'))
-      } else {
-        console.log(chalk.green('✔ Shell 工具安装完成：'))
-        for (const name of installed) {
-          console.log(`  ${chalk.bold('~/.local/bin')} ← ${name}`)
-        }
-        console.log('')
-        console.log(chalk.dim('  提示：确保 ~/.local/bin 已加入 PATH，然后可添加别名：alias p=p-launch'))
+  // ── Shell Tools ──────────────────────────────────────────────────────────
+  if (toolBundles.length > 0) {
+    const tools = resolveTools(toolBundles)
+    console.log('')
+    const installed = await installTools(tools, TARGETS.shell, forceFlag)
+    console.log('')
+    if (installed.length === 0) {
+      console.log(chalk.yellow('  没有 shell 工具被安装。'))
+    } else {
+      console.log(chalk.green('✔ Shell 工具安装完成：'))
+      for (const name of installed) {
+        console.log(`  ${chalk.bold('~/.local/bin')} ← ${name}`)
       }
+      console.log('')
+      console.log(chalk.dim('  提示：确保 ~/.local/bin 已加入 PATH，然后可添加别名：alias p=p-launch'))
     }
   }
 } catch (err) {
