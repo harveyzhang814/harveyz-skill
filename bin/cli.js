@@ -16,7 +16,6 @@ const targetIdx = args.indexOf('--target')
 const bundleArg = bundleIdx !== -1 ? args[bundleIdx + 1] : undefined
 const targetArg = targetIdx !== -1 ? args[targetIdx + 1] : undefined
 
-// list 子命令
 if (args[0] === 'list') {
   const { createRequire } = await import('module')
   const require = createRequire(import.meta.url)
@@ -40,7 +39,6 @@ if (args[0] === 'list') {
 
 const TOOL_BUNDLE_VALUES = new Set(TOOL_BUNDLE_CHOICES.map(c => c.value))
 
-// 交互式选择列表：单个 skill + shell tools + all
 function buildInteractiveChoices() {
   const toolItems = getAllToolItems()
   return [
@@ -57,11 +55,10 @@ function buildInteractiveChoices() {
 }
 
 try {
-  let skillItems = []  // [{ kind:'skill', skillName, srcPath }]
-  let toolItems  = []  // [{ kind:'tool',  toolName,  srcPath }]
+  let skillItems = []
+  let toolItems  = []
 
   if (bundleArg) {
-    // --bundle 保持 bundle 粒度，自动路由 skill vs tool
     const bundles = bundleArg.split(',').map(s => s.trim()).filter(Boolean)
     const skillBundles = bundles.filter(b => !TOOL_BUNDLE_VALUES.has(b))
     const toolBundles  = bundles.filter(b =>  TOOL_BUNDLE_VALUES.has(b))
@@ -69,23 +66,21 @@ try {
     if (toolBundles.length)  toolItems  = resolveTools(toolBundles).map(t => ({ kind: 'tool', ...t }))
   } else {
     const selected = await checkbox({
-      message: '选择要安装的内容（空格多选）:',
+      message: 'Select items to install (space to select, enter to confirm):',
       choices: buildInteractiveChoices(),
     })
 
     if (!selected.length) {
-      console.log(chalk.yellow('  未选择任何内容，退出。'))
+      console.log(chalk.dim('  · Nothing selected, exiting'))
       process.exit(0)
     }
 
     const hasAll = selected.includes('all')
     const items  = selected.filter(s => s !== 'all')
 
-    // 展开 all → 全部 skill（不含 tools）
     const selectedSkills = hasAll ? getAllSkillItems() : items.filter(s => s.kind === 'skill')
     toolItems = items.filter(s => s.kind === 'tool')
 
-    // 去重
     const seen = new Set()
     skillItems = selectedSkills.filter(s => {
       if (seen.has(s.skillName)) return false
@@ -94,21 +89,21 @@ try {
   }
 
   if (!skillItems.length && !toolItems.length) {
-    console.log(chalk.yellow('  未选择任何内容，退出。'))
+    console.log(chalk.dim('  · Nothing selected, exiting'))
     process.exit(0)
   }
 
-  // ── 安装 skills ─────────────────────────────────────────────────────────────
+  // ── Install skills ───────────────────────────────────────────────────────────
   if (skillItems.length > 0) {
     let selectedTargets
     if (targetArg) {
       selectedTargets = targetArg === 'all' ? Object.keys(TARGETS) : [targetArg]
     } else {
       selectedTargets = await checkbox({
-        message: '安装到哪些工具（空格多选）:',
+        message: 'Install to which tools (space to select, enter to confirm):',
         choices: [
           ...TARGET_CHOICES,
-          { name: 'all      — 全部工具', value: 'all' },
+          { name: 'all      — all tools', value: 'all' },
         ],
       })
     }
@@ -119,9 +114,9 @@ try {
       const summary = await installSkills(skillItems, targets, forceFlag)
       console.log('')
       if (Object.keys(summary).length === 0) {
-        console.log(chalk.yellow('  没有 skill 被安装。'))
+        console.log(chalk.dim('  · No skills installed'))
       } else {
-        console.log(chalk.green('✔ Skills 安装完成：'))
+        console.log(chalk.green.bold('✔ Skills installed:'))
         for (const [target, names] of Object.entries(summary)) {
           console.log(`  ${chalk.bold(target)} ← ${names.join(', ')}`)
         }
@@ -129,7 +124,7 @@ try {
     }
   }
 
-  // ── 安装 shell tools ────────────────────────────────────────────────────────
+  // ── Install shell tools ──────────────────────────────────────────────────────
   if (toolItems.length > 0) {
     console.log('')
     const installed = await installTools(
@@ -139,17 +134,20 @@ try {
     )
     console.log('')
     if (installed.length === 0) {
-      console.log(chalk.yellow('  没有 shell 工具被安装。'))
+      console.log(chalk.dim('  · No shell tools installed'))
     } else {
-      console.log(chalk.green('✔ Shell 工具安装完成：'))
+      console.log(chalk.green.bold('✔ Shell tools installed:'))
       for (const name of installed) {
         console.log(`  ${chalk.bold('~/.local/bin')} ← ${name}`)
       }
       console.log('')
-      console.log(chalk.dim('  提示：确保 ~/.local/bin 已加入 PATH，然后可添加别名：alias p=p-launch'))
+      console.log(chalk.yellow.bold('  ⚡ Reload your shell to apply changes:'))
+      console.log('')
+      console.log(`     ${chalk.bold.cyan('source ~/.zshrc')}`)
+      console.log('')
     }
   }
 } catch (err) {
-  console.error(chalk.red('Error: ' + err.message))
+  console.error(chalk.red('  ✗ ' + err.message))
   process.exit(1)
 }
