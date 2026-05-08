@@ -2,6 +2,8 @@
   {
     "name": "PROJECT_DIR",
     "description": "项目根目录（安装后可在 ~/.config/p-launch/config.zsh 追加更多路径）",
-    "default": "{{HOME}}/Documents/Projects"
+    "default": "~/Projects",
+    "configFile": "~/.config/p-launch/config.zsh",
+    "configKey": "PROJECT_DIRS"
   }
 ]

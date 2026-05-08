@@ -4,10 +4,8 @@
 #        p-launch --uninstall  remove everything
 
 # ── Config ─────────────────────────────────────────────────────────────────
-PROJECT_DIRS=(
-  "{{PROJECT_DIR}}"
-)
-# Additional paths or overrides: define PROJECT_DIRS in ~/.config/p-launch/config.zsh
+PROJECT_DIRS=()
+# Define PROJECT_DIRS in ~/.config/p-launch/config.zsh (written by installer)
 [[ -f "$HOME/.config/p-launch/config.zsh" ]] && source "$HOME/.config/p-launch/config.zsh"
 
 # ── Colors ──────────────────────────────────────────────────────────────────
@@ -151,7 +149,7 @@ main() {
 
   local projects
   projects=$(_collect) || {
-    printf "${C[yl]}no projects found${C[rs]} — check PROJECT_DIRS in this script\n"
+    printf "${C[yl]}no projects found${C[rs]} — check PROJECT_DIRS in ~/.config/p-launch/config.zsh\n"
     exit 0
   }
 
