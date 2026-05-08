@@ -2,20 +2,23 @@
 name: mermaid-diagram
 description: >
   Mermaid 专业作图标准。只要用户提到"画图"、"mermaid"、"流程图"、"产业链"、
-  "板块地图"、"时序图"、"状态机"、"甘特图"、"象限图"、"思维导图"，或需要在
-  Markdown 文档中嵌入任何 Mermaid 图表，立即调用本 skill。涵盖图类型选择、
-  宽度控制、Roland Berger 配色、语法禁区（禁用字符/语法）、渲染前 12 项
-  检查清单。支持 flowchart / stateDiagram / timeline / gantt / quadrantChart /
-  mindmap 全类型。
+  "板块地图"、"时序图"、"序列图"、"状态机"、"甘特图"、"象限图"、"思维导图"、
+  "接口调用"、"系统交互"，或需要在 Markdown 文档中嵌入任何 Mermaid 图表，
+  立即调用本 skill。支持 flowchart / sequenceDiagram / stateDiagram / timeline /
+  gantt / quadrantChart / mindmap 全类型。
 user_invocable: true
-version: "1.1.0"
+version: "1.3.0"
 ---
 
 # Mermaid 专业作图标准
 
-> 详细的各图类型规则与示例 → `references/chart-types.md`
-> 完整 Roland Berger 配色模板 → `references/color-templates.md`
-> Python 批量检测脚本 → `scripts/check_mermaid.py`（直接运行，无需读入）
+> **按需读取对应文件，不要一次性全部读入：**
+> - flowchart / 产业链 / 板块地图 → `references/flowchart.md` + `references/color-templates.md`
+> - sequenceDiagram / 时序图 / 接口调用 → `references/sequence.md`
+> - stateDiagram / 状态机 / 周期图 → `references/statediagram.md`
+> - gantt / timeline → `references/gantt-timeline.md`
+> - quadrantChart / mindmap → `references/other-charts.md`
+> - Python 批量检测 → `scripts/check_mermaid.py`（直接运行，无需读入）
 
 ---
 
@@ -31,6 +34,7 @@ version: "1.1.0"
 | 时间轴事件 | `timeline` | `gantt` | timeline 按时间节点列举，无时段重叠 |
 | 并行时间段 / 甘特 | `gantt` | `timeline` | gantt 能展示多条目时间段重叠 |
 | 二维象限定位 | `quadrantChart` | 自制坐标 | 原生支持，配置简单 |
+| 系统 / 服务间有时序的调用链 | `sequenceDiagram` | `flowchart` | sequenceDiagram 原生支持激活框、条件块、并行 |
 | 资金 / 数据流（有环路） | `flowchart TD` | `sequenceDiagram` | flowchart 支持循环箭头 |
 | 板块地图（股票/行业） | `flowchart TD` + subgraph | `mindmap` / 表格 | subgraph 支持分组+颜色+箭头 |
 | 时间轮动 / 波浪 | `timeline` | `graph LR` | timeline 语义直接对应时序 |
@@ -38,13 +42,14 @@ version: "1.1.0"
 ### 图类型速查
 
 ```
-flowchart TD    → 产业链、流程、板块地图、资本流
-flowchart LR    → 仅当内容天然横向（如横向对比）才用，否则用 TD
-mindmap         → 纯树形知识结构，无需表达流向
-timeline        → 历史事件/里程碑时间轴，每个时间点有多个条目
-gantt           → 多轨道并行时间段（如技术迭代、项目计划）
-stateDiagram-v2 → 状态机、周期轮动（如估值周期）
-quadrantChart   → 2×2 矩阵定位（如确定性 vs 弹性）
+flowchart TD      → 产业链、流程、板块地图、资本流
+flowchart LR      → 仅当内容天然横向（如横向对比）才用，否则用 TD
+sequenceDiagram   → 系统/服务间交互、API 调用时序、接口联调
+mindmap           → 纯树形知识结构，无需表达流向
+timeline          → 历史事件/里程碑时间轴，每个时间点有多个条目
+gantt             → 多轨道并行时间段（如技术迭代、项目计划）
+stateDiagram-v2   → 状态机、周期轮动（如估值周期）
+quadrantChart     → 2×2 矩阵定位（如确定性 vs 弹性）
 ```
 
 ---
@@ -71,7 +76,7 @@ Markdown 渲染器页面宽度通常 700–900px，图表必须适配：
 ❌ nested subgraph（嵌套子图）          # Mermaid 渲染不稳定
 ```
 
-> 矩阵布局 `---` 配对技法、subgraph 间箭头写法见 `references/chart-types.md`。
+> 矩阵布局 `---` 配对技法、subgraph 间箭头写法见 `references/flowchart.md 或对应图类型文件`。
 
 ---
 
@@ -132,9 +137,10 @@ Markdown 渲染器页面宽度通常 700–900px，图表必须适配：
 ❌ YYYY-Q 日期格式在 gantt      → 改用 YYYY-MM-DD
 ❌ direction TB 在 flowchart subgraph → 改为全局 TD，删除子图内 direction
 ❌ 多行 edge label（|"line1\nline2"|）→ 改为单行短语
+❌ sequenceDiagram 中文/空格参与者名不加处理 → 用 alias 或引号
+❌ sequenceDiagram activate 未配对 deactivate → 必须一一对应
+❌ sequenceDiagram 消息文本内换行 → 不支持，保持单行
 ```
-
-> 正确写法示例（stateDiagram ASCII ID、多行节点标签等）→ `references/chart-types.md`
 
 ---
 
@@ -155,6 +161,8 @@ Markdown 渲染器页面宽度通常 700–900px，图表必须适配：
 □ 10. quadrantChart 标签无 /
 □ 11. timeline key 无 + % & 特殊字符
 □ 12. 所有深色节点（fill 深于 #4A4A4A）已设 color:#fff
+□ 13. sequenceDiagram 参与者名含中文/空格时已用 alias 或引号
+□ 14. sequenceDiagram 每个 activate 有对应 deactivate
 ```
 
 > 批量自动检测 → 运行 `scripts/check_mermaid.py`
@@ -169,6 +177,7 @@ Markdown 渲染器页面宽度通常 700–900px，图表必须适配：
 产业链/供应链   → flowchart TD + 3个subgraph + UP→MID→DOWN 箭头
 板块地图        → flowchart TD + subgraph per layer + --- 矩阵节点
 资本/数据流     → flowchart TD + 有向链 + 反馈环
+系统交互/时序   → sequenceDiagram + participant alias + activate/deactivate
 状态周期        → stateDiagram-v2 direction TB + ASCII state ID
 时间轴          → timeline（事件点）/ gantt（时间段）
 象限定位        → quadrantChart

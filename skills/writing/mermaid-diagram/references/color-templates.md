@@ -1,82 +1,75 @@
-# Roland Berger 完整配色模板
+# Roland Berger 配色标准
 
-## 三层产业链 style 模板
+## 色板总览
 
-直接复制以下 style 块到 flowchart，然后按实际节点 ID 调整：
+| 角色 | 用途 | fill | stroke |
+|------|------|------|--------|
+| **subgraph 上游** | 最底层 / 最重要 / 上游容器 | `#00205B` | `#1E4A9A` |
+| **subgraph 中游** | 中间层 / 平台层容器 | `#003E96` | `#1A6AC4` |
+| **subgraph 下游** | 应用层 / 端侧容器 | `#1E5C9E` | `#3A8ACC` |
+| **节点 上游** | 上游 subgraph 内的节点 | `#0A2E7A` | `#1E4A9A` |
+| **节点 中游** | 中游 subgraph 内的节点 | `#0050B8` | `#1A6AC4` |
+| **节点 下游** | 下游 subgraph 内的节点 | `#2A6EAE` | `#3A8ACC` |
+
+**规律**：同层的 subgraph 比其内节点颜色**深 10–15%**，形成层次感。文字颜色一律 `color:#fff`。
+
+---
+
+## 语义辅助色
+
+用于传达风险信号，叠加在主色体系之上：
+
+| 语义 | 场景 | fill | stroke |
+|------|------|------|--------|
+| 预警 / 高风险 / 规避 | 危险区域、卖出信号 | `#7B1010` | `#B52020` |
+| 机会 / 买入 / 低风险 | 买入区域、推荐配置 | `#1A5E3A` | `#2A7E50` |
+| 等待 / 持有 / 中性 | 观察区域、中性态度 | `#003E96` | `#1A6AC4` |
+| 投机 / 主题 / 高波动 | 高风险高回报区域 | `#2E0078` | `#5A20A0` |
+| 价值 / 配置 / 稳健 | 价值投资区域 | `#004060` | `#1A5E80` |
+
+---
+
+## 使用规则
+
+1. **深色背景必须加白字**：任何 `fill` 颜色深于 `#4A4A4A`，必须加 `color:#fff`
+2. **单图最多 3 种主色**：不要同时使用上游/中游/下游/语义色全部五组
+3. **容器比节点深**：subgraph 的 fill 必须比其内节点的 fill 深，否则层次感消失
+4. **sequenceDiagram / gantt / timeline 不着色**：这些类型使用库默认颜色，不应用 RB 色板
+5. **语义色优先级低于主色**：只在需要传达明确风险信号时才使用语义辅助色
+
+---
+
+## style 片段速查
+
+三层结构（直接复制，按实际节点 ID 替换）：
 
 ```
 style UP   fill:#00205B,color:#fff,stroke:#1E4A9A
 style MID  fill:#003E96,color:#fff,stroke:#1A6AC4
 style DOWN fill:#1E5C9E,color:#fff,stroke:#3A8ACC
+
 style U1 fill:#0A2E7A,color:#fff,stroke:#1E4A9A
-style U2 fill:#0A2E7A,color:#fff,stroke:#1E4A9A
-style U3 fill:#0A2E7A,color:#fff,stroke:#1E4A9A
-style U4 fill:#0A2E7A,color:#fff,stroke:#1E4A9A
 style M1 fill:#0050B8,color:#fff,stroke:#1A6AC4
-style M2 fill:#0050B8,color:#fff,stroke:#1A6AC4
 style D1 fill:#2A6EAE,color:#fff,stroke:#3A8ACC
-style D2 fill:#2A6EAE,color:#fff,stroke:#3A8ACC
-style D3 fill:#2A6EAE,color:#fff,stroke:#3A8ACC
 ```
 
----
+两层结构：
 
-## 完整示例：三层产业链板块地图
+```
+style TOP fill:#00205B,color:#fff,stroke:#1E4A9A
+style BOT fill:#003E96,color:#fff,stroke:#1A6AC4
 
-以下示例综合运用所有规则，可直接复制修改：
-
-```mermaid
-flowchart TD
-    subgraph UP["上游 算力基础设施"]
-        U1["AI芯片 / 晶圆代工<br/>NVIDIA AMD Broadcom<br/>寒武纪 海光"] --- U2["设备 / 存储 HBM<br/>ASML 北方华创<br/>SK海力士 Micron"]
-        U3["光模块 / 服务器<br/>中际旭创 新易盛<br/>工业富联 Dell"]  --- U4["IDC / 液冷 / 电力<br/>英维克 Vertiv<br/>阳光电源 VST"]
-    end
-
-    subgraph MID["中游 模型与平台"]
-        M1["大模型<br/>GPT Gemini 通义 DeepSeek"] --- M2["云平台<br/>Azure AWS 阿里云 腾讯云"]
-    end
-
-    subgraph DOWN["下游 应用与端侧"]
-        D1["企业SaaS<br/>Palantir ServiceNow<br/>金山办公"] --- D2["AI编程 / 搜索<br/>Copilot Cursor Google"]
-        D3["端侧硬件<br/>机器人 智驾 AI眼镜"]
-    end
-
-    UP -->|"卖铲子"| MID
-    MID -->|"挖金子"| DOWN
-
-    style UP   fill:#00205B,color:#fff,stroke:#1E4A9A
-    style MID  fill:#003E96,color:#fff,stroke:#1A6AC4
-    style DOWN fill:#1E5C9E,color:#fff,stroke:#3A8ACC
-    style U1 fill:#0A2E7A,color:#fff,stroke:#1E4A9A
-    style U2 fill:#0A2E7A,color:#fff,stroke:#1E4A9A
-    style U3 fill:#0A2E7A,color:#fff,stroke:#1E4A9A
-    style U4 fill:#0A2E7A,color:#fff,stroke:#1E4A9A
-    style M1 fill:#0050B8,color:#fff,stroke:#1A6AC4
-    style M2 fill:#0050B8,color:#fff,stroke:#1A6AC4
-    style D1 fill:#2A6EAE,color:#fff,stroke:#3A8ACC
-    style D2 fill:#2A6EAE,color:#fff,stroke:#3A8ACC
-    style D3 fill:#2A6EAE,color:#fff,stroke:#3A8ACC
+style T1 fill:#0A2E7A,color:#fff,stroke:#1E4A9A
+style B1 fill:#0050B8,color:#fff,stroke:#1A6AC4
 ```
 
----
+语义色（按需挑选）：
 
-## 极简两层模板
-
-```mermaid
-flowchart TD
-    subgraph TOP["顶层"]
-        T1["节点A"] --- T2["节点B"]
-    end
-    subgraph BOT["底层"]
-        B1["节点C"] --- B2["节点D"]
-    end
-
-    TOP -->|"关系"| BOT
-
-    style TOP fill:#00205B,color:#fff,stroke:#1E4A9A
-    style BOT fill:#003E96,color:#fff,stroke:#1A6AC4
-    style T1 fill:#0A2E7A,color:#fff,stroke:#1E4A9A
-    style T2 fill:#0A2E7A,color:#fff,stroke:#1E4A9A
-    style B1 fill:#0050B8,color:#fff,stroke:#1A6AC4
-    style B2 fill:#0050B8,color:#fff,stroke:#1A6AC4
 ```
+style X fill:#7B1010,color:#fff,stroke:#B52020   /* 预警红 */
+style X fill:#1A5E3A,color:#fff,stroke:#2A7E50   /* 机会绿 */
+style X fill:#2E0078,color:#fff,stroke:#5A20A0   /* 投机紫 */
+style X fill:#004060,color:#fff,stroke:#1A5E80   /* 价值蓝绿 */
+```
+
+> 含真实内容的完整产业链示例 → `references/flowchart.md`
