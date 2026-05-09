@@ -78,14 +78,14 @@ _launch() {
     /usr/bin/open -na "Cursor" --args "$path" && cursor_ok=true
   fi
 
-  # Ghostty — new window; pass working-directory only when launching fresh
-  # (-n conflicts with a running instance and produces a blank window)
+  # Ghostty — AppleScript new window with working directory (Ghostty 1.3.0+)
+  # Works whether Ghostty is running or not; avoids the blank-window issue from -n
   if [[ -d "/Applications/Ghostty.app" ]]; then
-    if pgrep -x ghostty &>/dev/null; then
-      /usr/bin/open -a "Ghostty" && ghostty_ok=true
-    else
-      /usr/bin/open -a "Ghostty" --args --working-directory="$path" && ghostty_ok=true
-    fi
+    osascript -e "tell application \"Ghostty\"
+      set cfg to new surface configuration
+      set initial working directory of cfg to \"${path}\"
+      new window with configuration cfg
+    end tell" &>/dev/null && ghostty_ok=true
   fi
 
   # ── Launch Report ──────────────────────────────────────────────────────────
@@ -100,11 +100,7 @@ _launch() {
   fi
 
   if $ghostty_ok; then
-    if pgrep -x ghostty &>/dev/null; then
-      printf "  ${C[gr]}✓${C[rs]} Ghostty  new window opened  ${C[dim]}cd %s${C[rs]}\n" "$display"
-    else
-      printf "  ${C[gr]}✓${C[rs]} Ghostty  new window opened\n"
-    fi
+    printf "  ${C[gr]}✓${C[rs]} Ghostty  new window opened\n"
   else
     printf "  ${C[yl]}⚠${C[rs]} Ghostty  /Applications/Ghostty.app not found\n"
   fi
