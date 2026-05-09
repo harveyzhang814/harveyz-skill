@@ -70,9 +70,12 @@ _launch() {
   local display="${path/$HOME/~}"
   local cursor_ok=false ghostty_ok=false
 
-  # Cursor IDE
+  # Cursor IDE — CLI first, fall back to .app
   if command -v cursor &>/dev/null; then
     cursor "$path" &>/dev/null &
+    cursor_ok=true
+  elif [[ -d "/Applications/Cursor.app" ]]; then
+    open -na "Cursor" --args "$path"
     cursor_ok=true
   fi
 

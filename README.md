@@ -93,12 +93,23 @@ npx harveyz-skill --bundle brainstorming,dev --target all
 npx harveyz-skill list
 ```
 
-### 手动安装（从源码）
+### 本地源码安装
+
+克隆仓库后，用 CLI 安装：
 
 ```bash
-mkdir -p ~/.claude/skills
-cp -r skills/* ~/.claude/skills/
+# 交互式选择 bundle 和目标工具
+node bin/cli.js
+
+# 直接指定 bundle 和目标（仍会交互式询问配置项，按 Enter 接受默认值）
+node bin/cli.js --bundle shell-tools --target claude
+node bin/cli.js --bundle dev --target claude
+
+# 覆盖已有安装
+node bin/cli.js --bundle shell-tools --target claude --force
 ```
+
+Skills 安装到 `~/.claude/skills/`，shell 工具安装到 `~/.local/bin/`。
 
 ## Skill 开发指南
 
