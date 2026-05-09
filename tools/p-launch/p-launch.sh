@@ -92,13 +92,12 @@ _launch() {
 
   if [[ -n "$ghostty_app" ]]; then
     ghostty_err="failed to open"
-    osascript 2>/dev/null <<OSASCRIPT && ghostty_ok=true
+    /usr/bin/osascript 2>/dev/null <<OSASCRIPT && ghostty_ok=true
 use framework "AppKit"
 use scripting additions
-set theURL to current application's NSURL's fileURLWithPath:"${path}"
 set thePboard to current application's NSPasteboard's generalPasteboard()
 thePboard's clearContents()
-thePboard's writeObjects:{theURL}
+thePboard's setPropertyList:{"${path}"} forType:"NSFilenamesPboardType"
 return current application's NSPerformService("New Ghostty Window Here", thePboard)
 OSASCRIPT
   fi
