@@ -92,12 +92,17 @@ _launch() {
 
   if [[ -n "$ghostty_app" ]]; then
     ghostty_err="failed to open"
+    # Ghostty's service handler does dirname on the path, so pass a child of
+    # the target dir — dirname(target/child) == target.
+    local _child service_path
+    _child=$(/bin/ls -1A "$path" 2>/dev/null | /usr/bin/head -1)
+    service_path="${path}/${_child}"
     /usr/bin/osascript 2>/dev/null <<OSASCRIPT && ghostty_ok=true
 use framework "AppKit"
 use scripting additions
 set thePboard to current application's NSPasteboard's generalPasteboard()
 thePboard's clearContents()
-thePboard's setPropertyList:{"${path}"} forType:"NSFilenamesPboardType"
+thePboard's setPropertyList:{"${service_path}"} forType:"NSFilenamesPboardType"
 return current application's NSPerformService("New Ghostty Window Here", thePboard)
 OSASCRIPT
   fi
