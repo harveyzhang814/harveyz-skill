@@ -6,7 +6,8 @@ setup() {
   SCRIPT="$(cd "${BATS_TEST_DIRNAME}/.." && pwd)/p-launch.sh"
   TEST_DIR="$(mktemp -d)"
   MOCK_HOME="${TEST_DIR}/home"
-  mkdir -p "${MOCK_HOME}"
+  MOCK_BIN="${TEST_DIR}/bin"
+  mkdir -p "${MOCK_HOME}" "${MOCK_BIN}"
 }
 
 teardown() {
@@ -148,4 +149,74 @@ _src() {
   "
   [ "$status" -eq 0 ]
   [ "${#lines[@]}" -eq 2 ]
+}
+
+# ── _launch: Cursor ────────────────────────────────────────────────────────────
+
+_launch_src() {
+  local code="$1"
+  zsh -c "
+    export _P_LAUNCH_TEST=1
+    export HOME='${MOCK_HOME}'
+    export PATH='${MOCK_BIN}:${PATH}'
+    source '${SCRIPT}'
+    ${code}
+  "
+}
+
+@test "_launch: reports ✓ Cursor when cursor CLI is in PATH" {
+  printf '#!/bin/sh\nexit 0\n' > "${MOCK_BIN}/cursor"
+  chmod +x "${MOCK_BIN}/cursor"
+
+  run _launch_src "_launch '${TEST_DIR}'"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"✓"*"Cursor"* ]]
+}
+
+@test "_launch: reports ⚠ Cursor when CLI absent and Cursor.app not found" {
+  [[ ! -d "/Applications/Cursor.app" ]] || skip "Cursor.app installed — cannot test absence"
+
+  run _launch_src "_launch '${TEST_DIR}'"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"⚠"*"Cursor"* ]]
+}
+
+# ── _launch: Ghostty ───────────────────────────────────────────────────────────
+
+@test "_launch: reports ✓ Ghostty when osascript succeeds" {
+  [[ -d "/Applications/Ghostty.app" ]] || skip "Ghostty.app not installed"
+  printf '#!/bin/sh\nexit 0\n' > "${MOCK_BIN}/osascript"
+  chmod +x "${MOCK_BIN}/osascript"
+
+  run _launch_src "_launch '${TEST_DIR}'"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"✓"*"Ghostty"* ]]
+}
+
+@test "_launch: reports ⚠ Ghostty when osascript fails" {
+  [[ -d "/Applications/Ghostty.app" ]] || skip "Ghostty.app not installed"
+  printf '#!/bin/sh\nexit 1\n' > "${MOCK_BIN}/osascript"
+  chmod +x "${MOCK_BIN}/osascript"
+
+  run _launch_src "_launch '${TEST_DIR}'"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"⚠"*"Ghostty"* ]]
+}
+
+@test "_launch: reports ⚠ Ghostty when Ghostty.app not found" {
+  [[ ! -d "/Applications/Ghostty.app" ]] || skip "Ghostty.app installed — cannot test absence"
+
+  run _launch_src "_launch '${TEST_DIR}'"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"⚠"*"Ghostty"* ]]
+}
+
+@test "_launch: osascript receives working directory in script" {
+  [[ -d "/Applications/Ghostty.app" ]] || skip "Ghostty.app not installed"
+  printf '#!/bin/sh\nprintf "ARGS:%%s\n" "$@"\nexit 0\n' \
+    > "${MOCK_BIN}/osascript"
+  chmod +x "${MOCK_BIN}/osascript"
+
+  run _launch_src "_launch '${TEST_DIR}'"
+  [[ "$output" == *"${TEST_DIR}"* ]]
 }
