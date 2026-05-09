@@ -82,15 +82,15 @@ _launch() {
   # This is the same code path as the Finder right-click service, running
   # in-process inside Ghostty, so it reliably opens at the correct directory.
   if [[ -d "/Applications/Ghostty.app" ]]; then
-    osascript -e "
-      use framework \"AppKit\"
-      use scripting additions
-      set theURL to current application's NSURL's fileURLWithPath:\"${path}\"
-      set thePboard to current application's NSPasteboard's generalPasteboard()
-      thePboard's clearContents()
-      thePboard's writeObjects:{theURL}
-      return current application's NSPerformService(\"New Ghostty Window Here\", thePboard)
-    " &>/dev/null && ghostty_ok=true
+    osascript 2>/dev/null <<OSASCRIPT && ghostty_ok=true
+use framework "AppKit"
+use scripting additions
+set theURL to current application's NSURL's fileURLWithPath:"${path}"
+set thePboard to current application's NSPasteboard's generalPasteboard()
+thePboard's clearContents()
+thePboard's writeObjects:{theURL}
+return current application's NSPerformService("New Ghostty Window Here", thePboard)
+OSASCRIPT
   fi
 
   # ── Launch Report ──────────────────────────────────────────────────────────
