@@ -78,9 +78,14 @@ _launch() {
     /usr/bin/open -na "Cursor" --args "$path" && cursor_ok=true
   fi
 
-  # Ghostty — force a new window at the project directory
+  # Ghostty — new window; pass working-directory only when launching fresh
+  # (-n conflicts with a running instance and produces a blank window)
   if [[ -d "/Applications/Ghostty.app" ]]; then
-    /usr/bin/open -a "Ghostty" --args --working-directory="$path" && ghostty_ok=true
+    if pgrep -x ghostty &>/dev/null; then
+      /usr/bin/open -a "Ghostty" && ghostty_ok=true
+    else
+      /usr/bin/open -a "Ghostty" --args --working-directory="$path" && ghostty_ok=true
+    fi
   fi
 
   # ── Launch Report ──────────────────────────────────────────────────────────
@@ -95,7 +100,11 @@ _launch() {
   fi
 
   if $ghostty_ok; then
-    printf "  ${C[gr]}✓${C[rs]} Ghostty  new window opened\n"
+    if pgrep -x ghostty &>/dev/null; then
+      printf "  ${C[gr]}✓${C[rs]} Ghostty  new window opened  ${C[dim]}cd %s${C[rs]}\n" "$display"
+    else
+      printf "  ${C[gr]}✓${C[rs]} Ghostty  new window opened\n"
+    fi
   else
     printf "  ${C[yl]}⚠${C[rs]} Ghostty  /Applications/Ghostty.app not found\n"
   fi
