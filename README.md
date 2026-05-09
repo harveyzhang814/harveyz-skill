@@ -101,13 +101,18 @@ npx harveyz-skill list
 # 交互式选择 bundle 和目标工具
 node bin/cli.js
 
+# 安装指定 skill
+node bin/cli.js --skill mermaid-diagram --target claude
+node bin/cli.js --skill brainstorming,writing-plans --target claude
+
+# 安装整个 skill bundle
+node bin/cli.js --bundle dev --target claude
+
 # 安装指定 shell 工具（固定安装到 ~/.local/bin）
 node bin/cli.js --tool p-launch
 
-# 安装指定 skill bundle（--target 指定安装目标工具）
-node bin/cli.js --bundle dev --target claude
-
 # 覆盖已有安装
+node bin/cli.js --skill mermaid-diagram --target claude --force
 node bin/cli.js --tool p-launch --force
 ```
 
