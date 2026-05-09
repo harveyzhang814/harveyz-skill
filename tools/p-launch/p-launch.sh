@@ -80,7 +80,7 @@ _launch() {
 
   # Ghostty — force a new window at the project directory
   if [[ -d "/Applications/Ghostty.app" ]]; then
-    /usr/bin/open -na "Ghostty" --args --working-directory="$path" && ghostty_ok=true
+    /usr/bin/open -a "Ghostty" --args --working-directory="$path" && ghostty_ok=true
   fi
 
   # ── Launch Report ──────────────────────────────────────────────────────────
