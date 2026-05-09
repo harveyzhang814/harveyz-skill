@@ -68,7 +68,7 @@ _launch() {
   local path="$1"
   local name="${path:t}"
   local display="${path/$HOME/~}"
-  local cursor_ok=false ghostty_ok=false
+  local cursor_ok=false ghostty_ok=false ghostty_err="not installed"
 
   # Cursor IDE — CLI first, fall back to .app
   if command -v cursor &>/dev/null; then
@@ -78,10 +78,20 @@ _launch() {
     /usr/bin/open -na "Cursor" --args "$path" && cursor_ok=true
   fi
 
-  # Ghostty — invoke "New Ghostty Window Here" service via NSPerformService.
-  # This is the same code path as the Finder right-click service, running
-  # in-process inside Ghostty, so it reliably opens at the correct directory.
-  if [[ -d "/Applications/Ghostty.app" ]]; then
+  # Ghostty — find app via Spotlight (handles /Applications, ~/Applications,
+  # or any custom install path), then invoke "New Ghostty Window Here" service
+  # via NSPerformService — same code path as Finder right-click service.
+  local ghostty_app
+  ghostty_app=$(mdfind "kMDItemCFBundleIdentifier == 'com.mitchellh.ghostty'" 2>/dev/null | /usr/bin/head -1)
+  if [[ -z "$ghostty_app" ]]; then
+    # mdfind can miss apps before first Spotlight index; fall back to known paths
+    for _p in "/Applications/Ghostty.app" "$HOME/Applications/Ghostty.app"; do
+      [[ -d "$_p" ]] && { ghostty_app="$_p"; break }
+    done
+  fi
+
+  if [[ -n "$ghostty_app" ]]; then
+    ghostty_err="failed to open"
     osascript 2>/dev/null <<OSASCRIPT && ghostty_ok=true
 use framework "AppKit"
 use scripting additions
@@ -107,7 +117,7 @@ OSASCRIPT
   if $ghostty_ok; then
     printf "  ${C[gr]}✓${C[rs]} Ghostty  new window opened\n"
   else
-    printf "  ${C[yl]}⚠${C[rs]} Ghostty  /Applications/Ghostty.app not found\n"
+    printf "  ${C[yl]}⚠${C[rs]} Ghostty  %s\n" "$ghostty_err"
   fi
 
   printf '\n'
