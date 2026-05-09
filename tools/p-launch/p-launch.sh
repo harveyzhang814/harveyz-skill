@@ -78,14 +78,19 @@ _launch() {
     /usr/bin/open -na "Cursor" --args "$path" && cursor_ok=true
   fi
 
-  # Ghostty — AppleScript new window with working directory (Ghostty 1.3.0+)
-  # Works whether Ghostty is running or not; avoids the blank-window issue from -n
+  # Ghostty — invoke "New Ghostty Window Here" service via NSPerformService.
+  # This is the same code path as the Finder right-click service, running
+  # in-process inside Ghostty, so it reliably opens at the correct directory.
   if [[ -d "/Applications/Ghostty.app" ]]; then
-    osascript -e "tell application \"Ghostty\"
-      set cfg to new surface configuration
-      set initial working directory of cfg to \"${path}\"
-      new window with configuration cfg
-    end tell" &>/dev/null && ghostty_ok=true
+    osascript -e "
+      use framework \"AppKit\"
+      use scripting additions
+      set theURL to current application's NSURL's fileURLWithPath:\"${path}\"
+      set thePboard to current application's NSPasteboard's generalPasteboard()
+      thePboard's clearContents()
+      thePboard's writeObjects:{theURL}
+      return current application's NSPerformService(\"New Ghostty Window Here\", thePboard)
+    " &>/dev/null && ghostty_ok=true
   fi
 
   # ── Launch Report ──────────────────────────────────────────────────────────
