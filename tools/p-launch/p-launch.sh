@@ -75,14 +75,12 @@ _launch() {
     cursor "$path" &>/dev/null &
     cursor_ok=true
   elif [[ -d "/Applications/Cursor.app" ]]; then
-    open -na "Cursor" --args "$path"
-    cursor_ok=true
+    /usr/bin/open -na "Cursor" --args "$path" && cursor_ok=true
   fi
 
   # Ghostty — force a new window at the project directory
   if [[ -d "/Applications/Ghostty.app" ]]; then
-    open -na "Ghostty" --args --working-directory="$path"
-    ghostty_ok=true
+    /usr/bin/open -na "Ghostty" --args --working-directory="$path" && ghostty_ok=true
   fi
 
   # ── Launch Report ──────────────────────────────────────────────────────────

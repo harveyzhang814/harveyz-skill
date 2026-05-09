@@ -101,12 +101,12 @@ npx harveyz-skill list
 # 交互式选择 bundle 和目标工具
 node bin/cli.js
 
-# 直接指定 bundle 和目标（仍会交互式询问配置项，按 Enter 接受默认值）
-node bin/cli.js --bundle shell-tools --target claude
+# 直接指定 bundle（shell 工具固定安装到 ~/.local/bin，--target 仅对 skills 有效）
+node bin/cli.js --bundle shell-tools
 node bin/cli.js --bundle dev --target claude
 
 # 覆盖已有安装
-node bin/cli.js --bundle shell-tools --target claude --force
+node bin/cli.js --bundle shell-tools --force
 ```
 
 Skills 安装到 `~/.claude/skills/`，shell 工具安装到 `~/.local/bin/`。
