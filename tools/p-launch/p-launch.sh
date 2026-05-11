@@ -97,7 +97,7 @@ _launch() {
     local _child service_path
     _child=$(/bin/ls -1A "$path" 2>/dev/null | /usr/bin/head -1)
     service_path="${path}/${_child}"
-    /usr/bin/osascript 2>/dev/null <<OSASCRIPT && ghostty_ok=true
+    ${_OSASCRIPT:-/usr/bin/osascript} 2>/dev/null <<OSASCRIPT && ghostty_ok=true
 use framework "AppKit"
 use scripting additions
 set thePboard to current application's NSPasteboard's generalPasteboard()

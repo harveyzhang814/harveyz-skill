@@ -155,10 +155,16 @@ _src() {
 
 _launch_src() {
   local code="$1"
+  # _OSASCRIPT lets tests inject a mock without relying on PATH,
+  # since p-launch.sh calls /usr/bin/osascript via full path.
+  local mock_osascript="${MOCK_BIN}/osascript"
+  local osascript_override=""
+  [[ -x "$mock_osascript" ]] && osascript_override="export _OSASCRIPT='${mock_osascript}'"
   zsh -c "
     export _P_LAUNCH_TEST=1
     export HOME='${MOCK_HOME}'
     export PATH='${MOCK_BIN}:${PATH}'
+    ${osascript_override}
     source '${SCRIPT}'
     ${code}
   "
