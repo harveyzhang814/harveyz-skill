@@ -3,7 +3,7 @@ import { checkbox } from '@inquirer/prompts'
 import chalk from 'chalk'
 import {
   buildAllChoices, getAllSkillItems, getAllToolItems,
-  resolveSkills, resolveTools,
+  resolveSkills, resolveSkillsByName, resolveTools, resolveToolsByName,
   TOOL_BUNDLE_CHOICES,
 } from '../lib/bundles.js'
 import { TARGET_CHOICES, resolveTargets, TARGETS } from '../lib/targets.js'
@@ -13,8 +13,12 @@ const args = process.argv.slice(2)
 const forceFlag = args.includes('--force')
 const bundleIdx = args.indexOf('--bundle')
 const targetIdx = args.indexOf('--target')
+const toolIdx   = args.indexOf('--tool')
+const skillIdx  = args.indexOf('--skill')
 const bundleArg = bundleIdx !== -1 ? args[bundleIdx + 1] : undefined
 const targetArg = targetIdx !== -1 ? args[targetIdx + 1] : undefined
+const toolArg   = toolIdx   !== -1 ? args[toolIdx   + 1] : undefined
+const skillArg  = skillIdx  !== -1 ? args[skillIdx  + 1] : undefined
 
 if (args[0] === 'list') {
   const { createRequire } = await import('module')
@@ -58,7 +62,13 @@ try {
   let skillItems = []
   let toolItems  = []
 
-  if (bundleArg) {
+  if (toolArg) {
+    const names = toolArg.split(',').map(s => s.trim()).filter(Boolean)
+    toolItems = resolveToolsByName(names).map(t => ({ kind: 'tool', ...t }))
+  } else if (skillArg) {
+    const names = skillArg.split(',').map(s => s.trim()).filter(Boolean)
+    skillItems = resolveSkillsByName(names).map(s => ({ kind: 'skill', ...s }))
+  } else if (bundleArg) {
     const bundles = bundleArg.split(',').map(s => s.trim()).filter(Boolean)
     const skillBundles = bundles.filter(b => !TOOL_BUNDLE_VALUES.has(b))
     const toolBundles  = bundles.filter(b =>  TOOL_BUNDLE_VALUES.has(b))

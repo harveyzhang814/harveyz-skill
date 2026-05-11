@@ -151,7 +151,7 @@ vflag = lambda fontname: any(p in fontname for p in [
 # 规则 3: Unicode 数学符号范围
 def is_math_char(ch):
     cat = unicodedata.category(ch)
-    return cat in ("Sm", "Mn") or ("\u0370" <= ch <= "\u03FF")  # Greek
+    return cat in ("Sm", "Mn") or ("Ͱ" <= ch <= "Ͽ")  # Greek
 
 # 规则 4: 垂直字体 (matrix[0]==0 and matrix[3]==0)
 # 公式内的字符通常是垂直排列的

@@ -68,18 +68,43 @@ _launch() {
   local path="$1"
   local name="${path:t}"
   local display="${path/$HOME/~}"
-  local cursor_ok=false ghostty_ok=false
+  local cursor_ok=false ghostty_ok=false ghostty_err="not installed"
 
-  # Cursor IDE
+  # Cursor IDE — CLI first, fall back to .app
   if command -v cursor &>/dev/null; then
     cursor "$path" &>/dev/null &
     cursor_ok=true
+  elif [[ -d "/Applications/Cursor.app" ]]; then
+    /usr/bin/open -na "Cursor" --args "$path" && cursor_ok=true
   fi
 
-  # Ghostty — force a new window at the project directory
-  if [[ -d "/Applications/Ghostty.app" ]]; then
-    open -na "Ghostty" --args --working-directory="$path"
-    ghostty_ok=true
+  # Ghostty — find app via Spotlight (handles /Applications, ~/Applications,
+  # or any custom install path), then invoke "New Ghostty Window Here" service
+  # via NSPerformService — same code path as Finder right-click service.
+  local ghostty_app
+  ghostty_app=$(mdfind "kMDItemCFBundleIdentifier == 'com.mitchellh.ghostty'" 2>/dev/null | /usr/bin/head -1)
+  if [[ -z "$ghostty_app" ]]; then
+    # mdfind can miss apps before first Spotlight index; fall back to known paths
+    for _p in "/Applications/Ghostty.app" "$HOME/Applications/Ghostty.app"; do
+      [[ -d "$_p" ]] && { ghostty_app="$_p"; break }
+    done
+  fi
+
+  if [[ -n "$ghostty_app" ]]; then
+    ghostty_err="failed to open"
+    # Ghostty's service handler does dirname on the path, so pass a child of
+    # the target dir — dirname(target/child) == target.
+    local _child service_path
+    _child=$(/bin/ls -1A "$path" 2>/dev/null | /usr/bin/head -1)
+    service_path="${path}/${_child}"
+    ${_OSASCRIPT:-/usr/bin/osascript} 2>/dev/null <<OSASCRIPT && ghostty_ok=true
+use framework "AppKit"
+use scripting additions
+set thePboard to current application's NSPasteboard's generalPasteboard()
+thePboard's clearContents()
+thePboard's setPropertyList:{"${service_path}"} forType:"NSFilenamesPboardType"
+return current application's NSPerformService("New Ghostty Window Here", thePboard)
+OSASCRIPT
   fi
 
   # ── Launch Report ──────────────────────────────────────────────────────────
@@ -96,7 +121,7 @@ _launch() {
   if $ghostty_ok; then
     printf "  ${C[gr]}✓${C[rs]} Ghostty  new window opened\n"
   else
-    printf "  ${C[yl]}⚠${C[rs]} Ghostty  /Applications/Ghostty.app not found\n"
+    printf "  ${C[yl]}⚠${C[rs]} Ghostty  %s\n" "$ghostty_err"
   fi
 
   printf '\n'

@@ -23,3 +23,4 @@
 | 文件 | 用途 |
 |------|------|
 | [explanation/skill-creator-testing-system.md](explanation/skill-creator-testing-system.md) | skill-creator 测试体系的设计哲学、核心机制与工作原理 |
+| [explanation/pdf-math-translate-architecture.md](explanation/pdf-math-translate-architecture.md) | PDFMathTranslate 的整体架构、核心模块设计原理与已知限制 |
