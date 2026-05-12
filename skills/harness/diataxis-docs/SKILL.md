@@ -1,5 +1,6 @@
 ---
 name: diataxis-docs
+version: "1.0.0"
 description: Use when creating, updating, or deleting any file under docs/ — including writing a new guide, updating reference content, adding an ADR, or removing an outdated page. Also use when searching docs before writing, to avoid duplicating existing content.
 ---
 
