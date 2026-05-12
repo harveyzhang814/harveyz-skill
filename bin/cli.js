@@ -1,10 +1,10 @@
 #!/usr/bin/env node
-import { checkbox, select } from '@inquirer/prompts'
+import { select } from '@inquirer/prompts'
 import chalk from 'chalk'
-import { execSync } from 'child_process'
+import { execSync, spawnSync } from 'child_process'
 import { createRequire } from 'module'
 import {
-  buildAllChoices, formatChoice, getAllSkillItems, getAllToolItems,
+  getAllSkillItems, getAllToolItems,
   resolveSkills, resolveSkillsByName, resolveTools, resolveToolsByName,
   TOOL_BUNDLE_CHOICES,
 } from '../lib/bundles.js'
@@ -105,31 +105,61 @@ const scopeArg  = scopeIdx  !== -1 ? installArgs[scopeIdx  + 1] : undefined
 
 const TOOL_BUNDLE_VALUES = new Set(TOOL_BUNDLE_CHOICES.map(c => c.value))
 
-function buildInteractiveChoices() {
-  const toolItems   = getAllToolItems()
-  const skillChoices = buildAllChoices()
+// 用 fzf 交互式选择 skill/tool，返回选中的 item 列表
+function fzfSelect() {
+  const skillItems = getAllSkillItems()
+  const toolItems  = getAllToolItems()
 
-  // 计算统一的名称宽度（skill + tool 中最长的）
-  const maxSkillWidth = skillChoices
-    .filter(c => c.value && c.value.skillName)
-    .reduce((max, c) => Math.max(max, c.value.skillName.length), 0)
-  const maxToolWidth = toolItems.reduce((max, t) => Math.max(max, t.toolName.length), 0)
-  const nameWidth = Math.max(maxSkillWidth, maxToolWidth)
-
-  return [
-    ...skillChoices,
-    ...(toolItems.length > 0
-      ? [
-          { type: 'separator', separator: '── shell tools ──' },
-          ...toolItems.map(t => ({
-            name:  formatChoice(t.toolName, t.version, nameWidth),
-            value: t,
-          })),
-        ]
-      : []),
-    { type: 'separator', separator: '────────────────' },
-    { name: 'all skills', value: 'all' },
+  // 构建 fzf 输入：每行 "NAME\tVERSION\tBUNDLE\tKIND\tSRCPATH"
+  // bundle 从 srcPath 推断（取倒数第二段目录名）
+  const lines = [
+    ...skillItems.map(s => {
+      const bundle = s.srcPath.split('/').slice(-2, -1)[0]
+      return `${s.skillName}\t${s.version ?? '—'}\t${bundle}\tskill\t${s.srcPath}`
+    }),
+    ...toolItems.map(t => {
+      return `${t.toolName}\t—\tshell-tool\ttool\t${t.srcPath}`
+    }),
   ]
+
+  const nameWidth    = Math.max(...lines.map(l => l.split('\t')[0].length))
+  const versionWidth = Math.max(...lines.map(l => l.split('\t')[1].length))
+
+  // fzf 展示格式：NAME   VERSION   BUNDLE
+  const displayLines = lines.map(l => {
+    const [name, ver, bundle] = l.split('\t')
+    return `${name.padEnd(nameWidth)}  ${ver.padEnd(versionWidth)}  ${bundle}`
+  })
+
+  // 把原始数据附在末尾（隐藏列，用于解析）
+  const fzfInput = displayLines.map((d, i) => `${d}\t${lines[i]}`).join('\n')
+
+  const result = spawnSync('fzf', [
+    '--multi',
+    '--ansi',
+    '--delimiter=\t',
+    '--with-nth=1',           // 只显示格式化的第一列
+    '--prompt=  › ',
+    '--header=  hskill  ·  tab 多选  ·  enter 确认  ·  esc 取消',
+    '--height=50%',
+    '--layout=reverse',
+    '--border=rounded',
+    '--color=header:italic:dim,prompt:cyan,pointer:cyan,hl:cyan,hl+:cyan:bold',
+  ], {
+    input: fzfInput,
+    encoding: 'utf8',
+    stdio: ['pipe', 'pipe', 'inherit'],
+  })
+
+  if (result.status !== 0 || !result.stdout.trim()) return []
+
+  return result.stdout.trim().split('\n').map(line => {
+    const parts = line.split('\t')
+    // 原始数据从第二列开始
+    const [, name, ver, bundle, kind, srcPath] = parts
+    if (kind === 'skill') return { kind: 'skill', skillName: name, srcPath, version: ver }
+    return { kind: 'tool', toolName: name, srcPath, version: ver }
+  })
 }
 
 try {
@@ -149,24 +179,17 @@ try {
     if (skillBundles.length) skillItems = resolveSkills(skillBundles).map(s => ({ kind: 'skill', ...s }))
     if (toolBundles.length)  toolItems  = resolveTools(toolBundles).map(t => ({ kind: 'tool', ...t }))
   } else {
-    const selected = await checkbox({
-      message: 'Select items to install (space to select, enter to confirm):',
-      choices: buildInteractiveChoices(),
-    })
+    const selected = fzfSelect()
 
     if (!selected.length) {
       console.log(chalk.dim('  · Nothing selected, exiting'))
       process.exit(0)
     }
 
-    const hasAll = selected.includes('all')
-    const items  = selected.filter(s => s !== 'all')
-
-    const selectedSkills = hasAll ? getAllSkillItems() : items.filter(s => s.kind === 'skill')
-    toolItems = items.filter(s => s.kind === 'tool')
+    toolItems = selected.filter(s => s.kind === 'tool')
 
     const seen = new Set()
-    skillItems = selectedSkills.filter(s => {
+    skillItems = selected.filter(s => s.kind === 'skill').filter(s => {
       if (seen.has(s.skillName)) return false
       seen.add(s.skillName); return true
     })
@@ -182,13 +205,23 @@ try {
     // Resolve scope
     let scope = scopeArg ?? 'user'
     if (!scopeArg && !targetArg) {
-      scope = await select({
-        message: 'Scope:',
-        choices: [
-          { name: `user     — ~/.claude/skills/  (shared across all projects)`, value: 'user' },
-          { name: `project  — .claude/skills/    (current project only)`, value: 'project' },
-        ],
+      const scopeResult = spawnSync('fzf', [
+        '--prompt=  › ',
+        '--header=  Scope  ·  enter 确认  ·  esc 取消',
+        '--height=20%',
+        '--layout=reverse',
+        '--border=rounded',
+        '--color=header:italic:dim,prompt:cyan,pointer:cyan,hl:cyan,hl+:cyan:bold',
+      ], {
+        input: `user     — ~/.claude/skills/  (所有项目共享)\nproject  — .claude/skills/    (仅当前项目)`,
+        encoding: 'utf8',
+        stdio: ['pipe', 'pipe', 'inherit'],
       })
+      if (!scopeResult.stdout.trim()) {
+        console.log(chalk.dim('  · Cancelled'))
+        process.exit(0)
+      }
+      scope = scopeResult.stdout.trim().startsWith('project') ? 'project' : 'user'
     }
 
     // Resolve target
@@ -196,13 +229,27 @@ try {
     if (targetArg) {
       selectedTargets = targetArg === 'all' ? ['claude', 'cursor', 'codex'] : [targetArg]
     } else {
-      selectedTargets = await checkbox({
-        message: 'Install to which tools (space to select, enter to confirm):',
-        choices: [
-          ...buildTargetChoices(scope),
-          { name: 'all      — all tools', value: 'all' },
-        ],
+      const targetChoices = buildTargetChoices(scope)
+      const targetInput = targetChoices.map(c => c.name).join('\n') + '\nall      — all tools'
+      const targetResult = spawnSync('fzf', [
+        '--multi',
+        '--prompt=  › ',
+        '--header=  Install to  ·  tab 多选  ·  enter 确认  ·  esc 取消',
+        '--height=30%',
+        '--layout=reverse',
+        '--border=rounded',
+        '--color=header:italic:dim,prompt:cyan,pointer:cyan,hl:cyan,hl+:cyan:bold',
+      ], {
+        input: targetInput,
+        encoding: 'utf8',
+        stdio: ['pipe', 'pipe', 'inherit'],
       })
+      if (!targetResult.stdout.trim()) {
+        console.log(chalk.dim('  · Cancelled'))
+        process.exit(0)
+      }
+      selectedTargets = targetResult.stdout.trim().split('\n')
+        .map(l => l.trim().split(/\s+/)[0])
     }
 
     if (selectedTargets.length > 0) {
