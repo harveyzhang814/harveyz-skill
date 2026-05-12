@@ -1,6 +1,8 @@
 #!/usr/bin/env node
 import { checkbox } from '@inquirer/prompts'
 import chalk from 'chalk'
+import { execSync } from 'child_process'
+import { createRequire } from 'module'
 import {
   buildAllChoices, getAllSkillItems, getAllToolItems,
   resolveSkills, resolveSkillsByName, resolveTools, resolveToolsByName,
@@ -9,21 +11,64 @@ import {
 import { TARGET_CHOICES, resolveTargets, TARGETS } from '../lib/targets.js'
 import { installSkills, installTools } from '../lib/installer.js'
 
-const args = process.argv.slice(2)
-const forceFlag = args.includes('--force')
-const bundleIdx = args.indexOf('--bundle')
-const targetIdx = args.indexOf('--target')
-const toolIdx   = args.indexOf('--tool')
-const skillIdx  = args.indexOf('--skill')
-const bundleArg = bundleIdx !== -1 ? args[bundleIdx + 1] : undefined
-const targetArg = targetIdx !== -1 ? args[targetIdx + 1] : undefined
-const toolArg   = toolIdx   !== -1 ? args[toolIdx   + 1] : undefined
-const skillArg  = skillIdx  !== -1 ? args[skillIdx  + 1] : undefined
+const require = createRequire(import.meta.url)
+const { version } = require('../package.json')
 
-if (args[0] === 'list') {
-  const { createRequire } = await import('module')
-  const require = createRequire(import.meta.url)
-  const { bundleMeta, skills, toolBundleMeta = {}, tools = [] } = require('../skills-index.json')
+const args = process.argv.slice(2)
+const subcommand = args[0]
+
+// ── Help ─────────────────────────────────────────────────────────────────────
+function printHelp() {
+  console.log(`
+  ${chalk.bold('hskill')} — skill manager for Claude Code, Cursor, and Codex  v${version}
+
+  ${chalk.cyan('Usage:')}
+    hskill                         interactive install
+    hskill install                 interactive install (explicit)
+    hskill install --bundle <b>    install a skill bundle
+    hskill install --skill <s>     install specific skill(s)
+    hskill install --tool <t>      install shell tool(s)
+    hskill install --target <t>    set target (claude/cursor/codex/all)
+    hskill install --force         overwrite existing installs
+    hskill list                    list available skills and bundles
+    hskill update                  update hskill to the latest version
+    hskill --version               show version
+    hskill --help                  show this help
+
+  ${chalk.cyan('Examples:')}
+    hskill install --bundle dev --target claude
+    hskill install --skill git-workflow-init,mermaid-diagram --target claude
+    hskill install --tool p-launch
+    hskill update
+`)
+}
+
+if (args[0] === '--help' || args[0] === '-h') {
+  printHelp()
+  process.exit(0)
+}
+
+if (args[0] === '--version' || args[0] === '-v') {
+  console.log(version)
+  process.exit(0)
+}
+
+// ── Update ───────────────────────────────────────────────────────────────────
+if (subcommand === 'update') {
+  console.log(chalk.dim('  · Updating hskill…'))
+  try {
+    execSync('npm update -g harveyz-skill', { stdio: 'inherit' })
+    console.log(chalk.green('  ✔ hskill updated'))
+  } catch {
+    console.error(chalk.red('  ✗ Update failed. Try: npm update -g harveyz-skill'))
+    process.exit(1)
+  }
+  process.exit(0)
+}
+
+// ── List ─────────────────────────────────────────────────────────────────────
+if (subcommand === 'list') {
+  const { bundleMeta, skills, tools = [] } = require('../skills-index.json')
   const byBundle = {}
   for (const s of skills) {
     if (!byBundle[s.bundle]) byBundle[s.bundle] = []
@@ -40,6 +85,20 @@ if (args[0] === 'list') {
   }
   process.exit(0)
 }
+
+// ── Install ───────────────────────────────────────────────────────────────────
+// subcommand is 'install' or omitted (default behavior)
+const installArgs = subcommand === 'install' ? args.slice(1) : args
+
+const forceFlag = installArgs.includes('--force')
+const bundleIdx = installArgs.indexOf('--bundle')
+const targetIdx = installArgs.indexOf('--target')
+const toolIdx   = installArgs.indexOf('--tool')
+const skillIdx  = installArgs.indexOf('--skill')
+const bundleArg = bundleIdx !== -1 ? installArgs[bundleIdx + 1] : undefined
+const targetArg = targetIdx !== -1 ? installArgs[targetIdx + 1] : undefined
+const toolArg   = toolIdx   !== -1 ? installArgs[toolIdx   + 1] : undefined
+const skillArg  = skillIdx  !== -1 ? installArgs[skillIdx  + 1] : undefined
 
 const TOOL_BUNDLE_VALUES = new Set(TOOL_BUNDLE_CHOICES.map(c => c.value))
 
@@ -103,7 +162,7 @@ try {
     process.exit(0)
   }
 
-  // ── Install skills ───────────────────────────────────────────────────────────
+  // ── Install skills ──────────────────────────────────────────────────────────
   if (skillItems.length > 0) {
     let selectedTargets
     if (targetArg) {
@@ -134,7 +193,7 @@ try {
     }
   }
 
-  // ── Install shell tools ──────────────────────────────────────────────────────
+  // ── Install shell tools ─────────────────────────────────────────────────────
   if (toolItems.length > 0) {
     console.log('')
     const installed = await installTools(

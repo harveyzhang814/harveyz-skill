@@ -4,7 +4,7 @@ Harvey 的个人 Claude Code 技能仓库。
 
 ## 技能清单
 
-按 bundle 分组，`npx harveyz-skill --bundle <bundle>` 安装对应分组。
+按 bundle 分组，`hskill install --bundle <bundle>` 安装对应分组。
 
 ### analysis — 分析工具
 
@@ -63,7 +63,7 @@ Harvey 的个人 Claude Code 技能仓库。
 
 ## 工具清单
 
-Shell 工具，通过 `npx harveyz-skill --bundle shell-tools` 安装。
+Shell 工具，通过 `hskill install --tool p-launch` 安装。
 
 | 工具 | 说明 |
 |------|------|
@@ -74,49 +74,38 @@ Shell 工具，通过 `npx harveyz-skill --bundle shell-tools` 安装。
 
 ## 安装
 
-### 推荐：npx 一键安装
-
 ```bash
-npx harveyz-skill
+npm install -g harveyz-skill
 ```
 
-交互式选择 bundle 和目标工具（Claude Code / Cursor / Codex）。
+安装后使用 `hskill` 命令管理 skills。
 
-**无交互模式：**
-```bash
-npx harveyz-skill --bundle brainstorming --target claude
-npx harveyz-skill --bundle brainstorming,dev --target all
-```
-
-**查看可用 bundle：**
-```bash
-npx harveyz-skill list
-```
-
-### 本地源码安装
-
-克隆仓库后，用 CLI 安装：
+### 常用命令
 
 ```bash
-# 交互式选择 bundle 和目标工具
-node bin/cli.js
-
-# 安装指定 skill
-node bin/cli.js --skill mermaid-diagram --target claude
-node bin/cli.js --skill brainstorming,writing-plans --target claude
-
-# 安装整个 skill bundle
-node bin/cli.js --bundle dev --target claude
-
-# 安装指定 shell 工具（固定安装到 ~/.local/bin）
-node bin/cli.js --tool p-launch
-
-# 覆盖已有安装
-node bin/cli.js --skill mermaid-diagram --target claude --force
-node bin/cli.js --tool p-launch --force
+hskill                                          # 交互式选择安装
+hskill install --bundle dev --target claude     # 安装指定 bundle
+hskill install --skill git-workflow-init        # 安装指定 skill
+hskill install --tool p-launch                  # 安装 shell 工具
+hskill list                                     # 查看可用 skill
+hskill update                                   # 更新到最新版
+hskill --help                                   # 查看帮助
 ```
 
 Skills 安装到 `~/.claude/skills/`，shell 工具安装到 `~/.local/bin/`。
+
+### 本地源码开发
+
+```bash
+# 安装指定 skill
+node bin/cli.js install --skill mermaid-diagram --target claude
+
+# 安装整个 bundle
+node bin/cli.js install --bundle dev --target claude
+
+# 覆盖已有安装
+node bin/cli.js install --skill mermaid-diagram --target claude --force
+```
 
 ## Skill 开发指南
 
