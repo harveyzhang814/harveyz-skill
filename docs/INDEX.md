@@ -9,6 +9,7 @@
 
 | 文件 | 用途 |
 |------|------|
+| [how-to/install-skills.md](how-to/install-skills.md) | 如何安装 hskill 并将 skill 安装到 Claude Code / Cursor / Codex |
 | [how-to/git-daily-workflow.md](how-to/git-daily-workflow.md) | 如何安装 hook、日常开发切分支、合并到 staging 和 main |
 | [how-to/npm-publish.md](how-to/npm-publish.md) | 如何将新 skill 发布到 npm |
 
