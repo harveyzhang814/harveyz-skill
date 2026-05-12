@@ -45,6 +45,10 @@
 !docs/**/
 !docs/**/*
 
+# 保留测试目录
+!tests/
+!tests/**
+
 
 
 # 排除 eval workspace

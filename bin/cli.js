@@ -3,14 +3,19 @@ import { select } from '@inquirer/prompts'
 import chalk from 'chalk'
 import { execSync, spawnSync } from 'child_process'
 import { createRequire } from 'module'
+import os from 'os'
+import path from 'path'
+import { fileURLToPath } from 'url'
 import {
   getAllSkillItems, getAllToolItems,
+  checkInstalled, checkToolInstalled, scopeSummary,
   resolveSkills, resolveSkillsByName, resolveTools, resolveToolsByName,
   TOOL_BUNDLE_CHOICES,
 } from '../lib/bundles.js'
 import { buildTargetChoices, resolveTargets, TARGETS } from '../lib/targets.js'
 import { installSkills, installTools } from '../lib/installer.js'
 
+const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const require = createRequire(import.meta.url)
 const { version } = require('../package.json')
 
@@ -107,44 +112,60 @@ const TOOL_BUNDLE_VALUES = new Set(TOOL_BUNDLE_CHOICES.map(c => c.value))
 
 // 用 fzf 交互式选择 skill/tool，返回选中的 item 列表
 function fzfSelect() {
-  const skillItems = getAllSkillItems()
-  const toolItems  = getAllToolItems()
+  const skillItems  = getAllSkillItems()
+  const toolItems   = getAllToolItems()
+  const previewPath = path.join(__dirname, 'preview.mjs')
 
   // 构建 fzf 输入：每行 "NAME\tVERSION\tBUNDLE\tKIND\tSRCPATH"
-  // bundle 从 srcPath 推断（取倒数第二段目录名）
   const lines = [
     ...skillItems.map(s => {
       const bundle = s.srcPath.split('/').slice(-2, -1)[0]
       return `${s.skillName}\t${s.version ?? '—'}\t${bundle}\tskill\t${s.srcPath}`
     }),
-    ...toolItems.map(t => {
-      return `${t.toolName}\t—\tshell-tool\ttool\t${t.srcPath}`
-    }),
+    ...toolItems.map(t => `${t.toolName}\t${t.version ?? '—'}\tshell-tool\ttool\t${t.srcPath}`),
   ]
 
   const nameWidth    = Math.max(...lines.map(l => l.split('\t')[0].length))
   const versionWidth = Math.max(...lines.map(l => l.split('\t')[1].length))
 
-  // fzf 展示格式：NAME   VERSION   BUNDLE
+  const G = '\x1b[32m', Y = '\x1b[33m', D = '\x1b[2m', R = '\x1b[0m'
+  function colorIcon(status) {
+    if (status === 'up-to-date') return G + '✓' + R
+    if (status === 'update')     return Y + '↑' + R
+    return D + '—' + R
+  }
+
+  // fzf 展示格式：NAME   VERSION   U:?  P:?  BUNDLE
   const displayLines = lines.map(l => {
-    const [name, ver, bundle] = l.split('\t')
-    return `${name.padEnd(nameWidth)}  ${ver.padEnd(versionWidth)}  ${bundle}`
+    const [name, ver, bundle, kind, srcPath] = l.split('\t')
+    let uIcon = D + '—' + R, pIcon = D + '—' + R
+    if (kind === 'skill') {
+      const installed = checkInstalled(name, ver)
+      uIcon = colorIcon(scopeSummary(installed.user))
+      pIcon = colorIcon(scopeSummary(installed.project))
+    } else if (kind === 'tool') {
+      uIcon = colorIcon(checkToolInstalled(name, srcPath).status)
+    }
+    return `${name.padEnd(nameWidth)}  ${ver.padEnd(versionWidth)}  U:${uIcon}  P:${pIcon}  ${bundle}`
   })
 
-  // 把原始数据附在末尾（隐藏列，用于解析）
+  // 把原始数据附在末尾（隐藏列，用于解析和 preview）
   const fzfInput = displayLines.map((d, i) => `${d}\t${lines[i]}`).join('\n')
+
+  const header = `  hskill  ·  U=user P=project  ${G}✓${R}=ok ${Y}↑${R}=update ${D}—${R}=none  ·  tab 多选  ·  enter 确认`
 
   const result = spawnSync('fzf', [
     '--multi',
     '--ansi',
     '--delimiter=\t',
-    '--with-nth=1',           // 只显示格式化的第一列
+    '--with-nth=1',
     '--prompt=  › ',
-    '--header=  hskill  ·  tab 多选  ·  enter 确认  ·  esc 取消',
-    '--height=50%',
+    `--header=${header}`,
     '--layout=reverse',
     '--border=rounded',
     '--color=header:italic:dim,prompt:cyan,pointer:cyan,hl:cyan,hl+:cyan:bold',
+    `--preview=node ${previewPath} {2} {3} {5} {6}`,
+    '--preview-window=right:42%:wrap',
   ], {
     input: fzfInput,
     encoding: 'utf8',
@@ -155,7 +176,6 @@ function fzfSelect() {
 
   return result.stdout.trim().split('\n').map(line => {
     const parts = line.split('\t')
-    // 原始数据从第二列开始
     const [, name, ver, bundle, kind, srcPath] = parts
     if (kind === 'skill') return { kind: 'skill', skillName: name, srcPath, version: ver }
     return { kind: 'tool', toolName: name, srcPath, version: ver }
@@ -208,7 +228,6 @@ try {
       const scopeResult = spawnSync('fzf', [
         '--prompt=  › ',
         '--header=  Scope  ·  enter 确认  ·  esc 取消',
-        '--height=20%',
         '--layout=reverse',
         '--border=rounded',
         '--color=header:italic:dim,prompt:cyan,pointer:cyan,hl:cyan,hl+:cyan:bold',
@@ -235,7 +254,6 @@ try {
         '--multi',
         '--prompt=  › ',
         '--header=  Install to  ·  tab 多选  ·  enter 确认  ·  esc 取消',
-        '--height=30%',
         '--layout=reverse',
         '--border=rounded',
         '--color=header:italic:dim,prompt:cyan,pointer:cyan,hl:cyan,hl+:cyan:bold',
