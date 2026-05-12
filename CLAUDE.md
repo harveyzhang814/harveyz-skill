@@ -9,8 +9,9 @@ Personal Claude Code skills repository for Harvey. Skills are self-contained dir
 ## Installation
 
 ```bash
-# Recommended: npx one-click install
-npx harveyz-skill
+# Recommended: global install
+npm install -g harveyz-skill
+hskill                          # interactive install
 
 # Or manual install
 mkdir -p ~/.claude/skills
