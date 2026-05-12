@@ -1,10 +1,10 @@
 {
   "name": "harveyz-skill",
   "version": "0.3.0",
-  "description": "One-click skill installer for Claude Code, Cursor, and Codex",
+  "description": "Skill manager for Claude Code, Cursor, and Codex",
   "type": "module",
   "bin": {
-    "harveyz-skill": "bin/cli.js"
+    "hskill": "bin/cli.js"
   },
   "scripts": {
     "prepack": "node scripts/generate-npmignore.js"
