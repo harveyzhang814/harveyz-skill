@@ -1,8 +1,15 @@
+---
+name: skill-analyzer
+description: "对 Skill 仓库进行系统性分析。触发词：分析这个 skill 仓库、对这个 skill 仓库做系统性研究、输出 skill 仓库的分析报告、理解这个 skill 系统的设计意图"
+user_invocable: true
+version: "1.0.0"
+---
+
 # SKILL.md — skill-analyzer
 
-> **版本：** v0.9
-> **版本日期：** 2026-03-28
-> **基于：** v0.8 + 第7轮评估反馈
+> **版本：** v1.0.0
+> **版本日期：** 2026-05-12
+> **基于：** v0.9 + 结构性重构
 > **定位：** 对 Skill 仓库进行系统性分析的工具 Skill
 
 ---
@@ -111,40 +118,44 @@ cso, review, ship
 
 ---
 
-## Layer 1-4
+## Layer 1-4 执行指南
 
-按照洋葱模型框架执行。
+按洋葱模型从内到外逐层分析：
+
+- **Layer 1 — 设计意图（哲学视角）：** 读 ETHOS.md / ARCHITECTURE.md / README 等哲学文档，提炼系统定位和核心设计原则
+- **Layer 2 — 组件目录（结构视角）：** 实际运行命令列出所有目录和文件，统计各目录文件数，逐目录列清单，不能估算
+- **Layer 3 — 交互关系（系统视角）：** 识别三类关系（自动触发 / 建议序列 / 前置配置），分析 `allowed-tools` 权限矩阵（必须从实际 SKILL.md 读取）
+- **Layer 4 — 使用场景（用户视角）：** 提炼 3-5 个典型工作流场景，列出降级矩阵
+
+报告结构详见 → `references/output-template.md`
 
 ---
 
+## 输出路径
+
+所有输出文件保存在**被分析项目的根目录**下，新建 `skill-analysis/` 目录：
+
+```
+{被分析项目根目录}/
+└── skill-analysis/
+    ├── analysis/
+    │   └── {YYYY-MM-DD}-{仓库名}-report.md    # 分析报告
+    └── evaluation/
+        └── {YYYY-MM-DD}-{仓库名}-eval.md       # 评估报告（如有）
+```
+
+不得将输出文件保存在 skill 自身目录下。
+
 ## 输出格式
 
-```markdown
-# {仓库名} 系统分析报告
-
-## 元信息
-- 分析版本：
-- 项目类型：
-- VERSION / package.json / CHANGELOG：
-- 版本根因分析：
-
-## 1-6. 各层分析
-...
-
-## 附录
-### 幽灵文件列表（如有）
-### allowed-tools 完整读取记录
-（每个 skill：工具数 + 具体工具名称）
-```
+使用 `references/output-template.md` 中的结构填写报告，所有占位符替换为实际内容。
 
 ---
 
 ## 禁忌（共 23 条）
 
-1-22 条沿用 v0.8（略）
-
-**23. ❌ WebSearch 数量必须为 12 个（不是16！）。benchmark/canary/document-release/setup-deploy 均不含 WebSearch。browse/test/ = 18（不是11）。bin/ + browse/bin/ = 19（不是20）。**  ← 新增
+**执行前必须读取 `references/prohibitions.md`**，每条禁忌均来自真实迭代中发现的系统性错误。
 
 ---
 
-*skill-analyzer v0.9 | 2026-03-28*
+*skill-analyzer v1.0.0 | 2026-05-12*
