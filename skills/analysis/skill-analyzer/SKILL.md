@@ -1,3 +1,10 @@
+---
+name: skill-analyzer
+description: "对 Skill 仓库进行系统性分析。触发词：分析这个 skill 仓库、对这个 skill 仓库做系统性研究、输出 skill 仓库的分析报告、理解这个 skill 系统的设计意图"
+user_invocable: true
+version: "0.9.0"
+---
+
 # SKILL.md — skill-analyzer
 
 > **版本：** v0.9
