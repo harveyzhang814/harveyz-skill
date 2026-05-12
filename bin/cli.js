@@ -37,15 +37,20 @@ function printHelp() {
     hskill install --scope <s>     set scope: user (default) or project
     hskill install --force         overwrite existing installs
     hskill list                    list available skills and bundles
+    hskill status                  show install status for all skills and tools
+    hskill outdated                list skills and tools with available updates
+    hskill info <name>             show install detail for a skill or tool
     hskill update                  update hskill to the latest version
-    hskill --version               show version
+    hskill version                 show version
     hskill --help                  show this help
 
   ${chalk.cyan('Examples:')}
     hskill install --bundle dev --target claude
     hskill install --skill git-workflow-init --target claude --scope project
     hskill install --tool p-launch
-    hskill update
+    hskill status
+    hskill outdated
+    hskill info git-workflow-init
 `)
 }
 
@@ -54,7 +59,7 @@ if (args[0] === '--help' || args[0] === '-h') {
   process.exit(0)
 }
 
-if (args[0] === '--version' || args[0] === '-v') {
+if (args[0] === '--version' || args[0] === '-v' || subcommand === 'version') {
   console.log(version)
   process.exit(0)
 }
@@ -88,6 +93,155 @@ if (subcommand === 'list') {
     console.log('')
     console.log(chalk.bold('shell tools:'))
     for (const t of tools) console.log('  ' + t.name)
+  }
+  process.exit(0)
+}
+
+// ── Status / Outdated ─────────────────────────────────────────────────────────
+if (subcommand === 'status' || subcommand === 'outdated') {
+  const outdatedOnly = subcommand === 'outdated'
+  const skillItems   = getAllSkillItems()
+  const toolItems    = getAllToolItems()
+
+  function icon(status) {
+    if (status === 'up-to-date') return chalk.green('✓')
+    if (status === 'update')     return chalk.yellow('↑')
+    return chalk.dim('—')
+  }
+
+  const skillRows = skillItems.map(s => {
+    const inst = checkInstalled(s.skillName, s.version ?? '—')
+    return {
+      name: s.skillName, version: s.version ?? '—',
+      userStatus: scopeSummary(inst.user), projectStatus: scopeSummary(inst.project),
+      userDetail: inst.user, projectDetail: inst.project,
+    }
+  })
+  const toolRows = toolItems.map(t => {
+    const inst = checkToolInstalled(t.toolName, t.srcPath)
+    return { name: t.toolName, version: t.version ?? '—', ...inst }
+  })
+
+  if (outdatedOnly) {
+    const outdatedSkills = skillRows.filter(r => r.userStatus === 'update' || r.projectStatus === 'update')
+    const outdatedTools  = toolRows.filter(r => r.status === 'update')
+
+    if (!outdatedSkills.length && !outdatedTools.length) {
+      console.log(chalk.green.bold('\n  ✓ All installed skills and tools are up to date\n'))
+      process.exit(0)
+    }
+
+    const targets = ['claude', 'cursor', 'codex']
+
+    if (outdatedSkills.length) {
+      console.log('\n  ' + chalk.bold('SKILLS WITH UPDATES'))
+      const nw = Math.max(...outdatedSkills.map(r => r.name.length))
+      for (const r of outdatedSkills) {
+        console.log('  ' + r.name.padEnd(nw) + '  available: ' + chalk.yellow(r.version))
+        for (const scope of ['user', 'project']) {
+          const detail = scope === 'user' ? r.userDetail : r.projectDetail
+          for (const t of targets) {
+            if (detail[t].status === 'update') {
+              console.log('    ' + chalk.dim(scope.padEnd(8) + t.padEnd(8)) + detail[t].version + ' → ' + chalk.yellow(r.version))
+            }
+          }
+        }
+      }
+    }
+
+    if (outdatedTools.length) {
+      console.log('\n  ' + chalk.bold('TOOLS WITH UPDATES'))
+      const nw = Math.max(...outdatedTools.map(r => r.name.length))
+      for (const r of outdatedTools) {
+        console.log('  ' + r.name.padEnd(nw) + '  ' + chalk.dim(r.version) + ' → ' + chalk.yellow(r.version))
+      }
+    }
+    console.log('')
+    process.exit(0)
+  }
+
+  // Full status table
+  const allNames = [...skillRows, ...toolRows].map(r => r.name)
+  const allVers  = [...skillRows, ...toolRows].map(r => r.version)
+  const nw = Math.max(...allNames.map(n => n.length), 4)
+  const vw = Math.max(...allVers.map(v => v.length), 7)
+  const sep = chalk.dim('  ' + '─'.repeat(nw + vw + 20))
+
+  console.log('')
+  console.log('  ' + chalk.bold('SKILLS') + chalk.dim(`  — ${skillRows.length} available`))
+  console.log(sep)
+  console.log('  ' + ''.padEnd(nw + vw + 3) + chalk.dim('user    project'))
+  for (const r of skillRows) {
+    const u = icon(r.userStatus), p = icon(r.projectStatus)
+    console.log('  ' + r.name.padEnd(nw) + '  ' + chalk.dim(r.version.padEnd(vw)) + '  ' + u + '       ' + p)
+  }
+
+  console.log('')
+  console.log('  ' + chalk.bold('TOOLS') + chalk.dim(`  — ${toolRows.length} available`))
+  console.log(sep)
+  for (const r of toolRows) {
+    console.log('  ' + r.name.padEnd(nw) + '  ' + chalk.dim(r.version.padEnd(vw)) + '  ' + icon(r.status))
+  }
+
+  const installedSkills = skillRows.filter(r => r.userStatus !== 'none' || r.projectStatus !== 'none').length
+  const installedTools  = toolRows.filter(r => r.status !== 'none').length
+  const outdatedCount   = skillRows.filter(r => r.userStatus === 'update' || r.projectStatus === 'update').length
+                        + toolRows.filter(r => r.status === 'update').length
+  const outdatedNote    = outdatedCount ? '  ·  ' + chalk.yellow(outdatedCount + ' outdated') : ''
+  console.log('')
+  console.log(chalk.dim(`  ${installedSkills} of ${skillRows.length} skills installed  ·  ${installedTools} of ${toolRows.length} tools installed${outdatedNote}`))
+  console.log('')
+  process.exit(0)
+}
+
+// ── Info ──────────────────────────────────────────────────────────────────────
+if (subcommand === 'info') {
+  const name = args[1]
+  if (!name) {
+    console.error(chalk.red('  ✗ Usage: hskill info <skill-or-tool-name>'))
+    process.exit(1)
+  }
+
+  const skillItems = getAllSkillItems()
+  const toolItems  = getAllToolItems()
+  const skill = skillItems.find(s => s.skillName === name)
+  const tool  = toolItems.find(t => t.toolName === name)
+
+  if (!skill && !tool) {
+    console.error(chalk.red(`  ✗ Unknown: "${name}"`))
+    process.exit(1)
+  }
+
+  const targets = ['claude', 'cursor', 'codex']
+
+  function statusLabel(status) {
+    if (status === 'up-to-date') return chalk.green('✓ up to date')
+    if (status === 'update')     return chalk.yellow('↑ update available')
+    return chalk.dim('— not installed')
+  }
+
+  console.log('')
+  if (skill) {
+    const inst = checkInstalled(skill.skillName, skill.version ?? '—')
+    console.log('  ' + chalk.bold(skill.skillName) + chalk.dim('  skill'))
+    console.log('  ' + chalk.dim('available: ') + (skill.version ?? '—'))
+    console.log('')
+    for (const [scopeLabel, detail] of [['USER LEVEL', inst.user], ['PROJECT LEVEL', inst.project]]) {
+      console.log('  ' + chalk.bold(scopeLabel))
+      for (const t of targets) {
+        const { version: v, status } = detail[t]
+        console.log('  ' + t.padEnd(8) + chalk.dim(v.padEnd(10)) + statusLabel(status))
+      }
+      console.log('')
+    }
+  } else {
+    const inst = checkToolInstalled(tool.toolName, tool.srcPath)
+    console.log('  ' + chalk.bold(tool.toolName) + chalk.dim('  shell tool'))
+    console.log('  ' + chalk.dim('available: ') + (tool.version ?? '—'))
+    console.log('')
+    console.log('  ' + chalk.bold('INSTALL STATUS'))
+    console.log('  ' + '~/.local/bin'.padEnd(14) + chalk.dim(inst.version.padEnd(10)) + statusLabel(inst.status))
+    console.log('')
   }
   process.exit(0)
 }
