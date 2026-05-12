@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { checkbox } from '@inquirer/prompts'
+import { checkbox, select } from '@inquirer/prompts'
 import chalk from 'chalk'
 import { execSync } from 'child_process'
 import { createRequire } from 'module'
@@ -8,7 +8,7 @@ import {
   resolveSkills, resolveSkillsByName, resolveTools, resolveToolsByName,
   TOOL_BUNDLE_CHOICES,
 } from '../lib/bundles.js'
-import { TARGET_CHOICES, resolveTargets, TARGETS } from '../lib/targets.js'
+import { buildTargetChoices, resolveTargets, TARGETS } from '../lib/targets.js'
 import { installSkills, installTools } from '../lib/installer.js'
 
 const require = createRequire(import.meta.url)
@@ -29,6 +29,7 @@ function printHelp() {
     hskill install --skill <s>     install specific skill(s)
     hskill install --tool <t>      install shell tool(s)
     hskill install --target <t>    set target (claude/cursor/codex/all)
+    hskill install --scope <s>     set scope: user (default) or project
     hskill install --force         overwrite existing installs
     hskill list                    list available skills and bundles
     hskill update                  update hskill to the latest version
@@ -37,7 +38,7 @@ function printHelp() {
 
   ${chalk.cyan('Examples:')}
     hskill install --bundle dev --target claude
-    hskill install --skill git-workflow-init,mermaid-diagram --target claude
+    hskill install --skill git-workflow-init --target claude --scope project
     hskill install --tool p-launch
     hskill update
 `)
@@ -95,10 +96,12 @@ const bundleIdx = installArgs.indexOf('--bundle')
 const targetIdx = installArgs.indexOf('--target')
 const toolIdx   = installArgs.indexOf('--tool')
 const skillIdx  = installArgs.indexOf('--skill')
+const scopeIdx  = installArgs.indexOf('--scope')
 const bundleArg = bundleIdx !== -1 ? installArgs[bundleIdx + 1] : undefined
 const targetArg = targetIdx !== -1 ? installArgs[targetIdx + 1] : undefined
 const toolArg   = toolIdx   !== -1 ? installArgs[toolIdx   + 1] : undefined
 const skillArg  = skillIdx  !== -1 ? installArgs[skillIdx  + 1] : undefined
+const scopeArg  = scopeIdx  !== -1 ? installArgs[scopeIdx  + 1] : undefined
 
 const TOOL_BUNDLE_VALUES = new Set(TOOL_BUNDLE_CHOICES.map(c => c.value))
 
@@ -164,21 +167,34 @@ try {
 
   // ── Install skills ──────────────────────────────────────────────────────────
   if (skillItems.length > 0) {
+    // Resolve scope
+    let scope = scopeArg ?? 'user'
+    if (!scopeArg && !targetArg) {
+      scope = await select({
+        message: 'Scope:',
+        choices: [
+          { name: `user     — ~/.claude/skills/  (shared across all projects)`, value: 'user' },
+          { name: `project  — .claude/skills/    (current project only)`, value: 'project' },
+        ],
+      })
+    }
+
+    // Resolve target
     let selectedTargets
     if (targetArg) {
-      selectedTargets = targetArg === 'all' ? Object.keys(TARGETS) : [targetArg]
+      selectedTargets = targetArg === 'all' ? ['claude', 'cursor', 'codex'] : [targetArg]
     } else {
       selectedTargets = await checkbox({
         message: 'Install to which tools (space to select, enter to confirm):',
         choices: [
-          ...TARGET_CHOICES,
+          ...buildTargetChoices(scope),
           { name: 'all      — all tools', value: 'all' },
         ],
       })
     }
 
     if (selectedTargets.length > 0) {
-      const targets = resolveTargets(selectedTargets)
+      const targets = resolveTargets(selectedTargets, scope)
       console.log('')
       const summary = await installSkills(skillItems, targets, forceFlag)
       console.log('')
