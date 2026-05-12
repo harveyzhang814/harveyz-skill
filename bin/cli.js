@@ -4,7 +4,7 @@ import chalk from 'chalk'
 import { execSync } from 'child_process'
 import { createRequire } from 'module'
 import {
-  buildAllChoices, getAllSkillItems, getAllToolItems,
+  buildAllChoices, formatChoice, getAllSkillItems, getAllToolItems,
   resolveSkills, resolveSkillsByName, resolveTools, resolveToolsByName,
   TOOL_BUNDLE_CHOICES,
 } from '../lib/bundles.js'
@@ -106,13 +106,25 @@ const scopeArg  = scopeIdx  !== -1 ? installArgs[scopeIdx  + 1] : undefined
 const TOOL_BUNDLE_VALUES = new Set(TOOL_BUNDLE_CHOICES.map(c => c.value))
 
 function buildInteractiveChoices() {
-  const toolItems = getAllToolItems()
+  const toolItems   = getAllToolItems()
+  const skillChoices = buildAllChoices()
+
+  // 计算统一的名称宽度（skill + tool 中最长的）
+  const maxSkillWidth = skillChoices
+    .filter(c => c.value && c.value.skillName)
+    .reduce((max, c) => Math.max(max, c.value.skillName.length), 0)
+  const maxToolWidth = toolItems.reduce((max, t) => Math.max(max, t.toolName.length), 0)
+  const nameWidth = Math.max(maxSkillWidth, maxToolWidth)
+
   return [
-    ...buildAllChoices(),
+    ...skillChoices,
     ...(toolItems.length > 0
       ? [
           { type: 'separator', separator: '── shell tools ──' },
-          ...toolItems.map(t => ({ name: t.toolName, value: t })),
+          ...toolItems.map(t => ({
+            name:  formatChoice(t.toolName, t.version, nameWidth),
+            value: t,
+          })),
         ]
       : []),
     { type: 'separator', separator: '────────────────' },
