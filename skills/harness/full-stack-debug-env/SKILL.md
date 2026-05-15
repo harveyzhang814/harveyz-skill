@@ -1,5 +1,6 @@
 ---
 name: full-stack-debug-env
+version: "1.0.0"
 description: Use when setting up a log monitoring environment before running agents or test scenarios on a multi-component application — captures frontend browser console, backend processes, workers, daemons, and other services as independent log files so agents can query each layer precisely
 ---
 

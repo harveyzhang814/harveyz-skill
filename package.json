@@ -1,13 +1,14 @@
 {
   "name": "harveyz-skill",
-  "version": "0.5.0",
+  "version": "0.6.1",
   "description": "Skill manager for Claude Code, Cursor, and Codex",
   "type": "module",
   "bin": {
     "hskill": "bin/cli.js"
   },
   "scripts": {
-    "prepack": "node scripts/generate-npmignore.js"
+    "prepack": "node scripts/generate-npmignore.js",
+    "test": "bats tests/ tools/p-launch/tests/"
   },
   "files": [
     "bin/",
@@ -16,6 +17,7 @@
     "skills-index.json",
     "skills/analysis/skill-analyzer/CHANGELOG.md",
     "skills/analysis/skill-analyzer/SKILL.md",
+    "skills/analysis/skill-analyzer/references/",
     "skills/harness/diataxis-docs/",
     "skills/harness/full-stack-debug-env/",
     "skills/superpowers-fork/brainstorming/",

@@ -1,5 +1,6 @@
 ---
 name: article-fetcher
+version: "1.0.0"
 description: "Use for the fetch-URL → translate → save-to-Obsidian workflow. Trigger whenever a user has a web URL (article, blog post, tweet, newsletter) and wants it fetched, translated into Chinese, and saved locally — even if they say it obliquely (e.g. \"存到 obsidian\", \"抓取\", \"save this\", \"translate and archive\"). Handles single URLs and batch lists, and X.com / Twitter (Playwright + Chrome Profile). Skip only if: no URL is present (user pasting raw text to translate), user wants a summary without archiving, or user is asking about a site's tech stack without wanting to save anything."
 ---
 

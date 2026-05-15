@@ -1,6 +1,27 @@
 # CLAUDE.md
 
-Personal Claude Code skills repository. Skills are self-contained directories installed to `~/.claude/skills/`.
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+## Overview
+
+Personal Claude Code skills repository for Harvey. Skills are self-contained directories installed to `~/.claude/skills/` to extend Claude Code's capabilities.
+
+## Installation
+
+```bash
+# Recommended: global install
+npm install -g harveyz-skill
+hskill                          # interactive install
+
+# Or manual install
+mkdir -p ~/.claude/skills
+cp -r skills/* ~/.claude/skills/
+
+# Install git branch-protection hooks (optional, for this repo)
+bash scripts/git/install-git-hooks.sh
+```
+
+The git hooks block direct commits to `main` and `staging` — use feature/fix/chore/doc branches merged via staging.
 
 ## Skill Structure
 
