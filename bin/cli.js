@@ -264,8 +264,23 @@ const scopeArg  = scopeIdx  !== -1 ? installArgs[scopeIdx  + 1] : undefined
 
 const TOOL_BUNDLE_VALUES = new Set(TOOL_BUNDLE_CHOICES.map(c => c.value))
 
+function requireFzf() {
+  const probe = spawnSync('fzf', ['--version'], { encoding: 'utf8' })
+  if (probe.error || probe.status !== 0) {
+    console.error(chalk.red('  ✗ fzf is required but not installed.'))
+    console.error('')
+    console.error('  Install it with:')
+    console.error(chalk.cyan('    brew install fzf') + chalk.dim('          # macOS'))
+    console.error(chalk.cyan('    sudo apt install fzf') + chalk.dim('      # Debian/Ubuntu'))
+    console.error(chalk.cyan('    sudo dnf install fzf') + chalk.dim('      # Fedora'))
+    console.error('')
+    process.exit(1)
+  }
+}
+
 // 用 fzf 交互式选择 skill/tool，返回选中的 item 列表
 function fzfSelect() {
+  requireFzf()
   const skillItems  = getAllSkillItems()
   const toolItems   = getAllToolItems()
   const previewPath = path.join(__dirname, 'preview.mjs')
