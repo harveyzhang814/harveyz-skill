@@ -73,6 +73,7 @@ if (args[0] === '--help' || args[0] === '-h') {
           name: 'install',
           description: 'Install skills or shell tools',
           interactive_fallback: 'Requires TTY + fzf when no flags given',
+          note: '--skill and --tool are mutually exclusive; use --bundle to install both',
           flags: [
             { name: '--bundle', arg: '<name>',   description: 'Install a skill bundle (comma-separated)' },
             { name: '--skill',  arg: '<name>',   description: 'Install specific skill(s) (comma-separated)' },
@@ -458,6 +459,13 @@ function fzfSelect() {
 }
 
 try {
+  if (toolArg && skillArg) {
+    const msg = '--tool and --skill cannot be combined; use --bundle to install both'
+    if (jsonFlag) process.stderr.write(JSON.stringify({ error: true, message: msg }) + '\n')
+    else console.error(chalk.red('  ✗ ' + msg))
+    process.exit(1)
+  }
+
   let skillItems = []
   let toolItems  = []
 
@@ -501,6 +509,7 @@ try {
   }
 
   // ── Install skills ──────────────────────────────────────────────────────────
+  let skillSummary = null
   if (skillItems.length > 0) {
     // Resolve scope
     let scope = scopeArg ?? 'user'
@@ -561,54 +570,60 @@ try {
     if (selectedTargets.length > 0) {
       const targets = resolveTargets(selectedTargets, scope)
       console.log('')
-      const summary = await installSkills(skillItems, targets, forceFlag)
+      skillSummary = await installSkills(skillItems, targets, forceFlag)
       console.log('')
-      if (jsonFlag) {
-        console.log(JSON.stringify(summary, null, 2))
-      } else {
-        const anyInstalled = Object.values(summary).some(r => r.installed.length > 0)
-        if (!anyInstalled) {
-          console.log(chalk.dim('  · No skills installed'))
-        } else {
-          console.log(chalk.green.bold('✔ Skills installed:'))
-          for (const [target, { installed }] of Object.entries(summary)) {
-            if (installed.length > 0)
-              console.log(`  ${chalk.bold(target)} ← ${installed.join(', ')}`)
-          }
-        }
-        for (const [target, { skipped, failed }] of Object.entries(summary)) {
-          for (const s of skipped) {
-            const detail = s.reason === 'up-to-date'
-              ? `up-to-date ${s.version}`
-              : `outdated ${s.installed} → ${s.available}, use --force`
-            console.log(chalk.dim(`  · ${target}/${s.name} skipped (${detail})`))
-          }
-          for (const f of failed) {
-            console.log(chalk.red(`  ✗ ${target}/${f.name} failed: ${f.reason}${f.detail ? ` — ${f.detail}` : ''}`))
-          }
-        }
-      }
     }
   }
 
   // ── Install shell tools ─────────────────────────────────────────────────────
+  let toolSummary = null
   if (toolItems.length > 0) {
     console.log('')
-    const toolResult = await installTools(
+    toolSummary = await installTools(
       toolItems.map(t => ({ toolName: t.toolName, srcPath: t.srcPath })),
       TARGETS.shell,
       forceFlag,
     )
     console.log('')
-    if (jsonFlag) {
-      console.log(JSON.stringify(toolResult, null, 2))
-    } else {
-      if (toolResult.installed.length === 0 && !toolResult.skipped.length && !toolResult.failed.length) {
+  }
+
+  // ── Output ──────────────────────────────────────────────────────────────────
+  if (jsonFlag) {
+    const out = {}
+    if (skillSummary !== null) out.skills = skillSummary
+    if (toolSummary  !== null) out.tools  = toolSummary
+    console.log(JSON.stringify(out, null, 2))
+  } else {
+    if (skillSummary !== null) {
+      const anyInstalled = Object.values(skillSummary).some(r => r.installed.length > 0)
+      if (!anyInstalled) {
+        console.log(chalk.dim('  · No skills installed'))
+      } else {
+        console.log(chalk.green.bold('✔ Skills installed:'))
+        for (const [target, { installed }] of Object.entries(skillSummary)) {
+          if (installed.length > 0)
+            console.log(`  ${chalk.bold(target)} ← ${installed.join(', ')}`)
+        }
+      }
+      for (const [target, { skipped, failed }] of Object.entries(skillSummary)) {
+        for (const s of skipped) {
+          const detail = s.reason === 'up-to-date'
+            ? `up-to-date ${s.version}`
+            : `outdated ${s.installed} → ${s.available}, use --force`
+          console.log(chalk.dim(`  · ${target}/${s.name} skipped (${detail})`))
+        }
+        for (const f of failed) {
+          console.log(chalk.red(`  ✗ ${target}/${f.name} failed: ${f.reason}${f.detail ? ` — ${f.detail}` : ''}`))
+        }
+      }
+    }
+    if (toolSummary !== null) {
+      if (toolSummary.installed.length === 0 && !toolSummary.skipped.length && !toolSummary.failed.length) {
         console.log(chalk.dim('  · No shell tools installed'))
       } else {
-        if (toolResult.installed.length > 0) {
+        if (toolSummary.installed.length > 0) {
           console.log(chalk.green.bold('✔ Shell tools installed:'))
-          for (const name of toolResult.installed) {
+          for (const name of toolSummary.installed) {
             console.log(`  ${chalk.bold('~/.local/bin')} ← ${name}`)
           }
           console.log('')
@@ -617,16 +632,20 @@ try {
           console.log(`     ${chalk.bold.cyan('source ~/.zshrc')}`)
           console.log('')
         }
-        for (const s of toolResult.skipped) {
+        for (const s of toolSummary.skipped) {
           console.log(chalk.dim(`  · ${s.name} skipped (${s.reason === 'already_exists' ? 'already exists — use --force to overwrite' : s.reason})`))
         }
-        for (const f of toolResult.failed) {
+        for (const f of toolSummary.failed) {
           console.log(chalk.red(`  ✗ ${f.name} failed: ${f.reason}${f.detail ? ` — ${f.detail}` : ''}`))
         }
       }
     }
   }
 } catch (err) {
-  console.error(chalk.red('  ✗ ' + err.message))
+  if (jsonFlag) {
+    process.stderr.write(JSON.stringify({ error: true, message: err.message }) + '\n')
+  } else {
+    console.error(chalk.red('  ✗ ' + err.message))
+  }
   process.exit(1)
 }
