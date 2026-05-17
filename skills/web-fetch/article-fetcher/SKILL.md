@@ -73,11 +73,31 @@ URL: <URL>
    \"
    如果输出 ALREADY_FETCHED，报告「已抓取，跳过」并结束。
 
-2. 判断 URL 类型并运行对应脚本：
+2. 判断 URL 类型并用 subprocess list 调用脚本（禁止 bash 字符串拼接，避免 shell 注入）：
    - X.com / Twitter：
-     python3 {{SKILL_DIR}}/scripts/playwright_xcom.py '<URL>' '{{VAULT_PATH}}' '{{SKILL_DIR}}'
+     ```python
+     import subprocess, sys
+     result = subprocess.run(
+         ['python3', '{{SKILL_DIR}}/scripts/playwright_xcom.py',
+          url, '{{VAULT_PATH}}', '{{SKILL_DIR}}'],
+         capture_output=True, text=True, timeout=300
+     )
+     print(result.stdout)
+     if result.returncode != 0:
+         raise RuntimeError(result.stderr)
+     ```
    - 其他网站：先用 web_fetch 工具获取 HTML 保存到 /tmp/fetched_page.html，再：
-     python3 {{SKILL_DIR}}/scripts/playwright_web.py '<URL>' '/tmp/fetched_page.html' '{{VAULT_PATH}}' '{{SKILL_DIR}}'
+     ```python
+     import subprocess, sys
+     result = subprocess.run(
+         ['python3', '{{SKILL_DIR}}/scripts/playwright_web.py',
+          url, '/tmp/fetched_page.html', '{{VAULT_PATH}}', '{{SKILL_DIR}}'],
+         capture_output=True, text=True, timeout=300
+     )
+     print(result.stdout)
+     if result.returncode != 0:
+         raise RuntimeError(result.stderr)
+     ```
 
 3. 从脚本标准输出中提取 ORIGIN_PATH: 开头的行，取其值作为 origin_path。
 
@@ -112,27 +132,28 @@ fetch_type: <fetch_type 可选，默认 manual；传入时用传入值（cron/ma
    - frontmatter：publish_date、fetch_date、author、source_url、origin_title、
      category（如有）、fetch_type（默认 manual）、tags、description（一句话摘要）
    - 正文首行插入双向链接 [[Origin/<文件名>]]
-4. 执行校验并写入 SQLite 索引：
+4. 执行校验并写入 SQLite 索引（用 subprocess list + env var 传参，避免字符串注入）：
 
-   python3 -c \"
-   import sys, os
-   sys.path.insert(0, '{{SKILL_DIR}}/references')
-   from article_utils import repair_frontmatter, record_issues, write_url_index
-
-   origin_path  = '<origin_path>'
+   ```python
+   import subprocess, os
    article_path = '{{VAULT_PATH}}/' + os.path.basename(origin_path)
-   url          = '<URL>'
-   db           = '{{VAULT_PATH}}/url-index.db'
-   category     = '<category>'
-
-   fm, _, remaining = repair_frontmatter(article_path, url)
-   if remaining:
-       record_issues(url, '; '.join(remaining), db)
-       raise Exception(f'校验未通过：{remaining}')
-   record_issues(url, '', db)
-   write_url_index(url, origin_path, article_path, db, category=category)
-   print(f'翻译完成：{article_path}')
-   \"
+   result = subprocess.run(
+       ['python3', '{{SKILL_DIR}}/scripts/validate_article.py'],
+       env={
+           'ARTICLE_URL':       url,
+           'ARTICLE_ORIGIN':    origin_path,
+           'ARTICLE_PATH':      article_path,
+           'ARTICLE_DB':        '{{VAULT_PATH}}/url-index.db',
+           'ARTICLE_SKILL_DIR': '{{SKILL_DIR}}',
+           'ARTICLE_CATEGORY':  category or '',
+           'PATH': os.environ.get('PATH', ''),
+       },
+       capture_output=True, text=True, timeout=60
+   )
+   print(result.stdout)
+   if result.returncode != 0:
+       raise RuntimeError(result.stderr)
+   ```
 
 完成后报告格式：
 翻译完成：{标题} | {article_path}
@@ -178,5 +199,6 @@ time.sleep(wait)
 ## 附录
 
 - 抓取脚本：[scripts/playwright_xcom.py](scripts/playwright_xcom.py)（X.com）、[scripts/playwright_web.py](scripts/playwright_web.py)（普通网站）
+- 校验脚本：[scripts/validate_article.py](scripts/validate_article.py)（Subagent 2 校验 + SQLite 写入，通过 env var 接收参数）
 - 工具函数：[references/article_utils.py](references/article_utils.py)（format_block、sanitize_filename、repair_frontmatter、write_url_index 等）
 - 文件格式模板：[references/file-format.md](references/file-format.md)
