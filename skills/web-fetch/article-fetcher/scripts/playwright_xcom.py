@@ -4,13 +4,20 @@ Playwright scraper for X.com (Twitter) articles.
 Usage: python playwright_xcom.py <url> <vault_path> <skill_dir>
 Stdout: "ORIGIN_PATH: <path>" on success
 """
-import sys, os, json, urllib.request, hashlib
+import sys, os, json, urllib.request, hashlib, ipaddress
 from datetime import datetime, timezone, timedelta
+from urllib.parse import urlparse
 from playwright.sync_api import sync_playwright
 
 url        = sys.argv[1]
 vault_path = sys.argv[2]
 skill_dir  = sys.argv[3]
+
+# --- Security: validate URL scheme before touching Chrome Profile ---
+_parsed = urlparse(url)
+if _parsed.scheme not in ('http', 'https') or not _parsed.netloc:
+    print(f"ERROR: Rejected URL with scheme '{_parsed.scheme}' — only http/https allowed", file=sys.stderr)
+    sys.exit(1)
 
 sys.path.insert(0, os.path.join(skill_dir, 'references'))
 from article_utils import infer_ext, format_block, sanitize_filename, repair_frontmatter, record_issues
@@ -23,6 +30,21 @@ db_path    = os.path.join(vault_path, 'url-index.db')
 
 os.makedirs(image_dir, exist_ok=True)
 os.makedirs(origin_dir, exist_ok=True)
+
+
+def _is_safe_image_url(src):
+    """Block file://, non-HTTP schemes, and private/loopback IPs (SSRF prevention)."""
+    p = urlparse(src)
+    if p.scheme not in ('http', 'https'):
+        return False
+    try:
+        ip = ipaddress.ip_address(p.hostname)
+        if ip.is_private or ip.is_loopback or ip.is_link_local:
+            return False
+    except (ValueError, TypeError):
+        pass  # hostname, not a bare IP — allow
+    return True
+
 
 # --- Scrape ---
 with sync_playwright() as p:
@@ -131,6 +153,9 @@ if result.get('error'):
 # --- Download images ---
 downloaded = []
 for i, img in enumerate(result.get('imageBlocks', [])):
+    if not _is_safe_image_url(img['src']):
+        print(f"  [{i+1}] Skipped unsafe image URL: {img['src'][:80]}")
+        continue
     ext   = infer_ext(img['src'])
     fname = f"{url_hash}_img_{i+1}{ext}"
     fpath = os.path.join(image_dir, fname)
