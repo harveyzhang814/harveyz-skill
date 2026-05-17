@@ -25,7 +25,7 @@ const subcommand = args[0]
 // ── Help ─────────────────────────────────────────────────────────────────────
 function printHelp() {
   console.log(`
-  ${chalk.bold('hskill')} — skill manager for Claude Code, Cursor, and Codex  v${version}
+  ${chalk.bold('hskill')} — skill manager for Claude Code, Cursor, Codex, OpenClaw, and Hermes  v${version}
 
   ${chalk.cyan('Usage:')}
     hskill                         interactive install
@@ -33,7 +33,7 @@ function printHelp() {
     hskill install --bundle <b>    install a skill bundle
     hskill install --skill <s>     install specific skill(s)
     hskill install --tool <t>      install shell tool(s)
-    hskill install --target <t>    set target (claude/cursor/codex/all)
+    hskill install --target <t>    set target (claude/cursor/codex/openclaw/hermes/all)
     hskill install --scope <s>     set scope: user (default) or project
     hskill install --force         overwrite existing installs
     hskill list                    list available skills and bundles
@@ -131,7 +131,7 @@ if (subcommand === 'status' || subcommand === 'outdated') {
       process.exit(0)
     }
 
-    const targets = ['claude', 'cursor', 'codex']
+    const targets = ['claude', 'cursor', 'codex', 'openclaw', 'hermes']
 
     if (outdatedSkills.length) {
       console.log('\n  ' + chalk.bold('SKILLS WITH UPDATES'))
@@ -415,7 +415,7 @@ try {
     // Resolve target
     let selectedTargets
     if (targetArg) {
-      selectedTargets = targetArg === 'all' ? ['claude', 'cursor', 'codex'] : [targetArg]
+      selectedTargets = targetArg === 'all' ? ['claude', 'cursor', 'codex', 'openclaw', 'hermes'] : [targetArg]
     } else {
       const targetChoices = buildTargetChoices(scope)
       const targetInput = targetChoices.map(c => c.name).join('\n') + '\nall      — all tools'
