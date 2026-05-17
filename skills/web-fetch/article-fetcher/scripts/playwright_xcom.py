@@ -4,20 +4,22 @@ Playwright scraper for X.com (Twitter) articles.
 Usage: python playwright_xcom.py <url> <vault_path> <skill_dir>
 Stdout: "ORIGIN_PATH: <path>" on success
 """
-import sys, os, json, urllib.request, hashlib, ipaddress
-from datetime import datetime, timezone, timedelta
+import sys, os, ipaddress
 from urllib.parse import urlparse
-from playwright.sync_api import sync_playwright
 
+# --- Security: validate URL scheme FIRST, before any heavy imports ---
 url        = sys.argv[1]
 vault_path = sys.argv[2]
 skill_dir  = sys.argv[3]
 
-# --- Security: validate URL scheme before touching Chrome Profile ---
 _parsed = urlparse(url)
 if _parsed.scheme not in ('http', 'https') or not _parsed.netloc:
     print(f"ERROR: Rejected URL with scheme '{_parsed.scheme}' — only http/https allowed", file=sys.stderr)
     sys.exit(1)
+
+import json, urllib.request, hashlib
+from datetime import datetime, timezone, timedelta
+from playwright.sync_api import sync_playwright
 
 sys.path.insert(0, os.path.join(skill_dir, 'references'))
 from article_utils import infer_ext, format_block, sanitize_filename, repair_frontmatter, record_issues

@@ -5,21 +5,23 @@ Usage: python playwright_web.py <url> <html_path> <vault_path> <skill_dir>
   html_path: path to pre-fetched HTML file (e.g. /tmp/fetched_page.html)
 Stdout: "ORIGIN_PATH: <path>" on success
 """
-import sys, os, urllib.request, hashlib, ipaddress
-from datetime import datetime, timezone, timedelta
+import sys, os, ipaddress
 from urllib.parse import urlparse
-from playwright.sync_api import sync_playwright
 
+# --- Security: validate URL scheme FIRST, before any heavy imports ---
 url        = sys.argv[1]
 html_path  = sys.argv[2]
 vault_path = sys.argv[3]
 skill_dir  = sys.argv[4]
 
-# --- Security: validate URL scheme ---
 _parsed = urlparse(url)
 if _parsed.scheme not in ('http', 'https') or not _parsed.netloc:
     print(f"ERROR: Rejected URL with scheme '{_parsed.scheme}' — only http/https allowed", file=sys.stderr)
     sys.exit(1)
+
+import urllib.request, hashlib
+from datetime import datetime, timezone, timedelta
+from playwright.sync_api import sync_playwright
 
 sys.path.insert(0, os.path.join(skill_dir, 'references'))
 from article_utils import infer_ext, format_block, sanitize_filename, repair_frontmatter, record_issues
