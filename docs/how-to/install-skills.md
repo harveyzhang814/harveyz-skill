@@ -53,10 +53,10 @@ hskill install --skill mermaid-diagram --target claude --force
 
 ## 3. 安装路径
 
-| Scope | Claude Code | Cursor | Codex |
-|-------|------------|--------|-------|
-| user | `~/.claude/skills/` | `~/.cursor/skills/` | `~/.codex/skills/` |
-| project | `.claude/skills/` | `.cursor/skills/` | `.codex/skills/` |
+| Scope | Claude Code | Cursor | Codex | OpenClaw | Hermes |
+|-------|------------|--------|-------|----------|--------|
+| user | `~/.claude/skills/` | `~/.cursor/skills/` | `~/.codex/skills/` | `~/.openclaw/skills/` | `~/.hermes/skills/` |
+| project | `.claude/skills/` | `.cursor/skills/` | `.codex/skills/` | — (user only) | — (user only) |
 
 **user**：全局共享，一次安装所有项目生效。  
 **project**：仅当前目录项目可用，适合团队统一管理（可提交到 git）。
