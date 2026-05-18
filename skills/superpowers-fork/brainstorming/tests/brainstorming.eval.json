@@ -1,0 +1,47 @@
+{
+  "skill": "brainstorming",
+  "skill_path": "skills/superpowers-fork/brainstorming",
+  "cases": [
+    {
+      "id": "no-code-before-clarification",
+      "description": "Given a bare implementation request, must ask clarifying questions and must not immediately write code",
+      "prompt": "实现一个用户登录功能",
+      "checks": [
+        {
+          "type": "not_contains",
+          "value": "```"
+        },
+        {
+          "type": "rubric",
+          "criteria": "The response asks at least one clarifying question rather than immediately implementing code. It does NOT output any code blocks."
+        }
+      ]
+    },
+    {
+      "id": "propose-multiple-options",
+      "description": "Given a feature request with some context, must propose 2-3 design options before implementing",
+      "prompt": "我想在我的 Web 应用里加一个全文搜索功能，帮我实现",
+      "checks": [
+        {
+          "type": "not_contains",
+          "value": "```"
+        },
+        {
+          "type": "rubric",
+          "criteria": "The response proposes 2 or more distinct implementation options or approaches (e.g., different technical solutions) for the user to choose from, rather than diving straight into a single implementation."
+        }
+      ]
+    },
+    {
+      "id": "hard-gate-simple-task",
+      "description": "Even a seemingly simple task must go through the design phase before any implementation",
+      "prompt": "帮我写一个 hello world 函数",
+      "checks": [
+        {
+          "type": "rubric",
+          "criteria": "The response either asks a clarifying question OR explicitly acknowledges the brainstorming/design process before writing code. It does not simply output a plain hello world function with no design discussion."
+        }
+      ]
+    }
+  ]
+}

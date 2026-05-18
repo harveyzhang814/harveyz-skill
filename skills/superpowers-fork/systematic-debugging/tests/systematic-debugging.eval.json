@@ -1,0 +1,43 @@
+{
+  "skill": "systematic-debugging",
+  "skill_path": "skills/superpowers-fork/systematic-debugging",
+  "cases": [
+    {
+      "id": "no-fix-before-phase1",
+      "description": "Given a bug report, must not immediately propose a code fix — Phase 1 investigation required first",
+      "prompt": "我的代码报错了：TypeError: Cannot read properties of undefined (reading 'name')。帮我修复。",
+      "checks": [
+        {
+          "type": "not_contains",
+          "value": "```"
+        },
+        {
+          "type": "rubric",
+          "criteria": "The response does NOT provide a specific code fix or patch. Instead it begins Phase 1 investigation: asks for the stack trace, asks to see the relevant code, or describes steps to reproduce and understand the error before proposing any fix."
+        }
+      ]
+    },
+    {
+      "id": "root-cause-first",
+      "description": "Must mention root cause investigation before any fix attempt",
+      "prompt": "测试失败了，错误是 AssertionError: expected 42 but got undefined。怎么修？",
+      "checks": [
+        {
+          "type": "rubric",
+          "criteria": "The response focuses on investigating the root cause (e.g., asks for more context, describes what to check first, mentions reading the error carefully or tracing the data flow) rather than immediately suggesting a specific code change to fix the undefined value."
+        }
+      ]
+    },
+    {
+      "id": "investigation-steps-mentioned",
+      "description": "Response should describe concrete investigation steps from Phase 1",
+      "prompt": "线上环境偶尔出现一个 bug：用户点击保存按钮后，有时候数据没有保存成功，但也没有报错。",
+      "checks": [
+        {
+          "type": "rubric",
+          "criteria": "The response describes at least one concrete investigation step before suggesting a fix — for example: reproduce the issue reliably, add logging or diagnostics to trace the data flow, check recent changes, or gather more evidence. It does NOT jump straight to a code solution."
+        }
+      ]
+    }
+  ]
+}

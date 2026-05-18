@@ -8,7 +8,8 @@
   },
   "scripts": {
     "prepack": "node scripts/generate-npmignore.js",
-    "test": "bats tests/ tools/p-launch/tests/ && bash scripts/run-skill-tests.sh"
+    "test": "bats tests/ tools/p-launch/tests/ && bash scripts/run-skill-tests.sh",
+    "eval": "node scripts/run-skill-evals.js"
   },
   "files": [
     "bin/",

@@ -49,6 +49,10 @@
 !tests/
 !tests/**
 
+# 保留 eval 结果
+!eval-results/
+!eval-results/**
+
 
 
 # 排除 eval workspace
