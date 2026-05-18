@@ -21,6 +21,7 @@ const { version } = require('../package.json')
 
 const args = process.argv.slice(2)
 const subcommand = args[0]
+const jsonFlag = args.includes('--json')
 
 // ── Help ─────────────────────────────────────────────────────────────────────
 function printHelp() {
@@ -28,7 +29,7 @@ function printHelp() {
   ${chalk.bold('hskill')} — skill manager for Claude Code, Cursor, Codex, OpenClaw, and Hermes  v${version}
 
   ${chalk.cyan('Usage:')}
-    hskill                         interactive install
+    hskill                         interactive install (requires TTY + fzf)
     hskill install                 interactive install (explicit)
     hskill install --bundle <b>    install a skill bundle
     hskill install --skill <s>     install specific skill(s)
@@ -36,10 +37,10 @@ function printHelp() {
     hskill install --target <t>    set target (claude/cursor/codex/openclaw/hermes/all)
     hskill install --scope <s>     set scope: user (default) or project
     hskill install --force         overwrite existing installs
-    hskill list                    list available skills and bundles
-    hskill status                  show install status for all skills and tools
-    hskill outdated                list skills and tools with available updates
-    hskill info <name>             show install detail for a skill or tool
+    hskill list [--json]           list available skills and bundles
+    hskill status [--json]         show install status for all skills and tools
+    hskill outdated [--json]       list skills and tools with available updates
+    hskill info <name> [--json]    show install detail for a skill or tool
     hskill update                  update hskill to the latest version
     hskill version                 show version
     hskill --help                  show this help
@@ -49,12 +50,72 @@ function printHelp() {
     hskill install --skill git-workflow-init --target claude --scope project
     hskill install --tool p-launch
     hskill status
+    hskill status --json
     hskill outdated
     hskill info git-workflow-init
+
+  ${chalk.cyan('Agent / CI usage:')}
+    Use --json for machine-readable output on status, list, outdated, info.
+    Set NO_COLOR=1 to suppress ANSI color codes in all output.
+    Interactive mode (no flags) requires a TTY; use --bundle/--skill/--tool in scripts.
 `)
 }
 
 if (args[0] === '--help' || args[0] === '-h') {
+  if (jsonFlag || args.includes('--json')) {
+    console.log(JSON.stringify({
+      name: 'hskill',
+      version,
+      description: 'Skill manager for Claude Code, Cursor, Codex, OpenClaw, and Hermes',
+      agent_notes: 'Interactive mode requires TTY. Use --json for machine-readable output. Set NO_COLOR=1 to suppress ANSI codes.',
+      commands: [
+        {
+          name: 'install',
+          description: 'Install skills or shell tools',
+          interactive_fallback: 'Requires TTY + fzf when no flags given',
+          note: '--skill and --tool are mutually exclusive; use --bundle to install both',
+          flags: [
+            { name: '--bundle', arg: '<name>',   description: 'Install a skill bundle (comma-separated)' },
+            { name: '--skill',  arg: '<name>',   description: 'Install specific skill(s) (comma-separated)' },
+            { name: '--tool',   arg: '<name>',   description: 'Install shell tool(s) (comma-separated)' },
+            { name: '--target', arg: '<target>', description: 'Install target', enum: ['claude','cursor','codex','openclaw','hermes','all'] },
+            { name: '--scope',  arg: '<scope>',  description: 'Install scope', enum: ['user','project'], default: 'user' },
+            { name: '--force',  description: 'Overwrite existing installs' },
+          ],
+        },
+        {
+          name: 'list',
+          description: 'List available skills and bundles',
+          flags: [{ name: '--json', description: 'Machine-readable output' }],
+        },
+        {
+          name: 'status',
+          description: 'Show install status for all skills and tools',
+          flags: [{ name: '--json', description: 'Machine-readable output' }],
+        },
+        {
+          name: 'outdated',
+          description: 'List skills and tools with available updates',
+          flags: [{ name: '--json', description: 'Machine-readable output' }],
+        },
+        {
+          name: 'info',
+          description: 'Show install detail for a skill or tool',
+          args: ['<name>'],
+          flags: [{ name: '--json', description: 'Machine-readable output' }],
+        },
+        {
+          name: 'update',
+          description: 'Update hskill to the latest version via npm',
+        },
+        {
+          name: 'version',
+          description: 'Print version and exit',
+        },
+      ],
+    }, null, 2))
+    process.exit(0)
+  }
   printHelp()
   process.exit(0)
 }
@@ -84,6 +145,14 @@ if (subcommand === 'list') {
   for (const s of skills) {
     if (!byBundle[s.bundle]) byBundle[s.bundle] = []
     byBundle[s.bundle].push(s.path)
+  }
+  if (jsonFlag) {
+    const bundles = {}
+    for (const [name, paths] of Object.entries(byBundle)) {
+      bundles[name] = { description: bundleMeta[name] ?? name, skills: paths }
+    }
+    console.log(JSON.stringify({ bundles, tools: tools.map(t => t.name) }, null, 2))
+    process.exit(0)
   }
   for (const [name, paths] of Object.entries(byBundle)) {
     console.log(chalk.bold(name) + ' — ' + (bundleMeta[name] ?? name))
@@ -121,6 +190,26 @@ if (subcommand === 'status' || subcommand === 'outdated') {
     const inst = checkToolInstalled(t.toolName, t.srcPath)
     return { name: t.toolName, version: t.version ?? '—', ...inst }
   })
+
+  if (jsonFlag) {
+    const targets = ['claude', 'cursor', 'codex', 'openclaw', 'hermes']
+    const jsonSkills = skillRows.map(r => ({
+      name: r.name,
+      version: r.version,
+      user:    Object.fromEntries(targets.map(t => [t, r.userDetail[t]])),
+      project: Object.fromEntries(targets.map(t => [t, r.projectDetail[t]])),
+    }))
+    const jsonTools = toolRows.map(r => ({ name: r.name, version: r.version, status: r.status }))
+    if (outdatedOnly) {
+      console.log(JSON.stringify({
+        skills: jsonSkills.filter(s => Object.values(s.user).some(v => v.status === 'update') || Object.values(s.project).some(v => v.status === 'update')),
+        tools:  jsonTools.filter(t => t.status === 'update'),
+      }, null, 2))
+    } else {
+      console.log(JSON.stringify({ skills: jsonSkills, tools: jsonTools }, null, 2))
+    }
+    process.exit(0)
+  }
 
   if (outdatedOnly) {
     const outdatedSkills = skillRows.filter(r => r.userStatus === 'update' || r.projectStatus === 'update')
@@ -218,6 +307,24 @@ if (subcommand === 'info') {
     if (status === 'up-to-date') return chalk.green('✓ up to date')
     if (status === 'update')     return chalk.yellow('↑ update available')
     return chalk.dim('— not installed')
+  }
+
+  if (jsonFlag) {
+    if (skill) {
+      const inst = checkInstalled(skill.skillName, skill.version ?? '—')
+      console.log(JSON.stringify({
+        name: skill.skillName, type: 'skill', version: skill.version ?? '—',
+        user:    Object.fromEntries(targets.map(t => [t, inst.user[t]])),
+        project: Object.fromEntries(targets.map(t => [t, inst.project[t]])),
+      }, null, 2))
+    } else {
+      const inst = checkToolInstalled(tool.toolName, tool.srcPath)
+      console.log(JSON.stringify({
+        name: tool.toolName, type: 'tool', version: tool.version ?? '—',
+        installed: inst,
+      }, null, 2))
+    }
+    process.exit(0)
   }
 
   console.log('')
@@ -352,6 +459,13 @@ function fzfSelect() {
 }
 
 try {
+  if (toolArg && skillArg) {
+    const msg = '--tool and --skill cannot be combined; use --bundle to install both'
+    if (jsonFlag) process.stderr.write(JSON.stringify({ error: true, message: msg }) + '\n')
+    else console.error(chalk.red('  ✗ ' + msg))
+    process.exit(1)
+  }
+
   let skillItems = []
   let toolItems  = []
 
@@ -368,6 +482,11 @@ try {
     if (skillBundles.length) skillItems = resolveSkills(skillBundles).map(s => ({ kind: 'skill', ...s }))
     if (toolBundles.length)  toolItems  = resolveTools(toolBundles).map(t => ({ kind: 'tool', ...t }))
   } else {
+    if (!process.stdout.isTTY) {
+      console.error(chalk.red('  ✗ Interactive mode requires a TTY. Use --bundle, --skill, or --tool flags for non-interactive install.'))
+      console.error(chalk.dim('  Example: hskill install --bundle dev --target claude'))
+      process.exit(1)
+    }
     const selected = fzfSelect()
 
     if (!selected.length) {
@@ -390,10 +509,15 @@ try {
   }
 
   // ── Install skills ──────────────────────────────────────────────────────────
+  let skillSummary = null
   if (skillItems.length > 0) {
     // Resolve scope
     let scope = scopeArg ?? 'user'
     if (!scopeArg && !targetArg) {
+      if (!process.stdout.isTTY) {
+        console.error(chalk.red('  ✗ Interactive scope selection requires a TTY. Use --scope user|project.'))
+        process.exit(1)
+      }
       const scopeResult = spawnSync('fzf', [
         '--prompt=  › ',
         '--header=  Scope  ·  enter 确认  ·  esc 取消',
@@ -417,6 +541,10 @@ try {
     if (targetArg) {
       selectedTargets = targetArg === 'all' ? ['claude', 'cursor', 'codex', 'openclaw', 'hermes'] : [targetArg]
     } else {
+      if (!process.stdout.isTTY) {
+        console.error(chalk.red('  ✗ Interactive target selection requires a TTY. Use --target claude|cursor|codex|openclaw|hermes|all.'))
+        process.exit(1)
+      }
       const targetChoices = buildTargetChoices(scope)
       const targetInput = targetChoices.map(c => c.name).join('\n') + '\nall      — all tools'
       const targetResult = spawnSync('fzf', [
@@ -442,43 +570,82 @@ try {
     if (selectedTargets.length > 0) {
       const targets = resolveTargets(selectedTargets, scope)
       console.log('')
-      const summary = await installSkills(skillItems, targets, forceFlag)
+      skillSummary = await installSkills(skillItems, targets, forceFlag)
       console.log('')
-      if (Object.keys(summary).length === 0) {
-        console.log(chalk.dim('  · No skills installed'))
-      } else {
-        console.log(chalk.green.bold('✔ Skills installed:'))
-        for (const [target, names] of Object.entries(summary)) {
-          console.log(`  ${chalk.bold(target)} ← ${names.join(', ')}`)
-        }
-      }
     }
   }
 
   // ── Install shell tools ─────────────────────────────────────────────────────
+  let toolSummary = null
   if (toolItems.length > 0) {
     console.log('')
-    const installed = await installTools(
+    toolSummary = await installTools(
       toolItems.map(t => ({ toolName: t.toolName, srcPath: t.srcPath })),
       TARGETS.shell,
       forceFlag,
     )
     console.log('')
-    if (installed.length === 0) {
-      console.log(chalk.dim('  · No shell tools installed'))
-    } else {
-      console.log(chalk.green.bold('✔ Shell tools installed:'))
-      for (const name of installed) {
-        console.log(`  ${chalk.bold('~/.local/bin')} ← ${name}`)
+  }
+
+  // ── Output ──────────────────────────────────────────────────────────────────
+  if (jsonFlag) {
+    const out = {}
+    if (skillSummary !== null) out.skills = skillSummary
+    if (toolSummary  !== null) out.tools  = toolSummary
+    console.log(JSON.stringify(out, null, 2))
+  } else {
+    if (skillSummary !== null) {
+      const anyInstalled = Object.values(skillSummary).some(r => r.installed.length > 0)
+      if (!anyInstalled) {
+        console.log(chalk.dim('  · No skills installed'))
+      } else {
+        console.log(chalk.green.bold('✔ Skills installed:'))
+        for (const [target, { installed }] of Object.entries(skillSummary)) {
+          if (installed.length > 0)
+            console.log(`  ${chalk.bold(target)} ← ${installed.join(', ')}`)
+        }
       }
-      console.log('')
-      console.log(chalk.yellow.bold('  ⚡ Reload your shell to apply changes:'))
-      console.log('')
-      console.log(`     ${chalk.bold.cyan('source ~/.zshrc')}`)
-      console.log('')
+      for (const [target, { skipped, failed }] of Object.entries(skillSummary)) {
+        for (const s of skipped) {
+          const detail = s.reason === 'up-to-date'
+            ? `up-to-date ${s.version}`
+            : `outdated ${s.installed} → ${s.available}, use --force`
+          console.log(chalk.dim(`  · ${target}/${s.name} skipped (${detail})`))
+        }
+        for (const f of failed) {
+          console.log(chalk.red(`  ✗ ${target}/${f.name} failed: ${f.reason}${f.detail ? ` — ${f.detail}` : ''}`))
+        }
+      }
+    }
+    if (toolSummary !== null) {
+      if (toolSummary.installed.length === 0 && !toolSummary.skipped.length && !toolSummary.failed.length) {
+        console.log(chalk.dim('  · No shell tools installed'))
+      } else {
+        if (toolSummary.installed.length > 0) {
+          console.log(chalk.green.bold('✔ Shell tools installed:'))
+          for (const name of toolSummary.installed) {
+            console.log(`  ${chalk.bold('~/.local/bin')} ← ${name}`)
+          }
+          console.log('')
+          console.log(chalk.yellow.bold('  ⚡ Reload your shell to apply changes:'))
+          console.log('')
+          console.log(`     ${chalk.bold.cyan('source ~/.zshrc')}`)
+          console.log('')
+        }
+        for (const s of toolSummary.skipped) {
+          console.log(chalk.dim(`  · ${s.name} skipped (${s.reason === 'already_exists' ? 'already exists — use --force to overwrite' : s.reason})`))
+        }
+        for (const f of toolSummary.failed) {
+          console.log(chalk.red(`  ✗ ${f.name} failed: ${f.reason}${f.detail ? ` — ${f.detail}` : ''}`))
+        }
+      }
     }
   }
 } catch (err) {
-  console.error(chalk.red('  ✗ ' + err.message))
+  if (jsonFlag) {
+    process.stderr.write(JSON.stringify({ error: true, message: err.message }) + '\n')
+  } else {
+    console.error(chalk.red('  ✗ ' + err.message))
+  }
   process.exit(1)
 }

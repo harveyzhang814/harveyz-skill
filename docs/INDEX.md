@@ -18,6 +18,7 @@
 | 文件 | 用途 |
 |------|------|
 | [reference/git-branch-rules.md](reference/git-branch-rules.md) | 分支模型、分支定义、命名规则、违规行为表（v1.0.0） |
+| [reference/agent-cli-guide.md](reference/agent-cli-guide.md) | AI agent / CI 脚本调用 hskill 的完整参考（JSON 输出格式、非 TTY 行为、错误处理） |
 
 ## explanation/ — 理解类
 
