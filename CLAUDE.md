@@ -66,17 +66,12 @@ Skills that produce org-mode output:
 ## 测试
 
 ```bash
-npm test       # 结构性测试：hskill CLI + SKILL.md 格式校验
-npm run eval   # 行为测试：skill 跟随指令时的语义正确性
+npm test
 ```
 
-**两层测试，职责不同：**
-- `npm test` — hskill CLI 行为（安装、交互、JSON 输出）+ 所有 skill 的 SKILL.md 格式校验
-- `npm run eval` — 向模型注入 SKILL.md 内容，验证 skill 的行为约束是否被正确执行（如 HARD-GATE、Phase 1 前禁止修复等）
+hskill CLI 行为（安装、交互、JSON 输出）+ 所有 skill 的 SKILL.md 格式校验。
 
-写新 hskill CLI 测试前读 [docs/reference/testing-guide.md](docs/reference/testing-guide.md)。
-
-写 skill 行为测试（eval）前读 [docs/how-to/write-skill-evals.md](docs/how-to/write-skill-evals.md)；格式规范和现有用例见 [docs/reference/skill-eval-reference.md](docs/reference/skill-eval-reference.md)。
+写新测试前读 [docs/reference/testing-guide.md](docs/reference/testing-guide.md)。
 
 ## Git 工作流
 
