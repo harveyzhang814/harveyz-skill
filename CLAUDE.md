@@ -76,7 +76,7 @@ npm run eval   # 行为测试：skill 跟随指令时的语义正确性
 
 写新 hskill CLI 测试前读 [docs/reference/testing-guide.md](docs/reference/testing-guide.md)。
 
-写 skill 行为测试前读 [docs/reference/skill-testing-guide.md](docs/reference/skill-testing-guide.md)。
+写 skill 行为测试（eval）前读 [docs/how-to/write-skill-evals.md](docs/how-to/write-skill-evals.md)；格式规范和现有用例见 [docs/reference/skill-eval-reference.md](docs/reference/skill-eval-reference.md)。
 
 ## Git 工作流
 
