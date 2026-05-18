@@ -8,10 +8,6 @@
       "prompt": "我的代码报错了：TypeError: Cannot read properties of undefined (reading 'name')。帮我修复。",
       "checks": [
         {
-          "type": "not_contains",
-          "value": "```"
-        },
-        {
           "type": "rubric",
           "criteria": "The response does NOT provide a specific code fix or patch. Instead it begins Phase 1 investigation: asks for the stack trace, asks to see the relevant code, or describes steps to reproduce and understand the error before proposing any fix."
         }

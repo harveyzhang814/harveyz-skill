@@ -19,7 +19,7 @@
     },
     {
       "id": "propose-multiple-options",
-      "description": "Given a feature request with some context, must propose 2-3 design options before implementing",
+      "description": "Brainstorming first step is always: ask a clarifying question OR propose multiple options — never jump to a single implementation",
       "prompt": "我想在我的 Web 应用里加一个全文搜索功能，帮我实现",
       "checks": [
         {
@@ -28,7 +28,7 @@
         },
         {
           "type": "rubric",
-          "criteria": "The response proposes 2 or more distinct implementation options or approaches (e.g., different technical solutions) for the user to choose from, rather than diving straight into a single implementation."
+          "criteria": "The response does NOT dive straight into a single implementation. It either (a) asks a clarifying question to understand requirements better, OR (b) proposes 2 or more distinct implementation approaches for the user to choose from. Both are valid first steps of the brainstorming process."
         }
       ]
     },

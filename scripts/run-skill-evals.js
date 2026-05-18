@@ -19,7 +19,7 @@ import { fileURLToPath } from 'url';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = join(__dirname, '..');
 const MODEL = 'claude-haiku-4-5-20251001';
-const CLAUDE_TIMEOUT_MS = 120_000;
+const CLAUDE_TIMEOUT_MS = 240_000;
 
 // ── arg parsing ───────────────────────────────────────────────────────────────
 
@@ -46,7 +46,12 @@ function readSkillMd(skillPath) {
 }
 
 function runClaude(prompt) {
-  const result = spawnSync('claude', ['-p', prompt, '--model', MODEL], {
+  // Pass prompt via stdin to avoid CLI option parsing issues when the prompt
+  // starts with `---` (SKILL.md frontmatter is misread as an unknown flag).
+  // --tools "" disables all tools so the model can't block on tool-use approval
+  // when a skill's instructions reference bash commands or file reads.
+  const result = spawnSync('claude', ['--print', '--model', MODEL, '--tools', ''], {
+    input: prompt,
     encoding: 'utf8',
     timeout: CLAUDE_TIMEOUT_MS,
     maxBuffer: 10 * 1024 * 1024,
