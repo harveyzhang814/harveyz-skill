@@ -63,6 +63,16 @@ Skills that produce org-mode output:
 
 `skills-index.json` is the single source of truth. Skills absent from it are excluded from npm.
 
+## 测试
+
+```bash
+npm test
+```
+
+`tests/agent-cli.bats` — CLI 输出格式；`tests/install.bats` — flag 安装，断言文件系统；`tests/interactive.bats` — fzf 交互循环。
+
+写新测试前读 [docs/reference/testing-guide.md](docs/reference/testing-guide.md)。
+
 ## Git 工作流
 
 分支命名规范与合并流程详见 [docs/reference/git-workflow.md](docs/reference/git-workflow.md)。
