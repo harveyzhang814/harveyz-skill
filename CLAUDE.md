@@ -66,12 +66,17 @@ Skills that produce org-mode output:
 ## 测试
 
 ```bash
-npm test
+npm test       # 结构性测试：hskill CLI + SKILL.md 格式校验
+npm run eval   # 行为测试：skill 跟随指令时的语义正确性
 ```
 
-`tests/agent-cli.bats` — CLI 输出格式；`tests/install.bats` — flag 安装，断言文件系统；`tests/interactive.bats` — fzf 交互循环。
+**两层测试，职责不同：**
+- `npm test` — hskill CLI 行为（安装、交互、JSON 输出）+ 所有 skill 的 SKILL.md 格式校验
+- `npm run eval` — 向模型注入 SKILL.md 内容，验证 skill 的行为约束是否被正确执行（如 HARD-GATE、Phase 1 前禁止修复等）
 
-写新测试前读 [docs/reference/testing-guide.md](docs/reference/testing-guide.md)。
+写新 hskill CLI 测试前读 [docs/reference/testing-guide.md](docs/reference/testing-guide.md)。
+
+写 skill 行为测试前读 [docs/reference/skill-testing-guide.md](docs/reference/skill-testing-guide.md)。
 
 ## Git 工作流
 
