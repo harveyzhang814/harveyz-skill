@@ -458,6 +458,56 @@ function fzfSelect() {
   })
 }
 
+// ── Print install summary (shared between interactive loop and non-interactive) ──
+function printSummary(skillSummary, toolSummary) {
+  if (skillSummary !== null) {
+    const anyInstalled = Object.values(skillSummary).some(r => r.installed.length > 0)
+    if (!anyInstalled) {
+      console.log(chalk.dim('  · No skills installed'))
+    } else {
+      console.log(chalk.green.bold('✔ Skills installed:'))
+      for (const [target, { installed }] of Object.entries(skillSummary)) {
+        if (installed.length > 0)
+          console.log(`  ${chalk.bold(target)} ← ${installed.join(', ')}`)
+      }
+    }
+    for (const [target, { skipped, failed }] of Object.entries(skillSummary)) {
+      for (const s of skipped) {
+        const detail = s.reason === 'up-to-date'
+          ? `up-to-date ${s.version}`
+          : `outdated ${s.installed} → ${s.available}, use --force`
+        console.log(chalk.dim(`  · ${target}/${s.name} skipped (${detail})`))
+      }
+      for (const f of failed) {
+        console.log(chalk.red(`  ✗ ${target}/${f.name} failed: ${f.reason}${f.detail ? ` — ${f.detail}` : ''}`))
+      }
+    }
+  }
+  if (toolSummary !== null) {
+    if (toolSummary.installed.length === 0 && !toolSummary.skipped.length && !toolSummary.failed.length) {
+      console.log(chalk.dim('  · No shell tools installed'))
+    } else {
+      if (toolSummary.installed.length > 0) {
+        console.log(chalk.green.bold('✔ Shell tools installed:'))
+        for (const name of toolSummary.installed) {
+          console.log(`  ${chalk.bold('~/.local/bin')} ← ${name}`)
+        }
+        console.log('')
+        console.log(chalk.yellow.bold('  ⚡ Reload your shell to apply changes:'))
+        console.log('')
+        console.log(`     ${chalk.bold.cyan('source ~/.zshrc')}`)
+        console.log('')
+      }
+      for (const s of toolSummary.skipped) {
+        console.log(chalk.dim(`  · ${s.name} skipped (${s.reason === 'already_exists' ? 'already exists — use --force to overwrite' : s.reason})`))
+      }
+      for (const f of toolSummary.failed) {
+        console.log(chalk.red(`  ✗ ${f.name} failed: ${f.reason}${f.detail ? ` — ${f.detail}` : ''}`))
+      }
+    }
+  }
+}
+
 try {
   if (toolArg && skillArg) {
     const msg = '--tool and --skill cannot be combined; use --bundle to install both'
@@ -466,6 +516,103 @@ try {
     process.exit(1)
   }
 
+  const isInteractive = !toolArg && !skillArg && !bundleArg
+
+  // ── Interactive mode: loop back to skill selector after each install ────────
+  if (isInteractive) {
+    if (!process.stdout.isTTY && !process.env.HSKILL_TEST_INTERACTIVE) {
+      console.error(chalk.red('  ✗ Interactive mode requires a TTY. Use --bundle, --skill, or --tool flags for non-interactive install.'))
+      console.error(chalk.dim('  Example: hskill install --bundle dev --target claude'))
+      process.exit(1)
+    }
+
+    while (true) {
+      const selected = fzfSelect()
+
+      if (!selected.length) {
+        console.log(chalk.dim('  · Nothing selected, exiting'))
+        break
+      }
+
+      const toolItems = selected.filter(s => s.kind === 'tool')
+      const seen = new Set()
+      const skillItems = selected.filter(s => s.kind === 'skill').filter(s => {
+        if (seen.has(s.skillName)) return false
+        seen.add(s.skillName); return true
+      })
+
+      if (!skillItems.length && !toolItems.length) continue
+
+      let skillSummary = null
+      if (skillItems.length > 0) {
+        // Scope selection
+        const scopeResult = spawnSync('fzf', [
+          '--prompt=  › ',
+          '--header=  Scope  ·  enter 确认  ·  esc 取消',
+          '--layout=reverse',
+          '--border=rounded',
+          '--color=header:italic:dim,prompt:cyan,pointer:cyan,hl:cyan,hl+:cyan:bold',
+        ], {
+          input: `user     — ~/.claude/skills/  (所有项目共享)\nproject  — .claude/skills/    (仅当前项目)`,
+          encoding: 'utf8',
+          stdio: ['pipe', 'pipe', 'inherit'],
+        })
+        if (!scopeResult.stdout.trim()) {
+          console.log(chalk.dim('  · Cancelled'))
+          break
+        }
+        const scope = scopeResult.stdout.trim().startsWith('project') ? 'project' : 'user'
+
+        // Target selection
+        const targetChoices = buildTargetChoices(scope)
+        const targetInput = targetChoices.map(c => c.name).join('\n') + '\nall      — all tools'
+        const targetResult = spawnSync('fzf', [
+          '--multi',
+          '--prompt=  › ',
+          '--header=  Install to  ·  tab 多选  ·  enter 确认  ·  esc 取消',
+          '--layout=reverse',
+          '--border=rounded',
+          '--color=header:italic:dim,prompt:cyan,pointer:cyan,hl:cyan,hl+:cyan:bold',
+        ], {
+          input: targetInput,
+          encoding: 'utf8',
+          stdio: ['pipe', 'pipe', 'inherit'],
+        })
+        if (!targetResult.stdout.trim()) {
+          console.log(chalk.dim('  · Cancelled'))
+          break
+        }
+        const selectedTargets = targetResult.stdout.trim().split('\n')
+          .map(l => l.trim().split(/\s+/)[0])
+
+        if (selectedTargets.length > 0) {
+          const targets = resolveTargets(selectedTargets, scope)
+          console.log('')
+          skillSummary = await installSkills(skillItems, targets, forceFlag)
+          console.log('')
+        }
+      }
+
+      let toolSummary = null
+      if (toolItems.length > 0) {
+        console.log('')
+        toolSummary = await installTools(
+          toolItems.map(t => ({ toolName: t.toolName, srcPath: t.srcPath })),
+          TARGETS.shell,
+          forceFlag,
+        )
+        console.log('')
+      }
+
+      printSummary(skillSummary, toolSummary)
+
+      // Loop back to skill selector automatically
+    }
+
+    process.exit(0)
+  }
+
+  // ── Non-interactive mode: resolve items from flags, install once ────────────
   let skillItems = []
   let toolItems  = []
 
@@ -481,26 +628,6 @@ try {
     const toolBundles  = bundles.filter(b =>  TOOL_BUNDLE_VALUES.has(b))
     if (skillBundles.length) skillItems = resolveSkills(skillBundles).map(s => ({ kind: 'skill', ...s }))
     if (toolBundles.length)  toolItems  = resolveTools(toolBundles).map(t => ({ kind: 'tool', ...t }))
-  } else {
-    if (!process.stdout.isTTY) {
-      console.error(chalk.red('  ✗ Interactive mode requires a TTY. Use --bundle, --skill, or --tool flags for non-interactive install.'))
-      console.error(chalk.dim('  Example: hskill install --bundle dev --target claude'))
-      process.exit(1)
-    }
-    const selected = fzfSelect()
-
-    if (!selected.length) {
-      console.log(chalk.dim('  · Nothing selected, exiting'))
-      process.exit(0)
-    }
-
-    toolItems = selected.filter(s => s.kind === 'tool')
-
-    const seen = new Set()
-    skillItems = selected.filter(s => s.kind === 'skill').filter(s => {
-      if (seen.has(s.skillName)) return false
-      seen.add(s.skillName); return true
-    })
   }
 
   if (!skillItems.length && !toolItems.length) {
@@ -594,52 +721,7 @@ try {
     if (toolSummary  !== null) out.tools  = toolSummary
     console.log(JSON.stringify(out, null, 2))
   } else {
-    if (skillSummary !== null) {
-      const anyInstalled = Object.values(skillSummary).some(r => r.installed.length > 0)
-      if (!anyInstalled) {
-        console.log(chalk.dim('  · No skills installed'))
-      } else {
-        console.log(chalk.green.bold('✔ Skills installed:'))
-        for (const [target, { installed }] of Object.entries(skillSummary)) {
-          if (installed.length > 0)
-            console.log(`  ${chalk.bold(target)} ← ${installed.join(', ')}`)
-        }
-      }
-      for (const [target, { skipped, failed }] of Object.entries(skillSummary)) {
-        for (const s of skipped) {
-          const detail = s.reason === 'up-to-date'
-            ? `up-to-date ${s.version}`
-            : `outdated ${s.installed} → ${s.available}, use --force`
-          console.log(chalk.dim(`  · ${target}/${s.name} skipped (${detail})`))
-        }
-        for (const f of failed) {
-          console.log(chalk.red(`  ✗ ${target}/${f.name} failed: ${f.reason}${f.detail ? ` — ${f.detail}` : ''}`))
-        }
-      }
-    }
-    if (toolSummary !== null) {
-      if (toolSummary.installed.length === 0 && !toolSummary.skipped.length && !toolSummary.failed.length) {
-        console.log(chalk.dim('  · No shell tools installed'))
-      } else {
-        if (toolSummary.installed.length > 0) {
-          console.log(chalk.green.bold('✔ Shell tools installed:'))
-          for (const name of toolSummary.installed) {
-            console.log(`  ${chalk.bold('~/.local/bin')} ← ${name}`)
-          }
-          console.log('')
-          console.log(chalk.yellow.bold('  ⚡ Reload your shell to apply changes:'))
-          console.log('')
-          console.log(`     ${chalk.bold.cyan('source ~/.zshrc')}`)
-          console.log('')
-        }
-        for (const s of toolSummary.skipped) {
-          console.log(chalk.dim(`  · ${s.name} skipped (${s.reason === 'already_exists' ? 'already exists — use --force to overwrite' : s.reason})`))
-        }
-        for (const f of toolSummary.failed) {
-          console.log(chalk.red(`  ✗ ${f.name} failed: ${f.reason}${f.detail ? ` — ${f.detail}` : ''}`))
-        }
-      }
-    }
+    printSummary(skillSummary, toolSummary)
   }
 } catch (err) {
   if (jsonFlag) {

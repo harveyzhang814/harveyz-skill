@@ -63,6 +63,16 @@ Skills that produce org-mode output:
 
 `skills-index.json` is the single source of truth. Skills absent from it are excluded from npm.
 
+## 测试
+
+```bash
+npm test
+```
+
+hskill CLI 行为（安装、交互、JSON 输出）+ 所有 skill 的 SKILL.md 格式校验。
+
+写新测试前读 [docs/reference/testing-guide.md](docs/reference/testing-guide.md)。
+
 ## Git 工作流
 
 分支命名规范与合并流程详见 [docs/reference/git-workflow.md](docs/reference/git-workflow.md)。
