@@ -13,7 +13,8 @@
     "harness": "测试工具（full-stack-debug-env）",
     "task": "任务管理（pm-task-dispatch + task-close）",
     "web-fetch": "网页抓取工具（article-fetcher）",
-    "writing": "写作工具（mermaid-diagram）"
+    "writing": "写作工具（mermaid-diagram）",
+    "design": "设计同步工具（sync-design-html）"
   },
   "skills": [
     { "path": "analysis/skill-analyzer", "bundle": "analysis", "exclude": ["research/"] },
@@ -28,6 +29,7 @@
     { "path": "task/pm-task-dispatch", "bundle": "task" },
     { "path": "task/task-close", "bundle": "task" },
     { "path": "web-fetch/article-fetcher", "bundle": "web-fetch" },
-    { "path": "writing/mermaid-diagram", "bundle": "writing" }
+    { "path": "writing/mermaid-diagram", "bundle": "writing" },
+    { "path": "design/sync-design-html", "bundle": "design" }
   ]
 }
