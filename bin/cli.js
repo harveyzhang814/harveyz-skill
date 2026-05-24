@@ -623,7 +623,7 @@ function fzfSelect() {
 }
 
 // ── Print install summary (shared between interactive loop and non-interactive) ──
-function printSummary(skillSummary, toolSummary) {
+function printSummary(skillSummary, toolSummary, hookSummary = null) {
   if (skillSummary !== null) {
     const anyInstalled = Object.values(skillSummary).some(r => r.installed.length > 0)
     if (!anyInstalled) {
@@ -667,6 +667,26 @@ function printSummary(skillSummary, toolSummary) {
       }
       for (const f of toolSummary.failed) {
         console.log(chalk.red(`  ✗ ${f.name} failed: ${f.reason}${f.detail ? ` — ${f.detail}` : ''}`))
+      }
+    }
+  }
+  if (hookSummary !== null) {
+    const anyInstalled = Object.values(hookSummary).some(r => r.installed.length > 0)
+    if (!anyInstalled) {
+      console.log(chalk.dim('  · No hooks installed'))
+    } else {
+      console.log(chalk.green.bold('✔ Hooks installed:'))
+      for (const [target, { installed }] of Object.entries(hookSummary)) {
+        if (installed.length > 0)
+          console.log(`  ${chalk.bold(target)} ← ${installed.join(', ')}`)
+      }
+    }
+    for (const { skipped } of Object.values(hookSummary)) {
+      for (const s of skipped) {
+        const detail = s.reason === 'outdated'
+          ? `outdated ${s.installed} → ${s.available}, use --force`
+          : s.reason
+        console.log(chalk.dim(`  · ${s.name} skipped (${detail})`))
       }
     }
   }
@@ -769,7 +789,61 @@ try {
         console.log('')
       }
 
-      printSummary(skillSummary, toolSummary)
+      // ── Hook install ──────────────────────────────────────────────────────────
+      let hookSummary = null
+      if (hookItems.length > 0) {
+        // Scope selection
+        const hookScopeResult = spawnSync('fzf', [
+          '--prompt=  › ',
+          '--header=  Hook scope  ·  enter 确认  ·  esc 取消',
+          '--layout=reverse',
+          '--border=rounded',
+          '--color=header:italic:dim,prompt:cyan,pointer:cyan,hl:cyan,hl+:cyan:bold',
+        ], {
+          input: `user     — ~/.{claude,codex}/hooks/  (所有项目共享)\nproject  — .{claude,codex}/hooks/    (仅当前项目)`,
+          encoding: 'utf8',
+          stdio: ['pipe', 'pipe', 'inherit'],
+        })
+        if (!hookScopeResult.stdout.trim()) {
+          console.log(chalk.dim('  · Cancelled'))
+          break
+        }
+        const hookScope = hookScopeResult.stdout.trim().startsWith('project') ? 'project' : 'user'
+
+        // Target selection (claude / codex / all)
+        const hookTargetResult = spawnSync('fzf', [
+          '--multi',
+          '--prompt=  › ',
+          '--header=  Install hook to  ·  tab 多选  ·  enter 确认  ·  esc 取消',
+          '--layout=reverse',
+          '--border=rounded',
+          '--color=header:italic:dim,prompt:cyan,pointer:cyan,hl:cyan,hl+:cyan:bold',
+        ], {
+          input: `claude   — ~/.claude/hooks/\ncodex    — ~/.codex/hooks/\nall      — claude + codex`,
+          encoding: 'utf8',
+          stdio: ['pipe', 'pipe', 'inherit'],
+        })
+        if (!hookTargetResult.stdout.trim()) {
+          console.log(chalk.dim('  · Cancelled'))
+          break
+        }
+
+        const selectedHookTargets = hookTargetResult.stdout.trim().split('\n')
+          .map(l => l.trim().split(/\s+/)[0])
+        const resolvedHookTargets = selectedHookTargets.includes('all')
+          ? ['claude', 'codex']
+          : selectedHookTargets.filter(t => ['claude', 'codex'].includes(t))
+
+        hookSummary = {}
+        console.log('')
+        for (const target of resolvedHookTargets) {
+          const result = await installHooksForTarget(hookItems, target, hookScope, process.cwd(), forceFlag)
+          hookSummary[target] = result
+        }
+        console.log('')
+      }
+
+      printSummary(skillSummary, toolSummary, hookSummary)
 
       // Loop back to skill selector automatically
     }
