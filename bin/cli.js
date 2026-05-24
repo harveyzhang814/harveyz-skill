@@ -294,7 +294,8 @@ if (subcommand === 'status' || subcommand === 'outdated') {
     }
     for (const h of hookItems) {
       const inst = checkHookInstalled(h.name)
-      console.log('  ' + h.name.padEnd(nw) + '  ' + chalk.dim('—'.padEnd(vw)) + '  ' + hIcon(inst.user.status) + '       ' + hIcon(inst.project.status) + '  ' + chalk.dim(h.description))
+      const ver = inst.user.version !== '—' ? inst.user.version : inst.project.version
+      console.log('  ' + h.name.padEnd(nw) + '  ' + chalk.dim(ver.padEnd(vw)) + '  ' + hIcon(inst.user.status) + '       ' + hIcon(inst.project.status) + '  ' + chalk.dim(h.description))
     }
   }
 
@@ -404,7 +405,8 @@ if (subcommand === 'hooks') {
     if (hookJsonFlag) {
       const out = hookItems.map(h => {
         const inst = checkHookInstalled(h.name)
-        return { name: h.name, description: h.description, event: h.event, user: inst.user, project: inst.project }
+        const ver = inst.user.version !== '—' ? inst.user.version : (inst.project.version !== '—' ? inst.project.version : h.version ?? '—')
+        return { name: h.name, version: ver, description: h.description, event: h.event, user: inst.user, project: inst.project }
       })
       console.log(JSON.stringify({ hooks: out }, null, 2))
       process.exit(0)
@@ -415,12 +417,14 @@ if (subcommand === 'hooks') {
       return chalk.dim('—')
     }
     const nameWidth = Math.max(...hookItems.map(h => h.name.length), 4)
+    const verWidth = 7
     console.log('')
-    console.log('  ' + chalk.bold('NAME'.padEnd(nameWidth)) + '  U  P  ' + chalk.bold('DESCRIPTION'))
-    console.log('  ' + '─'.repeat(nameWidth) + '  ─  ─  ' + '─'.repeat(20))
+    console.log('  ' + chalk.bold('NAME'.padEnd(nameWidth)) + '  ' + chalk.bold('VER'.padEnd(verWidth)) + '  U  P  ' + chalk.bold('DESCRIPTION'))
+    console.log('  ' + '─'.repeat(nameWidth) + '  ' + '─'.repeat(verWidth) + '  ─  ─  ' + '─'.repeat(20))
     for (const h of hookItems) {
       const inst = checkHookInstalled(h.name)
-      console.log('  ' + h.name.padEnd(nameWidth) + '  ' + hookIcon(inst.user.status) + '  ' + hookIcon(inst.project.status) + '  ' + h.description)
+      const ver = inst.user.version !== '—' ? inst.user.version : (inst.project.version !== '—' ? inst.project.version : h.version ?? '—')
+      console.log('  ' + h.name.padEnd(nameWidth) + '  ' + chalk.dim(ver.padEnd(verWidth)) + '  ' + hookIcon(inst.user.status) + '  ' + hookIcon(inst.project.status) + '  ' + h.description)
     }
     console.log('')
     console.log(chalk.dim(`  U=user  P=project  ${chalk.green('✓')}=installed  ${chalk.yellow('~')}=partial  ${chalk.dim('—')}=none`))
@@ -460,13 +464,13 @@ if (subcommand === 'hooks') {
     if (hookJsonFlag) {
       console.log(JSON.stringify({ installed, skipped, failed }, null, 2))
       process.exit(failed.length ? 1 : 0)
+    } else {
+      if (installed.length) console.error(chalk.green.bold(`✔ Hooks installed (${hookScopeArg}):`), installed.join(', '))
+      for (const s of skipped) console.error(chalk.dim(`  · ${s.name} skipped (${s.reason})`))
+
+      for (const f of failed)  console.error(chalk.red(`  ✗ ${f.name} failed: ${f.reason}${f.detail ? ` — ${f.detail}` : ''}`))
+      process.exit(failed.length ? 1 : 0)
     }
-
-    if (installed.length) console.error(chalk.green.bold(`✔ Hooks installed (${hookScopeArg}):`), installed.join(', '))
-    for (const s of skipped) console.error(chalk.dim(`  · ${s.name} skipped (${s.reason})`))
-
-    for (const f of failed)  console.error(chalk.red(`  ✗ ${f.name} failed: ${f.reason}${f.detail ? ` — ${f.detail}` : ''}`))
-    process.exit(failed.length ? 1 : 0)
   }
 
   // ── hooks uninstall ──────────────────────────────────────────────────────────
