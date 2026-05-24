@@ -53,6 +53,8 @@ git branch --merged staging        # 已合并进 staging 的子集
 
 对每条本地分支（不在跳过列表中），按以下优先级归类：
 
+**预处理：** 先排除跳过列表（main、staging、当前分支名），剩余分支参与以下分类。
+
 1. **未合并进 staging** → 直接归入 `GROUP_KEEP`，标注 `[未合并]`
 2. **已合并 + 命中 Always Keep** → 归入 `GROUP_KEEP`，标注 `[规则保留: <pattern>]`
 3. **已合并 + 命中 Always Delete** → 归入 `GROUP_DELETE_RULE`，标注 `[规则: <pattern>]`
@@ -60,9 +62,13 @@ git branch --merged staging        # 已合并进 staging 的子集
 
 **glob 匹配规则：** `*` 匹配任意字符（不含 `/`）。`chore/bump-*` 匹配 `chore/bump-0.3.0`，不匹配 `feature/bump-test`。
 
+⚠️ **优先级冲突：** 若同一分支同时命中 Always Keep 和 Always Delete，**Always Keep 优先**（保留）。
+
 ---
 
 ## Step 4：LLM 分析 GROUP_AMBIGUOUS
+
+若 `GROUP_AMBIGUOUS` 为空，跳过 Step 4，直接进入 Step 5。
 
 若 `GROUP_AMBIGUOUS` 非空，执行以下步骤：
 
@@ -94,6 +100,8 @@ git log -1 --format="%s" <branch>
 ---
 
 ## Step 5：分组展示 + 逐组确认
+
+**边界情况：** 若三个分组均为空（仓库只有主干分支或当前 repo 无需清理），打印「✅ 所有分支已整理，无需清理」，跳到 Step 7。
 
 ### 组 A — 明显可删（规则命中）
 
