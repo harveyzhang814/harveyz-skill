@@ -294,7 +294,7 @@ if (subcommand === 'status' || subcommand === 'outdated') {
     }
     for (const h of hookItems) {
       const inst = checkHookInstalled(h.name)
-      const ver = inst.user.version !== '—' ? inst.user.version : inst.project.version
+      const ver = resolveHookDisplayVersion(inst, h.version)
       console.log('  ' + h.name.padEnd(nw) + '  ' + chalk.dim(ver.padEnd(vw)) + '  ' + hIcon(inst.user.status) + '       ' + hIcon(inst.project.status) + '  ' + chalk.dim(h.description))
     }
   }
@@ -382,6 +382,14 @@ if (subcommand === 'info') {
 
 // ── Hooks ─────────────────────────────────────────────────────────────────────
 if (subcommand === 'hooks') {
+  // Helper: resolve displayed version for a hook
+  // Priority: user-installed → project-installed → source version
+  function resolveHookDisplayVersion(inst, sourceVersion) {
+    if (inst.user.version !== '—') return inst.user.version
+    if (inst.project.version !== '—') return inst.project.version
+    return sourceVersion ?? '—'
+  }
+
   const hooksSubcmd    = args[1]
   const hookArgs       = args.slice(2)
   const hookJsonFlag   = hooksSubcmd === '--json' || hookArgs.includes('--json')
@@ -405,7 +413,7 @@ if (subcommand === 'hooks') {
     if (hookJsonFlag) {
       const out = hookItems.map(h => {
         const inst = checkHookInstalled(h.name)
-        const ver = inst.user.version !== '—' ? inst.user.version : (inst.project.version !== '—' ? inst.project.version : h.version ?? '—')
+        const ver = resolveHookDisplayVersion(inst, h.version)
         return { name: h.name, version: ver, description: h.description, event: h.event, user: inst.user, project: inst.project }
       })
       console.log(JSON.stringify({ hooks: out }, null, 2))
@@ -423,7 +431,7 @@ if (subcommand === 'hooks') {
     console.log('  ' + '─'.repeat(nameWidth) + '  ' + '─'.repeat(verWidth) + '  ─  ─  ' + '─'.repeat(20))
     for (const h of hookItems) {
       const inst = checkHookInstalled(h.name)
-      const ver = inst.user.version !== '—' ? inst.user.version : (inst.project.version !== '—' ? inst.project.version : h.version ?? '—')
+      const ver = resolveHookDisplayVersion(inst, h.version)
       console.log('  ' + h.name.padEnd(nameWidth) + '  ' + chalk.dim(ver.padEnd(verWidth)) + '  ' + hookIcon(inst.user.status) + '  ' + hookIcon(inst.project.status) + '  ' + h.description)
     }
     console.log('')
