@@ -65,4 +65,6 @@ __pycache__/
 !.claude/
 !.claude/**
 .claude/*.local.md
+.claude/settings.local.json
+.claude/skills/
 .gstack/
