@@ -166,3 +166,49 @@ teardown() {
     --name "${HOOK_NAME}" --scope user --target codex
   [ -f "${MOCK_HOME}/.codex/hooks/${HOOK_NAME}.sh" ]
 }
+
+@test "hooks install --target codex --scope user: registers in ~/.codex/hooks.json" {
+  HOME="${MOCK_HOME}" node "${CLI}" hooks install \
+    --name "${HOOK_NAME}" --scope user --target codex
+  node -e "
+    const d = JSON.parse(require('fs').readFileSync('${MOCK_HOME}/.codex/hooks.json','utf8'));
+    const entries = d.hooks?.PreToolUse ?? [];
+    const found = entries.some(e => e.hooks?.some(h => h.command?.includes('${HOOK_NAME}.sh')));
+    if (!found) throw new Error('hook not registered in ~/.codex/hooks.json');
+  "
+}
+
+@test "hooks install --target codex: command uses absolute path" {
+  HOME="${MOCK_HOME}" node "${CLI}" hooks install \
+    --name "${HOOK_NAME}" --scope user --target codex
+  node -e "
+    const d = JSON.parse(require('fs').readFileSync('${MOCK_HOME}/.codex/hooks.json','utf8'));
+    const entries = d.hooks?.PreToolUse ?? [];
+    const cmd = entries.flatMap(e => e.hooks ?? []).find(h => h.command?.includes('${HOOK_NAME}.sh'))?.command;
+    if (!cmd) throw new Error('command not found');
+    if (!require('path').isAbsolute(cmd)) throw new Error('command is not absolute: ' + cmd);
+  "
+}
+
+@test "hooks install --target codex: no type field in hooks.json entry" {
+  HOME="${MOCK_HOME}" node "${CLI}" hooks install \
+    --name "${HOOK_NAME}" --scope user --target codex
+  node -e "
+    const d = JSON.parse(require('fs').readFileSync('${MOCK_HOME}/.codex/hooks.json','utf8'));
+    const entries = d.hooks?.PreToolUse ?? [];
+    const entry = entries.flatMap(e => e.hooks ?? []).find(h => h.command?.includes('${HOOK_NAME}.sh'));
+    if (!entry) throw new Error('entry not found');
+    if ('type' in entry) throw new Error('type field must not be present in codex hooks.json');
+  "
+}
+
+@test "hooks install --force --target codex: no duplicate registration" {
+  HOME="${MOCK_HOME}" node "${CLI}" hooks install --name "${HOOK_NAME}" --scope user --target codex
+  HOME="${MOCK_HOME}" node "${CLI}" hooks install --name "${HOOK_NAME}" --scope user --target codex --force
+  node -e "
+    const d = JSON.parse(require('fs').readFileSync('${MOCK_HOME}/.codex/hooks.json','utf8'));
+    const entries = d.hooks?.PreToolUse ?? [];
+    const count = entries.filter(e => e.hooks?.some(h => h.command?.includes('${HOOK_NAME}.sh'))).length;
+    if (count !== 1) throw new Error('expected 1 registration, got ' + count);
+  "
+}

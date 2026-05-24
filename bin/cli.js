@@ -13,7 +13,7 @@ import {
   TOOL_BUNDLE_CHOICES,
 } from '../lib/bundles.js'
 import { buildTargetChoices, resolveTargets, TARGETS } from '../lib/targets.js'
-import { installSkills, installTools, installHooks, uninstallHook } from '../lib/installer.js'
+import { installSkills, installTools, installHooks, installHooksForTarget, uninstallHook } from '../lib/installer.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const require = createRequire(import.meta.url)
@@ -396,10 +396,12 @@ if (subcommand === 'hooks') {
   const hookNameIdx    = hookArgs.indexOf('--name')
   const hookScopeIdx   = hookArgs.indexOf('--scope')
   const hookProjectIdx = hookArgs.indexOf('--project')
+  const hookTargetIdx  = hookArgs.indexOf('--target')
   const hookForce      = hookArgs.includes('--force')
   const hookNameArg    = hookNameIdx    !== -1 ? hookArgs[hookNameIdx    + 1] : undefined
   const hookScopeArg   = hookScopeIdx   !== -1 ? hookArgs[hookScopeIdx   + 1] : 'user'
   const hookProjectArg = hookProjectIdx !== -1 ? hookArgs[hookProjectIdx + 1] : process.cwd()
+  const hookTargetArg  = hookTargetIdx  !== -1 ? hookArgs[hookTargetIdx  + 1] : 'claude'
 
   // Validate scope for install/uninstall commands
   if (!['user', 'project'].includes(hookScopeArg) && ['install', 'uninstall'].includes(hooksSubcmd)) {
@@ -467,7 +469,7 @@ if (subcommand === 'hooks') {
       toInstall = selected
     }
 
-    const { installed, skipped, failed } = await installHooks(toInstall, hookScopeArg, hookProjectArg, hookForce)
+    const { installed, skipped, failed } = await installHooksForTarget(toInstall, hookTargetArg, hookScopeArg, hookProjectArg, hookForce)
 
     if (hookJsonFlag) {
       console.log(JSON.stringify({ installed, skipped, failed }, null, 2))
