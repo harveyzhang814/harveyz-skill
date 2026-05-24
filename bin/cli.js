@@ -362,7 +362,7 @@ if (subcommand === 'info') {
 if (subcommand === 'hooks') {
   const hooksSubcmd    = args[1]
   const hookArgs       = args.slice(2)
-  const hookJsonFlag   = hookArgs.includes('--json')
+  const hookJsonFlag   = hooksSubcmd === '--json' || hookArgs.includes('--json')
   const hookNameIdx    = hookArgs.indexOf('--name')
   const hookScopeIdx   = hookArgs.indexOf('--scope')
   const hookProjectIdx = hookArgs.indexOf('--project')
@@ -371,8 +371,14 @@ if (subcommand === 'hooks') {
   const hookScopeArg   = hookScopeIdx   !== -1 ? hookArgs[hookScopeIdx   + 1] : 'user'
   const hookProjectArg = hookProjectIdx !== -1 ? hookArgs[hookProjectIdx + 1] : process.cwd()
 
+  // Validate scope for install/uninstall commands
+  if (!['user', 'project'].includes(hookScopeArg) && ['install', 'uninstall'].includes(hooksSubcmd)) {
+    console.error(chalk.red(`  ✗ Invalid scope: "${hookScopeArg}". Use user or project.`))
+    process.exit(1)
+  }
+
   // ── hooks list ──────────────────────────────────────────────────────────────
-  if (hooksSubcmd === 'list' || !hooksSubcmd) {
+  if (hooksSubcmd === 'list' || !hooksSubcmd || hooksSubcmd.startsWith('--')) {
     const hookItems = getAllHookItems()
     if (hookJsonFlag) {
       const out = hookItems.map(h => {
