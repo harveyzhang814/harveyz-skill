@@ -4,6 +4,7 @@
 # 保留根目录文件
 !.gitignore
 !README.md
+!CHANGELOG.md
 !CLAUDE.md
 !package.json
 !package-lock.json

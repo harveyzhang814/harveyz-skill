@@ -18,7 +18,7 @@ const index = rawSkills.map(entry =>
 const indexedPaths = new Set(index.map(e => e.path))
 
 // ── Skills ───────────────────────────────────────────────────────────────────
-const baseFiles = ['bin/', 'lib/', 'bundles.json', 'skills-index.json']
+const baseFiles = ['bin/', 'lib/', 'bundles.json', 'skills-index.json', 'CHANGELOG.md']
 const skillFiles = []
 
 for (const entry of index) {

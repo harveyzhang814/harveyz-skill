@@ -15,6 +15,7 @@
     "lib/",
     "bundles.json",
     "skills-index.json",
+    "CHANGELOG.md",
     "skills/analysis/skill-analyzer/",
     "skills/harness/diataxis-docs/",
     "skills/harness/full-stack-debug-env/",
