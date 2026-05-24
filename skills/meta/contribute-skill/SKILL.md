@@ -1,6 +1,6 @@
 ---
 name: contribute-skill
-description: "将其他项目的 skill 目录贡献、导入、同步或注册到 harveyz-skill 仓库，自动完成 SKILL.md 格式规范化、skills-index.json 注册登记、双向目录同步。只要用户想把某个现有 skill 添加/贡献/推送/迁移/导入/加进/同步到 harvey-skill 或 harveyz-skill，都应触发此技能——无论措辞是"贡献"、"导入"、"同步"、"注册"、"加进去"、"推到"还是"迁移过去"。注意：方向是从其他项目流向 harveyz-skill；安装或复制 harvey-skill 中已有的 skill 到本地项目不触发此技能。"
+description: '将其他项目的 skill 目录贡献、导入、同步或注册到 harveyz-skill 仓库，自动完成 SKILL.md 格式规范化、skills-index.json 注册登记、双向目录同步。只要用户想把某个现有 skill 添加、贡献、推送、迁移、导入、加进或同步到 harvey-skill 或 harveyz-skill，都应触发此技能。注意：方向是从其他项目流向 harveyz-skill；安装或复制 harvey-skill 中已有的 skill 到本地项目不触发此技能。'
 user_invocable: true
 version: "1.0.0"
 ---
