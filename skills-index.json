@@ -37,7 +37,7 @@
     {
       "name": "check-similar-branch",
       "description": "用 LLM 语义分析检测相似分支",
-      "path": "hooks/check-similar-branch/check-similar-branch.sh",
+      "path": "hooks/check-similar-branch",
       "event": "PreToolUse",
       "matcher": "Bash",
       "timeout": 60,
