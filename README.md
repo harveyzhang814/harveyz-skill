@@ -122,7 +122,7 @@ bash scripts/git/install-git-hooks.sh
 
 ## Hook 管理
 
-hskill 支持通过 `hooks` 命令管理 Git hooks。查看可用 hooks、在全局或项目作用域安装/卸载：
+hskill 支持通过 `hooks` 命令管理 Claude Code hooks。查看可用 hooks、在全局或项目作用域安装/卸载：
 
 ```bash
 hskill hooks list                                              # 查看可用 hooks 及安装状态

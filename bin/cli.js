@@ -260,7 +260,7 @@ if (subcommand === 'status' || subcommand === 'outdated') {
   }
 
   // Full status table
-  const allNames = [...skillRows, ...toolRows].map(r => r.name)
+  const allNames = [...skillRows.map(r => r.name), ...toolRows.map(r => r.name), ...hookItems.map(h => h.name)]
   const allVers  = [...skillRows, ...toolRows].map(r => r.version)
   const nw = Math.max(...allNames.map(n => n.length), 4)
   const vw = Math.max(...allVers.map(v => v.length), 7)
@@ -457,8 +457,9 @@ if (subcommand === 'hooks') {
 
     const { installed, skipped, failed } = await installHooks(toInstall, hookScopeArg, hookProjectArg, hookForce)
 
-    if (installed.length) console.log(chalk.green.bold(`✔ Hooks installed (${hookScopeArg}):`), installed.join(', '))
-    for (const s of skipped) console.log(chalk.dim(`  · ${s.name} skipped (${s.reason})`))
+    if (installed.length) console.error(chalk.green.bold(`✔ Hooks installed (${hookScopeArg}):`), installed.join(', '))
+    for (const s of skipped) console.error(chalk.dim(`  · ${s.name} skipped (${s.reason})`))
+
     for (const f of failed)  console.error(chalk.red(`  ✗ ${f.name} failed: ${f.reason}${f.detail ? ` — ${f.detail}` : ''}`))
     process.exit(failed.length ? 1 : 0)
   }
