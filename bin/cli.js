@@ -294,7 +294,7 @@ if (subcommand === 'status' || subcommand === 'outdated') {
     }
     for (const h of hookItems) {
       const inst = checkHookInstalled(h.name)
-      console.log('  ' + h.name.padEnd(nw) + '  ' + chalk.dim('—'.padEnd(vw)) + '  ' + hIcon(inst.user.status) + '       ' + hIcon(inst.project.status))
+      console.log('  ' + h.name.padEnd(nw) + '  ' + chalk.dim('—'.padEnd(vw)) + '  ' + hIcon(inst.user.status) + '       ' + hIcon(inst.project.status) + '  ' + chalk.dim(h.description))
     }
   }
 
