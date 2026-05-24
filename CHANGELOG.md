@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-05-24
+
+### Added
+- `contribute-skill`（`meta` bundle）：在其他项目中将本地 skill 目录贡献到 harveyz-skill 仓库，自动完成 SKILL.md 格式规范化、skills-index.json 注册登记、双向目录同步、分支创建与 commit
+- 新增 `meta` bundle，用于对 harveyz-skill 仓库本身的元操作
+
 ## [0.7.0] - 2026-05-24
 
 ### Added
