@@ -438,15 +438,22 @@ if (subcommand === 'hooks') {
     const nameWidth = Math.max(...hookItems.map(h => h.name.length), 4)
     const verWidth = 7
     console.log('')
-    console.log('  ' + chalk.bold('NAME'.padEnd(nameWidth)) + '  ' + chalk.bold('VER'.padEnd(verWidth)) + '  U  P  ' + chalk.bold('DESCRIPTION'))
-    console.log('  ' + '─'.repeat(nameWidth) + '  ' + '─'.repeat(verWidth) + '  ─  ─  ' + '─'.repeat(20))
+    console.log('  ' + chalk.bold('NAME'.padEnd(nameWidth)) + '  ' + chalk.bold('VER'.padEnd(verWidth)) + '  U  P  CX  ' + chalk.bold('DESCRIPTION'))
+    console.log('  ' + '─'.repeat(nameWidth) + '  ' + '─'.repeat(verWidth) + '  ─  ─  ──  ' + '─'.repeat(20))
     for (const h of hookItems) {
       const inst = checkHookInstalled(h.name)
       const ver = resolveHookDisplayVersion(inst, h.version)
-      console.log('  ' + h.name.padEnd(nameWidth) + '  ' + chalk.dim(ver.padEnd(verWidth)) + '  ' + hookIcon(inst.user.status) + '  ' + hookIcon(inst.project.status) + '  ' + h.description)
+      console.log(
+        '  ' + h.name.padEnd(nameWidth) +
+        '  ' + chalk.dim(ver.padEnd(verWidth)) +
+        '  ' + hookIcon(inst.user.status) +
+        '  ' + hookIcon(inst.project.status) +
+        '  ' + hookIcon(inst.codex.user.status) +
+        '   ' + h.description
+      )
     }
     console.log('')
-    console.log(chalk.dim(`  U=user  P=project  ${chalk.green('✓')}=installed  ${chalk.yellow('~')}=partial  ${chalk.dim('—')}=none`))
+    console.log(chalk.dim(`  U=claude-user  P=claude-project  CX=codex-user  ${chalk.green('✓')}=installed  ${chalk.yellow('~')}=partial  ${chalk.dim('—')}=none`))
     console.log('')
     process.exit(0)
   }

@@ -229,3 +229,19 @@ teardown() {
     if (h.codex.user.status !== 'installed') throw new Error('expected codex.user=installed, got: ' + h.codex.user.status);
   "
 }
+
+# ── codex column in list ──────────────────────────────────────────────────────
+
+@test "hooks list: shows CX column header" {
+  output="$(HOME="${MOCK_HOME}" node "${CLI}" hooks list 2>&1)"
+  echo "$output" | grep -qE "CX|codex"
+}
+
+@test "hooks list: CX shows installed when codex hook installed" {
+  HOME="${MOCK_HOME}" node "${CLI}" hooks install \
+    --name "${HOOK_NAME}" --scope user --target codex
+
+  output="$(HOME="${MOCK_HOME}" node "${CLI}" hooks list 2>&1)"
+  # The line for HOOK_NAME should have a ✓ in the CX column position
+  echo "$output" | grep "${HOOK_NAME}" | grep -q "✓"
+}
