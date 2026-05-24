@@ -1,5 +1,6 @@
 #!/bin/bash
 # check-similar-branch.sh
+# version: 1.0.0
 # PreToolUse command hook: 用 LLM 语义分析检测相似分支
 # 触发条件: git checkout -b 或 git switch -c
 
