@@ -212,3 +212,20 @@ teardown() {
     if (count !== 1) throw new Error('expected 1 registration, got ' + count);
   "
 }
+
+# ── codex status in list ──────────────────────────────────────────────────────
+
+@test "hooks list --json: includes codex install status" {
+  # Install into codex user scope
+  HOME="${MOCK_HOME}" node "${CLI}" hooks install \
+    --name "${HOOK_NAME}" --scope user --target codex
+
+  output="$(HOME="${MOCK_HOME}" node "${CLI}" hooks list --json 2>&1)"
+  echo "$output" | node -e "
+    const d = JSON.parse(require('fs').readFileSync('/dev/stdin','utf8'));
+    const h = d.hooks.find(h => h.name === '${HOOK_NAME}');
+    if (!h) throw new Error('hook not found');
+    if (!h.codex) throw new Error('codex field missing from hook status');
+    if (h.codex.user.status !== 'installed') throw new Error('expected codex.user=installed, got: ' + h.codex.user.status);
+  "
+}

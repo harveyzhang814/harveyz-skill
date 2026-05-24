@@ -416,7 +416,16 @@ if (subcommand === 'hooks') {
       const out = hookItems.map(h => {
         const inst = checkHookInstalled(h.name)
         const ver = resolveHookDisplayVersion(inst, h.version)
-        return { name: h.name, version: ver, description: h.description, event: h.event, user: inst.user, project: inst.project }
+        return {
+          name: h.name,
+          version: ver,
+          description: h.description,
+          event: h.event,
+          user: inst.user,
+          project: inst.project,
+          claude: inst.claude,
+          codex: inst.codex,
+        }
       })
       console.log(JSON.stringify({ hooks: out }, null, 2))
       process.exit(0)
