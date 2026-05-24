@@ -1,10 +1,10 @@
 #!/usr/bin/env bats
 # tests/hook-script.bats
-# Behavior tests for scripts/hooks/check-similar-branch.sh
+# Behavior tests for hooks/check-similar-branch/check-similar-branch.sh
 
 setup() {
   TEST_DIR="$(mktemp -d)"
-  HOOK_SCRIPT="$(cd "${BATS_TEST_DIRNAME}/.." && pwd)/scripts/hooks/check-similar-branch.sh"
+  HOOK_SCRIPT="$(cd "${BATS_TEST_DIRNAME}/.." && pwd)/hooks/check-similar-branch/check-similar-branch.sh"
 
   # Mock bin dir — fake `claude` lives here
   MOCK_BIN="${TEST_DIR}/bin"

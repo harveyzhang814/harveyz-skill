@@ -15,7 +15,7 @@
     "lib/",
     "bundles.json",
     "skills-index.json",
-    "scripts/hooks/",
+    "hooks/",
     "skills/analysis/skill-analyzer/CHANGELOG.md",
     "skills/analysis/skill-analyzer/SKILL.md",
     "skills/analysis/skill-analyzer/references/",
