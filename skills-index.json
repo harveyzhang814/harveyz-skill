@@ -6,7 +6,7 @@
     { "name": "p-launch", "bundle": "shell-tools" }
   ],
   "bundleMeta": {
-    "analysis": "分析工具（skill-analyzer）",
+    "analysis": "分析工具（skill-analyzer + git-cleanup）",
     "brainstorming": "设计与规划工具（brainstorming + writing-plans）",
     "dev": "开发工作流（executing-plans + systematic-debugging + using-git-worktrees + git-workflow-init）",
     "document": "文档工具（diataxis-docs）",
@@ -30,6 +30,7 @@
     { "path": "task/task-close", "bundle": "task" },
     { "path": "web-fetch/article-fetcher", "bundle": "web-fetch" },
     { "path": "writing/mermaid-diagram", "bundle": "writing" },
-    { "path": "design/sync-design-html", "bundle": "design" }
+    { "path": "design/sync-design-html", "bundle": "design" },
+    { "path": "analysis/git-cleanup", "bundle": "analysis" }
   ]
 }

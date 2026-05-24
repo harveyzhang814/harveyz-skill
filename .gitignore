@@ -61,6 +61,10 @@ node_modules/
 __pycache__/
 *.log
 
-# 本地插件配置
+# .claude 配置文件
+!.claude/
+!.claude/**
 .claude/*.local.md
+.claude/settings.local.json
+.claude/skills/
 .gstack/
