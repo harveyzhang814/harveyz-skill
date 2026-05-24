@@ -3,7 +3,10 @@
     "shell-tools": "终端工具（p-launch 项目启动器）"
   },
   "tools": [
-    { "name": "p-launch", "bundle": "shell-tools" }
+    {
+      "name": "p-launch",
+      "bundle": "shell-tools"
+    }
   ],
   "bundleMeta": {
     "analysis": "分析工具（skill-analyzer + git-cleanup）",
@@ -15,25 +18,78 @@
     "web-fetch": "网页抓取工具（article-fetcher）",
     "writing": "写作工具（mermaid-diagram）",
     "design": "设计同步工具（sync-design-html）",
-    "meta": "元操作工具（对 harveyz-skill 仓库本身的管理）"
+    "meta": "元操作工具（对 harveyz-skill 仓库本身的管理）",
+    "workflow": "工作流工具（backlog 管理、TODO 追踪）"
   },
   "skills": [
-    { "path": "analysis/skill-analyzer", "bundle": "analysis" },
-    { "path": "harness/diataxis-docs", "bundle": "document" },
-    { "path": "harness/full-stack-debug-env", "bundle": "harness" },
-    { "path": "superpowers-fork/brainstorming", "bundle": "brainstorming" },
-    { "path": "harness/git-workflow-init", "bundle": "dev" },
-    { "path": "superpowers-fork/executing-plans", "bundle": "dev" },
-    { "path": "superpowers-fork/systematic-debugging", "bundle": "dev" },
-    { "path": "superpowers-fork/using-git-worktrees", "bundle": "dev" },
-    { "path": "superpowers-fork/writing-plans", "bundle": "brainstorming" },
-    { "path": "task/pm-task-dispatch", "bundle": "task" },
-    { "path": "task/task-close", "bundle": "task" },
-    { "path": "web-fetch/article-fetcher", "bundle": "web-fetch" },
-    { "path": "writing/mermaid-diagram", "bundle": "writing" },
-    { "path": "design/sync-design-html", "bundle": "design" },
-    { "path": "analysis/git-cleanup", "bundle": "analysis" },
-    { "path": "meta/contribute-skill", "bundle": "meta" }
+    {
+      "path": "analysis/skill-analyzer",
+      "bundle": "analysis"
+    },
+    {
+      "path": "harness/diataxis-docs",
+      "bundle": "document"
+    },
+    {
+      "path": "harness/full-stack-debug-env",
+      "bundle": "harness"
+    },
+    {
+      "path": "superpowers-fork/brainstorming",
+      "bundle": "brainstorming"
+    },
+    {
+      "path": "harness/git-workflow-init",
+      "bundle": "dev"
+    },
+    {
+      "path": "superpowers-fork/executing-plans",
+      "bundle": "dev"
+    },
+    {
+      "path": "superpowers-fork/systematic-debugging",
+      "bundle": "dev"
+    },
+    {
+      "path": "superpowers-fork/using-git-worktrees",
+      "bundle": "dev"
+    },
+    {
+      "path": "superpowers-fork/writing-plans",
+      "bundle": "brainstorming"
+    },
+    {
+      "path": "task/pm-task-dispatch",
+      "bundle": "task"
+    },
+    {
+      "path": "task/task-close",
+      "bundle": "task"
+    },
+    {
+      "path": "web-fetch/article-fetcher",
+      "bundle": "web-fetch"
+    },
+    {
+      "path": "writing/mermaid-diagram",
+      "bundle": "writing"
+    },
+    {
+      "path": "design/sync-design-html",
+      "bundle": "design"
+    },
+    {
+      "path": "analysis/git-cleanup",
+      "bundle": "analysis"
+    },
+    {
+      "path": "meta/contribute-skill",
+      "bundle": "meta"
+    },
+    {
+      "path": "workflow/add-todo",
+      "bundle": "workflow"
+    }
   ],
   "hooks": [
     {
