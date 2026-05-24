@@ -6,7 +6,7 @@ import { fileURLToPath } from 'url'
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const root = path.join(__dirname, '..')
 
-const { skills: rawSkills, tools: rawTools = [] } = JSON.parse(readFileSync(path.join(root, 'skills-index.json'), 'utf8'))
+const { skills: rawSkills, tools: rawTools = [], hooks: rawHooks = [] } = JSON.parse(readFileSync(path.join(root, 'skills-index.json'), 'utf8'))
 const skillsDir = path.join(root, 'skills')
 const toolsDir  = path.join(root, 'tools')
 
@@ -41,10 +41,19 @@ for (const entry of index) {
 // 收集 tools 文件
 const toolFiles = rawTools.map(t => `tools/${t.name}/`)
 
+// 收集 hooks 文件，并校验约定脚本存在
+const hookFiles = rawHooks.map(h => {
+  const scriptPath = path.join(root, h.path, `${h.name}.sh`)
+  if (!existsSync(scriptPath)) {
+    throw new Error(`skills-index.json hooks references "${h.name}" but script not found: ${scriptPath}`)
+  }
+  return `${h.path}/`
+})
+
 // 更新 package.json files 字段
 const pkgPath = path.join(root, 'package.json')
 const pkg = JSON.parse(readFileSync(pkgPath, 'utf8'))
-pkg.files = [...baseFiles, ...skillFiles, ...toolFiles]
+pkg.files = [...baseFiles, ...skillFiles, ...toolFiles, ...hookFiles]
 writeFileSync(pkgPath, JSON.stringify(pkg, null, 2) + '\n')
 
 // 生成 .npmignore excluded block（排除非索引 skill 目录）
@@ -70,5 +79,5 @@ const base = existing.includes(marker)
 const generated = [marker, ...excludePaths.sort()].join('\n') + '\n'
 writeFileSync(npmignorePath, base + generated)
 
-console.log(`Updated package.json files: ${pkg.files.length} entries`)
+console.log(`Updated package.json files: ${pkg.files.length} entries (${skillFiles.length} skills, ${toolFiles.length} tools, ${hookFiles.length} hooks)`)
 console.log(`Updated .npmignore: excluded ${excludePaths.length} non-indexed skill paths`)

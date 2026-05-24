@@ -15,7 +15,6 @@
     "lib/",
     "bundles.json",
     "skills-index.json",
-    "hooks/check-similar-branch/",
     "skills/analysis/skill-analyzer/CHANGELOG.md",
     "skills/analysis/skill-analyzer/SKILL.md",
     "skills/analysis/skill-analyzer/references/",
@@ -31,7 +30,10 @@
     "skills/task/task-close/",
     "skills/web-fetch/article-fetcher/",
     "skills/writing/mermaid-diagram/",
-    "tools/p-launch/"
+    "skills/design/sync-design-html/",
+    "skills/analysis/git-cleanup/",
+    "tools/p-launch/",
+    "hooks/check-similar-branch/"
   ],
   "engines": {
     "node": ">=18"
