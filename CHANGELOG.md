@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.8.1] - 2026-05-24
+
+### Fixed
+- `contribute-skill`：SKILL.md description 字段内含 ASCII 双引号导致 YAML 解析失败
+
 ## [0.8.0] - 2026-05-24
 
 ### Added
