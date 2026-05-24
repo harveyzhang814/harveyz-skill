@@ -30,10 +30,14 @@ version: "1.0.0"
 2. **用户显式指定**：用户明确说明路径或名称
 3. **扫描列出**：若上下文不明确，执行以下命令并列出候选供用户选择：
    ```bash
-   ls .claude/skills/
+   # 先确定源项目根目录
+   SOURCE_ROOT=$(git rev-parse --show-toplevel 2>/dev/null || pwd)
+   ls "${SOURCE_ROOT}/.claude/skills/"
    ```
 
 验证：确认该目录存在且包含 `SKILL.md`，否则停止并报错。
+
+将 `$SOURCE_ROOT` 记为 `<源项目根目录>`，后续所有步骤中的 `<当前项目路径>` 均指此路径。
 
 ---
 
@@ -52,7 +56,9 @@ version: "1.0.0"
 
 ```
 1. 读取 ~/.claude/skills/contribute-skill/.config
-   └── 若存在且 <path>/skills-index.json 存在 → 直接使用，跳过后续步骤
+   └── 若存在：
+       ├── 且 <path>/skills-index.json 存在 → 直接使用，跳过后续步骤
+       └── 且路径无效（skills-index.json 不存在）→ 删除 .config，继续步骤 2
 
 2. 尝试默认路径：~/Projects/harveyz-skill
    └── 若 ~/Projects/harveyz-skill/skills-index.json 存在 → 使用此路径
@@ -101,6 +107,15 @@ version: "1.0.0"
 请输入新 bundle 名称（英文，如 deploy）：
 请输入 bundle 描述（如 部署工具）：
 ```
+
+选定 bundle 后，明确展示并让用户确认目标子目录名：
+
+```
+目标子目录名（skills/ 下的一级目录）：<bundle 名>
+确认使用此名称作为目录名？(回车确认 / 输入新名称，如 superpowers-fork)
+```
+
+目录名确认后，将 `<bundle-category>` 定为该值，用于构建目标路径 `skills/<bundle-category>/<name>/`。注意目录名与 bundle 名可以不同（如目录名 `superpowers-fork` 对应 bundle `brainstorming`）。
 
 ---
 
@@ -158,6 +173,7 @@ version: "1.0.0"
 
 **1. 复制 skill 目录**
 ```bash
+# 将源目录完整复制为目标路径
 cp -r <源目录>/ <harveyzSkillPath>/skills/<bundle-category>/<name>/
 ```
 
@@ -181,6 +197,8 @@ cp -r <源目录>/ <harveyzSkillPath>/skills/<bundle-category>/<name>/
 cd <harveyzSkillPath> && node scripts/generate-npmignore.js
 ```
 
+> `generate-npmignore.js` 会更新 `package.json` 的 `files[]` 字段和 `.npmignore`，将新注册的 skill 路径加入分发列表。
+
 若脚本执行失败：报告错误，**不执行 git commit**，保留已复制文件供用户检查。
 
 **边界情况：目标路径已存在同名 skill**
@@ -200,17 +218,18 @@ cd <harveyzSkillPath> && node scripts/generate-npmignore.js
 
 ```bash
 # 检测差异
-diff -rq <harveyzSkillPath>/skills/<bundle-category>/<name>/ <源目录>/
+diff -rq <harveyzSkillPath>/skills/<bundle-category>/<name>/ <源项目根目录>/.claude/skills/<name>/
 ```
 
 - **若无差异**：跳过，不产生 commit，提示用户"源目录内容已是最新，无需同步"
 - **若有差异**：
   ```bash
-  cp -r <harveyzSkillPath>/skills/<bundle-category>/<name>/. <源目录>/
+  # 复制目录内容（不含目录本身）到源目录，覆盖同名文件
+  cp -r <harveyzSkillPath>/skills/<bundle-category>/<name>/. <源项目根目录>/.claude/skills/<name>/
   ```
   然后在**源项目**当前分支执行：
   ```bash
-  cd <源项目路径>
+  cd <源项目根目录>
   git add .claude/skills/<name>/
   git commit -m "chore: sync skill format from harveyz-skill"
   ```
@@ -225,8 +244,14 @@ diff -rq <harveyzSkillPath>/skills/<bundle-category>/<name>/ <源目录>/
 ```bash
 cd <harveyzSkillPath>
 
-# 创建 feature 分支
-git checkout -b feature/contribute-<name>
+# 创建 feature 分支（处理分支已存在的情况）
+if git show-ref --quiet refs/heads/feature/contribute-<name>; then
+  echo "分支 feature/contribute-<name> 已存在，是否切换到该分支继续？(y/n)"
+  # 若用户确认 → git checkout feature/contribute-<name>
+  # 若用户拒绝 → 中止操作
+else
+  git checkout -b feature/contribute-<name>
+fi
 
 # 暂存所有变更
 git add skills/<bundle-category>/<name>/
