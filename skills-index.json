@@ -17,7 +17,7 @@
     "design": "设计同步工具（sync-design-html）"
   },
   "skills": [
-    { "path": "analysis/skill-analyzer", "bundle": "analysis", "exclude": ["research/"] },
+    { "path": "analysis/skill-analyzer", "bundle": "analysis" },
     { "path": "harness/diataxis-docs", "bundle": "document" },
     { "path": "harness/full-stack-debug-env", "bundle": "harness" },
     { "path": "superpowers-fork/brainstorming", "bundle": "brainstorming" },
@@ -32,5 +32,16 @@
     { "path": "writing/mermaid-diagram", "bundle": "writing" },
     { "path": "design/sync-design-html", "bundle": "design" },
     { "path": "analysis/git-cleanup", "bundle": "analysis" }
+  ],
+  "hooks": [
+    {
+      "name": "check-similar-branch",
+      "description": "用 LLM 语义分析检测相似分支",
+      "path": "hooks/check-similar-branch",
+      "event": "PreToolUse",
+      "matcher": "Bash",
+      "timeout": 60,
+      "statusMessage": "检查相似分支..."
+    }
   ]
 }

@@ -40,6 +40,11 @@
 !tools/**/
 !tools/**/*
 
+# 保留 hooks 目录
+!hooks/
+!hooks/**/
+!hooks/**/*
+
 # 保留文档目录
 !docs/
 !docs/**/

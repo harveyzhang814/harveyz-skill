@@ -3,6 +3,10 @@
     "PreToolUse": [
       {
         "matcher": "Bash",
+        "hooks": []
+      },
+      {
+        "matcher": "Bash",
         "hooks": [
           {
             "type": "command",

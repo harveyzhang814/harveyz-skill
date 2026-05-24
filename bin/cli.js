@@ -7,13 +7,13 @@ import os from 'os'
 import path from 'path'
 import { fileURLToPath } from 'url'
 import {
-  getAllSkillItems, getAllToolItems,
+  getAllSkillItems, getAllToolItems, getAllHookItems, checkHookInstalled,
   checkInstalled, checkToolInstalled, scopeSummary,
   resolveSkills, resolveSkillsByName, resolveTools, resolveToolsByName,
   TOOL_BUNDLE_CHOICES,
 } from '../lib/bundles.js'
 import { buildTargetChoices, resolveTargets, TARGETS } from '../lib/targets.js'
-import { installSkills, installTools } from '../lib/installer.js'
+import { installSkills, installTools, installHooks, uninstallHook } from '../lib/installer.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const require = createRequire(import.meta.url)
@@ -41,6 +41,11 @@ function printHelp() {
     hskill status [--json]         show install status for all skills and tools
     hskill outdated [--json]       list skills and tools with available updates
     hskill info <name> [--json]    show install detail for a skill or tool
+    hskill hooks list [--json]                        list hooks and install status
+    hskill hooks install [--name <n>] [--scope <s>]  install hook (scope: user|project)
+    hskill hooks install [--project <path>]           target project dir (for project scope)
+    hskill hooks install [--force]                    overwrite existing
+    hskill hooks uninstall <name> [--scope <s>]       remove hook
     hskill update                  update hskill to the latest version
     hskill version                 show version
     hskill --help                  show this help
@@ -166,11 +171,20 @@ if (subcommand === 'list') {
   process.exit(0)
 }
 
+// ── Helper: resolve displayed version for a hook ──────────────────────────────
+// Priority: user-installed → project-installed → source version
+function resolveHookDisplayVersion(inst, sourceVersion) {
+  if (inst.user.version !== '—') return inst.user.version
+  if (inst.project.version !== '—') return inst.project.version
+  return sourceVersion ?? '—'
+}
+
 // ── Status / Outdated ─────────────────────────────────────────────────────────
 if (subcommand === 'status' || subcommand === 'outdated') {
   const outdatedOnly = subcommand === 'outdated'
   const skillItems   = getAllSkillItems()
   const toolItems    = getAllToolItems()
+  const hookItems    = getAllHookItems()
 
   function icon(status) {
     if (status === 'up-to-date') return chalk.green('✓')
@@ -200,13 +214,17 @@ if (subcommand === 'status' || subcommand === 'outdated') {
       project: Object.fromEntries(targets.map(t => [t, r.projectDetail[t]])),
     }))
     const jsonTools = toolRows.map(r => ({ name: r.name, version: r.version, status: r.status }))
+    const jsonHooks = hookItems.map(h => {
+      const inst = checkHookInstalled(h.name)
+      return { name: h.name, description: h.description, user: inst.user, project: inst.project }
+    })
     if (outdatedOnly) {
       console.log(JSON.stringify({
         skills: jsonSkills.filter(s => Object.values(s.user).some(v => v.status === 'update') || Object.values(s.project).some(v => v.status === 'update')),
         tools:  jsonTools.filter(t => t.status === 'update'),
       }, null, 2))
     } else {
-      console.log(JSON.stringify({ skills: jsonSkills, tools: jsonTools }, null, 2))
+      console.log(JSON.stringify({ skills: jsonSkills, tools: jsonTools, hooks: jsonHooks }, null, 2))
     }
     process.exit(0)
   }
@@ -250,7 +268,7 @@ if (subcommand === 'status' || subcommand === 'outdated') {
   }
 
   // Full status table
-  const allNames = [...skillRows, ...toolRows].map(r => r.name)
+  const allNames = [...skillRows.map(r => r.name), ...toolRows.map(r => r.name), ...hookItems.map(h => h.name)]
   const allVers  = [...skillRows, ...toolRows].map(r => r.version)
   const nw = Math.max(...allNames.map(n => n.length), 4)
   const vw = Math.max(...allVers.map(v => v.length), 7)
@@ -270,6 +288,23 @@ if (subcommand === 'status' || subcommand === 'outdated') {
   console.log(sep)
   for (const r of toolRows) {
     console.log('  ' + r.name.padEnd(nw) + '  ' + chalk.dim(r.version.padEnd(vw)) + '  ' + icon(r.status))
+  }
+
+  // ── hooks ──
+  if (hookItems.length > 0) {
+    console.log('')
+    console.log('  ' + chalk.bold('HOOKS') + chalk.dim(`  — ${hookItems.length} available`))
+    console.log(sep)
+    function hIcon(s) {
+      if (s === 'installed') return chalk.green('✓')
+      if (s === 'partial')   return chalk.yellow('~')
+      return chalk.dim('—')
+    }
+    for (const h of hookItems) {
+      const inst = checkHookInstalled(h.name)
+      const ver = resolveHookDisplayVersion(inst, h.version)
+      console.log('  ' + h.name.padEnd(nw) + '  ' + chalk.dim(ver.padEnd(vw)) + '  ' + hIcon(inst.user.status) + '       ' + hIcon(inst.project.status) + '  ' + chalk.dim(h.description))
+    }
   }
 
   const installedSkills = skillRows.filter(r => r.userStatus !== 'none' || r.projectStatus !== 'none').length
@@ -351,6 +386,115 @@ if (subcommand === 'info') {
     console.log('')
   }
   process.exit(0)
+}
+
+// ── Hooks ─────────────────────────────────────────────────────────────────────
+if (subcommand === 'hooks') {
+  const hooksSubcmd    = args[1]
+  const hookArgs       = args.slice(2)
+  const hookJsonFlag   = hooksSubcmd === '--json' || hookArgs.includes('--json')
+  const hookNameIdx    = hookArgs.indexOf('--name')
+  const hookScopeIdx   = hookArgs.indexOf('--scope')
+  const hookProjectIdx = hookArgs.indexOf('--project')
+  const hookForce      = hookArgs.includes('--force')
+  const hookNameArg    = hookNameIdx    !== -1 ? hookArgs[hookNameIdx    + 1] : undefined
+  const hookScopeArg   = hookScopeIdx   !== -1 ? hookArgs[hookScopeIdx   + 1] : 'user'
+  const hookProjectArg = hookProjectIdx !== -1 ? hookArgs[hookProjectIdx + 1] : process.cwd()
+
+  // Validate scope for install/uninstall commands
+  if (!['user', 'project'].includes(hookScopeArg) && ['install', 'uninstall'].includes(hooksSubcmd)) {
+    console.error(chalk.red(`  ✗ Invalid scope: "${hookScopeArg}". Use user or project.`))
+    process.exit(1)
+  }
+
+  // ── hooks list ──────────────────────────────────────────────────────────────
+  if (hooksSubcmd === 'list' || !hooksSubcmd || hooksSubcmd.startsWith('--')) {
+    const hookItems = getAllHookItems()
+    if (hookJsonFlag) {
+      const out = hookItems.map(h => {
+        const inst = checkHookInstalled(h.name)
+        const ver = resolveHookDisplayVersion(inst, h.version)
+        return { name: h.name, version: ver, description: h.description, event: h.event, user: inst.user, project: inst.project }
+      })
+      console.log(JSON.stringify({ hooks: out }, null, 2))
+      process.exit(0)
+    }
+    function hookIcon(s) {
+      if (s === 'installed') return chalk.green('✓')
+      if (s === 'partial')   return chalk.yellow('~')
+      return chalk.dim('—')
+    }
+    const nameWidth = Math.max(...hookItems.map(h => h.name.length), 4)
+    const verWidth = 7
+    console.log('')
+    console.log('  ' + chalk.bold('NAME'.padEnd(nameWidth)) + '  ' + chalk.bold('VER'.padEnd(verWidth)) + '  U  P  ' + chalk.bold('DESCRIPTION'))
+    console.log('  ' + '─'.repeat(nameWidth) + '  ' + '─'.repeat(verWidth) + '  ─  ─  ' + '─'.repeat(20))
+    for (const h of hookItems) {
+      const inst = checkHookInstalled(h.name)
+      const ver = resolveHookDisplayVersion(inst, h.version)
+      console.log('  ' + h.name.padEnd(nameWidth) + '  ' + chalk.dim(ver.padEnd(verWidth)) + '  ' + hookIcon(inst.user.status) + '  ' + hookIcon(inst.project.status) + '  ' + h.description)
+    }
+    console.log('')
+    console.log(chalk.dim(`  U=user  P=project  ${chalk.green('✓')}=installed  ${chalk.yellow('~')}=partial  ${chalk.dim('—')}=none`))
+    console.log('')
+    process.exit(0)
+  }
+
+  // ── hooks install ────────────────────────────────────────────────────────────
+  if (hooksSubcmd === 'install') {
+    const hookItems = getAllHookItems()
+    let toInstall
+
+    if (hookNameArg) {
+      const found = hookItems.find(h => h.name === hookNameArg)
+      if (!found) {
+        console.error(chalk.red(`  ✗ Unknown hook: "${hookNameArg}"`))
+        process.exit(1)
+      }
+      toInstall = [found]
+    } else if (!process.stdout.isTTY) {
+      toInstall = hookItems
+    } else {
+      const { checkbox } = await import('@inquirer/prompts')
+      const selected = await checkbox({
+        message: 'Select hooks to install:',
+        choices: hookItems.map(h => ({ name: `${h.name.padEnd(32)} ${h.description}`, value: h })),
+      })
+      if (!selected.length) {
+        console.log(chalk.dim('  · Nothing selected'))
+        process.exit(0)
+      }
+      toInstall = selected
+    }
+
+    const { installed, skipped, failed } = await installHooks(toInstall, hookScopeArg, hookProjectArg, hookForce)
+
+    if (hookJsonFlag) {
+      console.log(JSON.stringify({ installed, skipped, failed }, null, 2))
+      process.exit(failed.length ? 1 : 0)
+    } else {
+      if (installed.length) console.error(chalk.green.bold(`✔ Hooks installed (${hookScopeArg}):`), installed.join(', '))
+      for (const s of skipped) console.error(chalk.dim(`  · ${s.name} skipped (${s.reason})`))
+
+      for (const f of failed)  console.error(chalk.red(`  ✗ ${f.name} failed: ${f.reason}${f.detail ? ` — ${f.detail}` : ''}`))
+      process.exit(failed.length ? 1 : 0)
+    }
+  }
+
+  // ── hooks uninstall ──────────────────────────────────────────────────────────
+  if (hooksSubcmd === 'uninstall') {
+    const nameToRemove = args[2]
+    if (!nameToRemove || nameToRemove.startsWith('--')) {
+      console.error(chalk.red('  ✗ Usage: hskill hooks uninstall <name> [--scope user|project]'))
+      process.exit(1)
+    }
+    const { removed } = await uninstallHook(nameToRemove, hookScopeArg, hookProjectArg)
+    if (!removed) console.log(chalk.dim(`  · ${nameToRemove} was not installed in ${hookScopeArg} scope`))
+    process.exit(0)
+  }
+
+  console.error(chalk.red(`  ✗ Unknown hooks subcommand: "${hooksSubcmd}". Use list, install, or uninstall.`))
+  process.exit(1)
 }
 
 // ── Install ───────────────────────────────────────────────────────────────────
