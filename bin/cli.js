@@ -457,6 +457,11 @@ if (subcommand === 'hooks') {
 
     const { installed, skipped, failed } = await installHooks(toInstall, hookScopeArg, hookProjectArg, hookForce)
 
+    if (hookJsonFlag) {
+      console.log(JSON.stringify({ installed, skipped, failed }, null, 2))
+      process.exit(failed.length ? 1 : 0)
+    }
+
     if (installed.length) console.error(chalk.green.bold(`✔ Hooks installed (${hookScopeArg}):`), installed.join(', '))
     for (const s of skipped) console.error(chalk.dim(`  · ${s.name} skipped (${s.reason})`))
 

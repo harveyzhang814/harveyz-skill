@@ -80,7 +80,7 @@ teardown() {
 @test "hooks install: skips if already installed without --force" {
   HOME="${MOCK_HOME}" node "${CLI}" hooks install --name "${HOOK_NAME}" --scope user
   output="$(HOME="${MOCK_HOME}" node "${CLI}" hooks install --name "${HOOK_NAME}" --scope user 2>&1)"
-  echo "$output" | grep -qiE "skip|already"
+  echo "$output" | grep -qiE "skip|up-to-date|outdated"
 }
 
 @test "hooks install --force: no duplicate registration in settings.json" {
@@ -111,4 +111,50 @@ teardown() {
     const found = entries.some(e => e.hooks?.some(h => h.command?.includes('${HOOK_NAME}.sh')));
     if (found) throw new Error('hook still registered after uninstall');
   "
+}
+
+# ── version tracking ──────────────────────────────────────────────────────────
+
+@test "hooks install: JSON output reason is 'up-to-date' when reinstalling same version" {
+  # Install first time
+  HOME="${MOCK_HOME}" node "${CLI}" hooks install --name "${HOOK_NAME}" --scope project --project "${MOCK_PROJECT}"
+
+  # Install again — should be up-to-date
+  output="$(HOME="${MOCK_HOME}" node "${CLI}" hooks install --json --name "${HOOK_NAME}" --scope project --project "${MOCK_PROJECT}" 2>/dev/null)"
+  [ "$(echo "$output" | node -e "const d=JSON.parse(require('fs').readFileSync('/dev/stdin','utf8')); process.stdout.write(d.skipped[0].reason)")" = "up-to-date" ]
+  echo "$output" | node -e "const d=JSON.parse(require('fs').readFileSync('/dev/stdin','utf8')); if (!d.skipped[0].version) throw new Error('version field missing')"
+}
+
+@test "hooks install: --force reinstalls hook (version field present after force)" {
+  # Install first time
+  HOME="${MOCK_HOME}" node "${CLI}" hooks install --name "${HOOK_NAME}" --scope project --project "${MOCK_PROJECT}"
+
+  # Force reinstall
+  output="$(HOME="${MOCK_HOME}" node "${CLI}" hooks install --json --force --name "${HOOK_NAME}" --scope project --project "${MOCK_PROJECT}" 2>/dev/null)"
+  echo "$output" | node -e "
+    const d = JSON.parse(require('fs').readFileSync('/dev/stdin','utf8'));
+    if (!Array.isArray(d.installed) || d.installed.length !== 1) throw new Error('expected 1 installed, got: ' + JSON.stringify(d.installed));
+    if (d.installed[0] !== '${HOOK_NAME}') throw new Error('wrong hook name: ' + d.installed[0]);
+  "
+}
+
+@test "hooks install: outdated skip when installed version differs from available" {
+  # Install first (gets version 1.0.0)
+  HOME="${MOCK_HOME}" node "${CLI}" hooks install --name "${HOOK_NAME}" --scope project --project "${MOCK_PROJECT}"
+
+  # Patch the installed script to have a fake old version
+  HOOKS_DIR="${MOCK_PROJECT}/.claude/hooks"
+  sed -i.bak 's/# version: 1.0.0/# version: 0.9.0/' "${HOOKS_DIR}/${HOOK_NAME}.sh"
+
+  # Reinstall without --force in non-TTY (should be outdated)
+  output="$(HOME="${MOCK_HOME}" node "${CLI}" hooks install --json --name "${HOOK_NAME}" --scope project --project "${MOCK_PROJECT}" 2>/dev/null)"
+  echo "$output" | node -e "
+    const d = JSON.parse(require('fs').readFileSync('/dev/stdin','utf8'));
+    if (d.skipped[0].reason !== 'outdated') throw new Error('expected outdated, got: ' + d.skipped[0].reason);
+    if (d.skipped[0].installed !== '0.9.0') throw new Error('expected installed=0.9.0, got: ' + d.skipped[0].installed);
+    if (d.skipped[0].available !== '1.0.0') throw new Error('expected available=1.0.0, got: ' + d.skipped[0].available);
+  "
+
+  # Cleanup backup
+  rm -f "${HOOKS_DIR}/${HOOK_NAME}.sh.bak"
 }
