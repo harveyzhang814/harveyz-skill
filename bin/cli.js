@@ -176,6 +176,7 @@ if (subcommand === 'status' || subcommand === 'outdated') {
   const outdatedOnly = subcommand === 'outdated'
   const skillItems   = getAllSkillItems()
   const toolItems    = getAllToolItems()
+  const hookItems    = getAllHookItems()
 
   function icon(status) {
     if (status === 'up-to-date') return chalk.green('✓')
@@ -205,13 +206,17 @@ if (subcommand === 'status' || subcommand === 'outdated') {
       project: Object.fromEntries(targets.map(t => [t, r.projectDetail[t]])),
     }))
     const jsonTools = toolRows.map(r => ({ name: r.name, version: r.version, status: r.status }))
+    const jsonHooks = hookItems.map(h => {
+      const inst = checkHookInstalled(h.name)
+      return { name: h.name, description: h.description, user: inst.user, project: inst.project }
+    })
     if (outdatedOnly) {
       console.log(JSON.stringify({
         skills: jsonSkills.filter(s => Object.values(s.user).some(v => v.status === 'update') || Object.values(s.project).some(v => v.status === 'update')),
         tools:  jsonTools.filter(t => t.status === 'update'),
       }, null, 2))
     } else {
-      console.log(JSON.stringify({ skills: jsonSkills, tools: jsonTools }, null, 2))
+      console.log(JSON.stringify({ skills: jsonSkills, tools: jsonTools, hooks: jsonHooks }, null, 2))
     }
     process.exit(0)
   }
@@ -275,6 +280,22 @@ if (subcommand === 'status' || subcommand === 'outdated') {
   console.log(sep)
   for (const r of toolRows) {
     console.log('  ' + r.name.padEnd(nw) + '  ' + chalk.dim(r.version.padEnd(vw)) + '  ' + icon(r.status))
+  }
+
+  // ── hooks ──
+  if (hookItems.length > 0) {
+    console.log('')
+    console.log('  ' + chalk.bold('HOOKS') + chalk.dim(`  — ${hookItems.length} available`))
+    console.log(sep)
+    function hIcon(s) {
+      if (s === 'installed') return chalk.green('✓')
+      if (s === 'partial')   return chalk.yellow('~')
+      return chalk.dim('—')
+    }
+    for (const h of hookItems) {
+      const inst = checkHookInstalled(h.name)
+      console.log('  ' + h.name.padEnd(nw) + '  ' + chalk.dim('—'.padEnd(vw)) + '  ' + hIcon(inst.user.status) + '       ' + hIcon(inst.project.status))
+    }
   }
 
   const installedSkills = skillRows.filter(r => r.userStatus !== 'none' || r.projectStatus !== 'none').length
