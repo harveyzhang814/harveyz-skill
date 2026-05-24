@@ -14,7 +14,8 @@
     "task": "任务管理（pm-task-dispatch + task-close）",
     "web-fetch": "网页抓取工具（article-fetcher）",
     "writing": "写作工具（mermaid-diagram）",
-    "design": "设计同步工具（sync-design-html）"
+    "design": "设计同步工具（sync-design-html）",
+    "meta": "元操作工具（对 harveyz-skill 仓库本身的管理）"
   },
   "skills": [
     { "path": "analysis/skill-analyzer", "bundle": "analysis" },
@@ -31,7 +32,8 @@
     { "path": "web-fetch/article-fetcher", "bundle": "web-fetch" },
     { "path": "writing/mermaid-diagram", "bundle": "writing" },
     { "path": "design/sync-design-html", "bundle": "design" },
-    { "path": "analysis/git-cleanup", "bundle": "analysis" }
+    { "path": "analysis/git-cleanup", "bundle": "analysis" },
+    { "path": "meta/contribute-skill", "bundle": "meta" }
   ],
   "hooks": [
     {
