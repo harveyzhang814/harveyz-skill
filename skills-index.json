@@ -32,5 +32,16 @@
     { "path": "writing/mermaid-diagram", "bundle": "writing" },
     { "path": "design/sync-design-html", "bundle": "design" },
     { "path": "analysis/git-cleanup", "bundle": "analysis" }
+  ],
+  "hooks": [
+    {
+      "name": "check-similar-branch",
+      "description": "用 LLM 语义分析检测相似分支",
+      "path": "scripts/hooks/check-similar-branch.sh",
+      "event": "PreToolUse",
+      "matcher": "Bash",
+      "timeout": 60,
+      "statusMessage": "检查相似分支..."
+    }
   ]
 }

@@ -3,14 +3,7 @@
     "PreToolUse": [
       {
         "matcher": "Bash",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "bash \"$(git rev-parse --show-toplevel 2>/dev/null || echo .)/.claude/hooks/check-similar-branch.sh\"",
-            "timeout": 60,
-            "statusMessage": "检查相似分支..."
-          }
-        ]
+        "hooks": []
       }
     ]
   }
