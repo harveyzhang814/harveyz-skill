@@ -35,6 +35,12 @@ for (const entry of index) {
   } else {
     // 展开直接子项，排除指定子目录
     const excludeSet = new Set(entry.exclude.map(e => e.replace(/\/$/, '')))
+    // 警告：exclude 中列出的目录不存在（可能是历史遗留）
+    for (const ex of excludeSet) {
+      if (!existsSync(path.join(skillDir, ex))) {
+        console.warn(`  ⚠ "${entry.path}" exclude "${ex}" does not exist — stale config?`)
+      }
+    }
     const items = readdirSync(skillDir, { withFileTypes: true })
     for (const item of items) {
       if (excludeSet.has(item.name)) continue
