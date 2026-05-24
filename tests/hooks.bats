@@ -158,3 +158,11 @@ teardown() {
   # Cleanup backup
   rm -f "${HOOKS_DIR}/${HOOK_NAME}.sh.bak"
 }
+
+# ── codex target ──────────────────────────────────────────────────────────────
+
+@test "hooks install --target codex --scope user: copies script to ~/.codex/hooks/" {
+  HOME="${MOCK_HOME}" node "${CLI}" hooks install \
+    --name "${HOOK_NAME}" --scope user --target codex
+  [ -f "${MOCK_HOME}/.codex/hooks/${HOOK_NAME}.sh" ]
+}
