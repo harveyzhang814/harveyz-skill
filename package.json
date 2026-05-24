@@ -15,7 +15,7 @@
     "lib/",
     "bundles.json",
     "skills-index.json",
-    "hooks/",
+    "hooks/check-similar-branch/",
     "skills/analysis/skill-analyzer/CHANGELOG.md",
     "skills/analysis/skill-analyzer/SKILL.md",
     "skills/analysis/skill-analyzer/references/",
