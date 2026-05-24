@@ -171,6 +171,14 @@ if (subcommand === 'list') {
   process.exit(0)
 }
 
+// ── Helper: resolve displayed version for a hook ──────────────────────────────
+// Priority: user-installed → project-installed → source version
+function resolveHookDisplayVersion(inst, sourceVersion) {
+  if (inst.user.version !== '—') return inst.user.version
+  if (inst.project.version !== '—') return inst.project.version
+  return sourceVersion ?? '—'
+}
+
 // ── Status / Outdated ─────────────────────────────────────────────────────────
 if (subcommand === 'status' || subcommand === 'outdated') {
   const outdatedOnly = subcommand === 'outdated'
@@ -382,14 +390,6 @@ if (subcommand === 'info') {
 
 // ── Hooks ─────────────────────────────────────────────────────────────────────
 if (subcommand === 'hooks') {
-  // Helper: resolve displayed version for a hook
-  // Priority: user-installed → project-installed → source version
-  function resolveHookDisplayVersion(inst, sourceVersion) {
-    if (inst.user.version !== '—') return inst.user.version
-    if (inst.project.version !== '—') return inst.project.version
-    return sourceVersion ?? '—'
-  }
-
   const hooksSubcmd    = args[1]
   const hookArgs       = args.slice(2)
   const hookJsonFlag   = hooksSubcmd === '--json' || hookArgs.includes('--json')
