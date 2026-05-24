@@ -158,3 +158,90 @@ teardown() {
   # Cleanup backup
   rm -f "${HOOKS_DIR}/${HOOK_NAME}.sh.bak"
 }
+
+# ── codex target ──────────────────────────────────────────────────────────────
+
+@test "hooks install --target codex --scope user: copies script to ~/.codex/hooks/" {
+  HOME="${MOCK_HOME}" node "${CLI}" hooks install \
+    --name "${HOOK_NAME}" --scope user --target codex
+  [ -f "${MOCK_HOME}/.codex/hooks/${HOOK_NAME}.sh" ]
+}
+
+@test "hooks install --target codex --scope user: registers in ~/.codex/hooks.json" {
+  HOME="${MOCK_HOME}" node "${CLI}" hooks install \
+    --name "${HOOK_NAME}" --scope user --target codex
+  node -e "
+    const d = JSON.parse(require('fs').readFileSync('${MOCK_HOME}/.codex/hooks.json','utf8'));
+    const entries = d.hooks?.PreToolUse ?? [];
+    const found = entries.some(e => e.hooks?.some(h => h.command?.includes('${HOOK_NAME}.sh')));
+    if (!found) throw new Error('hook not registered in ~/.codex/hooks.json');
+  "
+}
+
+@test "hooks install --target codex: command uses absolute path" {
+  HOME="${MOCK_HOME}" node "${CLI}" hooks install \
+    --name "${HOOK_NAME}" --scope user --target codex
+  node -e "
+    const d = JSON.parse(require('fs').readFileSync('${MOCK_HOME}/.codex/hooks.json','utf8'));
+    const entries = d.hooks?.PreToolUse ?? [];
+    const cmd = entries.flatMap(e => e.hooks ?? []).find(h => h.command?.includes('${HOOK_NAME}.sh'))?.command;
+    if (!cmd) throw new Error('command not found');
+    if (!require('path').isAbsolute(cmd)) throw new Error('command is not absolute: ' + cmd);
+  "
+}
+
+@test "hooks install --target codex: no type field in hooks.json entry" {
+  HOME="${MOCK_HOME}" node "${CLI}" hooks install \
+    --name "${HOOK_NAME}" --scope user --target codex
+  node -e "
+    const d = JSON.parse(require('fs').readFileSync('${MOCK_HOME}/.codex/hooks.json','utf8'));
+    const entries = d.hooks?.PreToolUse ?? [];
+    const entry = entries.flatMap(e => e.hooks ?? []).find(h => h.command?.includes('${HOOK_NAME}.sh'));
+    if (!entry) throw new Error('entry not found');
+    if ('type' in entry) throw new Error('type field must not be present in codex hooks.json');
+  "
+}
+
+@test "hooks install --force --target codex: no duplicate registration" {
+  HOME="${MOCK_HOME}" node "${CLI}" hooks install --name "${HOOK_NAME}" --scope user --target codex
+  HOME="${MOCK_HOME}" node "${CLI}" hooks install --name "${HOOK_NAME}" --scope user --target codex --force
+  node -e "
+    const d = JSON.parse(require('fs').readFileSync('${MOCK_HOME}/.codex/hooks.json','utf8'));
+    const entries = d.hooks?.PreToolUse ?? [];
+    const count = entries.filter(e => e.hooks?.some(h => h.command?.includes('${HOOK_NAME}.sh'))).length;
+    if (count !== 1) throw new Error('expected 1 registration, got ' + count);
+  "
+}
+
+# ── codex status in list ──────────────────────────────────────────────────────
+
+@test "hooks list --json: includes codex install status" {
+  # Install into codex user scope
+  HOME="${MOCK_HOME}" node "${CLI}" hooks install \
+    --name "${HOOK_NAME}" --scope user --target codex
+
+  output="$(HOME="${MOCK_HOME}" node "${CLI}" hooks list --json 2>&1)"
+  echo "$output" | node -e "
+    const d = JSON.parse(require('fs').readFileSync('/dev/stdin','utf8'));
+    const h = d.hooks.find(h => h.name === '${HOOK_NAME}');
+    if (!h) throw new Error('hook not found');
+    if (!h.codex) throw new Error('codex field missing from hook status');
+    if (h.codex.user.status !== 'installed') throw new Error('expected codex.user=installed, got: ' + h.codex.user.status);
+  "
+}
+
+# ── codex column in list ──────────────────────────────────────────────────────
+
+@test "hooks list: shows CX column header" {
+  output="$(HOME="${MOCK_HOME}" node "${CLI}" hooks list 2>&1)"
+  echo "$output" | grep -qE "CX|codex"
+}
+
+@test "hooks list: CX shows installed when codex hook installed" {
+  HOME="${MOCK_HOME}" node "${CLI}" hooks install \
+    --name "${HOOK_NAME}" --scope user --target codex
+
+  output="$(HOME="${MOCK_HOME}" node "${CLI}" hooks list 2>&1)"
+  # The line for HOOK_NAME should have a ✓ in the CX column position
+  echo "$output" | grep "${HOOK_NAME}" | grep -q "✓"
+}

@@ -13,7 +13,7 @@ import {
   TOOL_BUNDLE_CHOICES,
 } from '../lib/bundles.js'
 import { buildTargetChoices, resolveTargets, TARGETS } from '../lib/targets.js'
-import { installSkills, installTools, installHooks, uninstallHook } from '../lib/installer.js'
+import { installSkills, installTools, installHooks, installHooksForTarget, uninstallHook } from '../lib/installer.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const require = createRequire(import.meta.url)
@@ -396,10 +396,12 @@ if (subcommand === 'hooks') {
   const hookNameIdx    = hookArgs.indexOf('--name')
   const hookScopeIdx   = hookArgs.indexOf('--scope')
   const hookProjectIdx = hookArgs.indexOf('--project')
+  const hookTargetIdx  = hookArgs.indexOf('--target')
   const hookForce      = hookArgs.includes('--force')
   const hookNameArg    = hookNameIdx    !== -1 ? hookArgs[hookNameIdx    + 1] : undefined
   const hookScopeArg   = hookScopeIdx   !== -1 ? hookArgs[hookScopeIdx   + 1] : 'user'
   const hookProjectArg = hookProjectIdx !== -1 ? hookArgs[hookProjectIdx + 1] : process.cwd()
+  const hookTargetArg  = hookTargetIdx  !== -1 ? hookArgs[hookTargetIdx  + 1] : 'claude'
 
   // Validate scope for install/uninstall commands
   if (!['user', 'project'].includes(hookScopeArg) && ['install', 'uninstall'].includes(hooksSubcmd)) {
@@ -414,7 +416,16 @@ if (subcommand === 'hooks') {
       const out = hookItems.map(h => {
         const inst = checkHookInstalled(h.name)
         const ver = resolveHookDisplayVersion(inst, h.version)
-        return { name: h.name, version: ver, description: h.description, event: h.event, user: inst.user, project: inst.project }
+        return {
+          name: h.name,
+          version: ver,
+          description: h.description,
+          event: h.event,
+          user: inst.user,
+          project: inst.project,
+          claude: inst.claude,
+          codex: inst.codex,
+        }
       })
       console.log(JSON.stringify({ hooks: out }, null, 2))
       process.exit(0)
@@ -427,15 +438,22 @@ if (subcommand === 'hooks') {
     const nameWidth = Math.max(...hookItems.map(h => h.name.length), 4)
     const verWidth = 7
     console.log('')
-    console.log('  ' + chalk.bold('NAME'.padEnd(nameWidth)) + '  ' + chalk.bold('VER'.padEnd(verWidth)) + '  U  P  ' + chalk.bold('DESCRIPTION'))
-    console.log('  ' + '─'.repeat(nameWidth) + '  ' + '─'.repeat(verWidth) + '  ─  ─  ' + '─'.repeat(20))
+    console.log('  ' + chalk.bold('NAME'.padEnd(nameWidth)) + '  ' + chalk.bold('VER'.padEnd(verWidth)) + '  U  P  CX  ' + chalk.bold('DESCRIPTION'))
+    console.log('  ' + '─'.repeat(nameWidth) + '  ' + '─'.repeat(verWidth) + '  ─  ─  ──  ' + '─'.repeat(20))
     for (const h of hookItems) {
       const inst = checkHookInstalled(h.name)
       const ver = resolveHookDisplayVersion(inst, h.version)
-      console.log('  ' + h.name.padEnd(nameWidth) + '  ' + chalk.dim(ver.padEnd(verWidth)) + '  ' + hookIcon(inst.user.status) + '  ' + hookIcon(inst.project.status) + '  ' + h.description)
+      console.log(
+        '  ' + h.name.padEnd(nameWidth) +
+        '  ' + chalk.dim(ver.padEnd(verWidth)) +
+        '  ' + hookIcon(inst.user.status) +
+        '  ' + hookIcon(inst.project.status) +
+        '  ' + hookIcon(inst.codex.user.status) +
+        '   ' + h.description
+      )
     }
     console.log('')
-    console.log(chalk.dim(`  U=user  P=project  ${chalk.green('✓')}=installed  ${chalk.yellow('~')}=partial  ${chalk.dim('—')}=none`))
+    console.log(chalk.dim(`  U=claude-user  P=claude-project  CX=codex-user  ${chalk.green('✓')}=installed  ${chalk.yellow('~')}=partial  ${chalk.dim('—')}=none`))
     console.log('')
     process.exit(0)
   }
@@ -467,7 +485,7 @@ if (subcommand === 'hooks') {
       toInstall = selected
     }
 
-    const { installed, skipped, failed } = await installHooks(toInstall, hookScopeArg, hookProjectArg, hookForce)
+    const { installed, skipped, failed } = await installHooksForTarget(toInstall, hookTargetArg, hookScopeArg, hookProjectArg, hookForce)
 
     if (hookJsonFlag) {
       console.log(JSON.stringify({ installed, skipped, failed }, null, 2))
@@ -534,6 +552,7 @@ function fzfSelect() {
   requireFzf()
   const skillItems  = getAllSkillItems()
   const toolItems   = getAllToolItems()
+  const hookItems   = getAllHookItems()
   const previewPath = path.join(__dirname, 'preview.mjs')
 
   // 构建 fzf 输入：每行 "NAME\tVERSION\tBUNDLE\tKIND\tSRCPATH"
@@ -543,6 +562,7 @@ function fzfSelect() {
       return `${s.skillName}\t${s.version ?? '—'}\t${bundle}\tskill\t${s.srcPath}`
     }),
     ...toolItems.map(t => `${t.toolName}\t${t.version ?? '—'}\tshell-tool\ttool\t${t.srcPath}`),
+    ...hookItems.map(h => `${h.name}\t${h.version ?? '—'}\thook\thook\t${h.srcPath}`),
   ]
 
   const nameWidth    = Math.max(...lines.map(l => l.split('\t')[0].length))
@@ -565,6 +585,12 @@ function fzfSelect() {
       pIcon = colorIcon(scopeSummary(installed.project))
     } else if (kind === 'tool') {
       uIcon = colorIcon(checkToolInstalled(name, srcPath).status)
+    } else if (kind === 'hook') {
+      const inst = checkHookInstalled(name)
+      uIcon = colorIcon(inst.user.status === 'installed' ? 'up-to-date'
+             : inst.user.status === 'partial'            ? 'update' : '')
+      pIcon = colorIcon(inst.project.status === 'installed' ? 'up-to-date'
+             : inst.project.status === 'partial'             ? 'update' : '')
     }
     return `${name.padEnd(nameWidth)}  ${ver.padEnd(versionWidth)}  U:${uIcon}  P:${pIcon}  ${bundle}`
   })
@@ -598,12 +624,13 @@ function fzfSelect() {
     const parts = line.split('\t')
     const [, name, ver, bundle, kind, srcPath] = parts
     if (kind === 'skill') return { kind: 'skill', skillName: name, srcPath, version: ver }
+    if (kind === 'hook') return { kind: 'hook', name, srcPath, version: ver }
     return { kind: 'tool', toolName: name, srcPath, version: ver }
   })
 }
 
 // ── Print install summary (shared between interactive loop and non-interactive) ──
-function printSummary(skillSummary, toolSummary) {
+function printSummary(skillSummary, toolSummary, hookSummary = null) {
   if (skillSummary !== null) {
     const anyInstalled = Object.values(skillSummary).some(r => r.installed.length > 0)
     if (!anyInstalled) {
@@ -650,6 +677,26 @@ function printSummary(skillSummary, toolSummary) {
       }
     }
   }
+  if (hookSummary !== null) {
+    const anyInstalled = Object.values(hookSummary).some(r => r.installed.length > 0)
+    if (!anyInstalled) {
+      console.log(chalk.dim('  · No hooks installed'))
+    } else {
+      console.log(chalk.green.bold('✔ Hooks installed:'))
+      for (const [target, { installed }] of Object.entries(hookSummary)) {
+        if (installed.length > 0)
+          console.log(`  ${chalk.bold(target)} ← ${installed.join(', ')}`)
+      }
+    }
+    for (const { skipped } of Object.values(hookSummary)) {
+      for (const s of skipped) {
+        const detail = s.reason === 'outdated'
+          ? `outdated ${s.installed} → ${s.available}, use --force`
+          : s.reason
+        console.log(chalk.dim(`  · ${s.name} skipped (${detail})`))
+      }
+    }
+  }
 }
 
 try {
@@ -679,13 +726,14 @@ try {
       }
 
       const toolItems = selected.filter(s => s.kind === 'tool')
+      const hookItems = selected.filter(s => s.kind === 'hook')
       const seen = new Set()
       const skillItems = selected.filter(s => s.kind === 'skill').filter(s => {
         if (seen.has(s.skillName)) return false
         seen.add(s.skillName); return true
       })
 
-      if (!skillItems.length && !toolItems.length) continue
+      if (!skillItems.length && !toolItems.length && !hookItems.length) continue
 
       let skillSummary = null
       if (skillItems.length > 0) {
@@ -748,7 +796,61 @@ try {
         console.log('')
       }
 
-      printSummary(skillSummary, toolSummary)
+      // ── Hook install ──────────────────────────────────────────────────────────
+      let hookSummary = null
+      if (hookItems.length > 0) {
+        // Scope selection
+        const hookScopeResult = spawnSync('fzf', [
+          '--prompt=  › ',
+          '--header=  Hook scope  ·  enter 确认  ·  esc 取消',
+          '--layout=reverse',
+          '--border=rounded',
+          '--color=header:italic:dim,prompt:cyan,pointer:cyan,hl:cyan,hl+:cyan:bold',
+        ], {
+          input: `user     — ~/.{claude,codex}/hooks/  (所有项目共享)\nproject  — .{claude,codex}/hooks/    (仅当前项目)`,
+          encoding: 'utf8',
+          stdio: ['pipe', 'pipe', 'inherit'],
+        })
+        if (!hookScopeResult.stdout.trim()) {
+          console.log(chalk.dim('  · Cancelled'))
+          break
+        }
+        const hookScope = hookScopeResult.stdout.trim().startsWith('project') ? 'project' : 'user'
+
+        // Target selection (claude / codex / all)
+        const hookTargetResult = spawnSync('fzf', [
+          '--multi',
+          '--prompt=  › ',
+          '--header=  Install hook to  ·  tab 多选  ·  enter 确认  ·  esc 取消',
+          '--layout=reverse',
+          '--border=rounded',
+          '--color=header:italic:dim,prompt:cyan,pointer:cyan,hl:cyan,hl+:cyan:bold',
+        ], {
+          input: `claude   — ~/.claude/hooks/\ncodex    — ~/.codex/hooks/\nall      — claude + codex`,
+          encoding: 'utf8',
+          stdio: ['pipe', 'pipe', 'inherit'],
+        })
+        if (!hookTargetResult.stdout.trim()) {
+          console.log(chalk.dim('  · Cancelled'))
+          break
+        }
+
+        const selectedHookTargets = hookTargetResult.stdout.trim().split('\n')
+          .map(l => l.trim().split(/\s+/)[0])
+        const resolvedHookTargets = selectedHookTargets.includes('all')
+          ? ['claude', 'codex']
+          : selectedHookTargets.filter(t => ['claude', 'codex'].includes(t))
+
+        hookSummary = {}
+        console.log('')
+        for (const target of resolvedHookTargets) {
+          const result = await installHooksForTarget(hookItems, target, hookScope, process.cwd(), forceFlag)
+          hookSummary[target] = result
+        }
+        console.log('')
+      }
+
+      printSummary(skillSummary, toolSummary, hookSummary)
 
       // Loop back to skill selector automatically
     }
