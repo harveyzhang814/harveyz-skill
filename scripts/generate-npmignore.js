@@ -9,6 +9,7 @@ const root = path.join(__dirname, '..')
 const { skills: rawSkills, tools: rawTools = [], hooks: rawHooks = [] } = JSON.parse(readFileSync(path.join(root, 'skills-index.json'), 'utf8'))
 const skillsDir = path.join(root, 'skills')
 const toolsDir  = path.join(root, 'tools')
+const hooksDir  = path.join(root, 'hooks')
 
 // 规范化索引条目
 const index = rawSkills.map(entry =>
@@ -16,20 +17,24 @@ const index = rawSkills.map(entry =>
 )
 const indexedPaths = new Set(index.map(e => e.path))
 
-// 构建 files 数组
+// ── Skills ───────────────────────────────────────────────────────────────────
 const baseFiles = ['bin/', 'lib/', 'bundles.json', 'skills-index.json']
 const skillFiles = []
 
 for (const entry of index) {
   const skillDir = path.join(skillsDir, entry.path)
+  if (!existsSync(skillDir)) {
+    throw new Error(`skills-index.json references skill "${entry.path}" but directory does not exist: ${skillDir}`)
+  }
+  const skillMd = path.join(skillDir, 'SKILL.md')
+  if (!existsSync(skillMd)) {
+    throw new Error(`Skill directory exists but SKILL.md not found: ${skillMd}`)
+  }
   if (entry.exclude.length === 0) {
     skillFiles.push(`skills/${entry.path}/`)
   } else {
     // 展开直接子项，排除指定子目录
     const excludeSet = new Set(entry.exclude.map(e => e.replace(/\/$/, '')))
-    if (!existsSync(skillDir)) {
-      throw new Error(`skills-index.json references "${entry.path}" but directory does not exist: ${skillDir}`)
-    }
     const items = readdirSync(skillDir, { withFileTypes: true })
     for (const item of items) {
       if (excludeSet.has(item.name)) continue
@@ -38,25 +43,43 @@ for (const entry of index) {
   }
 }
 
-// 收集 tools 文件
-const toolFiles = rawTools.map(t => `tools/${t.name}/`)
+// ── Tools ────────────────────────────────────────────────────────────────────
+const toolFiles = []
 
-// 收集 hooks 文件，并校验约定脚本存在
-const hookFiles = rawHooks.map(h => {
-  const scriptPath = path.join(root, h.path, `${h.name}.sh`)
-  if (!existsSync(scriptPath)) {
-    throw new Error(`skills-index.json hooks references "${h.name}" but script not found: ${scriptPath}`)
+for (const tool of rawTools) {
+  const toolDir    = path.join(toolsDir, tool.name)
+  const toolScript = path.join(toolDir, `${tool.name}.sh`)
+  if (!existsSync(toolDir)) {
+    throw new Error(`skills-index.json references tool "${tool.name}" but directory does not exist: ${toolDir}`)
   }
-  return `${h.path}/`
-})
+  if (!existsSync(toolScript)) {
+    throw new Error(`Tool directory exists but script not found: ${toolScript}`)
+  }
+  toolFiles.push(`tools/${tool.name}/`)
+}
 
-// 更新 package.json files 字段
+// ── Hooks ────────────────────────────────────────────────────────────────────
+const hookFiles = []
+
+for (const hook of rawHooks) {
+  const hookDir    = path.join(root, hook.path)
+  const hookScript = path.join(hookDir, `${hook.name}.sh`)
+  if (!existsSync(hookDir)) {
+    throw new Error(`skills-index.json references hook "${hook.name}" but directory does not exist: ${hookDir}`)
+  }
+  if (!existsSync(hookScript)) {
+    throw new Error(`Hook directory exists but script not found: ${hookScript}`)
+  }
+  hookFiles.push(`${hook.path}/`)
+}
+
+// ── 更新 package.json files 字段 ─────────────────────────────────────────────
 const pkgPath = path.join(root, 'package.json')
 const pkg = JSON.parse(readFileSync(pkgPath, 'utf8'))
 pkg.files = [...baseFiles, ...skillFiles, ...toolFiles, ...hookFiles]
 writeFileSync(pkgPath, JSON.stringify(pkg, null, 2) + '\n')
 
-// 生成 .npmignore excluded block（排除非索引 skill 目录）
+// ── 生成 .npmignore excluded block（排除非索引 skill 目录）─────────────────────
 const excludePaths = []
 for (const category of readdirSync(skillsDir, { withFileTypes: true })) {
   if (!category.isDirectory()) continue
@@ -79,5 +102,6 @@ const base = existing.includes(marker)
 const generated = [marker, ...excludePaths.sort()].join('\n') + '\n'
 writeFileSync(npmignorePath, base + generated)
 
-console.log(`Updated package.json files: ${pkg.files.length} entries (${skillFiles.length} skills, ${toolFiles.length} tools, ${hookFiles.length} hooks)`)
+console.log(`Updated package.json files: ${pkg.files.length} entries`)
+console.log(`  skills: ${skillFiles.length}, tools: ${toolFiles.length}, hooks: ${hookFiles.length}`)
 console.log(`Updated .npmignore: excluded ${excludePaths.length} non-indexed skill paths`)
