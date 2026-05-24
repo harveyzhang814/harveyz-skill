@@ -1,6 +1,6 @@
 ---
 name: contribute-skill
-description: "将其他项目的 skill 贡献到 harveyz-skill 仓库，完成格式规范化、注册登记、双向同步。触发词：把这个 skill 贡献到 harvey-skill、将这个 skill 注册进 harvey-skill 仓库、导入这个 skill 到 harveyz-skill。"
+description: "将其他项目的 skill 目录贡献、导入、同步或注册到 harveyz-skill 仓库，自动完成 SKILL.md 格式规范化、skills-index.json 注册登记、双向目录同步。只要用户想把某个现有 skill 添加/贡献/推送/迁移/导入/加进/同步到 harvey-skill 或 harveyz-skill，都应触发此技能——无论措辞是"贡献"、"导入"、"同步"、"注册"、"加进去"、"推到"还是"迁移过去"。注意：方向是从其他项目流向 harveyz-skill；安装或复制 harvey-skill 中已有的 skill 到本地项目不触发此技能。"
 user_invocable: true
 version: "1.0.0"
 ---
@@ -8,15 +8,6 @@ version: "1.0.0"
 # contribute-skill
 
 将当前项目的某个 skill 目录贡献进 `harveyz-skill` 仓库，完成格式规范化、注册登记、双向同步的完整流程。
-
----
-
-## 触发场景
-
-用户在**非** harveyz-skill 项目中说：
-- "把这个 skill 贡献到 harvey-skill"
-- "把 `.claude/skills/my-deploy` 导入到 harveyz-skill"
-- "将这个 skill 注册进 harvey-skill 仓库"
 
 ---
 
@@ -34,6 +25,7 @@ version: "1.0.0"
    SOURCE_ROOT=$(git rev-parse --show-toplevel 2>/dev/null || pwd)
    ls "${SOURCE_ROOT}/.claude/skills/"
    ```
+   若 `.claude/skills/` 目录不存在，提示用户：「当前项目下未找到 .claude/skills/ 目录，请手动输入要贡献的 skill 路径。」
 
 验证：确认该目录存在且包含 `SKILL.md`，否则停止并报错。
 
@@ -88,15 +80,13 @@ version: "1.0.0"
 
 ### Step 4 — 交互选 bundle
 
-读取 harveyz-skill 的 `skills-index.json`，列出 `bundleMeta` 中所有现有 bundle：
+读取 harveyz-skill 的 `skills-index.json`，列出 `bundleMeta` 中所有现有 bundle（以实际内容为准）：
 
 ```
 现有 bundle：
-  1. analysis      — 分析工具（skill-analyzer + git-cleanup）
-  2. brainstorming — 设计与规划工具
-  3. dev           — 开发工作流
-  4. meta          — 元操作工具
-  ... （以实际 bundleMeta 为准）
+  1. <bundle-name> — <bundle-description>
+  2. <bundle-name> — <bundle-description>
+  ... （动态读取，不要使用硬编码列表）
   N. [新建 bundle]
 
 请选择目标 bundle（输入编号）：
@@ -215,6 +205,13 @@ cd <harveyzSkillPath> && node scripts/generate-npmignore.js
 ### Step 7 — 同步回源仓库
 
 将 harveyz-skill 中目标 skill 目录的**完整内容**同步回源项目：
+
+**前置检查：若源目录有未提交变更，先提示用户确认**
+```bash
+cd <源项目根目录>
+git status --short .claude/skills/<name>/
+```
+若有未提交修改，提示：「源目录有未提交的修改，同步将覆盖这些改动，是否继续？(y/n)」。用户拒绝则跳过 Step 7。
 
 ```bash
 # 检测差异
