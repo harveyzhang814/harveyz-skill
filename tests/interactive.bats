@@ -60,6 +60,10 @@ TOOL_NAME="p-launch"
 TOOL_SRC="${REPO_ROOT}/tools/p-launch"
 TOOL_VER="1.0.0"
 
+HOOK_NAME_INTERACTIVE="check-similar-branch"
+HOOK_SRC_INTERACTIVE="${REPO_ROOT}/hooks/check-similar-branch"
+HOOK_VER_INTERACTIVE="1.0.0"
+
 setup() {
   TEST_DIR="$(mktemp -d)"
   MOCK_HOME="${TEST_DIR}/home"
@@ -93,6 +97,12 @@ _skill_line() {
 _tool_line() {
   local name="$1" ver="$2" src="$3"
   printf 'display\t%s\t%s\tshell-tool\ttool\t%s' "$name" "$ver" "$src"
+}
+
+# fzf output line for a hook (mirrors fzfSelect format)
+_hook_line() {
+  local name="$1" ver="$2" src="$3"
+  printf 'display\t%s\t%s\thook\thook\t%s' "$name" "$ver" "$src"
 }
 
 # Write one fzf response per argument into the responses file.
@@ -331,6 +341,18 @@ _skill_version() {
 }
 
 # ── project scope ─────────────────────────────────────────────────────────────
+
+@test "interactive: hook install routes to hook flow (scope+target prompts)" {
+  # Select hook → Esc loop-back (Task 4: hook appears in list; full install flow in Task 5)
+  _write_responses \
+    "$(_hook_line "${HOOK_NAME_INTERACTIVE}" "${HOOK_VER_INTERACTIVE}" "${HOOK_SRC_INTERACTIVE}")" \
+    ""
+
+  run _run_interactive --force
+
+  # 2 fzf calls: selector + loop-back (scope/target prompts added in Task 5)
+  [ "$(_fzf_call_count)" -eq 2 ]
+}
 
 @test "interactive project scope: skill written to .claude/skills in cwd" {
   local project_dir="${TEST_DIR}/my-project"

@@ -545,6 +545,7 @@ function fzfSelect() {
   requireFzf()
   const skillItems  = getAllSkillItems()
   const toolItems   = getAllToolItems()
+  const hookItems   = getAllHookItems()
   const previewPath = path.join(__dirname, 'preview.mjs')
 
   // 构建 fzf 输入：每行 "NAME\tVERSION\tBUNDLE\tKIND\tSRCPATH"
@@ -554,6 +555,7 @@ function fzfSelect() {
       return `${s.skillName}\t${s.version ?? '—'}\t${bundle}\tskill\t${s.srcPath}`
     }),
     ...toolItems.map(t => `${t.toolName}\t${t.version ?? '—'}\tshell-tool\ttool\t${t.srcPath}`),
+    ...hookItems.map(h => `${h.name}\t${h.version ?? '—'}\thook\thook\t${h.srcPath}`),
   ]
 
   const nameWidth    = Math.max(...lines.map(l => l.split('\t')[0].length))
@@ -576,6 +578,12 @@ function fzfSelect() {
       pIcon = colorIcon(scopeSummary(installed.project))
     } else if (kind === 'tool') {
       uIcon = colorIcon(checkToolInstalled(name, srcPath).status)
+    } else if (kind === 'hook') {
+      const inst = checkHookInstalled(name)
+      uIcon = colorIcon(inst.user.status === 'installed' ? 'up-to-date'
+             : inst.user.status === 'partial'            ? 'update' : '')
+      pIcon = colorIcon(inst.project.status === 'installed' ? 'up-to-date'
+             : inst.project.status === 'partial'             ? 'update' : '')
     }
     return `${name.padEnd(nameWidth)}  ${ver.padEnd(versionWidth)}  U:${uIcon}  P:${pIcon}  ${bundle}`
   })
@@ -609,6 +617,7 @@ function fzfSelect() {
     const parts = line.split('\t')
     const [, name, ver, bundle, kind, srcPath] = parts
     if (kind === 'skill') return { kind: 'skill', skillName: name, srcPath, version: ver }
+    if (kind === 'hook') return { kind: 'hook', name, srcPath, version: ver }
     return { kind: 'tool', toolName: name, srcPath, version: ver }
   })
 }
@@ -690,13 +699,14 @@ try {
       }
 
       const toolItems = selected.filter(s => s.kind === 'tool')
+      const hookItems = selected.filter(s => s.kind === 'hook')
       const seen = new Set()
       const skillItems = selected.filter(s => s.kind === 'skill').filter(s => {
         if (seen.has(s.skillName)) return false
         seen.add(s.skillName); return true
       })
 
-      if (!skillItems.length && !toolItems.length) continue
+      if (!skillItems.length && !toolItems.length && !hookItems.length) continue
 
       let skillSummary = null
       if (skillItems.length > 0) {
