@@ -99,6 +99,44 @@
       "prompt": "我在 pre-commit 的 MANAGED 块外手写了 develop 分支的保护逻辑。现在 workflow-config.yml 也把 develop 加入了 branches.protected。重新运行 git-workflow-init。",
       "expected_output": "skill 扫描 MANAGED 块外的用户代码，发现 develop 分支在用户代码和新配置中都有处理，报告 type A 冲突（条件重叠），提供三个选项让用户决策后再写入。",
       "assertions": []
+    },
+    {
+      "id": 10,
+      "name": "acceptance-test-skip",
+      "prompt": "我的项目在 /tmp/gwi-acc-skip，已 git init，有默认 workflow-config.yml（branches.protected 包含 main 和 staging，commit_message.enforce: true）。请运行 git-workflow-init，hooks 部署完成后，当 skill 询问是否运行验收测试时，我选择跳过（N）。",
+      "expected_output": "Step 6 完成后 skill 询问是否运行验收测试，用户回答 N 后 skill 跳过验收直接继续 Step 7 文档渲染，最终正常完成整个流程。",
+      "assertions": [
+        "Step 6 完成后出现验收询问提示",
+        "用户选 N 后 skill 不执行任何 hook 调用测试",
+        "skill 继续执行 Step 7 及后续步骤，正常完成"
+      ]
+    },
+    {
+      "id": 11,
+      "name": "acceptance-test-pass",
+      "prompt": "我的项目在当前目录，已有 .githooks/（含 pre-commit、commit-msg），git config core.hooksPath 已设置为 .githooks，pre-commit 会拒绝直接提交到 main，commit-msg 强制 Conventional Commits 格式。hooks 刚部署完，我选择运行验收测试（Y）。",
+      "expected_output": "skill 在真实 repo 中直接调用 .githooks/pre-commit（在受保护分支上，期望 exit 1）和 .githooks/commit-msg（传入违规消息，期望 exit 1），两项均通过，展示 PASS 表格，继续 Step 7。无残留临时文件或临时分支。",
+      "assertions": [
+        "skill 询问用户是否运行验收测试，用户选 Y 后执行",
+        "pre-commit 验收：在受保护分支（main 或 staging）调用 .githooks/pre-commit，期望 exit 1，实际得到 exit 1 → PASS",
+        "commit-msg 验收：以违规消息调用 .githooks/commit-msg，期望 exit 1，实际得到 exit 1 → PASS",
+        "展示包含 PASS 标记的结果表格",
+        "验收完成后无 /tmp/gwi-test-* 临时文件残留",
+        "验收完成后无 gwi-test-INVALID-NAME-* 临时分支残留",
+        "skill 继续执行 Step 7"
+      ]
+    },
+    {
+      "id": 12,
+      "name": "acceptance-test-fail",
+      "prompt": "我的项目 .githooks/pre-commit 已安装，但 git config core.hooksPath 没有设置（hooks 实际不会被触发）。部署完成后我选择运行验收测试（Y）。",
+      "expected_output": "skill 直接调用 .githooks/pre-commit 脚本进行测试，若脚本返回 exit 0（未拦截），skill 报告 FAIL，展示失败详情（期望 exit 1，实际 exit 0），询问用户是否仍继续 Step 7。",
+      "assertions": [
+        "验收结果表格中对应 hook 标记为 FAIL ❌",
+        "失败详情包含：期望 exit code、实际 exit code、hook 输出内容",
+        "skill 询问用户是否仍继续后续步骤，而非直接中止或直接继续",
+        "用户选 N 后 skill 优雅停止"
+      ]
     }
   ]
 }
