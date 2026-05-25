@@ -237,6 +237,145 @@ git config merge.ff false
 
 ---
 
+### Step 6.5 — 验收测试（可选）
+
+完成 hooks 部署后，询问用户：
+
+```
+✅ Hooks 已部署完毕。是否运行验收测试？（在当前 repo 中验证 hooks 实际拦截行为）[y/N]
+```
+
+若用户选 **N**，跳过此步骤，直接进入 Step 7。
+
+若用户选 **Y**，执行以下步骤。
+
+#### 初始化
+
+记录当前分支与时间戳（用于临时分支命名和临时文件命名，避免冲突）：
+
+```bash
+ORIGINAL_BRANCH=$(git symbolic-ref --short HEAD)
+TIMESTAMP=$(date +%s)
+```
+
+#### 逐 hook 运行验收场景
+
+仅对 Step 6 中实际生成的 hook 运行对应场景。未生成的 hook 跳过，不报告。
+
+**pre-commit 验收**（仅当 `branches.protected` 非空时生成了 pre-commit）
+
+取配置中第一个保护分支名：
+
+```bash
+PROTECTED_BRANCH=<从 workflow-config.yml 的 branches.protected 取第一个 name 字段>
+
+# 若当前不在该分支，切换过去；若分支不存在则新建
+SWITCHED=0
+if [ "$(git symbolic-ref --short HEAD 2>/dev/null)" != "$PROTECTED_BRANCH" ]; then
+    git checkout "$PROTECTED_BRANCH" 2>/dev/null \
+        || git checkout -b "$PROTECTED_BRANCH" 2>/dev/null
+    SWITCHED=1
+fi
+
+# 直接调用 hook 脚本（不产生实际 commit）
+output=$(sh .githooks/pre-commit 2>&1)
+exit_code=$?
+
+# 立即还原分支
+[ "$SWITCHED" = "1" ] && git checkout "$ORIGINAL_BRANCH" 2>/dev/null
+
+# 期望 exit_code = 1（hook 拦截了直接提交）
+```
+
+**commit-msg 验收**（仅当 `commit_message.enforce: true`）
+
+构造格式违规消息：
+- `format: conventional` → 使用 `"bad commit"`（不含类型前缀）
+- `format: regex` → 使用一个确定不匹配 `pattern` 的字符串，如 `"NOMATCH: this should fail"`
+
+```bash
+echo "bad commit" > /tmp/gwi-test-msg-${TIMESTAMP}.txt
+output=$(sh .githooks/commit-msg /tmp/gwi-test-msg-${TIMESTAMP}.txt 2>&1)
+exit_code=$?
+rm -f /tmp/gwi-test-msg-${TIMESTAMP}.txt
+
+# 期望 exit_code = 1
+```
+
+**pre-push force-push 验收**（仅当 `push_rules.enforce: true`）
+
+取 `push_rules.block_force_push` 中第一个分支名：
+
+```bash
+PROTECTED_PUSH_BRANCH=<从 push_rules.block_force_push 取第一个分支名>
+output=$(printf "refs/heads/%s abc1234 refs/heads/%s 0000000000000000000000000000000000000000\n" \
+    "$PROTECTED_PUSH_BRANCH" "$PROTECTED_PUSH_BRANCH" \
+    | sh .githooks/pre-push 2>&1)
+exit_code=$?
+
+# 期望 exit_code = 1
+```
+
+**pre-push tag 验收**（仅当 `tags.enforce: true`）
+
+```bash
+output=$(printf "refs/tags/invalid-tag-format abc1234 refs/tags/invalid-tag-format 0000000000000000000000000000000000000000\n" \
+    | sh .githooks/pre-push 2>&1)
+exit_code=$?
+
+# 期望 exit_code = 1
+```
+
+**post-checkout 验收**（仅当 `branch_naming.enforce: true`）
+
+创建一个确定不符合 `allowed_patterns` 的临时分支名（固定前缀 `gwi-test-INVALID-NAME-` 不在任何常见命名规范中）：
+
+```bash
+TEST_BRANCH="gwi-test-INVALID-NAME-${TIMESTAMP}"
+git checkout -b "$TEST_BRANCH" 2>/dev/null
+
+output=$(sh .githooks/post-checkout HEAD HEAD 1 2>&1)
+
+# 立即还原并删除临时分支
+git checkout "$ORIGINAL_BRANCH" 2>/dev/null
+git branch -D "$TEST_BRANCH" 2>/dev/null
+
+# 期望：output 包含 ⚠️
+```
+
+#### 展示结果
+
+收集所有场景的结果，用表格展示：
+
+```
+验收测试结果：
+──────────────────────────────────────────────────────
+pre-commit    直接提交到 <branch>（应拒绝）           PASS ✅
+commit-msg    格式违规消息（应拒绝）                   PASS ✅
+pre-push      force push 到 <branch>（应拒绝）         PASS ✅
+pre-push      非法 tag 推送（应拒绝）                  PASS ✅
+post-checkout 不合规分支名（应有 ⚠️ 警告）             PASS ✅
+──────────────────────────────────────────────────────
+✅ 全部通过（N/N）。继续 Step 7...
+```
+
+若有失败：
+
+```
+──────────────────────────────────────────────────────
+pre-commit    直接提交到 main（应拒绝）                FAIL ❌
+  期望 exit 1，实际 exit 0
+  输出：（空）
+  可能原因：core.hooksPath 配置错误或 hook 脚本有语法问题
+──────────────────────────────────────────────────────
+❌ 验收未通过（M/N 失败）。是否仍继续 Step 7？[y/N]
+```
+
+用户选 **N** → 提示 `请检查 .githooks/ 目录和 core.hooksPath 配置后重新运行 /git-workflow-init`，停止。
+用户选 **Y** → 继续 Step 7。
+
+---
+
 ### Step 7 — 从配置渲染并写入工作流文档（差量）
 
 每次运行都根据当前 `workflow-config.yml` 的最终状态重新渲染文档，确保文档与配置始终一致。
