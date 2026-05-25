@@ -2,7 +2,7 @@
 name: git-workflow-init
 description: 初始化或更新 git 分支管理规范：读取项目的 workflow-config.yml，审核配置，差量生成并部署 git hooks（pre-commit、commit-msg、pre-push、post-checkout），生成工作流文档，可选写入 AI 配置文件引用。支持差量更新、MANAGED 块 hash 校验（检测用户手改）、lock 文件 diff（检测配置变更）、conflict scanner（检测用户代码与新配置的交叉冲突）。触发时机：初始化新 git 仓库、新项目首次配置 git、用户要求设置/更新分支保护或分支规范、安装或重新部署 git hooks、skill 或模板更新后需要同步、或问到分支命名规范。只要项目需要配置或更新 git 工作流，就应使用此 skill。
 user_invocable: true
-version: "4.0.0"
+version: "4.1.0"
 ---
 
 # Git 工作流初始化
