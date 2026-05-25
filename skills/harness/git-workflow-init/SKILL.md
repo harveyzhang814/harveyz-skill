@@ -2,7 +2,7 @@
 name: git-workflow-init
 description: 初始化或更新 git 分支管理规范：读取项目的 workflow-config.yml，审核配置，差量生成并部署 git hooks（pre-commit、commit-msg、pre-push、post-checkout），生成工作流文档，可选写入 AI 配置文件引用。支持差量更新、MANAGED 块 hash 校验（检测用户手改）、lock 文件 diff（检测配置变更）、conflict scanner（检测用户代码与新配置的交叉冲突）。触发时机：初始化新 git 仓库、新项目首次配置 git、用户要求设置/更新分支保护或分支规范、安装或重新部署 git hooks、skill 或模板更新后需要同步、或问到分支命名规范。只要项目需要配置或更新 git 工作流，就应使用此 skill。
 user_invocable: true
-version: "4.0.0"
+version: "4.1.0"
 ---
 
 # Git 工作流初始化
@@ -66,114 +66,33 @@ echo "" | grep -E "<pattern>" > /dev/null 2>&1; echo $?
 
 **首次安装时跳过此步骤，直接进入 Step 5。**
 
-此步骤目标：在写入任何文件之前，全面了解当前状态，收集所有需要用户决策的冲突，在 Step 5 一次性呈现。
+目标：写入任何文件之前，全面收集需要用户决策的冲突，在 Step 5 一次性呈现。实现细节见 `references/conflict-analysis.md`。
 
-#### 4a. Lock 文件 diff — 配置发生了什么变化
+#### 4a. Lock 文件 diff
+读取 `.githooks/.workflow-config.lock.yml`（不存在则视为全量新增，跳过）。对比上次配置与当前配置，生成 +/~/- 变更摘要。**提取 YAML 分支名时必须用 python3 精确解析，不得用 `grep "name:"`**（见 reference 中的脚本）。
 
-读取 `.githooks/.workflow-config.lock.yml`（若不存在则视为全量新增，跳过 diff）。
+#### 4b. MANAGED 块 hash 校验
+读取每个 hook 的 `BEGIN MANAGED`/`END MANAGED` 块，重新计算 hash，与块头标记对比。不一致 → 用户手改，记录为类型 C 冲突（附 diff）。
 
-将 lock 文件中记录的上一次配置与当前配置对比，生成变更摘要：
+#### 4c. 外部代码扫描
+提取每个 hook 中 MANAGED 块外的用户手写代码，识别其中引用的分支名、提交类型、pattern、外部脚本调用。
 
-```
-配置变更摘要：
-+ branches.protected 新增: develop（merge_from: feature/*）
-~ commit_message.conventional.types 修改: 新增 wip，移除 perf
-- tags.allowed_patterns 删除: ^v[0-9]+\.[0-9]+\.[0-9]+-rc\.[0-9]+$
-```
-
-**YAML 分支名提取规则（重要）：**
-
-不要用宽泛的 `grep "name:"` 提取分支名——YAML 多个层级都可能含有 `name:` 字段，会导致误匹配。用 `python3` 精确解析，进入 `protected:` 块后再匹配 `- name:`，遇到非缩进行则停止：
-
-```bash
-# FILE 传入要解析的文件路径（workflow-config.yml 或 lock 文件均适用）
-python3 -c "
-import re, sys
-content = open(sys.argv[1]).read()
-in_protected = False
-for line in content.splitlines():
-    if 'protected:' in line:
-        in_protected = True; continue
-    if in_protected:
-        m = re.match(r'\s+- name:\s+(\S+)', line)
-        if m: print(m.group(1))
-        elif line.strip() and not line.startswith(' '): break
-" "$FILE"
-```
-
-这份摘要用于后续冲突检测的输入。
-
-#### 4b. MANAGED 块 hash 校验 — 用户是否手改了生成的代码
-
-读取每个 hook 文件，提取所有 `BEGIN MANAGED` / `END MANAGED` 块。
-
-MANAGED 块格式：
-```sh
-# --- BEGIN MANAGED: <block-id> (hash:<8位hex>) ---
-<generated content>
-# --- END MANAGED: <block-id> ---
-```
-
-对每个块：重新计算块内容（两行标记之间的部分，去首尾空白）的 hash：
-```bash
-actual_hash=$(printf '%s' "<block_content>" | git hash-object --stdin | cut -c1-8)
-```
-
-若 `actual_hash` 与标记里记录的 hash 不一致 → 用户手改了此块，记录为冲突：
-
-```
-[手改冲突] .githooks/pre-commit 的 MANAGED 块 branches.protected/main 被手动修改
-  原始生成内容 hash: a3f9c2b1
-  当前内容 hash:     d7e42f0c
-  差异：（展示 diff）
-```
-
-#### 4c. 外部代码扫描 — 用户在 MANAGED 块外添加了什么
-
-提取每个 hook 文件中 MANAGED 块之外的所有代码（即用户手写区）。
-
-从用户代码中提取可解析的引用：
-
-| 提取目标 | 扫描方式 |
-|---------|---------|
-| 分支名 | `"$BRANCH" = "name"`、`case "name"`、`branch = "name"` |
-| 提交类型 | `grep -qE "...(type\|...)"`、字符串字面量 `wip`、`hotfix` |
-| Tag/分支 pattern | `grep -qE "pattern"` |
-| 外部脚本调用 | `./`、`bash `、`sh `、`npm run`、`make ` 开头的行 |
-
-#### 4d. 冲突检测 — 用户代码 × 新配置的交叉分析
-
-综合 4a（配置变更）、4b（手改块）、4c（用户代码）的结果，识别以下冲突类型：
-
-**冲突类型 A：用户代码覆盖了与新配置相同的条件**
-- 用户代码处理了分支 X，新配置也将 X 加入 `branches.protected`
-- 两段代码同时执行，可能产生矛盾行为
-
-**冲突类型 B：用户代码引用了配置中已删除的内容**
-- 用户代码里有对类型 `wip` 的处理，新配置删除了 `wip`
-- 用户代码逻辑失去对应的配置支撑
-
-**冲突类型 C：MANAGED 块被手动修改**
-- 来自 4b 的结果
-- 重新生成会覆盖用户修改
-
-**冲突类型 D：用户代码引用了新配置新增的内容（信息提示，非阻断）**
-- 用户已手写了对 `develop` 的处理，新配置也打算生成同名 MANAGED 块
-- 不一定冲突，但值得用户确认
+#### 4d. 冲突检测
+综合 4a/4b/4c，识别四种冲突类型（A 条件重叠、B 引用断裂、C 手改冲突、D 新增重叠）。类型定义与选项见 `references/conflict-analysis.md`。
 
 ---
 
 ### Step 5 — 冲突解决（一次性汇总，用户逐条决策）
 
-将 Step 4 发现的所有冲突汇总后**一次性呈现**，每条冲突附带建议选项。
+将 Step 4 发现的所有冲突**一次性呈现**，每条附带类型标签和选项，用户逐条决策后进入 Step 6。无冲突则直接进入 Step 6。
 
-示例输出：
+呈现格式（以类型 C 手改冲突为例）：
 
 ```
-发现 3 处需要决策的冲突，请逐条确认：
+发现 N 处需要决策的冲突，请逐条确认：
 
 ─────────────────────────────────────────────────────────
-[1/3] 手改冲突（类型 C）
+[1/N] 手改冲突（类型 C）
 文件: .githooks/pre-commit，块: branches.protected/main
 用户对生成代码做了如下修改：
   - echo "❌ 禁止直接在 main 上提交。"
@@ -182,26 +101,9 @@ actual_hash=$(printf '%s' "<block_content>" | git hash-object --stdin | cut -c1-
   A) 保留用户修改（此块不重新生成）
   B) 用新配置覆盖（丢弃用户修改）
 ─────────────────────────────────────────────────────────
-[2/3] 条件重叠（类型 A）
-文件: .githooks/pre-commit，用户代码第 58 行
-用户手写了 develop 分支的保护逻辑
-新配置将 develop 加入 branches.protected，也会生成对应 MANAGED 块
-选项：
-  A) 保留用户代码，跳过生成 develop 的 MANAGED 块
-  B) 用新配置生成 MANAGED 块，删除用户手写的重复代码
-  C) 两者都保留（会重复执行，请确认逻辑不矛盾）
-─────────────────────────────────────────────────────────
-[3/3] 引用断裂（类型 B）
-文件: .githooks/commit-msg，用户代码第 34 行
-用户代码引用了 commit 类型 wip，但新配置已从类型列表中移除 wip
-选项：
-  A) 保留用户代码（wip 检查逻辑继续生效，但配置层不再管理）
-  B) 删除用户代码中对 wip 的引用
-─────────────────────────────────────────────────────────
 ```
 
-用户全部决策完成后，带着决策结果进入 Step 6。
-若无任何冲突，直接进入 Step 6。
+各冲突类型的完整选项定义见 `references/conflict-analysis.md`。
 
 ---
 
@@ -234,6 +136,19 @@ git config merge.ff false
 ```
 
 `merge.ff false` 禁止 fast-forward 合并，确保每次合并都产生 merge commit，pre-commit 钩子才能检查合并来源分支。
+
+---
+
+### Step 6.5 — 验收测试（可选）
+
+完成 hooks 部署后，询问用户：
+
+```
+✅ Hooks 已部署完毕。是否运行验收测试？（在当前 repo 中验证 hooks 实际拦截行为）[y/N]
+```
+
+- 用户选 **N** → 直接进入 Step 7。
+- 用户选 **Y** → 读取 `references/acceptance-test.md`，按其中说明逐 hook 执行验收场景，展示结果表格。全通过则继续 Step 7；有失败则展示详情并询问用户是否仍继续。
 
 ---
 
@@ -315,7 +230,9 @@ CLAUDE.md                          已有引用，跳过
 | 文件 | 说明 | 读取时机 |
 |------|------|---------|
 | `references/workflow-config.yml` | 配置文件模板 | Step 2：用户无配置时复制 |
+| `references/conflict-analysis.md` | 4a–4d 实现脚本、冲突类型 A/B/C/D 完整定义与选项、Step 5 呈现格式 | Step 4/5：执行分析前读取 |
 | `references/hook-templates.md` | 4 个 hook 的代码模板、块 ID 规范、hash 计算、多行写入技巧 | Step 6：生成 hooks 前 |
+| `references/acceptance-test.md` | 验收场景 bash 脚本、期望结果、结果表格格式 | Step 6.5：用户选 Y 时读取 |
 | `references/lock-file-format.md` | lock 文件 YAML 格式 | Step 9：写入 lock 文件前 |
 | `references/git-workflow-template.md` | 工作流文档模板（含占位符） | Step 7：由 render_docs.py 读取 |
 | `references/render_docs.py` | 文档渲染脚本 | Step 7：直接执行 |
