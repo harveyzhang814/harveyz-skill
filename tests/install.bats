@@ -174,7 +174,7 @@ _skill_version() {
   HOME="${MOCK_HOME}" node "${CLI}" install --tool "${TOOL_NAME}" \
     2>/tmp/bats-install-stderr >/dev/null | cat
   err="$(_stderr)"
-  [[ "$err" == *"skipped"* ]] || [[ "$err" == *"already exists"* ]]
+  [[ "$err" == *"up-to-date"* ]] || [[ "$err" == *"Skipped"* ]]
 }
 
 @test "install --tool --force: re-installs over existing binary" {
@@ -298,4 +298,42 @@ _uninstall() {
 @test "uninstall skill: exits 0 when skill not installed" {
   run _uninstall "${SKILL1_NAME}" --scope user --target claude
   [ "$status" -eq 0 ]
+}
+
+# ── tool version-aware upgrade ────────────────────────────────────────────────
+
+@test "install --tool: skips with up-to-date message when version matches" {
+  _install --tool "${TOOL_NAME}" --force
+  run env HOME="${MOCK_HOME}" node "${CLI}" install --tool "${TOOL_NAME}" 2>&1
+  [[ "$output" == *"up-to-date"* ]]
+}
+
+@test "install --tool: skips with outdated message in non-TTY when version differs" {
+  _install --tool "${TOOL_NAME}" --force
+  local meta="${MOCK_HOME}/.local/share/hskill/tools/${TOOL_NAME}.json"
+  node -e "const f='${meta}'; const fs=require('fs'); const d=JSON.parse(fs.readFileSync(f,'utf8')); d.version='0.0.1'; fs.writeFileSync(f,JSON.stringify(d))"
+  run env HOME="${MOCK_HOME}" node "${CLI}" install --tool "${TOOL_NAME}" 2>&1
+  [[ "$output" == *"outdated"* ]]
+  [[ "$output" == *"--force"* ]]
+}
+
+@test "install --tool --force: removes uninstallPaths before reinstalling" {
+  _install --tool "${TOOL_NAME}" --force
+  local venv="${MOCK_HOME}/.local/share/hskill/p-launch-venv"
+  mkdir -p "$venv"
+  _install --tool "${TOOL_NAME}" --force
+  [ ! -d "$venv" ]
+}
+
+@test "install --tool --force: reinstalls even when up-to-date" {
+  _install --tool "${TOOL_NAME}" --force
+  local mtime1
+  mtime1=$(stat -f '%m' "${MOCK_HOME}/.local/bin/${TOOL_NAME}" 2>/dev/null || \
+           stat -c '%Y' "${MOCK_HOME}/.local/bin/${TOOL_NAME}" 2>/dev/null)
+  sleep 1
+  _install --tool "${TOOL_NAME}" --force
+  local mtime2
+  mtime2=$(stat -f '%m' "${MOCK_HOME}/.local/bin/${TOOL_NAME}" 2>/dev/null || \
+           stat -c '%Y' "${MOCK_HOME}/.local/bin/${TOOL_NAME}" 2>/dev/null)
+  [ "$mtime1" != "$mtime2" ]
 }
