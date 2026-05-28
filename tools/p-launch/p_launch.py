@@ -366,6 +366,7 @@ class PLaunchApp(App):
     """
 
     BINDINGS = [
+        Binding("ctrl+o", "launch", "Launch", show=True),
         Binding("ctrl+p", "pull", "Pull", show=True),
         Binding("ctrl+u", "push_action", "Push", show=True),
         Binding("ctrl+r", "refresh", "Refresh", show=True),
@@ -489,11 +490,7 @@ class PLaunchApp(App):
                 self._refresh_detail(self.selected_repo, item.branch_data["name"])
 
     def on_list_view_selected(self, event: ListView.Selected) -> None:
-        if event.control.id == "repo-list":
-            item = event.item
-            if isinstance(item, RepoItem):
-                self.selected_repo = item.repo_path
-                self.action_launch()
+        pass
 
     def on_key(self, event) -> None:
         if event.key == "right":
