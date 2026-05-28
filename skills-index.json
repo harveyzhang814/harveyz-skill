@@ -1,6 +1,6 @@
 {
   "toolBundleMeta": {
-    "shell-tools": "终端工具（p-launch 项目启动器）"
+    "shell-tools": "终端工具（p-launch 本地仓库管理器）"
   },
   "tools": [
     { "name": "p-launch", "bundle": "shell-tools" }

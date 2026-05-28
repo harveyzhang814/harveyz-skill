@@ -1,6 +1,6 @@
 #!/usr/bin/env zsh
-# p-launch — interactive project launcher
-# Usage: p-launch              launch picker
+# p-launch — local repository manager
+# Usage: p-launch              open repository manager
 #        p-launch --config     set project directories
 #        p-launch --uninstall  remove everything
 #        p-launch --help       show help
@@ -40,42 +40,514 @@ _collect() {
   printf '%s\n' "${rows[@]}" | sort -t$'\t' -k1,1rn | cut -f2-
 }
 
+# ── Git Status Detection ─────────────────────────────────────────────────────
+
+# Returns 0 if _dir is a git repo with at least one remote, 1 otherwise.
+# NOTE: Do NOT use 'path' as a local variable name — in zsh, $path is the
+# special array form of $PATH, and shadowing it breaks command lookup.
+_is_git_with_remote() {
+  local _dir="$1"
+  git -C "$_dir" rev-parse --git-dir >/dev/null 2>&1 || return 1
+  git -C "$_dir" remote | grep -q . || return 1
+}
+
+# Outputs all tracking branches and their ahead/behind status
+# Format: "branch|upstream|[ahead N, behind M]"
+_get_tracking_branch_statuses() {
+  local _dir="$1"
+  git -C "$_dir" for-each-ref \
+    --format='%(refname:short)|%(upstream:short)|%(upstream:track)' \
+    refs/heads | awk -F'|' '$2 != ""'
+}
+
+# Derives a short hash key for a path (used as status file name)
+_path_key() {
+  printf '%s' "$1" | shasum -a 256 | cut -c1-16
+}
+
+# Computes the status summary and writes it to $tmpdir/<key>
+# Status format (8-char wide): "↑N↓M    ", "✓       ", "·       ", etc.
+_write_status_file() {
+  local _dir="$1" tmpdir="$2"
+  local key
+  key=$(_path_key "$_dir")
+
+  if ! _is_git_with_remote "$_dir"; then
+    printf '·       ' > "${tmpdir}/${key}"
+    return 0
+  fi
+
+  local total_ahead=0 total_behind=0
+  local branch upstream track ahead behind
+
+  while IFS='|' read -r branch upstream track; do
+    # Skip [gone] upstreams
+    [[ "$track" == *gone* ]] && continue
+    ahead=0; behind=0
+    [[ "$track" =~ 'ahead ([0-9]+)' ]] && ahead="${match[1]}"
+    [[ "$track" =~ 'behind ([0-9]+)' ]] && behind="${match[1]}"
+    (( total_ahead  += ahead  ))
+    (( total_behind += behind ))
+  done < <(_get_tracking_branch_statuses "$_dir")
+
+  local s=""
+  (( total_ahead  > 0 )) && s+="↑${total_ahead}"
+  (( total_behind > 0 )) && s+="↓${total_behind}"
+  [[ -z "$s" ]] && s="✓"
+
+  # Pad to 8 chars for alignment
+  printf '%-8s' "$s" > "${tmpdir}/${key}"
+}
+
+# Fetch a single repo and write its status file (runs in background)
+_fetch_and_write_status() {
+  local _dir="$1" tmpdir="$2"
+  git -C "$_dir" fetch --all -q 2>/dev/null
+  _write_status_file "$_dir" "$tmpdir"
+}
+
+# Parallel-fetch all git repos and populate status files in tmpdir
+_fetch_all_repos() {
+  local tmpdir="$1"
+  shift
+  local -a dirs=("$@")
+  local -a pids=()
+
+  for dir in "${dirs[@]}"; do
+    if _is_git_with_remote "$dir"; then
+      ( _fetch_and_write_status "$dir" "$tmpdir" ) &
+      pids+=($!)
+    else
+      # Write · immediately for non-git dirs (no background needed)
+      local key; key=$(_path_key "$dir")
+      printf '·       ' > "${tmpdir}/${key}"
+    fi
+  done
+
+  for pid in "${pids[@]}"; do
+    wait "$pid"
+  done
+  return 0
+}
+
 # ── fzf Display Formatting ───────────────────────────────────────────────────
-# Input:  one path per line
-# Output: "PADDED_NAME \t PATH \t DISPLAY_PARENT" per line (name padded for alignment)
-_format() {
-  local -a names=() paths=() parents=()
+# Input:  one path per line (stdin)
+# Output: "STATUS \t PADDED_NAME \t PATH \t DISPLAY_PARENT" per line
+_format_with_status() {
+  local tmpdir="${_STATUS_TMPDIR:-}"
+  local -a statuses=() names=() rawpaths=() parents=()
+
+  local key _status
   while IFS= read -r p; do
+    key=$(_path_key "$p")
+    if [[ -n "$tmpdir" && -f "${tmpdir}/${key}" ]]; then
+      _status=$(cat "${tmpdir}/${key}")
+    else
+      _status='·       '
+    fi
+    statuses+=("$_status")
     names+=("${p:t}")
-    paths+=("$p")
+    rawpaths+=("$p")
     parents+=("${${p:h}/$HOME/~}")
   done
 
   local maxlen=0
   local n
   for n in "${names[@]}"; do
-    (( ${#n} > maxlen )) && maxlen=${#n}
+    if (( ${#n} > maxlen )); then
+      maxlen=${#n}
+    fi
   done
 
   local i
   for (( i = 1; i <= ${#names}; i++ )); do
-    printf "%-${maxlen}s\t%s\t%s\n" "${names[$i]}" "${paths[$i]}" "${parents[$i]}"
+    printf "%s\t%-${maxlen}s\t%s\t%s\n" \
+      "${statuses[$i]}" "${names[$i]}" "${rawpaths[$i]}" "${parents[$i]}"
   done
+  return 0
+}
+
+# ── Pull / Push Operations ───────────────────────────────────────────────────
+
+_do_pull() {
+  local _dir="$1"
+  local name="${_dir:t}"
+  local current_branch
+  current_branch=$(git -C "$_dir" symbolic-ref --short HEAD 2>/dev/null)
+
+  printf '\n'
+  printf "  ${C[bd]}${C[cy]}%s${C[rs]}  ${C[dim]}pull${C[rs]}\n\n" "$name"
+
+  local any=false
+  local branch upstream track behind
+
+  while IFS='|' read -r branch upstream track; do
+    [[ "$track" == *gone* ]] && continue
+    behind=0
+    [[ "$track" =~ 'behind ([0-9]+)' ]] && behind="${match[1]}"
+    (( behind == 0 )) && continue
+
+    any=true
+    if [[ "$branch" == "$current_branch" ]]; then
+      if git -C "$_dir" pull --ff-only origin "$branch" >/dev/null 2>&1; then
+        printf "  ${C[gr]}✓${C[rs]} pulled       %s\n" "$branch"
+      else
+        printf "  ${C[yl]}⚠${C[rs]} pull failed  %s (resolve conflicts manually)\n" "$branch"
+      fi
+    else
+      # Non-current branch: fast-forward only via fetch refspec
+      if git -C "$_dir" fetch origin "${branch}:${branch}" >/dev/null 2>&1; then
+        printf "  ${C[gr]}✓${C[rs]} fast-fwd     %s\n" "$branch"
+      else
+        printf "  ${C[yl]}⚠${C[rs]} skipped      %s (not fast-forward)\n" "$branch"
+      fi
+    fi
+  done < <(_get_tracking_branch_statuses "$_dir")
+
+  if ! $any; then
+    printf "  ${C[dim]}nothing to pull — all branches up to date${C[rs]}\n"
+  fi
+
+  printf '\n'
+
+  # Refresh status file after pull (using cached remote refs, no network)
+  if [[ -n "${_STATUS_TMPDIR:-}" ]]; then
+    _write_status_file "$_dir" "$_STATUS_TMPDIR"
+  fi
+  return 0
+}
+
+_do_push() {
+  local _dir="$1"
+  local name="${_dir:t}"
+
+  printf '\n'
+  printf "  ${C[bd]}${C[cy]}%s${C[rs]}  ${C[dim]}push${C[rs]}\n\n" "$name"
+
+  local any=false
+  local branch upstream track ahead
+
+  while IFS='|' read -r branch upstream track; do
+    [[ "$track" == *gone* ]] && continue
+    ahead=0
+    [[ "$track" =~ 'ahead ([0-9]+)' ]] && ahead="${match[1]}"
+    (( ahead == 0 )) && continue
+
+    any=true
+    if git -C "$_dir" push origin "$branch" >/dev/null 2>&1; then
+      printf "  ${C[gr]}✓${C[rs]} pushed  %s\n" "$branch"
+    else
+      printf "  ${C[yl]}⚠${C[rs]} failed  %s\n" "$branch"
+    fi
+  done < <(_get_tracking_branch_statuses "$_dir")
+
+  if ! $any; then
+    printf "  ${C[dim]}nothing to push — no branches ahead of remote${C[rs]}\n"
+  fi
+
+  printf '\n'
+
+  if [[ -n "${_STATUS_TMPDIR:-}" ]]; then
+    _write_status_file "$_dir" "$_STATUS_TMPDIR"
+  fi
+  return 0
+}
+
+# Pull a single specific branch. Unlike _do_pull which pulls ALL behind branches,
+# this targets one branch — used by the branch picker ctrl-p binding.
+_do_pull_branch() {
+  local _dir="$1" branch="$2"
+  local current_branch upstream track behind=0
+  current_branch=$(git -C "$_dir" symbolic-ref --short HEAD 2>/dev/null)
+
+  printf '\n'
+  printf "  ${C[bd]}${C[cy]}%s${C[rs]}  ${C[dim]}pull %s${C[rs]}\n\n" "${_dir:t}" "$branch"
+
+  upstream=$(git -C "$_dir" rev-parse --abbrev-ref "${branch}@{upstream}" 2>/dev/null)
+  if [[ -z "$upstream" ]]; then
+    printf "  ${C[dim]}no upstream — nothing to pull${C[rs]}\n\n"
+    return 0
+  fi
+
+  track=$(git -C "$_dir" for-each-ref \
+    --format='%(upstream:track)' "refs/heads/${branch}" 2>/dev/null)
+  [[ "$track" =~ 'behind ([0-9]+)' ]] && behind="${match[1]}"
+
+  if (( behind == 0 )); then
+    printf "  ${C[dim]}nothing to pull — %s is up to date${C[rs]}\n\n" "$branch"
+    return 0
+  fi
+
+  if [[ "$branch" == "$current_branch" ]]; then
+    if git -C "$_dir" pull --ff-only origin "$branch" >/dev/null 2>&1; then
+      printf "  ${C[gr]}✓${C[rs]} pulled    %s\n\n" "$branch"
+    else
+      printf "  ${C[yl]}⚠${C[rs]} failed    %s (resolve conflicts manually)\n\n" "$branch"
+    fi
+  else
+    if git -C "$_dir" fetch origin "${branch}:${branch}" >/dev/null 2>&1; then
+      printf "  ${C[gr]}✓${C[rs]} fast-fwd  %s\n\n" "$branch"
+    else
+      printf "  ${C[yl]}⚠${C[rs]} skipped   %s (not fast-forward)\n\n" "$branch"
+    fi
+  fi
+
+  if [[ -n "${_STATUS_TMPDIR:-}" ]]; then
+    _write_status_file "$_dir" "$_STATUS_TMPDIR"
+  fi
+  return 0
+}
+
+# Push a single specific branch.
+_do_push_branch() {
+  local _dir="$1" branch="$2"
+  local upstream track ahead=0
+
+  printf '\n'
+  printf "  ${C[bd]}${C[cy]}%s${C[rs]}  ${C[dim]}push %s${C[rs]}\n\n" "${_dir:t}" "$branch"
+
+  upstream=$(git -C "$_dir" rev-parse --abbrev-ref "${branch}@{upstream}" 2>/dev/null)
+  if [[ -z "$upstream" ]]; then
+    printf "  ${C[dim]}no upstream — branch is local only${C[rs]}\n\n"
+    return 0
+  fi
+
+  track=$(git -C "$_dir" for-each-ref \
+    --format='%(upstream:track)' "refs/heads/${branch}" 2>/dev/null)
+  [[ "$track" =~ 'ahead ([0-9]+)' ]] && ahead="${match[1]}"
+
+  if (( ahead == 0 )); then
+    printf "  ${C[dim]}nothing to push — %s is up to date${C[rs]}\n\n" "$branch"
+    return 0
+  fi
+
+  if git -C "$_dir" push origin "$branch" >/dev/null 2>&1; then
+    printf "  ${C[gr]}✓${C[rs]} pushed  %s\n\n" "$branch"
+  else
+    printf "  ${C[yl]}⚠${C[rs]} failed  %s\n\n" "$branch"
+  fi
+
+  if [[ -n "${_STATUS_TMPDIR:-}" ]]; then
+    _write_status_file "$_dir" "$_STATUS_TMPDIR"
+  fi
+  return 0
+}
+
+# ── Branch Picker ─────────────────────────────────────────────────────────────
+
+# Outputs branch list for the branch picker fzf.
+# Format per line: STATUS\tBRANCH\tREMOTE  (tab-delimited, 3 columns)
+# Current branch BRANCH field is ANSI cyan; fzf strips ANSI on {2} extraction.
+_list_branches() {
+  local _dir="$1"
+
+  git -C "$_dir" rev-parse --git-dir >/dev/null 2>&1 || return 0
+
+  local current_branch
+  current_branch=$(git -C "$_dir" symbolic-ref --short HEAD 2>/dev/null)
+
+  # Tracking branches
+  local branch upstream track ahead behind s branch_display
+  while IFS='|' read -r branch upstream track; do
+    [[ "$track" == *gone* ]] && continue
+    ahead=0; behind=0
+    [[ "$track" =~ 'ahead ([0-9]+)'  ]] && ahead="${match[1]}"
+    [[ "$track" =~ 'behind ([0-9]+)' ]] && behind="${match[1]}"
+
+    s=""
+    (( ahead  > 0 )) && s+="↑${ahead}"
+    (( behind > 0 )) && s+="↓${behind}"
+    [[ -z "$s" ]] && s="✓"
+
+    if [[ "$branch" == "$current_branch" ]]; then
+      branch_display=$'\033[36m'"${branch}"$'\033[0m'
+    else
+      branch_display="$branch"
+    fi
+
+    printf '%s\t%s\t%s\n' "$s" "$branch_display" "$upstream"
+  done < <(_get_tracking_branch_statuses "$_dir")
+
+  # Local-only branches
+  git -C "$_dir" for-each-ref \
+    --format='%(refname:short)|%(upstream:short)' \
+    refs/heads | awk -F'|' '$2 == ""' | \
+  while IFS='|' read -r branch _rest; do
+    printf '%s\t%s\t%s\n' "local" "$branch" "—"
+  done
+  return 0
+}
+
+# Outputs a detail block for a single branch.
+# Used by _preview_panel (current branch) and the branch picker preview.
+_branch_detail() {
+  local _dir="$1" branch="$2"
+
+  local upstream
+  upstream=$(git -C "$_dir" rev-parse --abbrev-ref "${branch}@{upstream}" 2>/dev/null)
+
+  local local_sha
+  local_sha=$(git -C "$_dir" rev-parse --short "$branch" 2>/dev/null) || local_sha="—"
+
+  local remote_sha=""
+  [[ -n "$upstream" ]] && \
+    remote_sha=$(git -C "$_dir" rev-parse --short "$upstream" 2>/dev/null)
+
+  local commit_msg commit_author commit_date
+  commit_msg=$(git -C "$_dir"    log -1 --format="%s"  "$branch" 2>/dev/null)
+  commit_author=$(git -C "$_dir" log -1 --format="%an" "$branch" 2>/dev/null)
+  commit_date=$(git -C "$_dir"   log -1 --format="%cr" "$branch" 2>/dev/null)
+
+  local track="" ahead=0 behind=0
+  if [[ -n "$upstream" ]]; then
+    track=$(git -C "$_dir" for-each-ref \
+      --format='%(upstream:track)' "refs/heads/${branch}" 2>/dev/null)
+    [[ "$track" =~ 'ahead ([0-9]+)'  ]] && ahead="${match[1]}"
+    [[ "$track" =~ 'behind ([0-9]+)' ]] && behind="${match[1]}"
+  fi
+
+  printf "  ${C[bd]}${C[cy]}%s${C[rs]}\n\n" "$branch"
+
+  if [[ -z "$upstream" ]]; then
+    printf "  ${C[dim]}local only — no upstream${C[rs]}\n\n"
+  elif (( ahead > 0 && behind > 0 )); then
+    printf "  ${C[yl]}↑%d${C[rs]} ${C[rd]}↓%d${C[rs]}  diverged from %s\n\n" \
+      "$ahead" "$behind" "$upstream"
+  elif (( ahead > 0 )); then
+    printf "  ${C[yl]}↑%d${C[rs]}  ahead of %s\n\n" "$ahead" "$upstream"
+  elif (( behind > 0 )); then
+    printf "  ${C[rd]}↓%d${C[rs]}  behind %s\n\n" "$behind" "$upstream"
+  else
+    printf "  ${C[gr]}✓${C[rs]}  synced with %s\n\n" "$upstream"
+  fi
+
+  printf "  ${C[dim]}local ${C[rs]} %s\n" "$local_sha"
+  [[ -n "$upstream" ]] && \
+    printf "  ${C[dim]}remote${C[rs]} %s\n" "${remote_sha:-—}"
+  printf '\n'
+  printf "  ${C[dim]}commit${C[rs]} %s\n" "$commit_msg"
+  printf "  ${C[dim]}author${C[rs]} %s · %s\n" "$commit_author" "$commit_date"
+  printf '\n'
+  return 0
+}
+
+# ── Preview Panel ─────────────────────────────────────────────────────────────
+# Generates right-pane content for the main fzf view.
+# Top: branch summary table. Bottom: current branch detail block (via _branch_detail).
+_preview_panel() {
+  local _dir="$1"
+
+  if ! git -C "$_dir" rev-parse --git-dir >/dev/null 2>&1; then
+    printf '\n  %s  not a git repository\n' "·"
+    return 0
+  fi
+
+  local current_branch
+  current_branch=$(git -C "$_dir" symbolic-ref --short HEAD 2>/dev/null)
+
+  # ── Branch summary table ───────────────────────────────────────────────────
+  printf '\n'
+  printf "  ${C[dim]}%-20s  %-22s  %s${C[rs]}\n" "LOCAL" "REMOTE" "STATUS"
+  printf "  ${C[dim]}%s${C[rs]}\n" \
+    "────────────────────────────────────────────────────"
+
+  local any_tracking=false
+  local branch upstream track ahead behind s cur_mark _rest
+
+  while IFS='|' read -r branch upstream track; do
+    [[ "$track" == *gone* ]] && continue
+    any_tracking=true
+    ahead=0; behind=0
+    [[ "$track" =~ 'ahead ([0-9]+)'  ]] && ahead="${match[1]}"
+    [[ "$track" =~ 'behind ([0-9]+)' ]] && behind="${match[1]}"
+
+    s=""
+    (( ahead  > 0 )) && s+="${C[yl]}↑${ahead}${C[rs]}"
+    (( behind > 0 )) && s+="${C[rd]}↓${behind}${C[rs]}"
+    [[ -z "$s" ]] && s="${C[gr]}✓${C[rs]}"
+
+    cur_mark="  "
+    [[ "$branch" == "$current_branch" ]] && cur_mark="${C[cy]}▶${C[rs]} "
+
+    printf "  %s%-20s  ${C[dim]}%-22s${C[rs]}  %s\n" \
+      "$cur_mark" "$branch" "$upstream" "$s"
+  done < <(_get_tracking_branch_statuses "$_dir")
+
+  # Local-only branches (no upstream set)
+  while IFS='|' read -r branch _rest; do
+    any_tracking=true
+    printf "  %s%-20s  ${C[dim]}%-22s${C[rs]}  ${C[dim]}local only${C[rs]}\n" \
+      "  " "$branch" "—"
+  done < <(git -C "$_dir" for-each-ref \
+    --format='%(refname:short)|%(upstream:short)' \
+    refs/heads | awk -F'|' '$2 == ""')
+
+  if ! $any_tracking; then
+    printf "  ${C[dim]}no tracking branches${C[rs]}\n"
+  fi
+
+  # ── Current branch detail ──────────────────────────────────────────────────
+  printf '\n'
+  printf "  ${C[dim]}%s${C[rs]}\n" \
+    "────────────────────────────────────────────────────"
+  printf '\n'
+
+  if [[ -n "$current_branch" ]]; then
+    _branch_detail "$_dir" "$current_branch"
+  fi
+
+  return 0
+}
+
+# ── Branch Picker ─────────────────────────────────────────────────────────────
+# Launched via `execute()` from the main fzf's right-arrow binding.
+# Opens a nested fzf listing all branches; ctrl-p/ctrl-u pull/push one branch.
+# left/esc exits back to the parent fzf without selecting.
+_branch_picker() {
+  local _dir="$1"
+  local name="${_dir:t}"
+
+  local qdir
+  printf -v qdir '%q' "$_dir"
+
+  local selected
+  selected=$(
+    p-launch --_branches "$_dir" | \
+    fzf --ansi \
+        --delimiter=$'\t' \
+        --with-nth='1,2,3' \
+        --nth='2' \
+        --prompt="  ${name} › " \
+        --header=$'  p-launch  ·  ↵ launch  ·  ctrl-p pull branch  ·  ctrl-u push branch  ·  ← / esc back' \
+        --height=100% \
+        --layout=reverse \
+        --border=rounded \
+        --color='header:italic:dim,prompt:cyan,pointer:cyan,hl:cyan,hl+:cyan:bold' \
+        --preview="p-launch --_branch-detail ${qdir} {2}" \
+        --preview-window='right:50%:wrap' \
+        --bind="ctrl-p:execute(env _STATUS_TMPDIR=${_STATUS_TMPDIR:-} p-launch --_pull-branch ${qdir} {2})+refresh-preview" \
+        --bind="ctrl-u:execute(env _STATUS_TMPDIR=${_STATUS_TMPDIR:-} p-launch --_push-branch ${qdir} {2})+refresh-preview" \
+        --bind='left:abort' \
+        --bind='esc:abort'
+  )
+
+  [[ -n "$selected" ]] && _launch "$_dir"
+  return 0
 }
 
 # ── Launch ───────────────────────────────────────────────────────────────────
 _launch() {
-  local path="$1"
-  local name="${path:t}"
-  local display="${path/$HOME/~}"
+  local _dir="$1"
+  local name="${_dir:t}"
+  local display="${_dir/$HOME/~}"
   local cursor_ok=false ghostty_ok=false ghostty_err="not installed"
 
   # Cursor IDE — CLI first, fall back to .app
   if command -v cursor &>/dev/null; then
-    cursor "$path" &>/dev/null &
+    cursor "$_dir" >/dev/null 2>&1 &
     cursor_ok=true
   elif [[ -d "/Applications/Cursor.app" ]]; then
-    /usr/bin/open -na "Cursor" --args "$path" && cursor_ok=true
+    /usr/bin/open -na "Cursor" --args "$_dir" && cursor_ok=true
   fi
 
   # Ghostty — find app via Spotlight (handles /Applications, ~/Applications,
@@ -95,8 +567,8 @@ _launch() {
     # Ghostty's service handler does dirname on the path, so pass a child of
     # the target dir — dirname(target/child) == target.
     local _child service_path
-    _child=$(/bin/ls -1A "$path" 2>/dev/null | /usr/bin/head -1)
-    service_path="${path}/${_child}"
+    _child=$(/bin/ls -1A "$_dir" 2>/dev/null | /usr/bin/head -1)
+    service_path="${_dir}/${_child}"
     ${_OSASCRIPT:-/usr/bin/osascript} 2>/dev/null <<OSASCRIPT && ghostty_ok=true
 use framework "AppKit"
 use scripting additions
@@ -242,12 +714,30 @@ _config() {
 main() {
   if [[ "$1" == "--help" || "$1" == "-h" ]]; then
     printf '\n'
-    printf "  ${C[bd]}p-launch${C[rs]} — interactive project launcher\n\n"
+    printf "  ${C[bd]}p-launch${C[rs]} — local repository manager\n\n"
     printf "  ${C[cy]}Usage:${C[rs]}\n"
-    printf "    p-launch               open project picker\n"
+    printf "    p-launch               open repository manager\n"
     printf "    p-launch --config      set project directories\n"
     printf "    p-launch --uninstall   remove all installed files\n"
     printf "    p-launch --help        show this help\n\n"
+    printf "  ${C[cy]}Keybindings (in picker):${C[rs]}\n"
+    printf "    ↵          launch project in Cursor + Ghostty\n"
+    printf "    →          enter branch picker for selected repo\n"
+    printf "    ctrl-p     pull all behind branches of selected repo\n"
+    printf "    ctrl-u     push all ahead branches of selected repo\n"
+    printf "    ctrl-r     refresh git status (re-fetch all)\n"
+    printf "    esc        cancel\n\n"
+    printf "  ${C[cy]}Keybindings (in branch picker):${C[rs]}\n"
+    printf "    ↵          launch project\n"
+    printf "    ctrl-p     pull selected branch only\n"
+    printf "    ctrl-u     push selected branch only\n"
+    printf "    ←  esc     back to project list\n\n"
+    printf "  ${C[cy]}Status column:${C[rs]}\n"
+    printf "    ✓       all tracking branches synced\n"
+    printf "    ↑N      N commits ahead of remote (push available)\n"
+    printf "    ↓N      N commits behind remote (pull available)\n"
+    printf "    ↑N↓M    diverged\n"
+    printf "    ·       not a git repo or no tracking branches\n\n"
     printf "  ${C[cy]}Config:${C[rs]}\n"
     printf "    ~/.config/p-launch/config.zsh   define PROJECT_DIRS\n\n"
     printf "  ${C[cy]}Dependencies:${C[rs]}\n"
@@ -265,6 +755,62 @@ main() {
     return
   fi
 
+  # Internal commands invoked from fzf bindings
+  if [[ "$1" == "--_pull" ]]; then
+    _do_pull "$2"
+    return
+  fi
+
+  if [[ "$1" == "--_push" ]]; then
+    _do_push "$2"
+    return
+  fi
+
+  # Re-format without fetching (called by fzf reload after pull/push)
+  # Uses _STATUS_TMPDIR env var set by the parent process
+  if [[ "$1" == "--_format-no-fetch" ]]; then
+    local projects
+    projects=$(_collect) || exit 0
+    # Recompute status files from cached remote refs (no network)
+    local -a dirs=()
+    while IFS= read -r p; do dirs+=("$p"); done <<< "$projects"
+    for dir in "${dirs[@]}"; do
+      _write_status_file "$dir" "${_STATUS_TMPDIR}"
+    done
+    _format_with_status <<< "$projects"
+    return
+  fi
+
+  if [[ "$1" == "--_preview" ]]; then
+    _preview_panel "$2"
+    return
+  fi
+
+  if [[ "$1" == "--_branches" ]]; then
+    _list_branches "$2"
+    return
+  fi
+
+  if [[ "$1" == "--_branch-detail" ]]; then
+    _branch_detail "$2" "$3"
+    return
+  fi
+
+  if [[ "$1" == "--_pull-branch" ]]; then
+    _do_pull_branch "$2" "$3"
+    return
+  fi
+
+  if [[ "$1" == "--_push-branch" ]]; then
+    _do_push_branch "$2" "$3"
+    return
+  fi
+
+  if [[ "$1" == "--_branch-picker" ]]; then
+    _branch_picker "$2"
+    return
+  fi
+
   _check_deps
 
   local projects
@@ -273,27 +819,49 @@ main() {
     exit 0
   }
 
+  # Parallel fetch all repos and populate status files
+  _STATUS_TMPDIR=$(mktemp -d)
+  trap 'rm -rf "${_STATUS_TMPDIR}"' EXIT
+
+  printf "  ${C[dim]}Fetching repository status...${C[rs]}" >&2
+
+  local -a dirs=()
+  while IFS= read -r p; do dirs+=("$p"); done <<< "$projects"
+  _fetch_all_repos "$_STATUS_TMPDIR" "${dirs[@]}"
+
+  # Clear the "Fetching..." line
+  printf "\r\033[K" >&2
+
+  export _STATUS_TMPDIR
+
+  # Build the reload command (embeds _STATUS_TMPDIR at launch time)
+  local reload_cmd="env _STATUS_TMPDIR=${_STATUS_TMPDIR} p-launch --_format-no-fetch"
+
   local selected
   selected=$(
-    _format <<< "$projects" | \
+    _format_with_status <<< "$projects" | \
     fzf --ansi \
         --delimiter=$'\t' \
-        --with-nth='1,3' \
+        --with-nth='1,2,4' \
+        --nth='2,4' \
         --prompt='  › ' \
-        --header='  p-launch  ·  ↵ launch  ·  esc cancel  ·  ctrl-p preview' \
-        --height=50% \
+        --header=$'  p-launch  ·  ↵ launch  ·  → branches  ·  ctrl-p pull all  ·  ctrl-u push all  ·  ctrl-r refresh  ·  esc cancel' \
+        --height=100% \
         --layout=reverse \
         --border=rounded \
         --color='header:italic:dim,prompt:cyan,pointer:cyan,hl:cyan,hl+:cyan:bold' \
-        --preview='ls -1 {2} 2>/dev/null' \
-        --preview-window='right:30%:wrap:hidden' \
-        --bind='ctrl-p:toggle-preview'
+        --preview='p-launch --_preview {3}' \
+        --preview-window='right:40%:wrap' \
+        --bind="right:execute(env _STATUS_TMPDIR=${_STATUS_TMPDIR} p-launch --_branch-picker {3})+reload(${reload_cmd})" \
+        --bind="ctrl-p:execute(p-launch --_pull {3})+reload(${reload_cmd})" \
+        --bind="ctrl-u:execute(p-launch --_push {3})+reload(${reload_cmd})" \
+        --bind="ctrl-r:reload(${reload_cmd})"
   )
 
   [[ -z "$selected" ]] && exit 0
 
   local proj_path
-  proj_path=$(printf '%s' "$selected" | cut -f2)
+  proj_path=$(printf '%s' "$selected" | cut -f3)
   _launch "$proj_path"
 }
 
