@@ -285,3 +285,17 @@ _uninstall() {
   run _uninstall "${TOOL_NAME}" --yes
   [ "$status" -eq 0 ]
 }
+
+# ── uninstall skill ───────────────────────────────────────────────────────────
+
+@test "uninstall skill: removes skill dir from user claude" {
+  _install --skill "${SKILL1_NAME}" --target claude --scope user --force
+  [ -d "${MOCK_HOME}/.claude/skills/${SKILL1_NAME}" ]
+  HOME="${MOCK_HOME}" node "${CLI}" uninstall "${SKILL1_NAME}" --scope user --target claude
+  [ ! -d "${MOCK_HOME}/.claude/skills/${SKILL1_NAME}" ]
+}
+
+@test "uninstall skill: exits 0 when skill not installed" {
+  run HOME="${MOCK_HOME}" node "${CLI}" uninstall "${SKILL1_NAME}" --scope user --target claude
+  [ "$status" -eq 0 ]
+}
