@@ -636,6 +636,9 @@ _launch_src() {
   [ "${#lines[@]}" -ge 1 ]
   local tabs; tabs=$(printf '%s' "${lines[0]}" | tr -cd '\t' | wc -c | tr -d ' ')
   [ "$tabs" -eq 2 ]
+  # STATUS field (first column) must contain no ANSI escape codes
+  local status_col; status_col=$(printf '%s' "${lines[0]}" | cut -f1)
+  [[ "$status_col" != *$'\033['* ]]
 }
 
 @test "_list_branches: local-only branch appears with 'local' status" {
