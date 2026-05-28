@@ -257,23 +257,20 @@ _do_push() {
 # this targets one branch — used by the branch picker ctrl-p binding.
 _do_pull_branch() {
   local _dir="$1" branch="$2"
-  local current_branch
+  local current_branch upstream track behind=0
   current_branch=$(git -C "$_dir" symbolic-ref --short HEAD 2>/dev/null)
 
   printf '\n'
   printf "  ${C[bd]}${C[cy]}%s${C[rs]}  ${C[dim]}pull %s${C[rs]}\n\n" "${_dir:t}" "$branch"
 
-  local upstream
   upstream=$(git -C "$_dir" rev-parse --abbrev-ref "${branch}@{upstream}" 2>/dev/null)
   if [[ -z "$upstream" ]]; then
     printf "  ${C[dim]}no upstream — nothing to pull${C[rs]}\n\n"
     return 0
   fi
 
-  local track
   track=$(git -C "$_dir" for-each-ref \
     --format='%(upstream:track)' "refs/heads/${branch}" 2>/dev/null)
-  local behind=0
   [[ "$track" =~ 'behind ([0-9]+)' ]] && behind="${match[1]}"
 
   if (( behind == 0 )); then
@@ -304,21 +301,19 @@ _do_pull_branch() {
 # Push a single specific branch.
 _do_push_branch() {
   local _dir="$1" branch="$2"
+  local upstream track ahead=0
 
   printf '\n'
   printf "  ${C[bd]}${C[cy]}%s${C[rs]}  ${C[dim]}push %s${C[rs]}\n\n" "${_dir:t}" "$branch"
 
-  local upstream
   upstream=$(git -C "$_dir" rev-parse --abbrev-ref "${branch}@{upstream}" 2>/dev/null)
   if [[ -z "$upstream" ]]; then
     printf "  ${C[dim]}no upstream — branch is local only${C[rs]}\n\n"
     return 0
   fi
 
-  local track
   track=$(git -C "$_dir" for-each-ref \
     --format='%(upstream:track)' "refs/heads/${branch}" 2>/dev/null)
-  local ahead=0
   [[ "$track" =~ 'ahead ([0-9]+)' ]] && ahead="${match[1]}"
 
   if (( ahead == 0 )); then
