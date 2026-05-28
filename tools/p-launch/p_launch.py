@@ -507,28 +507,50 @@ class PLaunchApp(App):
             return
         branch_list = self.query_one("#branch-list", ListView)
         if self.focused is branch_list and self.selected_branch:
-            msg = pull_branch(self.selected_repo, self.selected_branch)
-            self.notify(msg)
+            self._pull_branch_worker(self.selected_repo, self.selected_branch)
         else:
-            for b in get_branches(self.selected_repo):
-                if not b["is_local_only"] and b["behind"] > 0:
-                    pull_branch(self.selected_repo, b["name"])
-            self.notify(f"pulled all behind branches of {self.selected_repo.name}")
-        self._refresh_branches(self.selected_repo)
+            self._pull_all_worker(self.selected_repo)
 
     def action_push_action(self) -> None:
         if not self.selected_repo:
             return
         branch_list = self.query_one("#branch-list", ListView)
         if self.focused is branch_list and self.selected_branch:
-            msg = push_branch(self.selected_repo, self.selected_branch)
-            self.notify(msg)
+            self._push_branch_worker(self.selected_repo, self.selected_branch)
         else:
-            for b in get_branches(self.selected_repo):
-                if not b["is_local_only"] and b["ahead"] > 0:
-                    push_branch(self.selected_repo, b["name"])
-            self.notify(f"pushed all ahead branches of {self.selected_repo.name}")
-        self._refresh_branches(self.selected_repo)
+            self._push_all_worker(self.selected_repo)
+
+    @work(thread=True)
+    def _pull_branch_worker(self, path: Path, branch: str) -> None:
+        msg = pull_branch(path, branch)
+        self.call_from_thread(self.notify, msg)
+        self.call_from_thread(self._refresh_branches, path)
+
+    @work(thread=True)
+    def _pull_all_worker(self, path: Path) -> None:
+        msgs = []
+        for b in get_branches(path):
+            if not b["is_local_only"] and b["behind"] > 0:
+                msgs.append(pull_branch(path, b["name"]))
+        summary = "\n".join(msgs) if msgs else f"nothing to pull in {path.name}"
+        self.call_from_thread(self.notify, summary)
+        self.call_from_thread(self._refresh_branches, path)
+
+    @work(thread=True)
+    def _push_branch_worker(self, path: Path, branch: str) -> None:
+        msg = push_branch(path, branch)
+        self.call_from_thread(self.notify, msg)
+        self.call_from_thread(self._refresh_branches, path)
+
+    @work(thread=True)
+    def _push_all_worker(self, path: Path) -> None:
+        msgs = []
+        for b in get_branches(path):
+            if not b["is_local_only"] and b["ahead"] > 0:
+                msgs.append(push_branch(path, b["name"]))
+        summary = "\n".join(msgs) if msgs else f"nothing to push in {path.name}"
+        self.call_from_thread(self.notify, summary)
+        self.call_from_thread(self._refresh_branches, path)
 
     def action_refresh(self) -> None:
         self.notify("Refreshing git status…")
