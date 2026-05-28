@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-05-28
+
+### Added
+- `hskill uninstall <tool>` 命令：清理 binary、Python 模块、tool.json、venv 及 zshrc snippet
+- `hskill uninstall <tool> --yes`：跳过所有确认（含用户配置文件）
+- `hskill uninstall <skill> --scope <s> --target <t>`：卸载已安装的 skill 目录
+- `tool.json` 新增 `uninstallPaths[]` 和 `configPaths[]` 字段，tool 可声明 tool-specific 清理路径
+- fzf 交互界面在选完 item 后新增 Action 选择步骤（安装 / 卸载），支持在同一界面卸载 tool / skill / hook
+- p-launch：迁移至 Python + Textual，新增三栏 TUI 界面
+- p-launch：push/pull 时检测 diverged 分支（本地和远端均有新提交），跳过操作并提示
+- p-launch：首次运行自动创建隔离 venv 并安装 textual，无需手动配置依赖
+
+### Changed
+- p-launch `tool.json` 新增 `uninstallPaths`（`p-launch-venv`）和 `configPaths`（`~/.config/p-launch`）
+
 ## [0.8.1] - 2026-05-24
 
 ### Fixed
