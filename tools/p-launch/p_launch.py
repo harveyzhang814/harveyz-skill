@@ -436,9 +436,17 @@ class PLaunchApp(App):
         for b in branches:
             lst.append(BranchItem(b))
         lst.border_title = f"branches — {path.name}"
-        if branches:
-            self.selected_branch = branches[0]["name"]
-            self._refresh_detail(path, branches[0]["name"])
+        if not branches:
+            return
+        branch_list_focused = self.focused is lst
+        if branch_list_focused:
+            # keep whatever is highlighted in the branch list
+            return
+        # default to current branch unless branch-list has focus
+        current_idx = next((i for i, b in enumerate(branches) if b["is_current"]), 0)
+        lst.index = current_idx
+        self.selected_branch = branches[current_idx]["name"]
+        self._refresh_detail(path, branches[current_idx]["name"])
 
     def _refresh_detail(self, path: Path, branch: str) -> None:
         d = get_branch_detail(path, branch)
