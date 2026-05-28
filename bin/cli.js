@@ -13,7 +13,7 @@ import {
   TOOL_BUNDLE_CHOICES,
 } from '../lib/bundles.js'
 import { buildTargetChoices, resolveTargets, TARGETS } from '../lib/targets.js'
-import { installSkills, installTools, installHooks, installHooksForTarget, uninstallHook } from '../lib/installer.js'
+import { installSkills, installTools, installHooks, installHooksForTarget, uninstallHook, uninstallTool, uninstallSkill } from '../lib/installer.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const require = createRequire(import.meta.url)
@@ -46,6 +46,9 @@ function printHelp() {
     hskill hooks install [--project <path>]           target project dir (for project scope)
     hskill hooks install [--force]                    overwrite existing
     hskill hooks uninstall <name> [--scope <s>]       remove hook
+    hskill uninstall <tool>            uninstall a shell tool and clean up all files
+    hskill uninstall <tool> --yes      skip all confirmations (incl. config files)
+    hskill uninstall <skill> --scope <s> --target <t>  uninstall a skill
     hskill update                  update hskill to the latest version
     hskill version                 show version
     hskill --help                  show this help
@@ -108,6 +111,16 @@ if (args[0] === '--help' || args[0] === '-h') {
           description: 'Show install detail for a skill or tool',
           args: ['<name>'],
           flags: [{ name: '--json', description: 'Machine-readable output' }],
+        },
+        {
+          name: 'uninstall',
+          description: 'Uninstall a shell tool or skill',
+          args: ['<name>'],
+          flags: [
+            { name: '--yes',    description: 'Skip all confirmations including config file removal' },
+            { name: '--scope',  arg: '<scope>',  description: 'Skill scope: user or project', enum: ['user','project'] },
+            { name: '--target', arg: '<target>', description: 'Skill target: claude, cursor, codex, etc.' },
+          ],
         },
         {
           name: 'update',
@@ -386,6 +399,54 @@ if (subcommand === 'info') {
     console.log('')
   }
   process.exit(0)
+}
+
+// ── Uninstall ─────────────────────────────────────────────────────────────────
+if (subcommand === 'uninstall') {
+  const nameToRemove = args[1]
+  if (!nameToRemove || nameToRemove.startsWith('--')) {
+    console.error(chalk.red('  ✗ Usage: hskill uninstall <tool-or-skill-name> [--yes] [--scope user|project] [--target claude|...]'))
+    process.exit(1)
+  }
+
+  const yesFlag    = args.includes('--yes')
+  const scopeIdx2  = args.indexOf('--scope')
+  const targetIdx2 = args.indexOf('--target')
+  const scopeArg2  = scopeIdx2  !== -1 ? args[scopeIdx2  + 1] : 'user'
+  const targetArg2 = targetIdx2 !== -1 ? args[targetIdx2 + 1] : undefined
+
+  const toolItems2  = getAllToolItems()
+  const skillItems2 = getAllSkillItems()
+  const isTool  = toolItems2.some(t => t.toolName  === nameToRemove)
+  const isSkill = skillItems2.some(s => s.skillName === nameToRemove)
+
+  if (!isTool && !isSkill) {
+    console.error(chalk.red(`  ✗ Unknown tool or skill: "${nameToRemove}"`))
+    process.exit(1)
+  }
+
+  if (isTool) {
+    const { removed, failed } = await uninstallTool(nameToRemove, { yes: yesFlag })
+    if (removed.length > 0) console.error(chalk.green.bold(`✔ ${nameToRemove} uninstalled`))
+    process.exit(failed.length ? 1 : 0)
+  }
+
+  // Skill uninstall
+  const scope = scopeArg2
+  const selectedTargets = targetArg2
+    ? [targetArg2]
+    : ['claude', 'cursor', 'codex', 'openclaw', 'hermes']
+  const targets = resolveTargets(selectedTargets, scope)
+
+  let anyRemoved = false
+  let anyFailed  = false
+  for (const { dir } of targets) {
+    const { removed, failed } = await uninstallSkill(nameToRemove, dir)
+    if (removed.length) anyRemoved = true
+    if (failed.length)  anyFailed  = true
+  }
+  if (anyRemoved) console.error(chalk.green.bold(`✔ ${nameToRemove} uninstalled`))
+  process.exit(anyFailed ? 1 : 0)
 }
 
 // ── Hooks ─────────────────────────────────────────────────────────────────────

@@ -296,6 +296,6 @@ _uninstall() {
 }
 
 @test "uninstall skill: exits 0 when skill not installed" {
-  run HOME="${MOCK_HOME}" node "${CLI}" uninstall "${SKILL1_NAME}" --scope user --target claude
+  run _uninstall "${SKILL1_NAME}" --scope user --target claude
   [ "$status" -eq 0 ]
 }
