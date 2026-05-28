@@ -614,3 +614,36 @@ _launch_src() {
   [ "$status" -eq 0 ]
   [[ "$output" == *"✓"* ]]
 }
+
+# ── _list_branches ────────────────────────────────────────────────────────────
+
+@test "_list_branches: outputs nothing for non-git directory" {
+  local tmpdir; tmpdir=$(mktemp -d)
+  run env HOME="${MOCK_HOME}" PATH="${MOCK_BIN}:${PATH}" \
+    GIT_CONFIG_NOSYSTEM=1 \
+    zsh -c "_P_LAUNCH_TEST=1; source '${SCRIPT}'; _list_branches '${tmpdir}'"
+  rm -rf "$tmpdir"
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
+}
+
+@test "_list_branches: outputs three tab-delimited columns per tracking branch" {
+  local repo; repo=$(_make_git_repo_with_remote "list-branches-cols")
+  run env HOME="${MOCK_HOME}" PATH="${MOCK_BIN}:${PATH}" \
+    GIT_CONFIG_NOSYSTEM=1 \
+    zsh -c "_P_LAUNCH_TEST=1; source '${SCRIPT}'; _list_branches '${repo}'"
+  [ "$status" -eq 0 ]
+  [ "${#lines[@]}" -ge 1 ]
+  local tabs; tabs=$(printf '%s' "${lines[0]}" | tr -cd '\t' | wc -c | tr -d ' ')
+  [ "$tabs" -eq 2 ]
+}
+
+@test "_list_branches: local-only branch appears with 'local' status" {
+  local repo; repo=$(_make_git_repo_with_remote "list-branches-local")
+  git -C "$repo" checkout -b feature/local-only -q
+  run env HOME="${MOCK_HOME}" PATH="${MOCK_BIN}:${PATH}" \
+    GIT_CONFIG_NOSYSTEM=1 \
+    zsh -c "_P_LAUNCH_TEST=1; source '${SCRIPT}'; _list_branches '${repo}'"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"local"*"feature/local-only"* ]]
+}

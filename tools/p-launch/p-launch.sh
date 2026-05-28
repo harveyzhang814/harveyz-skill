@@ -253,6 +253,51 @@ _do_push() {
   return 0
 }
 
+# ── Branch Picker ─────────────────────────────────────────────────────────────
+
+# Outputs branch list for the branch picker fzf.
+# Format per line: STATUS\tBRANCH\tREMOTE  (tab-delimited, 3 columns)
+# Current branch BRANCH field is ANSI cyan; fzf strips ANSI on {2} extraction.
+_list_branches() {
+  local _dir="$1"
+
+  git -C "$_dir" rev-parse --git-dir >/dev/null 2>&1 || return 0
+
+  local current_branch
+  current_branch=$(git -C "$_dir" symbolic-ref --short HEAD 2>/dev/null)
+
+  # Tracking branches
+  local branch upstream track ahead behind s branch_display
+  while IFS='|' read -r branch upstream track; do
+    [[ "$track" == *gone* ]] && continue
+    ahead=0; behind=0
+    [[ "$track" =~ 'ahead ([0-9]+)'  ]] && ahead="${match[1]}"
+    [[ "$track" =~ 'behind ([0-9]+)' ]] && behind="${match[1]}"
+
+    s=""
+    (( ahead  > 0 )) && s+="↑${ahead}"
+    (( behind > 0 )) && s+="↓${behind}"
+    [[ -z "$s" ]] && s="✓"
+
+    if [[ "$branch" == "$current_branch" ]]; then
+      branch_display=$'\033[36m'"${branch}"$'\033[0m'
+    else
+      branch_display="$branch"
+    fi
+
+    printf '%s\t%s\t%s\n' "$s" "$branch_display" "$upstream"
+  done < <(_get_tracking_branch_statuses "$_dir")
+
+  # Local-only branches
+  git -C "$_dir" for-each-ref \
+    --format='%(refname:short)|%(upstream:short)' \
+    refs/heads | awk -F'|' '$2 == ""' | \
+  while IFS='|' read -r branch _rest; do
+    printf '%s\t%s\t%s\n' "local" "$branch" "—"
+  done
+  return 0
+}
+
 # Outputs a detail block for a single branch.
 # Used by _preview_panel (current branch) and the branch picker preview.
 _branch_detail() {
