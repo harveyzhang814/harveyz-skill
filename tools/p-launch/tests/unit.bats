@@ -23,7 +23,6 @@ teardown() {
 @test "launcher: exits with error when python3 is missing" {
   local fake_bin="${TEST_DIR}/fake-bin"
   mkdir -p "$fake_bin"
-  # Run the script with a PATH that has no python3 (but keeps system dirs for zsh itself)
   run zsh -c "
     export PATH='${fake_bin}'
     source '${SCRIPT}'
@@ -32,67 +31,109 @@ teardown() {
   [[ "$output" == *"python3"* ]]
 }
 
-@test "launcher: exits with error when textual is not installed" {
-  # python3 is present but cannot import textual
-  local fake_bin="${TEST_DIR}/fake-bin"
-  mkdir -p "$fake_bin"
-  # Fake python3 that fails 'import textual' but succeeds otherwise
-  cat > "${fake_bin}/python3" <<'EOF'
-#!/bin/sh
-if [ "$1" = "-c" ] && echo "$2" | grep -q "import textual"; then
-  exit 1
-fi
-exec /usr/bin/env python3 "$@"
-EOF
-  chmod +x "${fake_bin}/python3"
-  run env PATH="${fake_bin}:${PATH}" zsh "${SCRIPT}"
-  [ "$status" -ne 0 ]
-  [[ "$output" == *"textual"* ]]
-}
+# ── venv setup ───────────────────────────────────────────────────────────────
 
-@test "launcher: exits with error when p-launch.py is not found" {
-  # python3 + textual both ok, but PYFILE is missing
-  local fake_bin="${TEST_DIR}/fake-bin"
-  mkdir -p "$fake_bin"
-  cat > "${fake_bin}/python3" <<'EOF'
-#!/bin/sh
-# Succeed for dep check ('import textual'), fail for missing script
-if [ "$1" = "-c" ]; then exit 0; fi
-exit 2
-EOF
-  chmod +x "${fake_bin}/python3"
-  # Override home so ~/.local/share/hskill/tools/p-launch.py doesn't exist
-  run env PATH="${fake_bin}:${PATH}" HOME="${MOCK_HOME}" \
-    zsh -c "
-      # Patch the dev fallback by setting 0 to a non-existent path
-      zsh '${SCRIPT}'
-    "
-  # Should error (python3 fake exits 2 when given a .py file)
-  [ "$status" -ne 0 ]
-}
-
-@test "launcher: dev fallback runs p-launch.py next to script" {
-  # Create a minimal p-launch.py next to the launcher
-  local dir="${TEST_DIR}/tool"
-  mkdir -p "$dir"
-  cp "${SCRIPT}" "${dir}/p-launch.sh"
-  printf '#!/usr/bin/env python3\nprint("ok-from-py")\n' > "${dir}/p-launch.py"
-
-  # Resolve the real python3 path before manipulating PATH
+@test "launcher: creates venv on first run" {
   local real_python3
   real_python3=$(command -v python3)
 
-  # Fake python3: passes dep checks (-c), delegates to real python3 for scripts
+  local fake_bin="${TEST_DIR}/fake-bin"
+  mkdir -p "$fake_bin"
+  # Fake pip that silently succeeds
+  cat > "${fake_bin}/pip" <<'EOF'
+#!/bin/sh
+exit 0
+EOF
+  chmod +x "${fake_bin}/pip"
+
+  # Fake python3: creates a minimal venv structure when called with -m venv,
+  # delegates real python3 -m venv for proper creation, passes dep checks
+  cat > "${fake_bin}/python3" <<EOF
+#!/bin/sh
+# Pass through to real python3 for venv creation and script execution
+exec "${real_python3}" "\$@"
+EOF
+  chmod +x "${fake_bin}/python3"
+
+  local venv_dir="${MOCK_HOME}/.local/share/hskill/p-launch-venv"
+  [ ! -d "$venv_dir" ]
+
+  # Create a minimal py file so the launcher can exec it
+  local tools_dir="${MOCK_HOME}/.local/share/hskill/tools"
+  mkdir -p "$tools_dir"
+  printf 'import sys\nprint("launched")\n' > "${tools_dir}/p-launch.py"
+
+  run env PATH="${fake_bin}:${PATH}" HOME="${MOCK_HOME}" \
+    zsh "${SCRIPT}"
+  [ -d "$venv_dir" ]
+}
+
+@test "launcher: skips venv setup when venv already exists" {
+  local real_python3
+  real_python3=$(command -v python3)
+
+  # Pre-create a venv
+  local venv_dir="${MOCK_HOME}/.local/share/hskill/p-launch-venv"
+  "${real_python3}" -m venv "$venv_dir"
+
+  # Put a minimal p-launch.py in place
+  local tools_dir="${MOCK_HOME}/.local/share/hskill/tools"
+  mkdir -p "$tools_dir"
+  printf 'print("launched")\n' > "${tools_dir}/p-launch.py"
+
+  # Fake python3 that would fail if called for venv creation
   local fake_bin="${TEST_DIR}/fake-bin"
   mkdir -p "$fake_bin"
   cat > "${fake_bin}/python3" <<EOF
 #!/bin/sh
-if [ "\$1" = "-c" ]; then exit 0; fi
+if echo "\$*" | grep -q "venv"; then
+  echo "ERROR: venv should not be created again" >&2
+  exit 1
+fi
 exec "${real_python3}" "\$@"
 EOF
   chmod +x "${fake_bin}/python3"
 
   run env PATH="${fake_bin}:${PATH}" HOME="${MOCK_HOME}" \
-    zsh "${dir}/p-launch.sh"
+    zsh "${SCRIPT}"
+  [[ "$output" != *"Setting up"* ]]
+  [ "$status" -eq 0 ]
+}
+
+@test "launcher: exits with error when p-launch.py is not found" {
+  local real_python3
+  real_python3=$(command -v python3)
+
+  # Pre-create a venv with real python so dep setup is skipped
+  local venv_dir="${MOCK_HOME}/.local/share/hskill/p-launch-venv"
+  "${real_python3}" -m venv "$venv_dir"
+
+  # No p-launch.py installed, no dev fallback
+  local dir="${TEST_DIR}/tool"
+  mkdir -p "$dir"
+  cp "${SCRIPT}" "${dir}/p-launch.sh"
+  # Do NOT create p-launch.py next to the script
+
+  run env HOME="${MOCK_HOME}" zsh "${dir}/p-launch.sh"
+  [ "$status" -ne 0 ]
+  [[ "$output" == *"p-launch.py not found"* ]]
+}
+
+@test "launcher: dev fallback runs p-launch.py next to script" {
+  local real_python3
+  real_python3=$(command -v python3)
+
+  # Pre-create a venv so setup is skipped
+  local venv_dir="${MOCK_HOME}/.local/share/hskill/p-launch-venv"
+  "${real_python3}" -m venv "$venv_dir"
+
+  # Place launcher + minimal py side-by-side (dev setup)
+  local dir="${TEST_DIR}/tool"
+  mkdir -p "$dir"
+  cp "${SCRIPT}" "${dir}/p-launch.sh"
+  printf 'print("ok-from-py")\n' > "${dir}/p-launch.py"
+
+  run env HOME="${MOCK_HOME}" zsh "${dir}/p-launch.sh"
+  [ "$status" -eq 0 ]
   [[ "$output" == *"ok-from-py"* ]]
 }
