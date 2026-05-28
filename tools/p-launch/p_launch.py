@@ -191,7 +191,11 @@ def pull_branch(path: Path, branch: str) -> str:
             ["git", "-C", str(path), "fetch", "origin", f"{branch}:{branch}"],
             capture_output=True, text=True
         )
-    return f"✓ pulled {branch}" if r.returncode == 0 else f"⚠ failed to pull {branch}"
+    if r.returncode == 0:
+        return f"✓ pulled {branch}"
+    err = (r.stderr or r.stdout).strip().splitlines()
+    reason = err[-1] if err else "unknown error"
+    return f"⚠ failed to pull {branch}: {reason}"
 
 
 def push_branch(path: Path, branch: str) -> str:
