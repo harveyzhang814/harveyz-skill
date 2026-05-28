@@ -256,7 +256,7 @@ return current application's NSPerformService("New Ghostty Window Here", thePboa
 # ── Textual UI ────────────────────────────────────────────────────────────────
 from textual.app import App, ComposeResult
 from textual.containers import Container
-from textual.widgets import ListView, ListItem, Label, Static
+from textual.widgets import ListView, ListItem, Label, Static, Footer
 from textual.binding import Binding
 from textual import work
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -320,6 +320,11 @@ class BranchItem(ListItem):
 class PLaunchApp(App):
     CSS = """
     Screen {
+        layout: vertical;
+    }
+
+    #main-area {
+        height: 1fr;
         layout: horizontal;
     }
 
@@ -333,6 +338,10 @@ class PLaunchApp(App):
         width: 1fr;
         height: 100%;
         layout: vertical;
+    }
+
+    Footer {
+        height: 1;
     }
 
     #branch-list {
@@ -371,10 +380,12 @@ class PLaunchApp(App):
         self.selected_branch: str | None = None
 
     def compose(self) -> ComposeResult:
-        yield ListView(id="repo-list")
-        with Container(id="right-panel"):
-            yield ListView(id="branch-list")
-            yield Static("", id="branch-detail", markup=True)
+        with Container(id="main-area"):
+            yield ListView(id="repo-list")
+            with Container(id="right-panel"):
+                yield ListView(id="branch-list")
+                yield Static("", id="branch-detail", markup=True)
+        yield Footer()
 
     def on_mount(self) -> None:
         self.query_one("#repo-list", ListView).border_title = "repositories"
