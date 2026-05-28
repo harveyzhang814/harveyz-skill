@@ -519,7 +519,7 @@ _branch_picker() {
         --nth='2' \
         --prompt="  ${name} › " \
         --header=$'  p-launch  ·  ↵ launch  ·  ctrl-p pull branch  ·  ctrl-u push branch  ·  ← / esc back' \
-        --height=50% \
+        --height=100% \
         --layout=reverse \
         --border=rounded \
         --color='header:italic:dim,prompt:cyan,pointer:cyan,hl:cyan,hl+:cyan:bold' \
@@ -846,7 +846,7 @@ main() {
         --nth='2,4' \
         --prompt='  › ' \
         --header=$'  p-launch  ·  ↵ launch  ·  → branches  ·  ctrl-p pull all  ·  ctrl-u push all  ·  ctrl-r refresh  ·  esc cancel' \
-        --height=50% \
+        --height=100% \
         --layout=reverse \
         --border=rounded \
         --color='header:italic:dim,prompt:cyan,pointer:cyan,hl:cyan,hl+:cyan:bold' \
