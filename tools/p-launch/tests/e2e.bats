@@ -314,3 +314,56 @@ _make_git_repo_with_remote() {
   # Should not timeout (exit code 124 = timeout)
   [ "$status" -ne 124 ]
 }
+
+# ── Branch picker internal flags ──────────────────────────────────────────────
+
+@test "--_branches: outputs three-column tab-delimited format" {
+  local repo
+  repo=$(_make_git_repo_with_remote "branches-flag-e2e")
+  _run_p --_branches "$repo"
+  [ "$status" -eq 0 ]
+  [ "${#lines[@]}" -ge 1 ]
+  local tabs; tabs=$(printf '%s' "${lines[0]}" | tr -cd '\t' | wc -c | tr -d ' ')
+  [ "$tabs" -eq 2 ]
+}
+
+@test "--_branch-detail: outputs branch name and sync status" {
+  local repo
+  repo=$(_make_git_repo_with_remote "branch-detail-flag-e2e")
+  _run_p --_branch-detail "$repo" main
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"main"* ]]
+  [[ "$output" == *"✓"* ]]
+}
+
+@test "--_pull-branch: pulls specific branch when behind" {
+  local repo bare_dir
+  repo=$(_make_git_repo_with_remote "pull-branch-flag-e2e")
+  bare_dir="${TEST_DIR}/remotes/pull-branch-flag-e2e.git"
+  local tmp_clone="${TEST_DIR}/tc-pbfe"
+  git clone "$bare_dir" "$tmp_clone" -q 2>/dev/null
+  git -C "$tmp_clone" commit --allow-empty -m "remote ahead" -q
+  git -C "$tmp_clone" push origin main -q 2>/dev/null
+  git -C "$repo" fetch origin -q 2>/dev/null
+  _run_p --_pull-branch "$repo" main
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"pulled"* ]]
+  local local_sha remote_sha
+  local_sha=$(git -C "$repo" rev-parse main)
+  remote_sha=$(git -C "$repo" rev-parse origin/main)
+  [ "$local_sha" = "$remote_sha" ]
+}
+
+@test "--_push-branch: pushes specific branch when ahead" {
+  local repo bare_dir
+  repo=$(_make_git_repo_with_remote "push-branch-flag-e2e")
+  bare_dir="${TEST_DIR}/remotes/push-branch-flag-e2e.git"
+  git -C "$repo" commit --allow-empty -m "local ahead" -q
+  _run_p --_push-branch "$repo" main
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"pushed"* ]]
+  local repo_sha bare_sha
+  repo_sha=$(git -C "$repo" rev-parse main)
+  bare_sha=$(git -C "$bare_dir" rev-parse main)
+  [ "$repo_sha" = "$bare_sha" ]
+}

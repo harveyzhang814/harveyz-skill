@@ -499,6 +499,42 @@ _preview_panel() {
   return 0
 }
 
+# ── Branch Picker ─────────────────────────────────────────────────────────────
+# Launched via `execute()` from the main fzf's right-arrow binding.
+# Opens a nested fzf listing all branches; ctrl-p/ctrl-u pull/push one branch.
+# left/esc exits back to the parent fzf without selecting.
+_branch_picker() {
+  local _dir="$1"
+  local name="${_dir:t}"
+
+  local qdir
+  printf -v qdir '%q' "$_dir"
+
+  local selected
+  selected=$(
+    p-launch --_branches "$_dir" | \
+    fzf --ansi \
+        --delimiter=$'\t' \
+        --with-nth='1,2,3' \
+        --nth='2' \
+        --prompt="  ${name} › " \
+        --header=$'  p-launch  ·  ↵ launch  ·  ctrl-p pull branch  ·  ctrl-u push branch  ·  ← / esc back' \
+        --height=50% \
+        --layout=reverse \
+        --border=rounded \
+        --color='header:italic:dim,prompt:cyan,pointer:cyan,hl:cyan,hl+:cyan:bold' \
+        --preview="p-launch --_branch-detail ${qdir} {2}" \
+        --preview-window='right:50%:wrap' \
+        --bind="ctrl-p:execute(env _STATUS_TMPDIR=${_STATUS_TMPDIR:-} p-launch --_pull-branch ${qdir} {2})+refresh-preview" \
+        --bind="ctrl-u:execute(env _STATUS_TMPDIR=${_STATUS_TMPDIR:-} p-launch --_push-branch ${qdir} {2})+refresh-preview" \
+        --bind='left:abort' \
+        --bind='esc:abort'
+  )
+
+  [[ -n "$selected" ]] && _launch "$_dir"
+  return 0
+}
+
 # ── Launch ───────────────────────────────────────────────────────────────────
 _launch() {
   local _dir="$1"
@@ -686,11 +722,16 @@ main() {
     printf "    p-launch --help        show this help\n\n"
     printf "  ${C[cy]}Keybindings (in picker):${C[rs]}\n"
     printf "    ↵          launch project in Cursor + Ghostty\n"
+    printf "    →          enter branch picker for selected repo\n"
     printf "    ctrl-p     pull all behind branches of selected repo\n"
     printf "    ctrl-u     push all ahead branches of selected repo\n"
     printf "    ctrl-r     refresh git status (re-fetch all)\n"
-    printf "    ctrl-/     toggle file preview\n"
     printf "    esc        cancel\n\n"
+    printf "  ${C[cy]}Keybindings (in branch picker):${C[rs]}\n"
+    printf "    ↵          launch project\n"
+    printf "    ctrl-p     pull selected branch only\n"
+    printf "    ctrl-u     push selected branch only\n"
+    printf "    ←  esc     back to project list\n\n"
     printf "  ${C[cy]}Status column:${C[rs]}\n"
     printf "    ✓       all tracking branches synced\n"
     printf "    ↑N      N commits ahead of remote (push available)\n"
@@ -740,6 +781,36 @@ main() {
     return
   fi
 
+  if [[ "$1" == "--_preview" ]]; then
+    _preview_panel "$2"
+    return
+  fi
+
+  if [[ "$1" == "--_branches" ]]; then
+    _list_branches "$2"
+    return
+  fi
+
+  if [[ "$1" == "--_branch-detail" ]]; then
+    _branch_detail "$2" "$3"
+    return
+  fi
+
+  if [[ "$1" == "--_pull-branch" ]]; then
+    _do_pull_branch "$2" "$3"
+    return
+  fi
+
+  if [[ "$1" == "--_push-branch" ]]; then
+    _do_push_branch "$2" "$3"
+    return
+  fi
+
+  if [[ "$1" == "--_branch-picker" ]]; then
+    _branch_picker "$2"
+    return
+  fi
+
   _check_deps
 
   local projects
@@ -774,17 +845,17 @@ main() {
         --with-nth='1,2,4' \
         --nth='2,4' \
         --prompt='  › ' \
-        --header=$'  p-launch  ·  ↵ launch  ·  ctrl-p pull  ·  ctrl-u push  ·  ctrl-r refresh  ·  ctrl-/ preview' \
+        --header=$'  p-launch  ·  ↵ launch  ·  → branches  ·  ctrl-p pull all  ·  ctrl-u push all  ·  ctrl-r refresh  ·  esc cancel' \
         --height=50% \
         --layout=reverse \
         --border=rounded \
         --color='header:italic:dim,prompt:cyan,pointer:cyan,hl:cyan,hl+:cyan:bold' \
-        --preview='ls -1 {3} 2>/dev/null' \
-        --preview-window='right:30%:wrap:hidden' \
+        --preview='p-launch --_preview {3}' \
+        --preview-window='right:40%:wrap' \
+        --bind="right:execute(env _STATUS_TMPDIR=${_STATUS_TMPDIR} p-launch --_branch-picker {3})+reload(${reload_cmd})" \
         --bind="ctrl-p:execute(p-launch --_pull {3})+reload(${reload_cmd})" \
         --bind="ctrl-u:execute(p-launch --_push {3})+reload(${reload_cmd})" \
-        --bind="ctrl-r:reload(${reload_cmd})" \
-        --bind='ctrl-/:toggle-preview'
+        --bind="ctrl-r:reload(${reload_cmd})"
   )
 
   [[ -z "$selected" ]] && exit 0
