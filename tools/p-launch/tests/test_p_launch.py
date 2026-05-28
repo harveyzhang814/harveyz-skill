@@ -1,7 +1,15 @@
 import subprocess
 import sys
 from pathlib import Path
+from unittest.mock import MagicMock
 import pytest
+
+# Mock textual before importing p_launch so the UI layer doesn't block unit tests.
+for _mod in [
+    "textual", "textual.app", "textual.containers", "textual.widgets",
+    "textual.binding", "textual.work",
+]:
+    sys.modules.setdefault(_mod, MagicMock())
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 from p_launch import (
@@ -21,7 +29,11 @@ def git(*args, cwd=None):
              "GIT_AUTHOR_NAME": "Test",
              "GIT_AUTHOR_EMAIL": "t@t.com",
              "GIT_COMMITTER_NAME": "Test",
-             "GIT_COMMITTER_EMAIL": "t@t.com"},
+             "GIT_COMMITTER_EMAIL": "t@t.com",
+             # Ensure default branch is always 'main' regardless of system git config
+             "GIT_CONFIG_COUNT": "1",
+             "GIT_CONFIG_KEY_0": "init.defaultBranch",
+             "GIT_CONFIG_VALUE_0": "main"},
     )
 
 
@@ -30,6 +42,8 @@ def make_repo_with_remote(name: str, tmp_path: Path) -> tuple[Path, Path]:
     bare = tmp_path / "remotes" / f"{name}.git"
     bare.mkdir(parents=True)
     git("init", "--bare", str(bare))
+    # Explicitly set bare repo HEAD to main so all clones default to main
+    git("symbolic-ref", "HEAD", "refs/heads/main", cwd=str(bare))
     clone = tmp_path / "repos" / name
     clone.mkdir(parents=True)
     git("clone", str(bare), str(clone))
@@ -196,3 +210,30 @@ def test_push_branch_ahead(tmp_path):
         capture_output=True, text=True
     ).stdout.strip()
     assert repo_sha == bare_sha
+
+
+def _make_diverged(tmp_path, name: str) -> tuple[Path, Path]:
+    """Create a repo where local and remote have diverged (both ahead and behind)."""
+    clone, bare = make_repo_with_remote(name, tmp_path)
+    tc = tmp_path / f"tc-{name}"
+    tc.mkdir()
+    git("clone", str(bare), str(tc))
+    git("commit", "--allow-empty", "-m", "remote advance", cwd=str(tc))
+    git("push", "origin", "main", cwd=str(tc))
+    git("commit", "--allow-empty", "-m", "local advance", cwd=str(clone))
+    git("fetch", "origin", cwd=str(clone))
+    return clone, bare
+
+
+def test_pull_branch_diverged(tmp_path):
+    clone, _ = _make_diverged(tmp_path, "pull-div")
+    result = pull_branch(clone, "main")
+    assert "diverged" in result
+    assert "✓" not in result
+
+
+def test_push_branch_diverged(tmp_path):
+    clone, _ = _make_diverged(tmp_path, "push-div")
+    result = push_branch(clone, "main")
+    assert "diverged" in result
+    assert "✓" not in result

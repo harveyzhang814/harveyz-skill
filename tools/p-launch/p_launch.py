@@ -181,6 +181,12 @@ def pull_branch(path: Path, branch: str) -> str:
     if up_r.returncode != 0:
         return "no upstream — nothing to pull"
 
+    detail = get_branch_detail(path, branch)
+    if detail["ahead"] > 0 and detail["behind"] > 0:
+        return f"⚠ skipped {branch} (diverged — push or rebase first)"
+    if detail["behind"] == 0:
+        return f"nothing to pull — {branch} is up to date"
+
     if branch == current:
         r = subprocess.run(
             ["git", "-C", str(path), "pull", "--ff-only", "origin", branch],
@@ -206,6 +212,12 @@ def push_branch(path: Path, branch: str) -> str:
     )
     if up_r.returncode != 0:
         return "no upstream — branch is local only"
+
+    detail = get_branch_detail(path, branch)
+    if detail["ahead"] == 0:
+        return f"nothing to push — {branch} is up to date"
+    if detail["behind"] > 0:
+        return f"⚠ skipped {branch} (diverged — pull or rebase first)"
 
     r = subprocess.run(
         ["git", "-C", str(path), "push", "origin", branch],
