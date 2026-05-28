@@ -563,6 +563,18 @@ _launch_src() {
   [[ "$output" == *"↓"* ]]
 }
 
+@test "_branch_detail: shows ahead count for branch ahead of remote" {
+  local repo bare_dir
+  repo=$(_make_git_repo_with_remote "branch-detail-ahead")
+  git -C "$repo" commit --allow-empty -m "local ahead" -q
+  git -C "$repo" fetch origin -q 2>/dev/null
+  run env HOME="${MOCK_HOME}" PATH="${MOCK_BIN}:${PATH}" \
+    GIT_CONFIG_NOSYSTEM=1 \
+    zsh -c "_P_LAUNCH_TEST=1; source '${SCRIPT}'; _branch_detail '${repo}' main"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"↑"* ]]
+}
+
 @test "_branch_detail: shows 'local only' for branch without upstream" {
   local repo; repo=$(_make_git_repo_with_remote "branch-detail-local")
   git -C "$repo" checkout -b local-branch -q
