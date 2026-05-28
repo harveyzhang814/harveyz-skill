@@ -469,7 +469,12 @@ class PLaunchApp(App):
     # ── Event handlers ────────────────────────────────────────────────────────
 
     def on_list_view_highlighted(self, event: ListView.Highlighted) -> None:
-        if event.control.id == "branch-list":
+        if event.control.id == "repo-list":
+            item = event.item
+            if isinstance(item, RepoItem):
+                self.selected_repo = item.repo_path
+                self._refresh_branches(item.repo_path)
+        elif event.control.id == "branch-list":
             item = event.item
             if isinstance(item, BranchItem) and self.selected_repo:
                 self.selected_branch = item.branch_data["name"]
@@ -480,7 +485,6 @@ class PLaunchApp(App):
             item = event.item
             if isinstance(item, RepoItem):
                 self.selected_repo = item.repo_path
-                self._refresh_branches(item.repo_path)
                 self.action_launch()
 
     def on_key(self, event) -> None:
