@@ -267,8 +267,13 @@ class RepoItem(ListItem):
         super().__init__()
         self.repo_path = path
         self.repo_status = status
+        self._label: Label | None = None
 
     def compose(self) -> ComposeResult:
+        self._label = Label(self._render_text(), markup=True)
+        yield self._label
+
+    def _render_text(self) -> str:
         sym = self.repo_status["symbol"]
         name = self.repo_path.name
         parent = str(self.repo_path.parent).replace(str(Path.home()), "~")
@@ -282,7 +287,12 @@ class RepoItem(ListItem):
             sym_m = f"[green]{sym}[/]"
         else:
             sym_m = f"[dim]{sym}[/]"
-        yield Label(f"{sym_m:<12}{name}  [dim]{parent}[/]", markup=True)
+        return f"{sym_m:<12}{name}  [dim]{parent}[/]"
+
+    def update_status(self, status: dict) -> None:
+        self.repo_status = status
+        if self._label is not None:
+            self._label.update(self._render_text())
 
 
 class BranchItem(ListItem):
@@ -350,7 +360,6 @@ class PLaunchApp(App):
         Binding("ctrl+p", "pull", "Pull", show=True),
         Binding("ctrl+u", "push_action", "Push", show=True),
         Binding("ctrl+r", "refresh", "Refresh", show=True),
-        Binding("enter", "launch", "Launch", show=True),
         Binding("q", "quit", "Quit", show=True),
         Binding("escape", "quit", "Quit", show=False),
     ]
@@ -375,7 +384,7 @@ class PLaunchApp(App):
 
     # ── Workers ───────────────────────────────────────────────────────────────
 
-    @work(thread=True)
+    @work(thread=True, exclusive=True)
     def load_repos(self) -> None:
         dirs = read_project_dirs()
         repos = collect_repos(dirs)
@@ -406,8 +415,7 @@ class PLaunchApp(App):
     def _update_repo_item_status(self, path: Path, status: dict) -> None:
         for item in self.query_one("#repo-list", ListView).query(RepoItem):
             if item.repo_path == path:
-                item.repo_status = status
-                item.refresh(layout=True)
+                item.update_status(status)
                 break
 
     def _refresh_branches(self, path: Path) -> None:
@@ -450,18 +458,19 @@ class PLaunchApp(App):
     # ── Event handlers ────────────────────────────────────────────────────────
 
     def on_list_view_highlighted(self, event: ListView.Highlighted) -> None:
-        if event.list_view.id == "branch-list":
+        if event.control.id == "branch-list":
             item = event.item
             if isinstance(item, BranchItem) and self.selected_repo:
                 self.selected_branch = item.branch_data["name"]
                 self._refresh_detail(self.selected_repo, item.branch_data["name"])
 
     def on_list_view_selected(self, event: ListView.Selected) -> None:
-        if event.list_view.id == "repo-list":
+        if event.control.id == "repo-list":
             item = event.item
             if isinstance(item, RepoItem):
                 self.selected_repo = item.repo_path
                 self._refresh_branches(item.repo_path)
+                self.action_launch()
 
     def on_key(self, event) -> None:
         if event.key == "right":
