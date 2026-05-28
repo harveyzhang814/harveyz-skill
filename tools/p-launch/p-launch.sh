@@ -327,7 +327,7 @@ _preview_panel() {
     "────────────────────────────────────────────────────"
 
   local any_tracking=false
-  local branch upstream track ahead behind s cur_mark
+  local branch upstream track ahead behind s cur_mark _rest
 
   while IFS='|' read -r branch upstream track; do
     [[ "$track" == *gone* ]] && continue
@@ -349,14 +349,13 @@ _preview_panel() {
   done < <(_get_tracking_branch_statuses "$_dir")
 
   # Local-only branches (no upstream set)
-  git -C "$_dir" for-each-ref \
-    --format='%(refname:short)|%(upstream:short)' \
-    refs/heads | awk -F'|' '$2 == ""' | \
   while IFS='|' read -r branch _rest; do
     any_tracking=true
     printf "  %s%-20s  ${C[dim]}%-22s${C[rs]}  ${C[dim]}local only${C[rs]}\n" \
       "  " "$branch" "—"
-  done
+  done < <(git -C "$_dir" for-each-ref \
+    --format='%(refname:short)|%(upstream:short)' \
+    refs/heads | awk -F'|' '$2 == ""')
 
   if ! $any_tracking; then
     printf "  ${C[dim]}no tracking branches${C[rs]}\n"
