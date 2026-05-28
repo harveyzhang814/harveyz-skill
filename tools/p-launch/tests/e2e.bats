@@ -26,6 +26,12 @@ setup() {
   # Minimal mock for fzf — enough to satisfy _check_deps.
   printf '#!/bin/sh\nexit 0\n' > "${MOCK_BIN}/fzf"
   chmod +x "${MOCK_BIN}/fzf"
+
+  # Silence git global config warnings
+  export GIT_CONFIG_NOSYSTEM=1
+  git config --global user.email "test@test.com" 2>/dev/null || true
+  git config --global user.name "Test" 2>/dev/null || true
+  git config --global init.defaultBranch "main" 2>/dev/null || true
 }
 
 teardown() {
@@ -35,7 +41,25 @@ teardown() {
 # Shorthand: run the installed script with MOCK_HOME and mock fzf first in PATH.
 _run_p() {
   run env HOME="${MOCK_HOME}" PATH="${MOCK_BIN}:${PATH}" \
+    GIT_CONFIG_NOSYSTEM=1 \
     zsh "${MOCK_BIN}/p-launch" "$@"
+}
+
+# Helper: create a local bare repo and a clone pointing to it
+_make_git_repo_with_remote() {
+  local name="$1"
+  local base="${2:-${PROJECTS_DIR}}"
+  local bare_dir="${TEST_DIR}/remotes/${name}.git"
+  local repo_dir="${base}/${name}"
+
+  mkdir -p "$bare_dir" "$repo_dir"
+  git init --bare "$bare_dir" -q
+  git clone "$bare_dir" "$repo_dir" -q 2>/dev/null
+
+  git -C "$repo_dir" commit --allow-empty -m "init" -q
+  git -C "$repo_dir" push origin main -q 2>/dev/null
+
+  echo "$repo_dir"
 }
 
 # ── Syntax ────────────────────────────────────────────────────────────────────
@@ -74,7 +98,7 @@ _run_p() {
 
   run bash -c "
     printf 'n\n' | \
-    env HOME='${MOCK_HOME}' PATH='${MOCK_BIN}:${PATH}' \
+    env HOME='${MOCK_HOME}' PATH='${MOCK_BIN}:${PATH}' GIT_CONFIG_NOSYSTEM=1 \
       zsh '${MOCK_BIN}/p-launch' --uninstall
   "
   [ "$status" -eq 0 ]
@@ -91,7 +115,7 @@ _run_p() {
 @test "--uninstall: Y removes the script itself" {
   run bash -c "
     printf 'y\n' | \
-    env HOME='${MOCK_HOME}' PATH='${MOCK_BIN}:${PATH}' \
+    env HOME='${MOCK_HOME}' PATH='${MOCK_BIN}:${PATH}' GIT_CONFIG_NOSYSTEM=1 \
       zsh '${MOCK_BIN}/p-launch' --uninstall
   "
   [ "$status" -eq 0 ]
@@ -104,7 +128,7 @@ _run_p() {
 
   run bash -c "
     printf 'y\n' | \
-    env HOME='${MOCK_HOME}' PATH='${MOCK_BIN}:${PATH}' \
+    env HOME='${MOCK_HOME}' PATH='${MOCK_BIN}:${PATH}' GIT_CONFIG_NOSYSTEM=1 \
       zsh '${MOCK_BIN}/p-launch' --uninstall
   "
   [ "$status" -eq 0 ]
@@ -116,7 +140,7 @@ _run_p() {
 @test "--uninstall: Y removes the config directory" {
   run bash -c "
     printf 'y\n' | \
-    env HOME='${MOCK_HOME}' PATH='${MOCK_BIN}:${PATH}' \
+    env HOME='${MOCK_HOME}' PATH='${MOCK_BIN}:${PATH}' GIT_CONFIG_NOSYSTEM=1 \
       zsh '${MOCK_BIN}/p-launch' --uninstall
   "
   [ "$status" -eq 0 ]
@@ -128,7 +152,7 @@ _run_p() {
 
   run bash -c "
     printf 'y\n' | \
-    env HOME='${MOCK_HOME}' PATH='${MOCK_BIN}:${PATH}' \
+    env HOME='${MOCK_HOME}' PATH='${MOCK_BIN}:${PATH}' GIT_CONFIG_NOSYSTEM=1 \
       zsh '${MOCK_BIN}/p-launch' --uninstall
   "
   [ "$status" -eq 0 ]
@@ -142,7 +166,7 @@ _run_p() {
 
   run bash -c "
     printf 'y\n' | \
-    env HOME='${MOCK_HOME}' PATH='${MOCK_BIN}:${PATH}' \
+    env HOME='${MOCK_HOME}' PATH='${MOCK_BIN}:${PATH}' GIT_CONFIG_NOSYSTEM=1 \
       zsh '${MOCK_BIN}/p-launch' --uninstall
   "
   [ "$status" -eq 0 ]
@@ -155,10 +179,138 @@ _run_p() {
 
   run bash -c "
     printf 'y\n' | \
-    env HOME='${MOCK_HOME}' PATH='${MOCK_BIN}:${PATH}' \
+    env HOME='${MOCK_HOME}' PATH='${MOCK_BIN}:${PATH}' GIT_CONFIG_NOSYSTEM=1 \
       zsh '${MOCK_BIN}/p-launch' --uninstall
   "
   [ "$status" -eq 0 ]
   # Output should not mention config dir since it was absent.
   [[ "$output" != *".config/p-launch"* ]]
+}
+
+# ── Internal: --_pull ─────────────────────────────────────────────────────────
+
+@test "--_pull: reports nothing to pull for synced repo" {
+  local repo
+  repo=$(_make_git_repo_with_remote "pull-synced-e2e")
+
+  run env HOME="${MOCK_HOME}" PATH="${MOCK_BIN}:${PATH}" \
+    GIT_CONFIG_NOSYSTEM=1 \
+    zsh "${MOCK_BIN}/p-launch" --_pull "$repo"
+
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"nothing to pull"* ]]
+}
+
+@test "--_pull: pulls behind branch" {
+  local repo bare_dir
+  repo=$(_make_git_repo_with_remote "pull-behind-e2e")
+  bare_dir="${TEST_DIR}/remotes/pull-behind-e2e.git"
+
+  local tmp_clone="${TEST_DIR}/tc1"
+  git clone "$bare_dir" "$tmp_clone" -q 2>/dev/null
+  git -C "$tmp_clone" commit --allow-empty -m "remote ahead" -q
+  git -C "$tmp_clone" push origin main -q 2>/dev/null
+
+  git -C "$repo" fetch origin -q 2>/dev/null
+
+  run env HOME="${MOCK_HOME}" PATH="${MOCK_BIN}:${PATH}" \
+    GIT_CONFIG_NOSYSTEM=1 \
+    zsh "${MOCK_BIN}/p-launch" --_pull "$repo"
+
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"main"* ]]
+  # Confirm local repo has been updated
+  local local_sha remote_sha
+  local_sha=$(git -C "$repo" rev-parse main)
+  remote_sha=$(git -C "$repo" rev-parse origin/main)
+  [ "$local_sha" = "$remote_sha" ]
+}
+
+# ── Internal: --_push ─────────────────────────────────────────────────────────
+
+@test "--_push: reports nothing to push for synced repo" {
+  local repo
+  repo=$(_make_git_repo_with_remote "push-synced-e2e")
+
+  run env HOME="${MOCK_HOME}" PATH="${MOCK_BIN}:${PATH}" \
+    GIT_CONFIG_NOSYSTEM=1 \
+    zsh "${MOCK_BIN}/p-launch" --_push "$repo"
+
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"nothing to push"* ]]
+}
+
+@test "--_push: pushes ahead branch to remote" {
+  local repo bare_dir
+  repo=$(_make_git_repo_with_remote "push-ahead-e2e")
+  bare_dir="${TEST_DIR}/remotes/push-ahead-e2e.git"
+
+  git -C "$repo" commit --allow-empty -m "local ahead" -q
+
+  run env HOME="${MOCK_HOME}" PATH="${MOCK_BIN}:${PATH}" \
+    GIT_CONFIG_NOSYSTEM=1 \
+    zsh "${MOCK_BIN}/p-launch" --_push "$repo"
+
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"pushed"*"main"* ]]
+  # Confirm remote was updated
+  local repo_sha bare_sha
+  repo_sha=$(git -C "$repo" rev-parse main)
+  bare_sha=$(git -C "$bare_dir" rev-parse main)
+  [ "$repo_sha" = "$bare_sha" ]
+}
+
+# ── Internal: --_format-no-fetch ──────────────────────────────────────────────
+
+@test "--_format-no-fetch: outputs four-column tab-delimited format" {
+  local tmpdir repo
+  tmpdir=$(mktemp -d)
+  mkdir -p "${PROJECTS_DIR}/myproject"
+
+  run env HOME="${MOCK_HOME}" PATH="${MOCK_BIN}:${PATH}" \
+    GIT_CONFIG_NOSYSTEM=1 \
+    _STATUS_TMPDIR="$tmpdir" \
+    zsh "${MOCK_BIN}/p-launch" --_format-no-fetch
+
+  [ "$status" -eq 0 ]
+  [ "${#lines[@]}" -ge 1 ]
+  local tabs
+  tabs=$(printf '%s' "${lines[0]}" | tr -cd '\t' | wc -c | tr -d ' ')
+  [ "$tabs" -eq 3 ]
+  rm -rf "$tmpdir"
+}
+
+@test "--_format-no-fetch: skips fetch (non-git dirs show · status)" {
+  local tmpdir
+  tmpdir=$(mktemp -d)
+  mkdir -p "${PROJECTS_DIR}/plain-dir"
+
+  run env HOME="${MOCK_HOME}" PATH="${MOCK_BIN}:${PATH}" \
+    GIT_CONFIG_NOSYSTEM=1 \
+    _STATUS_TMPDIR="$tmpdir" \
+    zsh "${MOCK_BIN}/p-launch" --_format-no-fetch
+
+  [ "$status" -eq 0 ]
+  [[ "${lines[0]}" == *"·"* ]]
+  rm -rf "$tmpdir"
+}
+
+# ── Parallel fetch: non-git dirs do not hang ──────────────────────────────────
+
+@test "parallel fetch completes when project dirs have no remote" {
+  mkdir -p "${PROJECTS_DIR}/plain1" "${PROJECTS_DIR}/plain2"
+  local repo_no_remote="${PROJECTS_DIR}/no-remote"
+  mkdir -p "$repo_no_remote"
+  git -C "$repo_no_remote" init -q
+
+  # Mock fzf to exit immediately (prevents interactive wait)
+  printf '#!/bin/sh\nexit 0\n' > "${MOCK_BIN}/fzf"
+  chmod +x "${MOCK_BIN}/fzf"
+
+  run timeout 10 env HOME="${MOCK_HOME}" PATH="${MOCK_BIN}:${PATH}" \
+    GIT_CONFIG_NOSYSTEM=1 \
+    zsh "${MOCK_BIN}/p-launch"
+
+  # Should not timeout (exit code 124 = timeout)
+  [ "$status" -ne 124 ]
 }
