@@ -4,7 +4,6 @@ import re
 import subprocess
 import shutil
 from pathlib import Path
-from typing import Optional
 
 CONFIG_FILE = Path.home() / ".config" / "p-launch" / "config.zsh"
 
@@ -19,7 +18,7 @@ def read_project_dirs() -> list[Path]:
         return [Path.home() / "Projects"]
     dirs = []
     for token in re.findall(r'\S+', match.group(1)):
-        p = Path(token.replace('~', str(Path.home())))
+        p = Path(token).expanduser()
         if p.exists():
             dirs.append(p)
     return dirs or [Path.home() / "Projects"]
@@ -46,10 +45,14 @@ def is_git_with_remote(path: Path) -> bool:
 
 
 def fetch_repo(path: Path) -> None:
-    subprocess.run(
-        ["git", "-C", str(path), "fetch", "--all", "-q"],
-        capture_output=True
-    )
+    try:
+        subprocess.run(
+            ["git", "-C", str(path), "fetch", "--all", "-q"],
+            capture_output=True,
+            timeout=30,
+        )
+    except subprocess.TimeoutExpired:
+        pass
 
 
 def get_repo_status(path: Path) -> dict:
@@ -176,7 +179,7 @@ def pull_branch(path: Path, branch: str) -> str:
         capture_output=True, text=True
     )
     if up_r.returncode != 0:
-        return f"no upstream — nothing to pull"
+        return "no upstream — nothing to pull"
 
     if branch == current:
         r = subprocess.run(
@@ -198,7 +201,7 @@ def push_branch(path: Path, branch: str) -> str:
         capture_output=True, text=True
     )
     if up_r.returncode != 0:
-        return f"no upstream — branch is local only"
+        return "no upstream — branch is local only"
 
     r = subprocess.run(
         ["git", "-C", str(path), "push", "origin", branch],
@@ -235,12 +238,13 @@ def launch_project(path: Path) -> tuple[bool, bool, str]:
     if ghostty_app:
         ghostty_err = "failed to open"
         children = sorted(path.iterdir()) if path.exists() else []
-        service_path = str(children[0]) if children else str(path / "_placeholder")
+        service_path = str(children[0]) if children else str(path)
+        safe_path = service_path.replace("\\", "\\\\").replace('"', '\\"')
         script = f'''use framework "AppKit"
 use scripting additions
 set thePboard to current application's NSPasteboard's generalPasteboard()
 thePboard's clearContents()
-thePboard's setPropertyList:{{"{service_path}"}} forType:"NSFilenamesPboardType"
+thePboard's setPropertyList:{{"{safe_path}"}} forType:"NSFilenamesPboardType"
 return current application's NSPerformService("New Ghostty Window Here", thePboard)'''
         r = subprocess.run(["/usr/bin/osascript", "-e", script], capture_output=True)
         if r.returncode == 0:
