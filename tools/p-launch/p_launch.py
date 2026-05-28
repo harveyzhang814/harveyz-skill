@@ -367,7 +367,7 @@ class PLaunchApp(App):
 
     BINDINGS = [
         Binding("ctrl+o", "launch", "Launch", show=True),
-        Binding("ctrl+p", "pull", "Pull", show=True),
+        Binding("ctrl+f", "pull", "Pull", show=True),
         Binding("ctrl+u", "push_action", "Push", show=True),
         Binding("ctrl+r", "refresh", "Refresh", show=True),
         Binding("q", "quit", "Quit", show=True),
