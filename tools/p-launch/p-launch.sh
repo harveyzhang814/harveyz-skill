@@ -253,6 +253,59 @@ _do_push() {
   return 0
 }
 
+# Outputs a detail block for a single branch.
+# Used by _preview_panel (current branch) and the branch picker preview.
+_branch_detail() {
+  local _dir="$1" branch="$2"
+
+  local upstream
+  upstream=$(git -C "$_dir" rev-parse --abbrev-ref "${branch}@{upstream}" 2>/dev/null)
+
+  local local_sha
+  local_sha=$(git -C "$_dir" rev-parse --short "$branch" 2>/dev/null) || local_sha="—"
+
+  local remote_sha=""
+  [[ -n "$upstream" ]] && \
+    remote_sha=$(git -C "$_dir" rev-parse --short "$upstream" 2>/dev/null)
+
+  local commit_msg commit_author commit_date
+  commit_msg=$(git -C "$_dir"    log -1 --format="%s"  "$branch" 2>/dev/null)
+  commit_author=$(git -C "$_dir" log -1 --format="%an" "$branch" 2>/dev/null)
+  commit_date=$(git -C "$_dir"   log -1 --format="%cr" "$branch" 2>/dev/null)
+
+  local track="" ahead=0 behind=0
+  if [[ -n "$upstream" ]]; then
+    track=$(git -C "$_dir" for-each-ref \
+      --format='%(upstream:track)' "refs/heads/${branch}" 2>/dev/null)
+    [[ "$track" =~ 'ahead ([0-9]+)'  ]] && ahead="${match[1]}"
+    [[ "$track" =~ 'behind ([0-9]+)' ]] && behind="${match[1]}"
+  fi
+
+  printf "  ${C[bd]}${C[cy]}%s${C[rs]}\n\n" "$branch"
+
+  if [[ -z "$upstream" ]]; then
+    printf "  ${C[dim]}local only — no upstream${C[rs]}\n\n"
+  elif (( ahead > 0 && behind > 0 )); then
+    printf "  ${C[yl]}↑%d${C[rs]} ${C[rd]}↓%d${C[rs]}  diverged from %s\n\n" \
+      "$ahead" "$behind" "$upstream"
+  elif (( ahead > 0 )); then
+    printf "  ${C[yl]}↑%d${C[rs]}  ahead of %s\n\n" "$ahead" "$upstream"
+  elif (( behind > 0 )); then
+    printf "  ${C[rd]}↓%d${C[rs]}  behind %s\n\n" "$behind" "$upstream"
+  else
+    printf "  ${C[gr]}✓${C[rs]}  synced with %s\n\n" "$upstream"
+  fi
+
+  printf "  ${C[dim]}local ${C[rs]} %s\n" "$local_sha"
+  [[ -n "$upstream" ]] && \
+    printf "  ${C[dim]}remote${C[rs]} %s\n" "${remote_sha:-—}"
+  printf '\n'
+  printf "  ${C[dim]}commit${C[rs]} %s\n" "$commit_msg"
+  printf "  ${C[dim]}author${C[rs]} %s · %s\n" "$commit_author" "$commit_date"
+  printf '\n'
+  return 0
+}
+
 # ── Launch ───────────────────────────────────────────────────────────────────
 _launch() {
   local _dir="$1"

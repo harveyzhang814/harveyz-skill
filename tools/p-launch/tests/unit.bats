@@ -526,3 +526,49 @@ _launch_src() {
   run _launch_src "_launch '${TEST_DIR}'"
   [[ "$output" == *"${TEST_DIR}"* ]]
 }
+
+# ── _branch_detail ────────────────────────────────────────────────────────────
+
+@test "_branch_detail: shows branch name" {
+  local repo; repo=$(_make_git_repo_with_remote "branch-detail-name")
+  run env HOME="${MOCK_HOME}" PATH="${MOCK_BIN}:${PATH}" \
+    GIT_CONFIG_NOSYSTEM=1 \
+    zsh -c "_P_LAUNCH_TEST=1; source '${SCRIPT}'; _branch_detail '${repo}' main"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"main"* ]]
+}
+
+@test "_branch_detail: shows synced status for synced branch" {
+  local repo; repo=$(_make_git_repo_with_remote "branch-detail-synced")
+  run env HOME="${MOCK_HOME}" PATH="${MOCK_BIN}:${PATH}" \
+    GIT_CONFIG_NOSYSTEM=1 \
+    zsh -c "_P_LAUNCH_TEST=1; source '${SCRIPT}'; _branch_detail '${repo}' main"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"✓"* ]]
+}
+
+@test "_branch_detail: shows behind count for branch behind remote" {
+  local repo bare_dir
+  repo=$(_make_git_repo_with_remote "branch-detail-behind")
+  bare_dir="${TEST_DIR}/remotes/branch-detail-behind.git"
+  local tmp_clone="${TEST_DIR}/tc-bdb"
+  git clone "$bare_dir" "$tmp_clone" -q 2>/dev/null
+  git -C "$tmp_clone" commit --allow-empty -m "remote ahead" -q
+  git -C "$tmp_clone" push origin main -q 2>/dev/null
+  git -C "$repo" fetch origin -q 2>/dev/null
+  run env HOME="${MOCK_HOME}" PATH="${MOCK_BIN}:${PATH}" \
+    GIT_CONFIG_NOSYSTEM=1 \
+    zsh -c "_P_LAUNCH_TEST=1; source '${SCRIPT}'; _branch_detail '${repo}' main"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"↓"* ]]
+}
+
+@test "_branch_detail: shows 'local only' for branch without upstream" {
+  local repo; repo=$(_make_git_repo_with_remote "branch-detail-local")
+  git -C "$repo" checkout -b local-branch -q
+  run env HOME="${MOCK_HOME}" PATH="${MOCK_BIN}:${PATH}" \
+    GIT_CONFIG_NOSYSTEM=1 \
+    zsh -c "_P_LAUNCH_TEST=1; source '${SCRIPT}'; _branch_detail '${repo}' local-branch"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"local only"* ]]
+}
