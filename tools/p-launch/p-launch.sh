@@ -306,6 +306,75 @@ _branch_detail() {
   return 0
 }
 
+# ── Preview Panel ─────────────────────────────────────────────────────────────
+# Generates right-pane content for the main fzf view.
+# Top: branch summary table. Bottom: current branch detail block (via _branch_detail).
+_preview_panel() {
+  local _dir="$1"
+
+  if ! git -C "$_dir" rev-parse --git-dir >/dev/null 2>&1; then
+    printf '\n  %s  not a git repository\n' "·"
+    return 0
+  fi
+
+  local current_branch
+  current_branch=$(git -C "$_dir" symbolic-ref --short HEAD 2>/dev/null)
+
+  # ── Branch summary table ───────────────────────────────────────────────────
+  printf '\n'
+  printf "  ${C[dim]}%-20s  %-22s  %s${C[rs]}\n" "LOCAL" "REMOTE" "STATUS"
+  printf "  ${C[dim]}%s${C[rs]}\n" \
+    "────────────────────────────────────────────────────"
+
+  local any_tracking=false
+  local branch upstream track ahead behind s cur_mark
+
+  while IFS='|' read -r branch upstream track; do
+    [[ "$track" == *gone* ]] && continue
+    any_tracking=true
+    ahead=0; behind=0
+    [[ "$track" =~ 'ahead ([0-9]+)'  ]] && ahead="${match[1]}"
+    [[ "$track" =~ 'behind ([0-9]+)' ]] && behind="${match[1]}"
+
+    s=""
+    (( ahead  > 0 )) && s+="${C[yl]}↑${ahead}${C[rs]}"
+    (( behind > 0 )) && s+="${C[rd]}↓${behind}${C[rs]}"
+    [[ -z "$s" ]] && s="${C[gr]}✓${C[rs]}"
+
+    cur_mark="  "
+    [[ "$branch" == "$current_branch" ]] && cur_mark="${C[cy]}▶${C[rs]} "
+
+    printf "  %s%-20s  ${C[dim]}%-22s${C[rs]}  %s\n" \
+      "$cur_mark" "$branch" "$upstream" "$s"
+  done < <(_get_tracking_branch_statuses "$_dir")
+
+  # Local-only branches (no upstream set)
+  git -C "$_dir" for-each-ref \
+    --format='%(refname:short)|%(upstream:short)' \
+    refs/heads | awk -F'|' '$2 == ""' | \
+  while IFS='|' read -r branch _rest; do
+    any_tracking=true
+    printf "  %s%-20s  ${C[dim]}%-22s${C[rs]}  ${C[dim]}local only${C[rs]}\n" \
+      "  " "$branch" "—"
+  done
+
+  if ! $any_tracking; then
+    printf "  ${C[dim]}no tracking branches${C[rs]}\n"
+  fi
+
+  # ── Current branch detail ──────────────────────────────────────────────────
+  printf '\n'
+  printf "  ${C[dim]}%s${C[rs]}\n" \
+    "────────────────────────────────────────────────────"
+  printf '\n'
+
+  if [[ -n "$current_branch" ]]; then
+    _branch_detail "$_dir" "$current_branch"
+  fi
+
+  return 0
+}
+
 # ── Launch ───────────────────────────────────────────────────────────────────
 _launch() {
   local _dir="$1"

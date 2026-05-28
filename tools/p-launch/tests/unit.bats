@@ -584,3 +584,33 @@ _launch_src() {
   [ "$status" -eq 0 ]
   [[ "$output" == *"local only"* ]]
 }
+
+# ── _preview_panel ────────────────────────────────────────────────────────────
+
+@test "_preview_panel: non-git directory outputs not-a-git-repository" {
+  local tmpdir; tmpdir=$(mktemp -d)
+  run env HOME="${MOCK_HOME}" PATH="${MOCK_BIN}:${PATH}" \
+    GIT_CONFIG_NOSYSTEM=1 \
+    zsh -c "_P_LAUNCH_TEST=1; source '${SCRIPT}'; _preview_panel '${tmpdir}'"
+  rm -rf "$tmpdir"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"not a git"* ]]
+}
+
+@test "_preview_panel: shows branch name for git repo with remote" {
+  local repo; repo=$(_make_git_repo_with_remote "preview-panel-basic")
+  run env HOME="${MOCK_HOME}" PATH="${MOCK_BIN}:${PATH}" \
+    GIT_CONFIG_NOSYSTEM=1 \
+    zsh -c "_P_LAUNCH_TEST=1; source '${SCRIPT}'; _preview_panel '${repo}'"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"main"* ]]
+}
+
+@test "_preview_panel: shows sync status symbol" {
+  local repo; repo=$(_make_git_repo_with_remote "preview-panel-status")
+  run env HOME="${MOCK_HOME}" PATH="${MOCK_BIN}:${PATH}" \
+    GIT_CONFIG_NOSYSTEM=1 \
+    zsh -c "_P_LAUNCH_TEST=1; source '${SCRIPT}'; _preview_panel '${repo}'"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"✓"* ]]
+}
