@@ -142,6 +142,7 @@ _skill_version() {
 @test "interactive loop: shows success message then returns to skill selector" {
   _write_responses \
     "$(_skill_line "${SKILL1_NAME}" "${SKILL1_VER}" "${SKILL1_BUNDLE}" "${SKILL1_SRC}")" \
+    "install" \
     "user" \
     "claude" \
     ""  # Esc on loop-back
@@ -151,13 +152,14 @@ _skill_version() {
   [[ "$output" == *"Skills installed"* ]]
   [[ "$output" == *"${SKILL1_NAME}"* ]]
   [[ "$output" == *"Nothing selected, exiting"* ]]
-  [ "$(_fzf_call_count)" -eq 4 ]   # skill + scope + target + loop-back
+  [ "$(_fzf_call_count)" -eq 5 ]   # skill + action + scope + target + loop-back
   [ "$status" -eq 0 ]
 }
 
 @test "interactive loop: skill is actually written to target directory" {
   _write_responses \
     "$(_skill_line "${SKILL1_NAME}" "${SKILL1_VER}" "${SKILL1_BUNDLE}" "${SKILL1_SRC}")" \
+    "install" \
     "user" \
     "claude" \
     ""
@@ -170,9 +172,9 @@ _skill_version() {
 @test "interactive loop: two installs in one session, then exit" {
   _write_responses \
     "$(_skill_line "${SKILL1_NAME}" "${SKILL1_VER}" "${SKILL1_BUNDLE}" "${SKILL1_SRC}")" \
-    "user" "claude" \
+    "install" "user" "claude" \
     "$(_skill_line "${SKILL1_NAME}" "${SKILL1_VER}" "${SKILL1_BUNDLE}" "${SKILL1_SRC}")" \
-    "user" "claude" \
+    "install" "user" "claude" \
     ""  # Esc on third round
 
   run _run_interactive --force
@@ -180,13 +182,14 @@ _skill_version() {
   local count
   count=$(echo "$output" | grep -c "Skills installed")
   [ "$count" -eq 2 ]
-  [ "$(_fzf_call_count)" -eq 7 ]   # (skill+scope+target)×2 + loop-back
+  [ "$(_fzf_call_count)" -eq 9 ]   # (skill+action+scope+target)×2 + loop-back
   [ "$status" -eq 0 ]
 }
 
 @test "interactive loop: cancel on scope selection exits loop cleanly" {
   _write_responses \
     "$(_skill_line "${SKILL1_NAME}" "${SKILL1_VER}" "${SKILL1_BUNDLE}" "${SKILL1_SRC}")" \
+    "install" \
     ""  # Esc on scope
 
   run _run_interactive --force
@@ -194,12 +197,13 @@ _skill_version() {
   [ "$status" -eq 0 ]
   [[ "$output" == *"Cancelled"* ]]
   [[ "$output" != *"Skills installed"* ]]
-  [ "$(_fzf_call_count)" -eq 2 ]   # skill + scope(Esc)
+  [ "$(_fzf_call_count)" -eq 3 ]   # skill + action + scope(Esc)
 }
 
 @test "interactive loop: cancel on target selection exits loop cleanly" {
   _write_responses \
     "$(_skill_line "${SKILL1_NAME}" "${SKILL1_VER}" "${SKILL1_BUNDLE}" "${SKILL1_SRC}")" \
+    "install" \
     "user" \
     ""  # Esc on target
 
@@ -208,7 +212,7 @@ _skill_version() {
   [ "$status" -eq 0 ]
   [[ "$output" == *"Cancelled"* ]]
   [[ "$output" != *"Skills installed"* ]]
-  [ "$(_fzf_call_count)" -eq 3 ]   # skill + scope + target(Esc)
+  [ "$(_fzf_call_count)" -eq 4 ]   # skill + action + scope + target(Esc)
 }
 
 @test "interactive loop: immediate Esc on first skill select exits cleanly" {
@@ -237,6 +241,7 @@ _skill_version() {
 
   _write_responses \
     "$two_skills" \
+    "install" \
     "user" \
     "claude" \
     ""
@@ -246,14 +251,14 @@ _skill_version() {
   [ "$status" -eq 0 ]
   [ -f "${MOCK_HOME}/.claude/skills/${SKILL1_NAME}/SKILL.md" ]
   [ -f "${MOCK_HOME}/.claude/skills/${SKILL2_NAME}/SKILL.md" ]
-  [ "$(_fzf_call_count)" -eq 4 ]   # skill-select(2 items) + scope + target + loop-back
+  [ "$(_fzf_call_count)" -eq 5 ]   # skill-select(2 items) + action + scope + target + loop-back
 }
 
 @test "interactive multi-select: both skill names appear in success output" {
   local two_skills
   two_skills="$(_skill_line "${SKILL1_NAME}" "${SKILL1_VER}" "${SKILL1_BUNDLE}" "${SKILL1_SRC}")<NL>$(_skill_line "${SKILL2_NAME}" "${SKILL2_VER}" "${SKILL2_BUNDLE}" "${SKILL2_SRC}")"
 
-  _write_responses "$two_skills" "user" "claude" ""
+  _write_responses "$two_skills" "install" "user" "claude" ""
 
   run _run_interactive --force
 
@@ -264,21 +269,23 @@ _skill_version() {
 # ── tool installation ─────────────────────────────────────────────────────────
 
 @test "interactive tool install: tool binary written to ~/.local/bin" {
-  # Tool install has no scope/target prompts — only skill-selector + loop-back.
+  # Tool install has no scope/target prompts — only skill-selector + action + loop-back.
   _write_responses \
     "$(_tool_line "${TOOL_NAME}" "${TOOL_VER}" "${TOOL_SRC}")" \
+    "install" \
     ""  # Esc on loop-back
 
   run _run_interactive --force
 
   [ "$status" -eq 0 ]
   [ -x "${MOCK_HOME}/.local/bin/${TOOL_NAME}" ]
-  [ "$(_fzf_call_count)" -eq 2 ]   # tool-select + loop-back (no scope/target)
+  [ "$(_fzf_call_count)" -eq 3 ]   # tool-select + action + loop-back (no scope/target)
 }
 
 @test "interactive tool install: success message shown" {
   _write_responses \
     "$(_tool_line "${TOOL_NAME}" "${TOOL_VER}" "${TOOL_SRC}")" \
+    "install" \
     ""
 
   run _run_interactive --force
@@ -297,7 +304,7 @@ _skill_version() {
 
   _write_responses \
     "$(_skill_line "${SKILL1_NAME}" "${SKILL1_VER}" "${SKILL1_BUNDLE}" "${SKILL1_SRC}")" \
-    "user" "claude" ""
+    "install" "user" "claude" ""
 
   # No --force: up-to-date skill must be skipped, no prompt.
   run _run_interactive
@@ -315,7 +322,7 @@ _skill_version() {
 
   _write_responses \
     "$(_skill_line "${SKILL1_NAME}" "${SKILL1_VER}" "${SKILL1_BUNDLE}" "${SKILL1_SRC}")" \
-    "user" "claude" ""
+    "install" "user" "claude" ""
 
   # No --force: outdated skill skipped without prompting (non-TTY path).
   run _run_interactive
@@ -333,7 +340,7 @@ _skill_version() {
 
   _write_responses \
     "$(_skill_line "${SKILL1_NAME}" "${SKILL1_VER}" "${SKILL1_BUNDLE}" "${SKILL1_SRC}")" \
-    "user" "claude" ""
+    "install" "user" "claude" ""
 
   run _run_interactive --force
 
@@ -345,19 +352,21 @@ _skill_version() {
 @test "interactive: hook install routes to hook flow (scope+target prompts)" {
   _write_responses \
     "$(_hook_line "${HOOK_NAME_INTERACTIVE}" "${HOOK_VER_INTERACTIVE}" "${HOOK_SRC_INTERACTIVE}")" \
+    "install" \
     "user" \
     "claude" \
     ""
 
   run _run_interactive --force
 
-  # 4 fzf calls: selector, scope, target, loop-back
-  [ "$(_fzf_call_count)" -eq 4 ]
+  # 5 fzf calls: selector, action, scope, target, loop-back
+  [ "$(_fzf_call_count)" -eq 5 ]
 }
 
 @test "interactive: hook install user+claude installs to ~/.claude/hooks/" {
   _write_responses \
     "$(_hook_line "${HOOK_NAME_INTERACTIVE}" "${HOOK_VER_INTERACTIVE}" "${HOOK_SRC_INTERACTIVE}")" \
+    "install" \
     "user" \
     "claude" \
     ""
@@ -370,6 +379,7 @@ _skill_version() {
 @test "interactive: hook install user+codex installs to ~/.codex/hooks/" {
   _write_responses \
     "$(_hook_line "${HOOK_NAME_INTERACTIVE}" "${HOOK_VER_INTERACTIVE}" "${HOOK_SRC_INTERACTIVE}")" \
+    "install" \
     "user" \
     "codex" \
     ""
@@ -382,6 +392,7 @@ _skill_version() {
 @test "interactive: hook install user+all installs to both claude and codex" {
   _write_responses \
     "$(_hook_line "${HOOK_NAME_INTERACTIVE}" "${HOOK_VER_INTERACTIVE}" "${HOOK_SRC_INTERACTIVE}")" \
+    "install" \
     "user" \
     "all" \
     ""
@@ -395,6 +406,7 @@ _skill_version() {
 @test "interactive: hook+skill combined selection installs both" {
   _write_responses \
     "$(_skill_line "${SKILL1_NAME}" "${SKILL1_VER}" "${SKILL1_BUNDLE}" "${SKILL1_SRC}")<NL>$(_hook_line "${HOOK_NAME_INTERACTIVE}" "${HOOK_VER_INTERACTIVE}" "${HOOK_SRC_INTERACTIVE}")" \
+    "install" \
     "user" \
     "claude" \
     "user" \
@@ -413,6 +425,7 @@ _skill_version() {
 
   _write_responses \
     "$(_skill_line "${SKILL1_NAME}" "${SKILL1_VER}" "${SKILL1_BUNDLE}" "${SKILL1_SRC}")" \
+    "install" \
     "project" \
     "claude" \
     ""
@@ -431,4 +444,22 @@ _skill_version() {
   [ -f "${project_dir}/.claude/skills/${SKILL1_NAME}/SKILL.md" ]
   # Must NOT appear in user-level skills.
   [ ! -f "${MOCK_HOME}/.claude/skills/${SKILL1_NAME}/SKILL.md" ]
+}
+
+# ── fzf action selection ──────────────────────────────────────────────────────
+
+@test "interactive: HSKILL_TEST_ACTION=uninstall removes tool" {
+  # Pre-install p-launch
+  HOME="${MOCK_HOME}" node "${CLI}" install --tool p-launch --force 2>/dev/null
+  [ -x "${MOCK_HOME}/.local/bin/p-launch" ]
+
+  # HSKILL_TEST_ACTION=uninstall + HSKILL_TEST_TOOL=p-launch bypasses fzf
+  run env HOME="${MOCK_HOME}" \
+    HSKILL_TEST_INTERACTIVE=1 \
+    HSKILL_TEST_TOOL="p-launch" \
+    HSKILL_TEST_ACTION="uninstall" \
+    HSKILL_TEST_YES="1" \
+    node "${CLI}"
+  [ "$status" -eq 0 ]
+  [ ! -f "${MOCK_HOME}/.local/bin/p-launch" ]
 }
