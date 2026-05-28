@@ -251,3 +251,268 @@ return current application's NSPerformService("New Ghostty Window Here", thePboa
             ghostty_ok = True
 
     return cursor_ok, ghostty_ok, ghostty_err
+
+
+# ── Textual UI ────────────────────────────────────────────────────────────────
+from textual.app import App, ComposeResult
+from textual.containers import Container
+from textual.widgets import ListView, ListItem, Label, Static
+from textual.binding import Binding
+from textual import work
+from concurrent.futures import ThreadPoolExecutor, as_completed
+
+
+class RepoItem(ListItem):
+    def __init__(self, path: Path, status: dict) -> None:
+        super().__init__()
+        self.repo_path = path
+        self.repo_status = status
+
+    def compose(self) -> ComposeResult:
+        sym = self.repo_status["symbol"]
+        name = self.repo_path.name
+        parent = str(self.repo_path.parent).replace(str(Path.home()), "~")
+        if "↑" in sym and "↓" in sym:
+            sym_m = f"[yellow]{sym}[/]"
+        elif "↑" in sym:
+            sym_m = f"[yellow]{sym}[/]"
+        elif "↓" in sym:
+            sym_m = f"[red]{sym}[/]"
+        elif sym == "✓":
+            sym_m = f"[green]{sym}[/]"
+        else:
+            sym_m = f"[dim]{sym}[/]"
+        yield Label(f"{sym_m:<12}{name}  [dim]{parent}[/]", markup=True)
+
+
+class BranchItem(ListItem):
+    def __init__(self, branch: dict) -> None:
+        super().__init__()
+        self.branch_data = branch
+
+    def compose(self) -> ComposeResult:
+        b = self.branch_data
+        cur = "[cyan]▶[/] " if b["is_current"] else "  "
+        if b["is_local_only"]:
+            sym_m = "[dim]local[/]"
+        elif b["ahead"] and b["behind"]:
+            sym_m = f"[yellow]↑{b['ahead']}↓{b['behind']}[/]"
+        elif b["ahead"]:
+            sym_m = f"[yellow]↑{b['ahead']}[/]"
+        elif b["behind"]:
+            sym_m = f"[red]↓{b['behind']}[/]"
+        else:
+            sym_m = "[green]✓[/]"
+        remote = f"[dim]{b['upstream'] or '—'}[/]"
+        yield Label(f"{cur}{sym_m:<14}{b['name']}  {remote}", markup=True)
+
+
+class PLaunchApp(App):
+    CSS = """
+    Screen {
+        layout: horizontal;
+    }
+
+    #repo-list {
+        width: 28%;
+        height: 100%;
+        border: solid $surface-lighten-2;
+    }
+
+    #right-panel {
+        width: 1fr;
+        height: 100%;
+        layout: vertical;
+    }
+
+    #branch-list {
+        height: 55%;
+        border: solid $surface-lighten-2;
+    }
+
+    #branch-detail {
+        height: 1fr;
+        border: solid $surface-lighten-2;
+        padding: 1 2;
+        overflow-y: auto;
+    }
+
+    ListView:focus {
+        border: solid $accent;
+    }
+
+    ListItem > Label {
+        padding: 0 1;
+    }
+    """
+
+    BINDINGS = [
+        Binding("ctrl+p", "pull", "Pull", show=True),
+        Binding("ctrl+u", "push_action", "Push", show=True),
+        Binding("ctrl+r", "refresh", "Refresh", show=True),
+        Binding("enter", "launch", "Launch", show=True),
+        Binding("q", "quit", "Quit", show=True),
+        Binding("escape", "quit", "Quit", show=False),
+    ]
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.repos: list[Path] = []
+        self.selected_repo: Path | None = None
+        self.selected_branch: str | None = None
+
+    def compose(self) -> ComposeResult:
+        yield ListView(id="repo-list")
+        with Container(id="right-panel"):
+            yield ListView(id="branch-list")
+            yield Static("", id="branch-detail", markup=True)
+
+    def on_mount(self) -> None:
+        self.query_one("#repo-list", ListView).border_title = "repositories"
+        self.query_one("#branch-list", ListView).border_title = "branches"
+        self.query_one("#branch-detail", Static).border_title = "branch detail"
+        self.load_repos()
+
+    # ── Workers ───────────────────────────────────────────────────────────────
+
+    @work(thread=True)
+    def load_repos(self) -> None:
+        dirs = read_project_dirs()
+        repos = collect_repos(dirs)
+        self.call_from_thread(self._populate_repo_list, repos)
+        with ThreadPoolExecutor(max_workers=8) as ex:
+            futs = {ex.submit(self._fetch_and_refresh, r): r
+                    for r in repos if is_git_with_remote(r)}
+            for fut in as_completed(futs):
+                pass
+
+    def _fetch_and_refresh(self, path: Path) -> None:
+        fetch_repo(path)
+        status = get_repo_status(path)
+        self.call_from_thread(self._update_repo_item_status, path, status)
+
+    # ── UI update helpers ─────────────────────────────────────────────────────
+
+    def _populate_repo_list(self, repos: list[Path]) -> None:
+        self.repos = repos
+        lst = self.query_one("#repo-list", ListView)
+        lst.clear()
+        for repo in repos:
+            lst.append(RepoItem(repo, {"symbol": "…", "ahead": 0, "behind": 0}))
+        if repos:
+            self.selected_repo = repos[0]
+            self._refresh_branches(repos[0])
+
+    def _update_repo_item_status(self, path: Path, status: dict) -> None:
+        for item in self.query_one("#repo-list", ListView).query(RepoItem):
+            if item.repo_path == path:
+                item.repo_status = status
+                item.refresh(layout=True)
+                break
+
+    def _refresh_branches(self, path: Path) -> None:
+        branches = get_branches(path)
+        lst = self.query_one("#branch-list", ListView)
+        lst.clear()
+        for b in branches:
+            lst.append(BranchItem(b))
+        lst.border_title = f"branches — {path.name}"
+        if branches:
+            self.selected_branch = branches[0]["name"]
+            self._refresh_detail(path, branches[0]["name"])
+
+    def _refresh_detail(self, path: Path, branch: str) -> None:
+        d = get_branch_detail(path, branch)
+        if d["is_local_only"]:
+            status_line = "[dim]local only — no upstream[/]"
+        elif d["ahead"] and d["behind"]:
+            status_line = (f"[yellow]↑{d['ahead']}[/] [red]↓{d['behind']}[/]"
+                           f"  diverged from {d['upstream']}")
+        elif d["ahead"]:
+            status_line = f"[yellow]↑{d['ahead']}[/]  ahead of {d['upstream']}"
+        elif d["behind"]:
+            status_line = f"[red]↓{d['behind']}[/]  behind {d['upstream']}"
+        else:
+            status_line = f"[green]✓[/]  synced with {d['upstream']}"
+
+        content = (
+            f"[bold cyan]{d['name']}[/]\n\n"
+            f"{status_line}\n\n"
+            f"[dim]local [/] {d['local_sha']}\n"
+            f"[dim]remote[/] {d['remote_sha']}\n\n"
+            f"[dim]commit[/] {d['commit_msg']}\n"
+            f"[dim]author[/] {d['author']} · {d['date']}\n"
+        )
+        w = self.query_one("#branch-detail", Static)
+        w.update(content)
+        w.border_title = f"detail — {d['name']}"
+
+    # ── Event handlers ────────────────────────────────────────────────────────
+
+    def on_list_view_highlighted(self, event: ListView.Highlighted) -> None:
+        if event.list_view.id == "branch-list":
+            item = event.item
+            if isinstance(item, BranchItem) and self.selected_repo:
+                self.selected_branch = item.branch_data["name"]
+                self._refresh_detail(self.selected_repo, item.branch_data["name"])
+
+    def on_list_view_selected(self, event: ListView.Selected) -> None:
+        if event.list_view.id == "repo-list":
+            item = event.item
+            if isinstance(item, RepoItem):
+                self.selected_repo = item.repo_path
+                self._refresh_branches(item.repo_path)
+
+    def on_key(self, event) -> None:
+        if event.key == "right":
+            self.query_one("#branch-list", ListView).focus()
+            event.prevent_default()
+        elif event.key == "left":
+            self.query_one("#repo-list", ListView).focus()
+            event.prevent_default()
+
+    # ── Actions ───────────────────────────────────────────────────────────────
+
+    def action_pull(self) -> None:
+        if not self.selected_repo:
+            return
+        branch_list = self.query_one("#branch-list", ListView)
+        if self.focused is branch_list and self.selected_branch:
+            msg = pull_branch(self.selected_repo, self.selected_branch)
+            self.notify(msg)
+        else:
+            for b in get_branches(self.selected_repo):
+                if not b["is_local_only"] and b["behind"] > 0:
+                    pull_branch(self.selected_repo, b["name"])
+            self.notify(f"pulled all behind branches of {self.selected_repo.name}")
+        self._refresh_branches(self.selected_repo)
+
+    def action_push_action(self) -> None:
+        if not self.selected_repo:
+            return
+        branch_list = self.query_one("#branch-list", ListView)
+        if self.focused is branch_list and self.selected_branch:
+            msg = push_branch(self.selected_repo, self.selected_branch)
+            self.notify(msg)
+        else:
+            for b in get_branches(self.selected_repo):
+                if not b["is_local_only"] and b["ahead"] > 0:
+                    push_branch(self.selected_repo, b["name"])
+            self.notify(f"pushed all ahead branches of {self.selected_repo.name}")
+        self._refresh_branches(self.selected_repo)
+
+    def action_refresh(self) -> None:
+        self.notify("Refreshing git status…")
+        self.load_repos()
+
+    def action_launch(self) -> None:
+        if not self.selected_repo:
+            return
+        cursor_ok, ghostty_ok, ghostty_err = launch_project(self.selected_repo)
+        parts = ["Cursor ✓" if cursor_ok else "Cursor ⚠",
+                 "Ghostty ✓" if ghostty_ok else f"Ghostty ⚠ {ghostty_err}"]
+        self.notify(f"{self.selected_repo.name}: {', '.join(parts)}")
+
+
+if __name__ == "__main__":
+    PLaunchApp().run()
