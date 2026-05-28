@@ -13,7 +13,7 @@ import {
   TOOL_BUNDLE_CHOICES,
 } from '../lib/bundles.js'
 import { buildTargetChoices, resolveTargets, TARGETS } from '../lib/targets.js'
-import { installSkills, installTools, installHooks, installHooksForTarget, uninstallHook } from '../lib/installer.js'
+import { installSkills, installTools, installHooks, installHooksForTarget, uninstallHook, uninstallTool, uninstallSkill } from '../lib/installer.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const require = createRequire(import.meta.url)
@@ -46,6 +46,9 @@ function printHelp() {
     hskill hooks install [--project <path>]           target project dir (for project scope)
     hskill hooks install [--force]                    overwrite existing
     hskill hooks uninstall <name> [--scope <s>]       remove hook
+    hskill uninstall <tool>            uninstall a shell tool and clean up all files
+    hskill uninstall <tool> --yes      skip all confirmations (incl. config files)
+    hskill uninstall <skill> --scope <s> --target <t>  uninstall a skill
     hskill update                  update hskill to the latest version
     hskill version                 show version
     hskill --help                  show this help
@@ -108,6 +111,16 @@ if (args[0] === '--help' || args[0] === '-h') {
           description: 'Show install detail for a skill or tool',
           args: ['<name>'],
           flags: [{ name: '--json', description: 'Machine-readable output' }],
+        },
+        {
+          name: 'uninstall',
+          description: 'Uninstall a shell tool or skill',
+          args: ['<name>'],
+          flags: [
+            { name: '--yes',    description: 'Skip all confirmations including config file removal' },
+            { name: '--scope',  arg: '<scope>',  description: 'Skill scope: user or project', enum: ['user','project'] },
+            { name: '--target', arg: '<target>', description: 'Skill target: claude, cursor, codex, etc.' },
+          ],
         },
         {
           name: 'update',
@@ -386,6 +399,54 @@ if (subcommand === 'info') {
     console.log('')
   }
   process.exit(0)
+}
+
+// ── Uninstall ─────────────────────────────────────────────────────────────────
+if (subcommand === 'uninstall') {
+  const nameToRemove = args[1]
+  if (!nameToRemove || nameToRemove.startsWith('--')) {
+    console.error(chalk.red('  ✗ Usage: hskill uninstall <tool-or-skill-name> [--yes] [--scope user|project] [--target claude|...]'))
+    process.exit(1)
+  }
+
+  const yesFlag    = args.includes('--yes')
+  const scopeIdx2  = args.indexOf('--scope')
+  const targetIdx2 = args.indexOf('--target')
+  const scopeArg2  = scopeIdx2  !== -1 ? args[scopeIdx2  + 1] : 'user'
+  const targetArg2 = targetIdx2 !== -1 ? args[targetIdx2 + 1] : undefined
+
+  const toolItems2  = getAllToolItems()
+  const skillItems2 = getAllSkillItems()
+  const isTool  = toolItems2.some(t => t.toolName  === nameToRemove)
+  const isSkill = skillItems2.some(s => s.skillName === nameToRemove)
+
+  if (!isTool && !isSkill) {
+    console.error(chalk.red(`  ✗ Unknown tool or skill: "${nameToRemove}"`))
+    process.exit(1)
+  }
+
+  if (isTool) {
+    const { removed, failed } = await uninstallTool(nameToRemove, { yes: yesFlag })
+    if (removed.length > 0) console.error(chalk.green.bold(`✔ ${nameToRemove} uninstalled`))
+    process.exit(failed.length ? 1 : 0)
+  }
+
+  // Skill uninstall
+  const scope = scopeArg2
+  const selectedTargets = targetArg2
+    ? [targetArg2]
+    : ['claude', 'cursor', 'codex', 'openclaw', 'hermes']
+  const targets = resolveTargets(selectedTargets, scope)
+
+  let anyRemoved = false
+  let anyFailed  = false
+  for (const { dir } of targets) {
+    const { removed, failed } = await uninstallSkill(nameToRemove, dir)
+    if (removed.length) anyRemoved = true
+    if (failed.length)  anyFailed  = true
+  }
+  if (anyRemoved) console.error(chalk.green.bold(`✔ ${nameToRemove} uninstalled`))
+  process.exit(anyFailed ? 1 : 0)
 }
 
 // ── Hooks ─────────────────────────────────────────────────────────────────────
@@ -718,7 +779,14 @@ try {
     }
 
     while (true) {
-      const selected = fzfSelect()
+      // ── Test shortcut: HSKILL_TEST_ACTION bypasses fzf entirely ───────────
+      let selected
+      if (process.env.HSKILL_TEST_ACTION && process.env.HSKILL_TEST_TOOL) {
+        const testTool = getAllToolItems().find(t => t.toolName === process.env.HSKILL_TEST_TOOL)
+        selected = testTool ? [{ kind: 'tool', ...testTool }] : []
+      } else {
+        selected = fzfSelect()
+      }
 
       if (!selected.length) {
         console.log(chalk.dim('  · Nothing selected, exiting'))
@@ -735,122 +803,213 @@ try {
 
       if (!skillItems.length && !toolItems.length && !hookItems.length) continue
 
-      let skillSummary = null
-      if (skillItems.length > 0) {
-        // Scope selection
-        const scopeResult = spawnSync('fzf', [
+      // ── Action selection (install / uninstall) ─────────────────────────────
+      let action = 'install'
+      if (process.env.HSKILL_TEST_ACTION) {
+        action = process.env.HSKILL_TEST_ACTION
+      } else {
+        const actionResult = spawnSync('fzf', [
           '--prompt=  › ',
-          '--header=  Scope  ·  enter 确认  ·  esc 取消',
+          '--header=  Action  ·  enter 确认  ·  esc 取消',
           '--layout=reverse',
           '--border=rounded',
           '--color=header:italic:dim,prompt:cyan,pointer:cyan,hl:cyan,hl+:cyan:bold',
         ], {
-          input: `user     — ~/.claude/skills/  (所有项目共享)\nproject  — .claude/skills/    (仅当前项目)`,
+          input: `install    安装 / 重新安装\nuninstall  卸载并清理文件`,
           encoding: 'utf8',
           stdio: ['pipe', 'pipe', 'inherit'],
         })
-        if (!scopeResult.stdout.trim()) {
+        if (!actionResult.stdout.trim()) {
           console.log(chalk.dim('  · Cancelled'))
           break
         }
-        const scope = scopeResult.stdout.trim().startsWith('project') ? 'project' : 'user'
+        action = actionResult.stdout.trim().startsWith('uninstall') ? 'uninstall' : 'install'
+      }
 
-        // Target selection
-        const targetChoices = buildTargetChoices(scope)
-        const targetInput = targetChoices.map(c => c.name).join('\n') + '\nall      — all tools'
-        const targetResult = spawnSync('fzf', [
-          '--multi',
-          '--prompt=  › ',
-          '--header=  Install to  ·  tab 多选  ·  enter 确认  ·  esc 取消',
-          '--layout=reverse',
-          '--border=rounded',
-          '--color=header:italic:dim,prompt:cyan,pointer:cyan,hl:cyan,hl+:cyan:bold',
-        ], {
-          input: targetInput,
-          encoding: 'utf8',
-          stdio: ['pipe', 'pipe', 'inherit'],
-        })
-        if (!targetResult.stdout.trim()) {
-          console.log(chalk.dim('  · Cancelled'))
-          break
+      if (action === 'install') {
+        let skillSummary = null
+        if (skillItems.length > 0) {
+          // Scope selection
+          const scopeResult = spawnSync('fzf', [
+            '--prompt=  › ',
+            '--header=  Scope  ·  enter 确认  ·  esc 取消',
+            '--layout=reverse',
+            '--border=rounded',
+            '--color=header:italic:dim,prompt:cyan,pointer:cyan,hl:cyan,hl+:cyan:bold',
+          ], {
+            input: `user     — ~/.claude/skills/  (所有项目共享)\nproject  — .claude/skills/    (仅当前项目)`,
+            encoding: 'utf8',
+            stdio: ['pipe', 'pipe', 'inherit'],
+          })
+          if (!scopeResult.stdout.trim()) {
+            console.log(chalk.dim('  · Cancelled'))
+            break
+          }
+          const scope = scopeResult.stdout.trim().startsWith('project') ? 'project' : 'user'
+
+          // Target selection
+          const targetChoices = buildTargetChoices(scope)
+          const targetInput = targetChoices.map(c => c.name).join('\n') + '\nall      — all tools'
+          const targetResult = spawnSync('fzf', [
+            '--multi',
+            '--prompt=  › ',
+            '--header=  Install to  ·  tab 多选  ·  enter 确认  ·  esc 取消',
+            '--layout=reverse',
+            '--border=rounded',
+            '--color=header:italic:dim,prompt:cyan,pointer:cyan,hl:cyan,hl+:cyan:bold',
+          ], {
+            input: targetInput,
+            encoding: 'utf8',
+            stdio: ['pipe', 'pipe', 'inherit'],
+          })
+          if (!targetResult.stdout.trim()) {
+            console.log(chalk.dim('  · Cancelled'))
+            break
+          }
+          const selectedTargets = targetResult.stdout.trim().split('\n')
+            .map(l => l.trim().split(/\s+/)[0])
+
+          if (selectedTargets.length > 0) {
+            const targets = resolveTargets(selectedTargets, scope)
+            console.log('')
+            skillSummary = await installSkills(skillItems, targets, forceFlag)
+            console.log('')
+          }
         }
-        const selectedTargets = targetResult.stdout.trim().split('\n')
-          .map(l => l.trim().split(/\s+/)[0])
 
-        if (selectedTargets.length > 0) {
-          const targets = resolveTargets(selectedTargets, scope)
+        let toolSummary = null
+        if (toolItems.length > 0) {
           console.log('')
-          skillSummary = await installSkills(skillItems, targets, forceFlag)
+          toolSummary = await installTools(
+            toolItems.map(t => ({ toolName: t.toolName, srcPath: t.srcPath })),
+            TARGETS.shell,
+            forceFlag,
+          )
           console.log('')
         }
+
+        // ── Hook install ────────────────────────────────────────────────────────
+        let hookSummary = null
+        if (hookItems.length > 0) {
+          // Scope selection
+          const hookScopeResult = spawnSync('fzf', [
+            '--prompt=  › ',
+            '--header=  Hook scope  ·  enter 确认  ·  esc 取消',
+            '--layout=reverse',
+            '--border=rounded',
+            '--color=header:italic:dim,prompt:cyan,pointer:cyan,hl:cyan,hl+:cyan:bold',
+          ], {
+            input: `user     — ~/.{claude,codex}/hooks/  (所有项目共享)\nproject  — .{claude,codex}/hooks/    (仅当前项目)`,
+            encoding: 'utf8',
+            stdio: ['pipe', 'pipe', 'inherit'],
+          })
+          if (!hookScopeResult.stdout.trim()) {
+            console.log(chalk.dim('  · Cancelled'))
+            break
+          }
+          const hookScope = hookScopeResult.stdout.trim().startsWith('project') ? 'project' : 'user'
+
+          // Target selection (claude / codex / all)
+          const hookTargetResult = spawnSync('fzf', [
+            '--multi',
+            '--prompt=  › ',
+            '--header=  Install hook to  ·  tab 多选  ·  enter 确认  ·  esc 取消',
+            '--layout=reverse',
+            '--border=rounded',
+            '--color=header:italic:dim,prompt:cyan,pointer:cyan,hl:cyan,hl+:cyan:bold',
+          ], {
+            input: `claude   — ~/.claude/hooks/\ncodex    — ~/.codex/hooks/\nall      — claude + codex`,
+            encoding: 'utf8',
+            stdio: ['pipe', 'pipe', 'inherit'],
+          })
+          if (!hookTargetResult.stdout.trim()) {
+            console.log(chalk.dim('  · Cancelled'))
+            break
+          }
+
+          const selectedHookTargets = hookTargetResult.stdout.trim().split('\n')
+            .map(l => l.trim().split(/\s+/)[0])
+          const resolvedHookTargets = selectedHookTargets.includes('all')
+            ? ['claude', 'codex']
+            : selectedHookTargets.filter(t => ['claude', 'codex'].includes(t))
+
+          hookSummary = {}
+          console.log('')
+          for (const target of resolvedHookTargets) {
+            const result = await installHooksForTarget(hookItems, target, hookScope, process.cwd(), forceFlag)
+            hookSummary[target] = result
+          }
+          console.log('')
+        }
+
+        printSummary(skillSummary, toolSummary, hookSummary)
+      } else {
+        // ── Uninstall ───────────────────────────────────────────────────────
+        const yesFlag2 = !!process.env.HSKILL_TEST_YES
+        console.log('')
+
+        // Re-filter after possible HSKILL_TEST_TOOL injection
+        const uToolItems  = selected.filter(s => s.kind === 'tool')
+        const uSkillItems = selected.filter(s => s.kind === 'skill')
+        const uHookItems  = selected.filter(s => s.kind === 'hook')
+
+        for (const item of uToolItems) {
+          const { removed, failed } = await uninstallTool(item.toolName, { yes: yesFlag2 })
+          if (removed.length) console.error(chalk.green.bold(`✔ ${item.toolName} uninstalled`))
+          if (failed.length)  console.error(chalk.red(`  ✗ ${item.toolName}: some files could not be removed`))
+        }
+
+        for (const item of uSkillItems) {
+          const scopeRes = spawnSync('fzf', [
+            '--prompt=  › ',
+            '--header=  Uninstall from scope  ·  enter 确认  ·  esc 取消',
+            '--layout=reverse', '--border=rounded',
+            '--color=header:italic:dim,prompt:cyan,pointer:cyan,hl:cyan,hl+:cyan:bold',
+          ], {
+            input: `user     — ~/.claude/skills/\nproject  — .claude/skills/`,
+            encoding: 'utf8', stdio: ['pipe', 'pipe', 'inherit'],
+          })
+          if (!scopeRes.stdout.trim()) { console.log(chalk.dim('  · Cancelled')); break }
+          const scope2 = scopeRes.stdout.trim().startsWith('project') ? 'project' : 'user'
+
+          const targetChoices2 = buildTargetChoices(scope2)
+          const targetRes = spawnSync('fzf', [
+            '--multi', '--prompt=  › ',
+            '--header=  Uninstall from  ·  tab 多选  ·  enter 确认',
+            '--layout=reverse', '--border=rounded',
+            '--color=header:italic:dim,prompt:cyan,pointer:cyan,hl:cyan,hl+:cyan:bold',
+          ], {
+            input: targetChoices2.map(c => c.name).join('\n') + '\nall      — all tools',
+            encoding: 'utf8', stdio: ['pipe', 'pipe', 'inherit'],
+          })
+          if (!targetRes.stdout.trim()) { console.log(chalk.dim('  · Cancelled')); break }
+          const selTargets2 = targetRes.stdout.trim().split('\n').map(l => l.trim().split(/\s+/)[0])
+          const targets2 = resolveTargets(selTargets2, scope2)
+          for (const { dir } of targets2) {
+            await uninstallSkill(item.skillName, dir)
+          }
+        }
+
+        for (const item of uHookItems) {
+          const hookScopeRes = spawnSync('fzf', [
+            '--prompt=  › ',
+            '--header=  Hook scope  ·  enter 确认',
+            '--layout=reverse', '--border=rounded',
+            '--color=header:italic:dim,prompt:cyan,pointer:cyan,hl:cyan,hl+:cyan:bold',
+          ], {
+            input: `user     — ~/.claude/hooks/\nproject  — .claude/hooks/`,
+            encoding: 'utf8', stdio: ['pipe', 'pipe', 'inherit'],
+          })
+          if (!hookScopeRes.stdout.trim()) { console.log(chalk.dim('  · Cancelled')); break }
+          const hookScope2 = hookScopeRes.stdout.trim().startsWith('project') ? 'project' : 'user'
+          await uninstallHook(item.name, hookScope2, process.cwd())
+        }
+
+        console.log('')
       }
 
-      let toolSummary = null
-      if (toolItems.length > 0) {
-        console.log('')
-        toolSummary = await installTools(
-          toolItems.map(t => ({ toolName: t.toolName, srcPath: t.srcPath })),
-          TARGETS.shell,
-          forceFlag,
-        )
-        console.log('')
-      }
-
-      // ── Hook install ──────────────────────────────────────────────────────────
-      let hookSummary = null
-      if (hookItems.length > 0) {
-        // Scope selection
-        const hookScopeResult = spawnSync('fzf', [
-          '--prompt=  › ',
-          '--header=  Hook scope  ·  enter 确认  ·  esc 取消',
-          '--layout=reverse',
-          '--border=rounded',
-          '--color=header:italic:dim,prompt:cyan,pointer:cyan,hl:cyan,hl+:cyan:bold',
-        ], {
-          input: `user     — ~/.{claude,codex}/hooks/  (所有项目共享)\nproject  — .{claude,codex}/hooks/    (仅当前项目)`,
-          encoding: 'utf8',
-          stdio: ['pipe', 'pipe', 'inherit'],
-        })
-        if (!hookScopeResult.stdout.trim()) {
-          console.log(chalk.dim('  · Cancelled'))
-          break
-        }
-        const hookScope = hookScopeResult.stdout.trim().startsWith('project') ? 'project' : 'user'
-
-        // Target selection (claude / codex / all)
-        const hookTargetResult = spawnSync('fzf', [
-          '--multi',
-          '--prompt=  › ',
-          '--header=  Install hook to  ·  tab 多选  ·  enter 确认  ·  esc 取消',
-          '--layout=reverse',
-          '--border=rounded',
-          '--color=header:italic:dim,prompt:cyan,pointer:cyan,hl:cyan,hl+:cyan:bold',
-        ], {
-          input: `claude   — ~/.claude/hooks/\ncodex    — ~/.codex/hooks/\nall      — claude + codex`,
-          encoding: 'utf8',
-          stdio: ['pipe', 'pipe', 'inherit'],
-        })
-        if (!hookTargetResult.stdout.trim()) {
-          console.log(chalk.dim('  · Cancelled'))
-          break
-        }
-
-        const selectedHookTargets = hookTargetResult.stdout.trim().split('\n')
-          .map(l => l.trim().split(/\s+/)[0])
-        const resolvedHookTargets = selectedHookTargets.includes('all')
-          ? ['claude', 'codex']
-          : selectedHookTargets.filter(t => ['claude', 'codex'].includes(t))
-
-        hookSummary = {}
-        console.log('')
-        for (const target of resolvedHookTargets) {
-          const result = await installHooksForTarget(hookItems, target, hookScope, process.cwd(), forceFlag)
-          hookSummary[target] = result
-        }
-        console.log('')
-      }
-
-      printSummary(skillSummary, toolSummary, hookSummary)
+      // In test mode with HSKILL_TEST_ACTION, run once and exit
+      if (process.env.HSKILL_TEST_ACTION) break
 
       // Loop back to skill selector automatically
     }

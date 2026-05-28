@@ -223,3 +223,79 @@ _skill_version() {
   [[ "$out" == *'"skipped"'* ]]
   [[ "$out" == *'"reason"'* ]]
 }
+
+# ── uninstall tool ────────────────────────────────────────────────────────────
+
+_uninstall() {
+  HOME="${MOCK_HOME}" node "${CLI}" uninstall "$@" 2>/tmp/bats-uninstall-stderr | cat
+}
+
+@test "uninstall: removes binary from ~/.local/bin" {
+  _install --tool "${TOOL_NAME}" --force
+  [ -x "${MOCK_HOME}/.local/bin/${TOOL_NAME}" ]
+  _uninstall "${TOOL_NAME}" --yes
+  [ ! -f "${MOCK_HOME}/.local/bin/${TOOL_NAME}" ]
+}
+
+@test "uninstall: removes tool.json from share dir" {
+  _install --tool "${TOOL_NAME}" --force
+  _uninstall "${TOOL_NAME}" --yes
+  [ ! -f "${MOCK_HOME}/.local/share/hskill/tools/${TOOL_NAME}.json" ]
+}
+
+@test "uninstall: removes companion .py from share dir" {
+  _install --tool "${TOOL_NAME}" --force
+  _uninstall "${TOOL_NAME}" --yes
+  [ ! -f "${MOCK_HOME}/.local/share/hskill/tools/${TOOL_NAME}.py" ]
+}
+
+@test "uninstall: removes uninstallPaths declared in tool.json" {
+  _install --tool "${TOOL_NAME}" --force
+  mkdir -p "${MOCK_HOME}/.local/share/hskill/p-launch-venv"
+  _uninstall "${TOOL_NAME}" --yes
+  [ ! -d "${MOCK_HOME}/.local/share/hskill/p-launch-venv" ]
+}
+
+@test "uninstall: keeps configPaths without --yes in non-TTY" {
+  _install --tool "${TOOL_NAME}" --force
+  mkdir -p "${MOCK_HOME}/.config/p-launch"
+  printf 'PROJECT_DIRS=(%s)\n' "${MOCK_HOME}" > "${MOCK_HOME}/.config/p-launch/config.zsh"
+  _uninstall "${TOOL_NAME}"
+  [ -f "${MOCK_HOME}/.config/p-launch/config.zsh" ]
+}
+
+@test "uninstall: removes configPaths with --yes" {
+  _install --tool "${TOOL_NAME}" --force
+  mkdir -p "${MOCK_HOME}/.config/p-launch"
+  printf 'PROJECT_DIRS=(%s)\n' "${MOCK_HOME}" > "${MOCK_HOME}/.config/p-launch/config.zsh"
+  _uninstall "${TOOL_NAME}" --yes
+  [ ! -d "${MOCK_HOME}/.config/p-launch" ]
+}
+
+@test "uninstall: removes zshrc snippet if present" {
+  _install --tool "${TOOL_NAME}" --force
+  printf '# >>> p-launch\nexport PATH="$HOME/.local/bin:$PATH"\n# <<< p-launch\n' \
+    >> "${MOCK_HOME}/.zshrc"
+  _uninstall "${TOOL_NAME}" --yes
+  run grep "p-launch" "${MOCK_HOME}/.zshrc"
+  [ "$status" -ne 0 ]
+}
+
+@test "uninstall: exits 0 when tool is not installed" {
+  run _uninstall "${TOOL_NAME}" --yes
+  [ "$status" -eq 0 ]
+}
+
+# ── uninstall skill ───────────────────────────────────────────────────────────
+
+@test "uninstall skill: removes skill dir from user claude" {
+  _install --skill "${SKILL1_NAME}" --target claude --scope user --force
+  [ -d "${MOCK_HOME}/.claude/skills/${SKILL1_NAME}" ]
+  HOME="${MOCK_HOME}" node "${CLI}" uninstall "${SKILL1_NAME}" --scope user --target claude
+  [ ! -d "${MOCK_HOME}/.claude/skills/${SKILL1_NAME}" ]
+}
+
+@test "uninstall skill: exits 0 when skill not installed" {
+  run _uninstall "${SKILL1_NAME}" --scope user --target claude
+  [ "$status" -eq 0 ]
+}

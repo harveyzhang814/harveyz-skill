@@ -2,7 +2,7 @@
 
 ## hskill — tool lifecycle
 
-### [ ] Tool uninstall mechanism
+### [x] Tool uninstall mechanism
 **背景**：hskill 目前只能安装和更新 tool，没有卸载命令。  
 部分 tool（如 p-launch）在安装后会在用户目录写入额外数据：
 - `~/.local/bin/p-launch` — 可执行文件
