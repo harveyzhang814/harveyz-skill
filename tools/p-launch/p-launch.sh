@@ -253,6 +253,91 @@ _do_push() {
   return 0
 }
 
+# Pull a single specific branch. Unlike _do_pull which pulls ALL behind branches,
+# this targets one branch — used by the branch picker ctrl-p binding.
+_do_pull_branch() {
+  local _dir="$1" branch="$2"
+  local current_branch
+  current_branch=$(git -C "$_dir" symbolic-ref --short HEAD 2>/dev/null)
+
+  printf '\n'
+  printf "  ${C[bd]}${C[cy]}%s${C[rs]}  ${C[dim]}pull %s${C[rs]}\n\n" "${_dir:t}" "$branch"
+
+  local upstream
+  upstream=$(git -C "$_dir" rev-parse --abbrev-ref "${branch}@{upstream}" 2>/dev/null)
+  if [[ -z "$upstream" ]]; then
+    printf "  ${C[dim]}no upstream — nothing to pull${C[rs]}\n\n"
+    return 0
+  fi
+
+  local track
+  track=$(git -C "$_dir" for-each-ref \
+    --format='%(upstream:track)' "refs/heads/${branch}" 2>/dev/null)
+  local behind=0
+  [[ "$track" =~ 'behind ([0-9]+)' ]] && behind="${match[1]}"
+
+  if (( behind == 0 )); then
+    printf "  ${C[dim]}nothing to pull — %s is up to date${C[rs]}\n\n" "$branch"
+    return 0
+  fi
+
+  if [[ "$branch" == "$current_branch" ]]; then
+    if git -C "$_dir" pull --ff-only origin "$branch" >/dev/null 2>&1; then
+      printf "  ${C[gr]}✓${C[rs]} pulled    %s\n\n" "$branch"
+    else
+      printf "  ${C[yl]}⚠${C[rs]} failed    %s (resolve conflicts manually)\n\n" "$branch"
+    fi
+  else
+    if git -C "$_dir" fetch origin "${branch}:${branch}" >/dev/null 2>&1; then
+      printf "  ${C[gr]}✓${C[rs]} fast-fwd  %s\n\n" "$branch"
+    else
+      printf "  ${C[yl]}⚠${C[rs]} skipped   %s (not fast-forward)\n\n" "$branch"
+    fi
+  fi
+
+  if [[ -n "${_STATUS_TMPDIR:-}" ]]; then
+    _write_status_file "$_dir" "$_STATUS_TMPDIR"
+  fi
+  return 0
+}
+
+# Push a single specific branch.
+_do_push_branch() {
+  local _dir="$1" branch="$2"
+
+  printf '\n'
+  printf "  ${C[bd]}${C[cy]}%s${C[rs]}  ${C[dim]}push %s${C[rs]}\n\n" "${_dir:t}" "$branch"
+
+  local upstream
+  upstream=$(git -C "$_dir" rev-parse --abbrev-ref "${branch}@{upstream}" 2>/dev/null)
+  if [[ -z "$upstream" ]]; then
+    printf "  ${C[dim]}no upstream — branch is local only${C[rs]}\n\n"
+    return 0
+  fi
+
+  local track
+  track=$(git -C "$_dir" for-each-ref \
+    --format='%(upstream:track)' "refs/heads/${branch}" 2>/dev/null)
+  local ahead=0
+  [[ "$track" =~ 'ahead ([0-9]+)' ]] && ahead="${match[1]}"
+
+  if (( ahead == 0 )); then
+    printf "  ${C[dim]}nothing to push — %s is up to date${C[rs]}\n\n" "$branch"
+    return 0
+  fi
+
+  if git -C "$_dir" push origin "$branch" >/dev/null 2>&1; then
+    printf "  ${C[gr]}✓${C[rs]} pushed  %s\n\n" "$branch"
+  else
+    printf "  ${C[yl]}⚠${C[rs]} failed  %s\n\n" "$branch"
+  fi
+
+  if [[ -n "${_STATUS_TMPDIR:-}" ]]; then
+    _write_status_file "$_dir" "$_STATUS_TMPDIR"
+  fi
+  return 0
+}
+
 # ── Branch Picker ─────────────────────────────────────────────────────────────
 
 # Outputs branch list for the branch picker fzf.

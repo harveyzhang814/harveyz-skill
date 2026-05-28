@@ -650,3 +650,81 @@ _launch_src() {
   [ "$status" -eq 0 ]
   [[ "$output" == *"local"*"feature/local-only"* ]]
 }
+
+# ── _do_pull_branch ───────────────────────────────────────────────────────────
+
+@test "_do_pull_branch: reports 'no upstream' for local-only branch" {
+  local repo; repo=$(_make_git_repo_with_remote "pull-branch-local")
+  git -C "$repo" checkout -b local-only -q
+  run env HOME="${MOCK_HOME}" PATH="${MOCK_BIN}:${PATH}" \
+    GIT_CONFIG_NOSYSTEM=1 \
+    zsh -c "_P_LAUNCH_TEST=1; source '${SCRIPT}'; _do_pull_branch '${repo}' local-only"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"no upstream"* ]]
+}
+
+@test "_do_pull_branch: reports 'nothing to pull' for synced branch" {
+  local repo; repo=$(_make_git_repo_with_remote "pull-branch-synced")
+  run env HOME="${MOCK_HOME}" PATH="${MOCK_BIN}:${PATH}" \
+    GIT_CONFIG_NOSYSTEM=1 \
+    zsh -c "_P_LAUNCH_TEST=1; source '${SCRIPT}'; _do_pull_branch '${repo}' main"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"nothing to pull"* ]]
+}
+
+@test "_do_pull_branch: pulls current branch when behind" {
+  local repo bare_dir
+  repo=$(_make_git_repo_with_remote "pull-branch-behind")
+  bare_dir="${TEST_DIR}/remotes/pull-branch-behind.git"
+  local tmp_clone="${TEST_DIR}/tc-dpb"
+  git clone "$bare_dir" "$tmp_clone" -q 2>/dev/null
+  git -C "$tmp_clone" commit --allow-empty -m "remote commit" -q
+  git -C "$tmp_clone" push origin main -q 2>/dev/null
+  git -C "$repo" fetch origin -q 2>/dev/null
+  run env HOME="${MOCK_HOME}" PATH="${MOCK_BIN}:${PATH}" \
+    GIT_CONFIG_NOSYSTEM=1 \
+    zsh -c "_P_LAUNCH_TEST=1; source '${SCRIPT}'; _do_pull_branch '${repo}' main"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"pulled"* ]]
+  local local_sha remote_sha
+  local_sha=$(git -C "$repo" rev-parse main)
+  remote_sha=$(git -C "$repo" rev-parse origin/main)
+  [ "$local_sha" = "$remote_sha" ]
+}
+
+# ── _do_push_branch ───────────────────────────────────────────────────────────
+
+@test "_do_push_branch: reports 'no upstream' for local-only branch" {
+  local repo; repo=$(_make_git_repo_with_remote "push-branch-local")
+  git -C "$repo" checkout -b local-only -q
+  run env HOME="${MOCK_HOME}" PATH="${MOCK_BIN}:${PATH}" \
+    GIT_CONFIG_NOSYSTEM=1 \
+    zsh -c "_P_LAUNCH_TEST=1; source '${SCRIPT}'; _do_push_branch '${repo}' local-only"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"no upstream"* ]]
+}
+
+@test "_do_push_branch: reports 'nothing to push' for synced branch" {
+  local repo; repo=$(_make_git_repo_with_remote "push-branch-synced")
+  run env HOME="${MOCK_HOME}" PATH="${MOCK_BIN}:${PATH}" \
+    GIT_CONFIG_NOSYSTEM=1 \
+    zsh -c "_P_LAUNCH_TEST=1; source '${SCRIPT}'; _do_push_branch '${repo}' main"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"nothing to push"* ]]
+}
+
+@test "_do_push_branch: pushes branch when ahead of remote" {
+  local repo bare_dir
+  repo=$(_make_git_repo_with_remote "push-branch-ahead")
+  bare_dir="${TEST_DIR}/remotes/push-branch-ahead.git"
+  git -C "$repo" commit --allow-empty -m "local commit" -q
+  run env HOME="${MOCK_HOME}" PATH="${MOCK_BIN}:${PATH}" \
+    GIT_CONFIG_NOSYSTEM=1 \
+    zsh -c "_P_LAUNCH_TEST=1; source '${SCRIPT}'; _do_push_branch '${repo}' main"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"pushed"* ]]
+  local repo_sha bare_sha
+  repo_sha=$(git -C "$repo" rev-parse main)
+  bare_sha=$(git -C "$bare_dir" rev-parse main)
+  [ "$repo_sha" = "$bare_sha" ]
+}
