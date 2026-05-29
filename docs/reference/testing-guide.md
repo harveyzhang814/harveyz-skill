@@ -13,13 +13,14 @@ Run them all with:
 npm test
 ```
 
-There are three test files and one shared helper:
+There are four test files and one shared helper:
 
 | File | What it tests |
 |---|---|
 | `tests/agent-cli.bats` | CLI output shape: `--json` validity, error codes, mutual-exclusion flags |
 | `tests/install.bats` | Flag-based install (`--skill`, `--bundle`, `--tool`, `--scope`, `--target`) — verifies file-system state |
 | `tests/interactive.bats` | Interactive fzf loop — verifies loop-back behavior, multi-select, cancellation |
+| `tests/hooks.bats` | Hook install, version detection, and uninstall — verifies script files + settings.json |
 | `tests/helpers/mock-fzf.sh` | Stateful fzf mock used by `interactive.bats` |
 
 **Rule:** when in doubt about which file to add a test to, use this decision tree:
@@ -208,6 +209,84 @@ out=$(cd "${project_dir}" && \
 
 [ -f "${project_dir}/.claude/skills/skill-analyzer/SKILL.md" ]
 ```
+
+---
+
+## hooks.bats — hook install and version tests
+
+Hook 测试验证脚本文件落地 + settings.json 注册两个产物，以及版本感知行为。
+
+### 关键场景
+
+```bash
+@test "hooks install: installs script and registers in settings.json" {
+  hskill hooks install --name check-similar-branch --scope user --force
+  [ -f "${MOCK_HOME}/.claude/hooks/check-similar-branch.sh" ]
+  grep -q "check-similar-branch" "${MOCK_HOME}/.claude/settings.json"
+}
+
+@test "hooks install: skips with up-to-date when version matches" {
+  hskill hooks install --name check-similar-branch --scope user --force
+  run hskill hooks install --name check-similar-branch --scope user
+  [[ "$output" == *"up-to-date"* ]]
+}
+
+@test "hooks install --force: updates version in installed script" {
+  # pre-install old version, then force-install current
+  local script="${MOCK_HOME}/.claude/hooks/check-similar-branch.sh"
+  sed -i '' 's/# version: .*/# version: 0.0.1/' "$script"
+  hskill hooks install --name check-similar-branch --scope user --force
+  grep -q "# version: $(AVAILABLE_VERSION)" "$script"
+}
+
+@test "hooks install: non-TTY reports outdated when version differs" {
+  # inject older version into installed script
+  sed -i '' 's/# version: .*/# version: 0.0.1/' "${MOCK_HOME}/.claude/hooks/check-similar-branch.sh"
+  run hskill hooks install --name check-similar-branch --scope user
+  [[ "$output" == *"outdated"* ]]
+}
+```
+
+**partial 状态**（脚本存在但 settings.json 未注册，或反之）：`hskill hooks list` 应显示 `~` 而非 `✓`。
+
+---
+
+## 验收测试模式（hook 脚本就地测试）
+
+此模式在 `skills/harness/git-workflow-init` 的 Step 6.5 中有完整实现（见 `references/acceptance-test.md`），以下为通用模式描述。
+
+当需要验证 hook 脚本在真实 git 仓库中的拦截行为时，**必须在真实 repo 里直接调用脚本**，不能用临时 repo。原因：临时 repo 只能证明脚本本身能运行，无法证明当前项目的 `core.hooksPath` 配置是否生效。
+
+### 通用调用模式
+
+```bash
+# pre-commit：直接调用，不产生实际 commit
+output=$(sh .githooks/pre-commit 2>&1)
+exit_code=$?
+
+# commit-msg：传入临时消息文件
+echo "bad commit" > /tmp/test-msg-$$.txt
+output=$(sh .githooks/commit-msg /tmp/test-msg-$$.txt 2>&1)
+rm -f /tmp/test-msg-$$.txt
+
+# pre-push：通过 stdin 传 push 数据
+output=$(echo "refs/heads/main abc1234 refs/heads/main 0000000000000000000000000000000000000000" \
+  | sh .githooks/pre-push 2>&1)
+
+# post-checkout：传参数（prev_sha new_sha is_branch_checkout）
+output=$(sh .githooks/post-checkout HEAD HEAD 1 2>&1)
+```
+
+### 清理保证
+
+- 临时文件（`/tmp/test-msg-$$.txt`）执行后立即删除
+- 测试中创建的临时分支切回原分支后立即 `git branch -D`
+- 不产生任何 commit，不修改 git 历史
+
+### 结果判断原则
+
+- **拒绝型 hook**（pre-commit、commit-msg、pre-push）：期望 `exit_code = 1`
+- **警告型 hook**（post-checkout）：期望 `output` 包含警告标识（如 `⚠️`），exit_code 通常为 0
 
 ---
 
