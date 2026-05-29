@@ -1,7 +1,14 @@
+---
+migrated: 2026-05-29
+docs:
+  - explanation/hskill-architecture.md  # 版本检测设计：三类 item 对齐
+  - reference/agent-cli-guide.md        # Hooks — list 输出格式（含 VER 列）
+---
+
 # Hook 版本追踪设计
 
 **日期:** 2026-05-24  
-**状态:** 已批准
+**状态:** 已实现
 
 ## 背景
 

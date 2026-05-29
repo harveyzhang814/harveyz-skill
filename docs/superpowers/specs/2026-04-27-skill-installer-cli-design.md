@@ -1,3 +1,10 @@
+---
+migrated: 2026-05-29
+docs:
+  - explanation/hskill-architecture.md
+  - reference/agent-cli-guide.md
+---
+
 # Skill Installer CLI 设计文档
 
 ## 概述

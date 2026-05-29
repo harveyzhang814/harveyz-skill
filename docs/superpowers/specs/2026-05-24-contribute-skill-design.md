@@ -1,7 +1,13 @@
+---
+migrated: 2026-05-29
+docs:
+  - how-to/contribute-skill.md
+---
+
 # contribute-skill 设计文档
 
 **日期：** 2026-05-24
-**状态：** 已批准，待实现
+**状态：** 已实现（v1.0.0）
 
 ---
 

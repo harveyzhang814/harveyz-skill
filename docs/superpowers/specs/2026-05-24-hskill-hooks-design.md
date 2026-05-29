@@ -1,7 +1,16 @@
+---
+migrated: 2026-05-29
+docs:
+  - reference/agent-cli-guide.md       # Hooks — CLI 命令参考
+  - explanation/hskill-architecture.md  # scope 模型、settings.json patch 格式
+superseded_by:
+  - 2026-05-24-hook-version-tracking-design.md  # hooks list 输出格式（VER 列）、install 版本感知逻辑
+---
+
 # hskill hooks 子命令设计
 
 **日期:** 2026-05-24  
-**状态:** 已批准
+**状态:** 已实现
 
 ## 背景
 

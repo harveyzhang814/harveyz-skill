@@ -1,8 +1,15 @@
+---
+migrated: 2026-05-29
+docs:
+  - reference/testing-guide.md  # 验收测试模式（通用模式）
+implemented_in: skills/harness/git-workflow-init/references/acceptance-test.md  # Step 6.5
+---
+
 # git-workflow-init 验收测试设计
 
 > 设计日期：2026-05-25
 > 目标 skill：`skills/harness/git-workflow-init`（v4.0.0）
-> 状态：待实现
+> 状态：已实现（Step 6.5）
 
 ---
 
