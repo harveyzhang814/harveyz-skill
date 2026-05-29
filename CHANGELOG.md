@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.9.0] - 2026-05-28
+## [0.9.0] - 2026-05-29
 
 ### Added
 - `hskill uninstall <tool>` 命令：清理 binary、Python 模块、tool.json、venv 及 zshrc snippet
@@ -21,6 +21,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 - p-launch `tool.json` 新增 `uninstallPaths`（`p-launch-venv`）和 `configPaths`（`~/.config/p-launch`）
+
+### Fixed
+- installer：`--force` 重装时根据 `uninstallPaths` 精确清理旧版本文件，避免残留
+- installer：`--force` 重装时正确清理 venv，支持版本感知升级
+- tool 版本对比逻辑：upgrade 前先读取已安装版本，跳过同版本重复安装
 
 ## [0.8.1] - 2026-05-24
 
