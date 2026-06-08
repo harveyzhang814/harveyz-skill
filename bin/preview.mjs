@@ -3,6 +3,7 @@ import fs from 'fs'
 import os from 'os'
 import path from 'path'
 import { fileURLToPath } from 'url'
+import { SKILL_TARGETS, USER_ONLY_TARGETS } from '../lib/targets.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
@@ -72,10 +73,11 @@ function statusLine(version, status) {
   return ver + '  ' + D + '— not installed' + R
 }
 
-const targets = ['claude', 'cursor', 'codex']
+const userTargets    = SKILL_TARGETS
+const projectTargets = SKILL_TARGETS.filter(t => !USER_ONLY_TARGETS.has(t))
 const home    = os.homedir()
 
-function checkScope(dirFn) {
+function checkScope(targets, dirFn) {
   return targets.map(t => {
     const ver    = readVersion(path.join(dirFn(t), skillName))
     const status = ver === '—' ? 'none'
@@ -86,10 +88,10 @@ function checkScope(dirFn) {
 }
 
 const cwd = process.cwd()
-const userDetails    = checkScope(t => path.join(home, `.${t}`, 'skills'))
+const userDetails    = checkScope(userTargets,    t => path.join(home, `.${t}`, 'skills'))
 const projectDetails = cwd === home
-  ? targets.map(t => ({ tool: t, version: '—', status: 'none' }))
-  : checkScope(t => path.join(cwd, `.${t}`, 'skills'))
+  ? projectTargets.map(t => ({ tool: t, version: '—', status: 'none' }))
+  : checkScope(projectTargets, t => path.join(cwd, `.${t}`, 'skills'))
 
 console.log(B + skillName + R)
 console.log(D + 'available: ' + R + availableVersion)
