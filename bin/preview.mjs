@@ -3,6 +3,7 @@ import fs from 'fs'
 import os from 'os'
 import path from 'path'
 import { fileURLToPath } from 'url'
+import { SKILL_TARGETS, USER_ONLY_TARGETS } from '../lib/targets.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
@@ -72,8 +73,8 @@ function statusLine(version, status) {
   return ver + '  ' + D + '— not installed' + R
 }
 
-const userTargets    = ['claude', 'cursor', 'codex', 'openclaw', 'hermes']
-const projectTargets = ['claude', 'cursor', 'codex']
+const userTargets    = SKILL_TARGETS
+const projectTargets = SKILL_TARGETS.filter(t => !USER_ONLY_TARGETS.has(t))
 const home    = os.homedir()
 
 function checkScope(targets, dirFn) {
