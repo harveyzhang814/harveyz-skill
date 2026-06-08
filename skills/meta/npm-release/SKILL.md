@@ -2,12 +2,14 @@
 name: npm-release
 description: "Complete npm publish workflow for harveyz-skill: bump version, update CHANGELOG, create release branch, merge to staging then main, tag, and publish to npm. Use this skill whenever the user wants to release, publish, cut a version, bump version, ship to npm, or deploy a new package version."
 user_invocable: true
-version: "1.0.0"
+version: "1.1.0"
 ---
 
 # npm-release
 
-harveyz-skill 发布到 npm 的完整流程：版本号升级 → CHANGELOG 更新 → 分支提交 → 合并到 staging → 合并到 main → 打 tag → npm publish。
+harveyz-skill 发布到 npm 的完整流程：版本号升级 → CHANGELOG 更新 → 分支提交 → 本地合并到 staging 和 main → 打 tag → 给出推送 + 发布指令供用户执行。
+
+**说明**：所有 `git push` 和 `npm publish` 操作由用户自行执行，Claude 只做本地操作，最后统一给出指令清单。
 
 ---
 
@@ -111,44 +113,66 @@ git commit -m "chore(release): bump version to <new-version>"
 
 ---
 
-## Step 5 — 合并到 staging
+## Step 5 — 本地合并到 staging（不推送）
 
 ```bash
 git checkout staging
 git merge release/<new-version>
-git push origin staging
 ```
+
+只做本地合并，不执行 push。
 
 ---
 
-## Step 6 — 合并到 main 并打 tag
+## Step 6 — 本地合并到 main 并打 tag（不推送）
 
 ```bash
 git checkout main
-git pull origin main
+git pull origin main          # 只拉取，确保本地 main 是最新的
 git merge staging
 git tag -a v<new-version> -m "v<new-version>"
-git push origin main
-git push origin v<new-version>
 ```
 
 tag 使用 annotated tag（`-a`），符合项目 workflow-config.yml 的 `require_annotated: true` 规则。
 
+**不执行任何 push**，推送操作统一在最后由用户执行。
+
 ---
 
-## Step 7 — npm publish
+## Step 7 — 给出最终执行清单
 
-```bash
+本地准备工作已完成。向用户展示以下指令，请用户依次确认并手动执行：
+
+---
+
+```
+== 待执行：推送 + 发布 ==
+
+# 1. 推送 staging
+git push origin staging
+
+# 2. 推送 main 和 tag
+git push origin main
+git push origin v<new-version>
+
+# 3. 发布到 npm（需要已登录：npm login）
 npm publish
 ```
 
-如果报错（比如登录态过期），提示用户先运行 `npm login`，然后重试。
+---
+
+说明：
+- 如果 `npm login` 状态已过期，先运行 `npm login` 再执行 `npm publish`
+- 如果 `git push origin main` 被 pre-push hook 拒绝，检查 tag 格式是否为 `v<X>.<Y>.<Z>`，以及是否是 annotated tag
+- 以上命令需在项目根目录执行
+
+用户执行完毕后，告知 Claude，Claude 会输出最终摘要。
 
 ---
 
-## Step 8 — 收尾
+## Step 8 — 收尾（用户执行完毕后）
 
-发布成功后输出摘要：
+用户确认推送和发布成功后输出摘要：
 
 ```
 ✓ 版本 v<new-version> 已发布
