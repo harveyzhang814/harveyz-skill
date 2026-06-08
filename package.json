@@ -37,8 +37,7 @@
     "skills/harness/dir-manage/",
     "skills/writing/capture-insight/",
     "tools/p-launch/",
-    "hooks/check-similar-branch/",
-    "hooks/dir-manage-guard/"
+    "hooks/check-similar-branch/"
   ],
   "engines": {
     "node": ">=18"
