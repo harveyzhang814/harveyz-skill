@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.10.0] - 2026-06-08
+
+### Added
+- `url-extract` skill（`data-extraction` bundle）：跨平台 URL 存档工具，支持 Claude Code / Codex / Hermes，含 Playwright 抓取、SQLite 存储、VAULT_PATH / SKILL_DIR / CHROME_PROFILE 配置
+- `vision-extract` skill（`data-extraction` bundle）：从 hermes-skills 贡献的视觉数据提取 skill
+- `skill-publish` skill（`meta` bundle）：检查 skill 格式合规性与 skills-index.json 注册状态
+- `npm-release` skill（`meta` bundle）：完整 npm 发布工作流（版本号 → CHANGELOG → 分支 → tag → publish）
+- `migrate-specs` skill（`harness` bundle）：将旧 spec 文档迁移为 Diataxis 结构
+- `dir-manage` skill（`document` bundle）：从 writing-agent 贡献的目录管理 skill
+- `capture-insight` skill（`writing` bundle）：从 writing-agent 贡献的洞察捕获 skill
+- `add-todo` skill（`workflow` bundle）：从 harveyz-skill workflow 贡献的 TODO 追踪 skill
+- Diataxis 结构文档：cache、config、bundle、info 模块的参考文档与指南
+
+### Changed
+- `hskill` 安装交互优化：改为两步式（先选 target，再选 scope），更符合操作直觉
+- `url-extract`：通用 SKILL.md + 各平台 patch 文件，支持跨平台复用
+
+### Fixed
+- installer：`--force` 时按 `uninstallPaths` 精确清理，支持版本感知 venv 升级
+- `url-extract`：以 `source_url` 为主键，支持存量 DB schema 迁移
+- `url-extract`：命令注入安全加固，usability 改进
+- SKILL.md frontmatter 跨所有 skill 规范化
+
 ## [0.9.0] - 2026-05-29
 
 ### Added
