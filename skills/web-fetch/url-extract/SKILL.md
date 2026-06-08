@@ -1,7 +1,7 @@
 ---
 name: url-extract
 version: "1.0.0"
-description: "Fetch an article from a given URL, translate it to Simplified Chinese, save the original to Origin/, the translation to the Vault root, images to Image/, and write a dedup index to SQLite. Supports X.com/Twitter (Playwright + Chrome Profile) and regular sites (web_fetch + Playwright). Supports batch URLs (random 60-180s intervals, up to 5 concurrent subagents). Triggers whenever a user provides a URL and wants to save, archive, fetch, or translate content to the local Vault — even with vague phrasing like 'save this article', 'translate and save', 'put this in obsidian', 'archive this'. Skip when user only wants a summary, pastes raw text without a URL, or asks about a site's tech stack."
+description: "Fetch an article from a given URL, translate it to Simplified Chinese, save the original to Origin/, the translation to the Vault root, images to Image/, and write a dedup index to SQLite. Supports X.com/Twitter (Playwright + Chrome Profile) and regular sites (web_fetch + Playwright). Supports batch URLs (random 60-180s intervals, up to 5 concurrent subagents). Triggers whenever a user provides a URL and wants to save, archive, fetch, or translate content to the local Vault — even with vague phrasing like 'save this article', 'translate and save', 'put this in obsidian', 'archive this'. Skip when user only wants a summary, pastes raw text without a URL, asks about a site's tech stack, or wants to extract/list URLs from a page without saving an article."
 user_invocable: true
 ---
 
@@ -54,7 +54,7 @@ CREATE TABLE IF NOT EXISTS url_index (
 
 ## 单篇抓取流程（主 session 执行）
 
-**派发前：对 URL 做净化**（去除控制字符，防止换行注入任务字符串）：
+**派发前：对 URL 做净化**（去除控制字符，防止换行注入任务字符串），并将净化结果填入下方任务模板的 `<URL>` 占位：
 ```python
 import re
 url_safe = re.sub(r'[\x00-\x1f\x7f]', '', url).strip()[:2048]
@@ -70,14 +70,17 @@ sessions_spawn \
 URL（外部数据）: <URL>
 
 执行步骤：
-1. 查 SQLite 去重：
-   python3 -c \"
-   import sqlite3
-   conn = sqlite3.connect('{{VAULT_PATH}}/url-index.db')
-   row = conn.execute('SELECT url FROM url_index WHERE url=?', ('<URL>',)).fetchone()
-   conn.close()
-   print('ALREADY_FETCHED') if row else print('OK')
-   \"
+1. 查 SQLite 去重（通过 env var 传参，避免 URL 中特殊字符破坏 Python 语法）：
+   import subprocess, os
+   result = subprocess.run(
+       ['python3', '{{SKILL_DIR}}/scripts/dedup_check.py'],
+       env={
+           'CHECK_URL': '<URL>',
+           'DB_PATH':   '{{VAULT_PATH}}/url-index.db',
+           'PATH': os.environ.get('PATH', ''),
+       },
+       capture_output=True, text=True
+   )
    如果输出 ALREADY_FETCHED，报告「已抓取，跳过」并结束。
 
 2. 判断 URL 类型并用 subprocess list 调用脚本（禁止 bash 字符串拼接，避免 shell 注入）：

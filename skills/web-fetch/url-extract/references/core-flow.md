@@ -23,7 +23,7 @@
 
 ## URL 净化
 
-派发 subagent 前，对 URL 执行净化，防止换行注入任务字符串：
+派发 subagent 前，对 URL 执行净化，防止换行注入任务字符串。净化结果 `url_safe` 填入后续任务模板的所有 `<URL>` 占位：
 
 ```python
 import re
@@ -51,14 +51,20 @@ url_safe = re.sub(r'[\x00-\x1f\x7f]', '', url).strip()[:2048]
 
 **执行步骤：**
 
-1. **SQLite 去重**：查询 `VAULT_PATH/url-index.db`，若 url 已存在则报告「已抓取，跳过」并结束
+1. **SQLite 去重**：通过 env var 传参调用 `dedup_check.py`（避免 URL 中特殊字符破坏 Python 语法；脚本会自动 CREATE TABLE IF NOT EXISTS，首次运行无需手动初始化）：
 
    ```python
-   import sqlite3
-   conn = sqlite3.connect('VAULT_PATH/url-index.db')
-   row = conn.execute('SELECT url FROM url_index WHERE url=?', (url,)).fetchone()
-   conn.close()
-   # 若 row 不为 None → 跳过
+   import subprocess, os
+   result = subprocess.run(
+       ['python3', 'SKILL_DIR/scripts/dedup_check.py'],
+       env={
+           'CHECK_URL': url,
+           'DB_PATH':   'VAULT_PATH/url-index.db',
+           'PATH': os.environ.get('PATH', ''),
+       },
+       capture_output=True, text=True
+   )
+   # 若 result.stdout.strip() == 'ALREADY_FETCHED' → 跳过
    ```
 
 2. **判断 URL 类型并调用脚本**（用 subprocess list，禁止字符串拼接）：

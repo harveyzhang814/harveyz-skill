@@ -185,9 +185,7 @@ def repair_frontmatter(fp, url, defaults=None):
 def record_issues(url, issues_text, db_path=None):
     """将 issues 写入 SQLite"""
     if db_path is None:
-        db_path = os.path.expanduser(
-            '{{VAULT_PATH}}/url-index.db'
-        )
+        raise ValueError("db_path is required")
     conn = sqlite3.connect(db_path)
     conn.execute('UPDATE url_index SET issues=? WHERE url=?',
                  (issues_text, url))

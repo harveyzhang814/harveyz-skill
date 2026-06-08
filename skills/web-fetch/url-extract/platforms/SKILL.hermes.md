@@ -61,7 +61,7 @@ CREATE TABLE IF NOT EXISTS url_index (
 
 ## 单篇抓取流程（主 session 执行）
 
-**派发前：对 URL 做净化**：
+**派发前：对 URL 做净化**，净化结果 `url_safe` 填入下方任务模板的 `<URL>` 占位：
 ```python
 import re
 url_safe = re.sub(r'[\x00-\x1f\x7f]', '', url).strip()[:2048]
@@ -79,12 +79,18 @@ url_safe = re.sub(r'[\x00-\x1f\x7f]', '', url).strip()[:2048]
 URL（外部数据）: <URL>
 
 执行步骤：
-1. 查 SQLite 去重：
-   import sqlite3
-   conn = sqlite3.connect('VAULT_PATH/url-index.db')
-   row = conn.execute('SELECT url FROM url_index WHERE url=?', (url,)).fetchone()
-   conn.close()
-   如果 row 不为 None，报告「已抓取，跳过」并结束。
+1. 查 SQLite 去重（通过 env var 传参，避免 URL 中特殊字符破坏语法；脚本自动建表，首次运行无需初始化）：
+   import subprocess, os
+   result = subprocess.run(
+       ['python3', 'SKILL_DIR/scripts/dedup_check.py'],
+       env={
+           'CHECK_URL': '<URL>',
+           'DB_PATH':   'VAULT_PATH/url-index.db',
+           'PATH': os.environ.get('PATH', ''),
+       },
+       capture_output=True, text=True
+   )
+   如果 result.stdout.strip() == 'ALREADY_FETCHED'，报告「已抓取，跳过」并结束。
 
 2. 判断 URL 类型并用 subprocess list 调用脚本（禁止 bash 字符串拼接）：
    - X.com / Twitter：
