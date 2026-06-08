@@ -12,7 +12,7 @@ import {
   resolveSkills, resolveSkillsByName, resolveTools, resolveToolsByName,
   TOOL_BUNDLE_CHOICES,
 } from '../lib/bundles.js'
-import { buildTargetChoices, resolveTargets, TARGETS } from '../lib/targets.js'
+import { buildTargetChoices, resolveTargets, TARGETS, USER_ONLY_TARGETS } from '../lib/targets.js'
 import { installSkills, installTools, installHooks, installHooksForTarget, uninstallHook, uninstallTool, uninstallSkill } from '../lib/installer.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
@@ -594,6 +594,69 @@ const scopeArg  = scopeIdx  !== -1 ? installArgs[scopeIdx  + 1] : undefined
 
 const TOOL_BUNDLE_VALUES = new Set(TOOL_BUNDLE_CHOICES.map(c => c.value))
 
+// ── Two-step target→scope selector ───────────────────────────────────────────
+const ALL_SKILL_TARGETS = ['claude', 'cursor', 'codex', 'openclaw', 'hermes']
+
+function selectTargetThenScope() {
+  // Step 1: platform (target)
+  const targetInput = [
+    'claude    ~/.claude/skills/',
+    'cursor    ~/.cursor/skills/',
+    'codex     ~/.codex/skills/',
+    'openclaw  ~/.openclaw/skills/',
+    'hermes    ~/.hermes/skills/',
+    'all       all 5 targets',
+  ].join('\n')
+
+  const targetResult = spawnSync('fzf', [
+    '--multi',
+    '--prompt=  › ',
+    '--header=  安装到  ·  tab 多选  ·  enter 确认  ·  esc 取消',
+    '--layout=reverse',
+    '--border=rounded',
+    '--color=header:italic:dim,prompt:cyan,pointer:cyan,hl:cyan,hl+:cyan:bold',
+  ], {
+    input: targetInput,
+    encoding: 'utf8',
+    stdio: ['pipe', 'pipe', 'inherit'],
+  })
+
+  if (!targetResult.stdout.trim()) return null
+
+  const rawTargets = targetResult.stdout.trim().split('\n')
+    .map(l => l.trim().split(/\s+/)[0])
+  const expandedTargets = rawTargets.includes('all') ? ALL_SKILL_TARGETS : rawTargets
+
+  // Step 2: scope (user/project) — skip if all selected targets are user-only
+  const allUserOnly = expandedTargets.every(t => USER_ONLY_TARGETS.has(t))
+  let scope = 'user'
+  if (!allUserOnly) {
+    const scopeResult = spawnSync('fzf', [
+      '--prompt=  › ',
+      '--header=  安装范围  ·  enter 确认  ·  esc 取消',
+      '--layout=reverse',
+      '--border=rounded',
+      '--color=header:italic:dim,prompt:cyan,pointer:cyan,hl:cyan,hl+:cyan:bold',
+    ], {
+      input: 'user     — 所有项目共享  (~/.{target}/skills/)\nproject  — 仅当前项目  (.{target}/skills/)',
+      encoding: 'utf8',
+      stdio: ['pipe', 'pipe', 'inherit'],
+    })
+    if (!scopeResult.stdout.trim()) return null
+    scope = scopeResult.stdout.trim().startsWith('project') ? 'project' : 'user'
+  }
+
+  // Build final list — openclaw/hermes always resolve to user scope
+  const seen = new Set()
+  const result = []
+  for (const t of expandedTargets) {
+    const effectiveScope = USER_ONLY_TARGETS.has(t) ? 'user' : scope
+    const key = `${effectiveScope}/${t}`
+    if (!seen.has(key)) { seen.add(key); result.push({ scope: effectiveScope, target: t }) }
+  }
+  return result  // [{ scope, target }]
+}
+
 function requireFzf() {
   const probe = spawnSync('fzf', ['--version'], { encoding: 'utf8' })
   if (probe.error || probe.status !== 0) {
@@ -804,77 +867,66 @@ try {
       if (!skillItems.length && !toolItems.length && !hookItems.length) continue
 
       // ── Action selection (install / uninstall) ─────────────────────────────
+      // Skip the prompt when nothing is installed yet — default to install.
       let action = 'install'
       if (process.env.HSKILL_TEST_ACTION) {
         action = process.env.HSKILL_TEST_ACTION
       } else {
-        const actionResult = spawnSync('fzf', [
-          '--prompt=  › ',
-          '--header=  Action  ·  enter 确认  ·  esc 取消',
-          '--layout=reverse',
-          '--border=rounded',
-          '--color=header:italic:dim,prompt:cyan,pointer:cyan,hl:cyan,hl+:cyan:bold',
-        ], {
-          input: `install    安装 / 重新安装\nuninstall  卸载并清理文件`,
-          encoding: 'utf8',
-          stdio: ['pipe', 'pipe', 'inherit'],
-        })
-        if (!actionResult.stdout.trim()) {
-          console.log(chalk.dim('  · Cancelled'))
-          break
+        const anyInstalled =
+          skillItems.some(s => {
+            const inst = checkInstalled(s.skillName, s.version ?? '—')
+            return scopeSummary(inst.user) !== 'none' || scopeSummary(inst.project) !== 'none'
+          }) ||
+          toolItems.some(t => checkToolInstalled(t.toolName, t.srcPath).status !== 'none') ||
+          hookItems.some(h => {
+            const inst = checkHookInstalled(h.name)
+            return inst.user.status !== 'none' || inst.project.status !== 'none'
+          })
+
+        if (anyInstalled) {
+          const actionResult = spawnSync('fzf', [
+            '--prompt=  › ',
+            '--header=  Action  ·  enter 确认  ·  esc 取消',
+            '--layout=reverse',
+            '--border=rounded',
+            '--color=header:italic:dim,prompt:cyan,pointer:cyan,hl:cyan,hl+:cyan:bold',
+          ], {
+            input: `install    安装 / 重新安装\nuninstall  卸载并清理文件`,
+            encoding: 'utf8',
+            stdio: ['pipe', 'pipe', 'inherit'],
+          })
+          if (!actionResult.stdout.trim()) {
+            console.log(chalk.dim('  · Cancelled'))
+            break
+          }
+          action = actionResult.stdout.trim().startsWith('uninstall') ? 'uninstall' : 'install'
         }
-        action = actionResult.stdout.trim().startsWith('uninstall') ? 'uninstall' : 'install'
       }
 
       if (action === 'install') {
         let skillSummary = null
         if (skillItems.length > 0) {
-          // Scope selection
-          const scopeResult = spawnSync('fzf', [
-            '--prompt=  › ',
-            '--header=  Scope  ·  enter 确认  ·  esc 取消',
-            '--layout=reverse',
-            '--border=rounded',
-            '--color=header:italic:dim,prompt:cyan,pointer:cyan,hl:cyan,hl+:cyan:bold',
-          ], {
-            input: `user     — ~/.claude/skills/  (所有项目共享)\nproject  — .claude/skills/    (仅当前项目)`,
-            encoding: 'utf8',
-            stdio: ['pipe', 'pipe', 'inherit'],
-          })
-          if (!scopeResult.stdout.trim()) {
+          // Combined scope+target selection (one step instead of two)
+          const selectedST = selectTargetThenScope()
+          if (!selectedST) {
             console.log(chalk.dim('  · Cancelled'))
             break
           }
-          const scope = scopeResult.stdout.trim().startsWith('project') ? 'project' : 'user'
 
-          // Target selection
-          const targetChoices = buildTargetChoices(scope)
-          const targetInput = targetChoices.map(c => c.name).join('\n') + '\nall      — all tools'
-          const targetResult = spawnSync('fzf', [
-            '--multi',
-            '--prompt=  › ',
-            '--header=  Install to  ·  tab 多选  ·  enter 确认  ·  esc 取消',
-            '--layout=reverse',
-            '--border=rounded',
-            '--color=header:italic:dim,prompt:cyan,pointer:cyan,hl:cyan,hl+:cyan:bold',
-          ], {
-            input: targetInput,
-            encoding: 'utf8',
-            stdio: ['pipe', 'pipe', 'inherit'],
-          })
-          if (!targetResult.stdout.trim()) {
-            console.log(chalk.dim('  · Cancelled'))
-            break
+          // Group by scope so we make one installSkills call per scope
+          const byScope = {}
+          for (const { scope, target } of selectedST) {
+            if (!byScope[scope]) byScope[scope] = []
+            byScope[scope].push(target)
           }
-          const selectedTargets = targetResult.stdout.trim().split('\n')
-            .map(l => l.trim().split(/\s+/)[0])
 
-          if (selectedTargets.length > 0) {
+          console.log('')
+          for (const [scope, selectedTargets] of Object.entries(byScope)) {
             const targets = resolveTargets(selectedTargets, scope)
-            console.log('')
-            skillSummary = await installSkills(skillItems, targets, forceFlag)
-            console.log('')
+            const result = await installSkills(skillItems, targets, forceFlag)
+            skillSummary = skillSummary ? { ...skillSummary, ...result } : result
           }
+          console.log('')
         }
 
         let toolSummary = null
@@ -960,30 +1012,33 @@ try {
         }
 
         for (const item of uSkillItems) {
-          const scopeRes = spawnSync('fzf', [
-            '--prompt=  › ',
-            '--header=  Uninstall from scope  ·  enter 确认  ·  esc 取消',
+          // Step 1: target (platform)
+          const targetChoices2 = buildTargetChoices('user')
+          const targetRes = spawnSync('fzf', [
+            '--multi', '--prompt=  › ',
+            '--header=  从哪里卸载  ·  tab 多选  ·  enter 确认  ·  esc 取消',
             '--layout=reverse', '--border=rounded',
             '--color=header:italic:dim,prompt:cyan,pointer:cyan,hl:cyan,hl+:cyan:bold',
           ], {
-            input: `user     — ~/.claude/skills/\nproject  — .claude/skills/`,
+            input: targetChoices2.map(c => c.name).join('\n') + '\nall      — all targets',
+            encoding: 'utf8', stdio: ['pipe', 'pipe', 'inherit'],
+          })
+          if (!targetRes.stdout.trim()) { console.log(chalk.dim('  · Cancelled')); break }
+          const selTargets2 = targetRes.stdout.trim().split('\n').map(l => l.trim().split(/\s+/)[0])
+
+          // Step 2: scope (user/project)
+          const scopeRes = spawnSync('fzf', [
+            '--prompt=  › ',
+            '--header=  卸载范围  ·  enter 确认  ·  esc 取消',
+            '--layout=reverse', '--border=rounded',
+            '--color=header:italic:dim,prompt:cyan,pointer:cyan,hl:cyan,hl+:cyan:bold',
+          ], {
+            input: 'user     — 所有项目  (~/.{target}/skills/)\nproject  — 仅当前项目  (.{target}/skills/)',
             encoding: 'utf8', stdio: ['pipe', 'pipe', 'inherit'],
           })
           if (!scopeRes.stdout.trim()) { console.log(chalk.dim('  · Cancelled')); break }
           const scope2 = scopeRes.stdout.trim().startsWith('project') ? 'project' : 'user'
 
-          const targetChoices2 = buildTargetChoices(scope2)
-          const targetRes = spawnSync('fzf', [
-            '--multi', '--prompt=  › ',
-            '--header=  Uninstall from  ·  tab 多选  ·  enter 确认',
-            '--layout=reverse', '--border=rounded',
-            '--color=header:italic:dim,prompt:cyan,pointer:cyan,hl:cyan,hl+:cyan:bold',
-          ], {
-            input: targetChoices2.map(c => c.name).join('\n') + '\nall      — all tools',
-            encoding: 'utf8', stdio: ['pipe', 'pipe', 'inherit'],
-          })
-          if (!targetRes.stdout.trim()) { console.log(chalk.dim('  · Cancelled')); break }
-          const selTargets2 = targetRes.stdout.trim().split('\n').map(l => l.trim().split(/\s+/)[0])
           const targets2 = resolveTargets(selTargets2, scope2)
           for (const { dir } of targets2) {
             await uninstallSkill(item.skillName, dir)
@@ -1043,66 +1098,36 @@ try {
   // ── Install skills ──────────────────────────────────────────────────────────
   let skillSummary = null
   if (skillItems.length > 0) {
-    // Resolve scope
-    let scope = scopeArg ?? 'user'
-    if (!scopeArg && !targetArg) {
-      if (!process.stdout.isTTY) {
-        console.error(chalk.red('  ✗ Interactive scope selection requires a TTY. Use --scope user|project.'))
-        process.exit(1)
-      }
-      const scopeResult = spawnSync('fzf', [
-        '--prompt=  › ',
-        '--header=  Scope  ·  enter 确认  ·  esc 取消',
-        '--layout=reverse',
-        '--border=rounded',
-        '--color=header:italic:dim,prompt:cyan,pointer:cyan,hl:cyan,hl+:cyan:bold',
-      ], {
-        input: `user     — ~/.claude/skills/  (所有项目共享)\nproject  — .claude/skills/    (仅当前项目)`,
-        encoding: 'utf8',
-        stdio: ['pipe', 'pipe', 'inherit'],
-      })
-      if (!scopeResult.stdout.trim()) {
-        console.log(chalk.dim('  · Cancelled'))
-        process.exit(0)
-      }
-      scope = scopeResult.stdout.trim().startsWith('project') ? 'project' : 'user'
-    }
-
-    // Resolve target
-    let selectedTargets
+    // When --target is given, use it directly (with --scope or default 'user').
+    // When only --skill is given and no --target, use the combined selector.
     if (targetArg) {
-      selectedTargets = targetArg === 'all' ? ['claude', 'cursor', 'codex', 'openclaw', 'hermes'] : [targetArg]
+      const scope = scopeArg ?? 'user'
+      const selectedTargets = targetArg === 'all' ? ['claude', 'cursor', 'codex', 'openclaw', 'hermes'] : [targetArg]
+      const targets = resolveTargets(selectedTargets, scope)
+      console.log('')
+      skillSummary = await installSkills(skillItems, targets, forceFlag)
+      console.log('')
     } else {
       if (!process.stdout.isTTY) {
         console.error(chalk.red('  ✗ Interactive target selection requires a TTY. Use --target claude|cursor|codex|openclaw|hermes|all.'))
         process.exit(1)
       }
-      const targetChoices = buildTargetChoices(scope)
-      const targetInput = targetChoices.map(c => c.name).join('\n') + '\nall      — all tools'
-      const targetResult = spawnSync('fzf', [
-        '--multi',
-        '--prompt=  › ',
-        '--header=  Install to  ·  tab 多选  ·  enter 确认  ·  esc 取消',
-        '--layout=reverse',
-        '--border=rounded',
-        '--color=header:italic:dim,prompt:cyan,pointer:cyan,hl:cyan,hl+:cyan:bold',
-      ], {
-        input: targetInput,
-        encoding: 'utf8',
-        stdio: ['pipe', 'pipe', 'inherit'],
-      })
-      if (!targetResult.stdout.trim()) {
+      const selectedST = selectTargetThenScope()
+      if (!selectedST) {
         console.log(chalk.dim('  · Cancelled'))
         process.exit(0)
       }
-      selectedTargets = targetResult.stdout.trim().split('\n')
-        .map(l => l.trim().split(/\s+/)[0])
-    }
-
-    if (selectedTargets.length > 0) {
-      const targets = resolveTargets(selectedTargets, scope)
+      const byScope = {}
+      for (const { scope, target } of selectedST) {
+        if (!byScope[scope]) byScope[scope] = []
+        byScope[scope].push(target)
+      }
       console.log('')
-      skillSummary = await installSkills(skillItems, targets, forceFlag)
+      for (const [scope, selectedTargets] of Object.entries(byScope)) {
+        const targets = resolveTargets(selectedTargets, scope)
+        const result = await installSkills(skillItems, targets, forceFlag)
+        skillSummary = skillSummary ? { ...skillSummary, ...result } : result
+      }
       console.log('')
     }
   }
