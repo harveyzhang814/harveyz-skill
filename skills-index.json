@@ -44,7 +44,8 @@
     { "path": "workflow/add-todo", "bundle": "workflow" },
     { "path": "harness/dir-manage", "bundle": "document" },
     { "path": "writing/capture-insight", "bundle": "writing" },
-    { "path": "meta/skill-publish", "bundle": "meta" }
+    { "path": "meta/skill-publish", "bundle": "meta" },
+    { "path": "meta/npm-release", "bundle": "meta" }
   ],
   "hooks": [
     {
