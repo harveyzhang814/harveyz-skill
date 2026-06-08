@@ -1,0 +1,17 @@
+[
+  {
+    "name": "VAULT_PATH",
+    "description": "Obsidian Reading 目录完整路径（例如 /Users/you/Vault/Product/Reading）",
+    "default": "{{HOME}}/Vault/Product/Reading"
+  },
+  {
+    "name": "SKILL_DIR",
+    "description": "url-extract skill 安装后的完整路径（用于定位辅助脚本和数据库文件）",
+    "default": "{{HOME}}/.claude/skills/url-extract"
+  },
+  {
+    "name": "CHROME_PROFILE",
+    "description": "Chrome 用户配置目录（X.com 登录态所需）。macOS 默认：~/Library/Application Support/Google/Chrome/Profile 2",
+    "default": "{{HOME}}/Library/Application Support/Google/Chrome/Profile 2"
+  }
+]
