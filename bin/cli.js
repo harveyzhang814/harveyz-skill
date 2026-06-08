@@ -158,29 +158,31 @@ if (subcommand === 'update') {
 
 // ── List ─────────────────────────────────────────────────────────────────────
 if (subcommand === 'list') {
-  const { bundleMeta, skills, tools = [] } = require('../skills-index.json')
-  const byBundle = {}
-  for (const s of skills) {
-    if (!byBundle[s.bundle]) byBundle[s.bundle] = []
-    byBundle[s.bundle].push(s.path)
-  }
+  const { skills, tools = [] } = require('../skills-index.json')
+  const sorted = [...skills].sort((a, b) => a.bundle.localeCompare(b.bundle) || a.path.split('/').pop().localeCompare(b.path.split('/').pop()))
   if (jsonFlag) {
-    const bundles = {}
-    for (const [name, paths] of Object.entries(byBundle)) {
-      bundles[name] = { description: bundleMeta[name] ?? name, skills: paths }
-    }
-    console.log(JSON.stringify({ bundles, tools: tools.map(t => t.name) }, null, 2))
+    console.log(JSON.stringify({
+      skills: sorted.map(s => ({ name: s.path.split('/').pop(), path: s.path, bundle: s.bundle })),
+      tools: tools.map(t => t.name),
+    }, null, 2))
     process.exit(0)
   }
-  for (const [name, paths] of Object.entries(byBundle)) {
-    console.log(chalk.bold(name) + ' — ' + (bundleMeta[name] ?? name))
-    for (const p of paths) console.log('  ' + p)
+  const nw = Math.max(...sorted.map(s => s.path.split('/').pop().length), 4)
+  const bw = Math.max(...sorted.map(s => s.bundle.length), 6)
+  const sep = chalk.dim('  ' + '─'.repeat(nw + bw + 4))
+  console.log('')
+  console.log('  ' + chalk.bold('NAME'.padEnd(nw)) + '  ' + chalk.bold('BUNDLE'))
+  console.log(sep)
+  for (const s of sorted) {
+    console.log('  ' + s.path.split('/').pop().padEnd(nw) + '  ' + chalk.dim(s.bundle))
   }
   if (tools.length > 0) {
     console.log('')
-    console.log(chalk.bold('shell tools:'))
+    console.log('  ' + chalk.bold('SHELL TOOLS'))
+    console.log(sep)
     for (const t of tools) console.log('  ' + t.name)
   }
+  console.log('')
   process.exit(0)
 }
 
@@ -208,11 +210,11 @@ if (subcommand === 'status' || subcommand === 'outdated') {
   const skillRows = skillItems.map(s => {
     const inst = checkInstalled(s.skillName, s.version ?? '—')
     return {
-      name: s.skillName, version: s.version ?? '—',
+      name: s.skillName, bundle: s.bundle ?? '—', version: s.version ?? '—',
       userStatus: scopeSummary(inst.user), projectStatus: scopeSummary(inst.project),
       userDetail: inst.user, projectDetail: inst.project,
     }
-  })
+  }).sort((a, b) => a.bundle.localeCompare(b.bundle) || a.name.localeCompare(b.name))
   const toolRows = toolItems.map(t => {
     const inst = checkToolInstalled(t.toolName, t.srcPath)
     return { name: t.toolName, version: t.version ?? '—', ...inst }
@@ -285,15 +287,16 @@ if (subcommand === 'status' || subcommand === 'outdated') {
   const allVers  = [...skillRows, ...toolRows].map(r => r.version)
   const nw = Math.max(...allNames.map(n => n.length), 4)
   const vw = Math.max(...allVers.map(v => v.length), 7)
-  const sep = chalk.dim('  ' + '─'.repeat(nw + vw + 20))
+  const bw = Math.max(...skillRows.map(r => r.bundle.length), 6)
+  const sep = chalk.dim('  ' + '─'.repeat(nw + vw + bw + 22))
 
   console.log('')
   console.log('  ' + chalk.bold('SKILLS') + chalk.dim(`  — ${skillRows.length} available`))
   console.log(sep)
-  console.log('  ' + ''.padEnd(nw + vw + 3) + chalk.dim('user    project'))
+  console.log('  ' + ''.padEnd(nw + vw + bw + 5) + chalk.dim('user    project'))
   for (const r of skillRows) {
     const u = icon(r.userStatus), p = icon(r.projectStatus)
-    console.log('  ' + r.name.padEnd(nw) + '  ' + chalk.dim(r.version.padEnd(vw)) + '  ' + u + '       ' + p)
+    console.log('  ' + r.name.padEnd(nw) + '  ' + chalk.dim(r.version.padEnd(vw)) + '  ' + chalk.dim(r.bundle.padEnd(bw)) + '  ' + u + '       ' + p)
   }
 
   console.log('')
