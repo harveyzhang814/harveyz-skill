@@ -35,7 +35,8 @@
     { "path": "analysis/git-cleanup", "bundle": "analysis" },
     { "path": "meta/contribute-skill", "bundle": "meta" },
     { "path": "harness/migrate-specs", "bundle": "harness" },
-    { "path": "harness/dir-manage", "bundle": "document" }
+    { "path": "harness/dir-manage", "bundle": "document" },
+    { "path": "writing/capture-insight", "bundle": "writing" }
   ],
   "hooks": [
     {

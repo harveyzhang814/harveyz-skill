@@ -34,6 +34,7 @@
     "skills/meta/contribute-skill/",
     "skills/harness/migrate-specs/",
     "skills/harness/dir-manage/",
+    "skills/writing/capture-insight/",
     "tools/p-launch/",
     "hooks/check-similar-branch/"
   ],
