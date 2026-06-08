@@ -32,6 +32,8 @@
     "skills/design/sync-design-html/",
     "skills/analysis/git-cleanup/",
     "skills/meta/contribute-skill/",
+    "skills/harness/migrate-specs/",
+    "skills/harness/dir-manage/",
     "tools/p-launch/",
     "hooks/check-similar-branch/"
   ],

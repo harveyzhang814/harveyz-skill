@@ -34,7 +34,8 @@
     { "path": "design/sync-design-html", "bundle": "design" },
     { "path": "analysis/git-cleanup", "bundle": "analysis" },
     { "path": "meta/contribute-skill", "bundle": "meta" },
-    { "path": "harness/migrate-specs", "bundle": "harness" }
+    { "path": "harness/migrate-specs", "bundle": "harness" },
+    { "path": "harness/dir-manage", "bundle": "document" }
   ],
   "hooks": [
     {
