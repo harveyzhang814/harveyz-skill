@@ -33,7 +33,8 @@
     { "path": "writing/mermaid-diagram", "bundle": "writing" },
     { "path": "design/sync-design-html", "bundle": "design" },
     { "path": "analysis/git-cleanup", "bundle": "analysis" },
-    { "path": "meta/contribute-skill", "bundle": "meta" }
+    { "path": "meta/contribute-skill", "bundle": "meta" },
+    { "path": "harness/migrate-specs", "bundle": "harness" }
   ],
   "hooks": [
     {

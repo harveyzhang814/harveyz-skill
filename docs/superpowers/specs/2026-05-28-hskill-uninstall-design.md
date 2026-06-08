@@ -1,3 +1,10 @@
+---
+migrated: 2026-05-29
+docs:
+  - reference/agent-cli-guide.md       # Uninstall — 命令参考
+  - explanation/hskill-architecture.md  # tool.json 格式（uninstallPaths / configPaths）
+---
+
 # hskill uninstall 功能设计文档
 
 ## 概述

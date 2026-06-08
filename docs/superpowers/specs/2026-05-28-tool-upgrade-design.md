@@ -1,3 +1,10 @@
+---
+migrated: 2026-05-29
+docs:
+  - explanation/hskill-architecture.md  # 版本检测设计：三类 item 对齐
+  - reference/agent-cli-guide.md        # Non-TTY behavior reference — tool install 行为修正
+---
+
 # tool 升级改进设计文档
 
 ## 概述

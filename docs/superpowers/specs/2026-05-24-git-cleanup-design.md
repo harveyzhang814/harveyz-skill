@@ -1,7 +1,14 @@
+---
+migrated: 2026-05-29
+docs:
+  - how-to/git-cleanup.md
+  - reference/branch-cleanup-config.md
+---
+
 # Git Cleanup Skill — Design Spec
 
 **日期：** 2026-05-24
-**状态：** 待实现
+**状态：** 已实现（v1.0.0）
 
 ---
 
