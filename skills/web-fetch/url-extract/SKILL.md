@@ -40,7 +40,7 @@ ChromeProfile: {{CHROME_PROFILE}}
 
 ```sql
 CREATE TABLE IF NOT EXISTS url_index (
-    url          TEXT PRIMARY KEY,
+    source_url   TEXT PRIMARY KEY,
     title        TEXT,
     fetched_at   TEXT,
     issues       TEXT,

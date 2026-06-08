@@ -175,7 +175,7 @@ time.sleep(wait)
 
 ```sql
 CREATE TABLE IF NOT EXISTS url_index (
-    url          TEXT PRIMARY KEY,
+    source_url   TEXT PRIMARY KEY,
     title        TEXT,
     fetched_at   TEXT,
     issues       TEXT,
@@ -184,3 +184,5 @@ CREATE TABLE IF NOT EXISTS url_index (
     article_path TEXT
 );
 ```
+
+> 兼容性说明：`dedup_check.py` 会在首次运行时自动建表；若 DB 已存在（如旧版 article-fetcher 创建的），会自动 `ALTER TABLE ADD COLUMN` 补齐缺失字段，无需手动迁移。

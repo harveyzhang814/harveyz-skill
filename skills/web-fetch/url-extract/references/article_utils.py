@@ -187,7 +187,7 @@ def record_issues(url, issues_text, db_path=None):
     if db_path is None:
         raise ValueError("db_path is required")
     conn = sqlite3.connect(db_path)
-    conn.execute('UPDATE url_index SET issues=? WHERE url=?',
+    conn.execute('UPDATE url_index SET issues=? WHERE source_url=?',
                  (issues_text, url))
     conn.commit()
 
@@ -212,7 +212,7 @@ def write_url_index(url, origin_path, article_path, db_path, category=''):
     conn = sqlite3.connect(db_path)
     conn.execute(
         "INSERT OR REPLACE INTO url_index "
-        "(url, title, fetched_at, issues, category, origin_path, article_path) "
+        "(source_url, title, fetched_at, issues, category, origin_path, article_path) "
         "VALUES (?,?,?,?,?,?,?)",
         (url, os.path.basename(article_path), fetch_date, '', cat, origin_path, article_path)
     )
