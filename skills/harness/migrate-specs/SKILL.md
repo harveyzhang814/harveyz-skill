@@ -1,6 +1,6 @@
 ---
 name: migrate-specs
-description: "Processes unprocessed design spec files into formal Diataxis documentation. Locates the superpowers/specs/ directory, scans for spec files whose YAML frontmatter lacks a 'migrated:' field, reads them all, does a cross-spec horizontal comparison to identify the latest authoritative content per topic, plans a document set from the topic matrix, cross-checks against INDEX.md, then writes or updates formal docs. Finishes by annotating each spec's frontmatter with migration metadata. Trigger phrases: '整理specs', 'migrate specs', 'process spec files', '有没有新的spec需要整理', 'spec迁移到docs', 'process unprocessed specs'."
+description: "Processes unprocessed design spec files into formal Diataxis documentation. Locates the superpowers/specs/ directory, scans for spec files whose YAML frontmatter lacks a 'migrated:' field, reads them all, does a cross-spec horizontal comparison to identify the latest authoritative content per topic, plans a document set from the topic matrix, cross-checks against INDEX.md, then writes or updates formal docs. Finishes by annotating each spec's frontmatter with migration metadata. Triggers: 'migrate specs', 'process spec files', 'spec migration to docs', 'process unprocessed specs'."
 user_invocable: true
 version: "1.0.0"
 ---

@@ -2,6 +2,7 @@
 name: sync-design-html
 description: Use after any UI source file change — detects changed view/component files via git diff and syncs them to high-fidelity HTML design backups. Maintains a manifest as the source-of-truth mapping between source files and HTML previews. Also invocable as a post-step from /ship or /review. Trigger when user says "sync design", "update HTML preview", "design changed", or after UI code edits.
 version: "3.0.0"
+user_invocable: true
 ---
 
 # Sync Design HTML

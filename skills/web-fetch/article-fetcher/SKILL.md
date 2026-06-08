@@ -1,11 +1,8 @@
 ---
 name: article-fetcher
 version: "1.1.0"
-description: "抓取指定 URL 的文章，翻译为简体中文，保存原文到 Origin/、译文到 Vault 根目录，图片下载到 Image/，并写入 SQLite 去重索引。支持 X.com/Twitter（Playwright + Chrome Profile 2）和普通网站（web_fetch + Playwright 提取）。支持批量 URL（随机间隔 60–180 秒、最多 5 个并发 Subagent）。
-
-只要用户提供了 URL 且想要保存、存档、抓取、翻译到本地 Vault，就应触发本 skill——即使用词模糊（如"存一下这篇"、"帮我翻译保存"、"把这个存到 obsidian"、"抓一下"、"archive 这篇"、"save this"、"存到我的库"）。
-
-跳过条件：用户只要摘要不需要存档；用户粘贴原文要求翻译但无 URL；用户询问网站技术栈而非保存内容。"
+description: "Fetch an article from a given URL, translate it to Simplified Chinese, save the original to Origin/, the translation to the Vault root, images to Image/, and write a dedup index to SQLite. Supports X.com/Twitter (Playwright + Chrome Profile 2) and regular sites (web_fetch + Playwright). Supports batch URLs (random 60-180s intervals, up to 5 concurrent subagents). Triggers whenever a user provides a URL and wants to save, archive, fetch, or translate content to the local Vault — even with vague phrasing like 'save this article', 'translate and save', 'put this in obsidian', 'archive this'. Skip when user only wants a summary, pastes raw text without a URL, or asks about a site's tech stack."
+user_invocable: true
 ---
 
 # Article Fetcher

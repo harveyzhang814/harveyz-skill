@@ -2,16 +2,7 @@
 name: add-todo
 version: "1.0.0"
 user_invocable: true
-description: |
-  Add a new requirement or feature request to the project's TODO/backlog document.
-  Use this skill whenever the user wants to capture a new requirement, feature idea,
-  bug report, refactor task, or any future work item — even if they phrase it casually
-  like "we should do X later", "add this to the backlog", "note this down",
-  "remember to build X", "record this requirement", "put this in the todo", or
-  "we need to do Y at some point". Always invoke this skill proactively when the
-  user mentions work they want tracked but not done immediately.
-  Also invoke when the user says "change todo file", "set todo path", "use a different
-  backlog", or "configure the todo location".
+description: "Add a new requirement or feature request to the project's TODO/backlog document. Triggers whenever the user wants to capture a new requirement, feature idea, bug report, refactor task, or future work item — even phrased casually like 'we should do X later', 'add this to the backlog', 'note this down', 'remember to build X', or 'we need to do Y at some point'. Also triggers for 'change todo file', 'set todo path', or 'configure the todo location'."
 ---
 
 # 写入 TODO

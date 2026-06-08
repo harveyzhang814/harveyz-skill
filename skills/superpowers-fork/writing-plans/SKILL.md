@@ -1,6 +1,6 @@
 ---
 name: writing-plans
-description: "当有规格说明或需求文档后，将设计拆解为可执行的小任务时使用。每个任务应该是 2-5 分钟可完成的，包含精确文件路径、完整代码和验证步骤。此技能与 brainstorming（生成规格）和 executing-plans（执行计划）配合使用，构成完整的工作流。"
+description: "Use when you have a spec or requirements doc and need to break the design into executable small tasks. Each task should be completable in 2-5 minutes with precise file paths, full code, and verification steps. Works with brainstorming (generate spec) and executing-plans (run the plan) as a complete workflow."
 user_invocable: true
 version: "1.0.0"
 ---
