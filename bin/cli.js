@@ -2,7 +2,6 @@
 import { select } from '@inquirer/prompts'
 import chalk from 'chalk'
 import { execSync, spawnSync } from 'child_process'
-import { readFileSync, writeFileSync } from 'fs'
 import { createRequire } from 'module'
 import os from 'os'
 import path from 'path'
@@ -595,88 +594,67 @@ const scopeArg  = scopeIdx  !== -1 ? installArgs[scopeIdx  + 1] : undefined
 
 const TOOL_BUNDLE_VALUES = new Set(TOOL_BUNDLE_CHOICES.map(c => c.value))
 
-// ── Prefs (persist last scope/target) ────────────────────────────────────────
-const PREFS_PATH = path.join(os.homedir(), '.hskill-prefs.json')
-function readPrefs() {
-  try { return JSON.parse(readFileSync(PREFS_PATH, 'utf8')) } catch { return {} }
-}
-function writePrefs(update) {
-  try { writeFileSync(PREFS_PATH, JSON.stringify({ ...readPrefs(), ...update }, null, 2)) } catch {}
-}
+// ── Two-step target→scope selector ───────────────────────────────────────────
+const ALL_SKILL_TARGETS = ['claude', 'cursor', 'codex', 'openclaw', 'hermes']
 
-// ── Combined scope+target selector (replaces two-step scope then target) ──────
-const SCOPE_TARGET_ROWS = [
-  { scope: 'user',    target: 'claude',   display: 'user    claude    ~/.claude/skills/' },
-  { scope: 'user',    target: 'cursor',   display: 'user    cursor    ~/.cursor/skills/' },
-  { scope: 'user',    target: 'codex',    display: 'user    codex     ~/.codex/skills/' },
-  { scope: 'user',    target: 'openclaw', display: 'user    openclaw  ~/.openclaw/skills/' },
-  { scope: 'user',    target: 'hermes',   display: 'user    hermes    ~/.hermes/skills/' },
-  { scope: 'user',    target: 'all',      display: 'user    all       all 5 user targets' },
-  { scope: 'project', target: 'claude',   display: 'project claude    .claude/skills/' },
-  { scope: 'project', target: 'cursor',   display: 'project cursor    .cursor/skills/' },
-  { scope: 'project', target: 'codex',    display: 'project codex     .codex/skills/' },
-  { scope: 'project', target: 'all',      display: 'project all       all 3 project targets' },
-]
+function selectTargetThenScope() {
+  // Step 1: platform (target)
+  const targetInput = [
+    'claude    ~/.claude/skills/',
+    'cursor    ~/.cursor/skills/',
+    'codex     ~/.codex/skills/',
+    'openclaw  ~/.openclaw/skills/',
+    'hermes    ~/.hermes/skills/',
+    'all       all 5 targets',
+  ].join('\n')
 
-function selectInstallTarget() {
-  const lastKey = readPrefs().lastScopeTarget  // e.g. "user/claude"
-
-  const rows = [...SCOPE_TARGET_ROWS].sort((a, b) => {
-    const aKey = `${a.scope}/${a.target}`
-    const bKey = `${b.scope}/${b.target}`
-    if (aKey === lastKey) return -1
-    if (bKey === lastKey) return 1
-    return 0
-  })
-
-  const fzfInput = rows.map(r => {
-    const key = `${r.scope}/${r.target}`
-    const marker = key === lastKey ? '  (last)' : ''
-    return `${r.display}${marker}\t${r.scope}\t${r.target}`
-  }).join('\n')
-
-  const result = spawnSync('fzf', [
+  const targetResult = spawnSync('fzf', [
     '--multi',
     '--prompt=  › ',
     '--header=  安装到  ·  tab 多选  ·  enter 确认  ·  esc 取消',
     '--layout=reverse',
     '--border=rounded',
-    '--delimiter=\t',
-    '--with-nth=1',
     '--color=header:italic:dim,prompt:cyan,pointer:cyan,hl:cyan,hl+:cyan:bold',
   ], {
-    input: fzfInput,
+    input: targetInput,
     encoding: 'utf8',
     stdio: ['pipe', 'pipe', 'inherit'],
   })
 
-  if (!result.stdout.trim()) return null
+  if (!targetResult.stdout.trim()) return null
 
-  const selected = result.stdout.trim().split('\n').map(l => {
-    const parts = l.split('\t')
-    return { scope: parts[1], target: parts[2] }
-  })
+  const rawTargets = targetResult.stdout.trim().split('\n')
+    .map(l => l.trim().split(/\s+/)[0])
+  const expandedTargets = rawTargets.includes('all') ? ALL_SKILL_TARGETS : rawTargets
 
-  // Expand "all" and deduplicate
+  // Step 2: scope (user/project) — skip if all selected targets are user-only
+  const allUserOnly = expandedTargets.every(t => USER_ONLY_TARGETS.has(t))
+  let scope = 'user'
+  if (!allUserOnly) {
+    const scopeResult = spawnSync('fzf', [
+      '--prompt=  › ',
+      '--header=  安装范围  ·  enter 确认  ·  esc 取消',
+      '--layout=reverse',
+      '--border=rounded',
+      '--color=header:italic:dim,prompt:cyan,pointer:cyan,hl:cyan,hl+:cyan:bold',
+    ], {
+      input: 'user     — 所有项目共享  (~/.{target}/skills/)\nproject  — 仅当前项目  (.{target}/skills/)',
+      encoding: 'utf8',
+      stdio: ['pipe', 'pipe', 'inherit'],
+    })
+    if (!scopeResult.stdout.trim()) return null
+    scope = scopeResult.stdout.trim().startsWith('project') ? 'project' : 'user'
+  }
+
+  // Build final list — openclaw/hermes always resolve to user scope
   const seen = new Set()
-  const expanded = []
-  for (const { scope, target } of selected) {
-    const allTargets = scope === 'user'
-      ? ['claude', 'cursor', 'codex', 'openclaw', 'hermes']
-      : ['claude', 'cursor', 'codex']
-    const targets = target === 'all' ? allTargets : [target]
-    for (const t of targets) {
-      const key = `${scope}/${t}`
-      if (!seen.has(key)) { seen.add(key); expanded.push({ scope, target: t }) }
-    }
+  const result = []
+  for (const t of expandedTargets) {
+    const effectiveScope = USER_ONLY_TARGETS.has(t) ? 'user' : scope
+    const key = `${effectiveScope}/${t}`
+    if (!seen.has(key)) { seen.add(key); result.push({ scope: effectiveScope, target: t }) }
   }
-
-  // Persist last single-target choice for next run
-  if (selected.length === 1 && selected[0].target !== 'all') {
-    writePrefs({ lastScopeTarget: `${selected[0].scope}/${selected[0].target}` })
-  }
-
-  return expanded  // [{ scope, target }]
+  return result  // [{ scope, target }]
 }
 
 function requireFzf() {
@@ -929,7 +907,7 @@ try {
         let skillSummary = null
         if (skillItems.length > 0) {
           // Combined scope+target selection (one step instead of two)
-          const selectedST = selectInstallTarget()
+          const selectedST = selectTargetThenScope()
           if (!selectedST) {
             console.log(chalk.dim('  · Cancelled'))
             break
@@ -1034,30 +1012,33 @@ try {
         }
 
         for (const item of uSkillItems) {
-          const scopeRes = spawnSync('fzf', [
-            '--prompt=  › ',
-            '--header=  Uninstall from scope  ·  enter 确认  ·  esc 取消',
+          // Step 1: target (platform)
+          const targetChoices2 = buildTargetChoices('user')
+          const targetRes = spawnSync('fzf', [
+            '--multi', '--prompt=  › ',
+            '--header=  从哪里卸载  ·  tab 多选  ·  enter 确认  ·  esc 取消',
             '--layout=reverse', '--border=rounded',
             '--color=header:italic:dim,prompt:cyan,pointer:cyan,hl:cyan,hl+:cyan:bold',
           ], {
-            input: `user     — ~/.claude/skills/\nproject  — .claude/skills/`,
+            input: targetChoices2.map(c => c.name).join('\n') + '\nall      — all targets',
+            encoding: 'utf8', stdio: ['pipe', 'pipe', 'inherit'],
+          })
+          if (!targetRes.stdout.trim()) { console.log(chalk.dim('  · Cancelled')); break }
+          const selTargets2 = targetRes.stdout.trim().split('\n').map(l => l.trim().split(/\s+/)[0])
+
+          // Step 2: scope (user/project)
+          const scopeRes = spawnSync('fzf', [
+            '--prompt=  › ',
+            '--header=  卸载范围  ·  enter 确认  ·  esc 取消',
+            '--layout=reverse', '--border=rounded',
+            '--color=header:italic:dim,prompt:cyan,pointer:cyan,hl:cyan,hl+:cyan:bold',
+          ], {
+            input: 'user     — 所有项目  (~/.{target}/skills/)\nproject  — 仅当前项目  (.{target}/skills/)',
             encoding: 'utf8', stdio: ['pipe', 'pipe', 'inherit'],
           })
           if (!scopeRes.stdout.trim()) { console.log(chalk.dim('  · Cancelled')); break }
           const scope2 = scopeRes.stdout.trim().startsWith('project') ? 'project' : 'user'
 
-          const targetChoices2 = buildTargetChoices(scope2)
-          const targetRes = spawnSync('fzf', [
-            '--multi', '--prompt=  › ',
-            '--header=  Uninstall from  ·  tab 多选  ·  enter 确认',
-            '--layout=reverse', '--border=rounded',
-            '--color=header:italic:dim,prompt:cyan,pointer:cyan,hl:cyan,hl+:cyan:bold',
-          ], {
-            input: targetChoices2.map(c => c.name).join('\n') + '\nall      — all tools',
-            encoding: 'utf8', stdio: ['pipe', 'pipe', 'inherit'],
-          })
-          if (!targetRes.stdout.trim()) { console.log(chalk.dim('  · Cancelled')); break }
-          const selTargets2 = targetRes.stdout.trim().split('\n').map(l => l.trim().split(/\s+/)[0])
           const targets2 = resolveTargets(selTargets2, scope2)
           for (const { dir } of targets2) {
             await uninstallSkill(item.skillName, dir)
@@ -1131,7 +1112,7 @@ try {
         console.error(chalk.red('  ✗ Interactive target selection requires a TTY. Use --target claude|cursor|codex|openclaw|hermes|all.'))
         process.exit(1)
       }
-      const selectedST = selectInstallTarget()
+      const selectedST = selectTargetThenScope()
       if (!selectedST) {
         console.log(chalk.dim('  · Cancelled'))
         process.exit(0)

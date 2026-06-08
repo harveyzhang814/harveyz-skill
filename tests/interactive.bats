@@ -18,17 +18,19 @@
 # ## fzf call order for interactive install
 #
 # Skill-only, fresh install (action prompt skipped — nothing pre-installed):
-#   Call 1  skill selector          → tab-separated line (see _skill_line helper)
-#   Call 2  scope+target selector   → _scope_target_line("user","claude")
-#   Call N  (loop-back)             → empty line = Esc → loop exits
+#   Call 1  skill selector    → tab-separated line (see _skill_line helper)
+#   Call 2  target selector   → "claude ..." (first word = target name)
+#   Call 3  scope selector    → "user ..." or "project ..."
+#   Call N  (loop-back)       → empty line = Esc → loop exits
 #
 # Skill-only, already installed (action prompt shown):
-#   Call 1  skill selector          → skill line
-#   Call 2  action selector         → "install ..." or "uninstall ..."
-#   Call 3  scope+target selector   → _scope_target_line("user","claude")
-#   Call N  (loop-back)             → empty = Esc
+#   Call 1  skill selector    → skill line
+#   Call 2  action selector   → "install ..." or "uninstall ..."
+#   Call 3  target selector   → "claude ..."
+#   Call 4  scope selector    → "user ..."
+#   Call N  (loop-back)       → empty = Esc
 #
-# Tool-only, fresh install (action skipped, no scope/target for tools):
+# Tool-only, fresh install (action skipped, no target/scope for tools):
 #   Call 1  skill selector   → tool line (see _tool_line helper)
 #   Call 2  (loop-back)      → empty = Esc → loop exits
 #
@@ -70,11 +72,16 @@ HOOK_NAME_INTERACTIVE="check-similar-branch"
 HOOK_SRC_INTERACTIVE="${REPO_ROOT}/hooks/check-similar-branch/check-similar-branch.sh"
 HOOK_VER_INTERACTIVE="1.0.0"
 
-# fzf output line for the combined scope+target selector.
-# Format: display<TAB>scope<TAB>target  (matches selectInstallTarget parse logic)
-_scope_target_line() {
-  local scope="$1" target="$2"
-  printf 'display\t%s\t%s' "$scope" "$target"
+# fzf response for the target selector (first word = target name).
+_target_line() {
+  local target="$1"
+  printf '%s   ~/.%s/skills/' "$target" "$target"
+}
+
+# fzf response for the scope selector (first word = scope).
+_scope_line() {
+  local scope="$1"
+  printf '%s   scope' "$scope"
 }
 
 setup() {
@@ -153,10 +160,11 @@ _skill_version() {
 # ── loop-back behavior ────────────────────────────────────────────────────────
 
 @test "interactive loop: shows success message then returns to skill selector" {
-  # Fresh install: action skipped, scope+target combined into one step.
+  # Fresh install: action skipped, target then scope.
   _write_responses \
     "$(_skill_line "${SKILL1_NAME}" "${SKILL1_VER}" "${SKILL1_BUNDLE}" "${SKILL1_SRC}")" \
-    "$(_scope_target_line "user" "claude")" \
+    "$(_target_line "claude")" \
+    "$(_scope_line "user")" \
     ""  # Esc on loop-back
 
   run _run_interactive --force
@@ -164,14 +172,15 @@ _skill_version() {
   [[ "$output" == *"Skills installed"* ]]
   [[ "$output" == *"${SKILL1_NAME}"* ]]
   [[ "$output" == *"Nothing selected, exiting"* ]]
-  [ "$(_fzf_call_count)" -eq 3 ]   # skill + scope+target + loop-back
+  [ "$(_fzf_call_count)" -eq 4 ]   # skill + target + scope + loop-back
   [ "$status" -eq 0 ]
 }
 
 @test "interactive loop: skill is actually written to target directory" {
   _write_responses \
     "$(_skill_line "${SKILL1_NAME}" "${SKILL1_VER}" "${SKILL1_BUNDLE}" "${SKILL1_SRC}")" \
-    "$(_scope_target_line "user" "claude")" \
+    "$(_target_line "claude")" \
+    "$(_scope_line "user")" \
     ""
 
   run _run_interactive --force
@@ -180,15 +189,17 @@ _skill_version() {
 }
 
 @test "interactive loop: two installs in one session, then exit" {
-  # Round 1: fresh install — action skipped (2 calls: skill + scope+target).
-  # Round 2: skill now installed — action shown (3 calls: skill + action + scope+target).
-  # Plus loop-back = 6 calls total.
+  # Round 1: fresh install — action skipped (3 calls: skill + target + scope).
+  # Round 2: skill now installed — action shown (4 calls: skill + action + target + scope).
+  # Plus loop-back = 8 calls total.
   _write_responses \
     "$(_skill_line "${SKILL1_NAME}" "${SKILL1_VER}" "${SKILL1_BUNDLE}" "${SKILL1_SRC}")" \
-    "$(_scope_target_line "user" "claude")" \
+    "$(_target_line "claude")" \
+    "$(_scope_line "user")" \
     "$(_skill_line "${SKILL1_NAME}" "${SKILL1_VER}" "${SKILL1_BUNDLE}" "${SKILL1_SRC}")" \
     "install" \
-    "$(_scope_target_line "user" "claude")" \
+    "$(_target_line "claude")" \
+    "$(_scope_line "user")" \
     ""  # Esc on third round
 
   run _run_interactive --force
@@ -196,22 +207,37 @@ _skill_version() {
   local count
   count=$(echo "$output" | grep -c "Skills installed")
   [ "$count" -eq 2 ]
-  [ "$(_fzf_call_count)" -eq 6 ]   # (skill+scope+target) + (skill+action+scope+target) + loop-back
+  [ "$(_fzf_call_count)" -eq 8 ]   # (skill+target+scope) + (skill+action+target+scope) + loop-back
   [ "$status" -eq 0 ]
 }
 
-@test "interactive loop: cancel on scope/target selection exits loop cleanly" {
-  # Fresh install: action skipped. Esc on combined scope+target → cancel.
+@test "interactive loop: cancel on target selection exits loop cleanly" {
+  # Fresh install: action skipped. Esc on target → cancel.
   _write_responses \
     "$(_skill_line "${SKILL1_NAME}" "${SKILL1_VER}" "${SKILL1_BUNDLE}" "${SKILL1_SRC}")" \
-    ""  # Esc on combined scope+target
+    ""  # Esc on target
 
   run _run_interactive --force
 
   [ "$status" -eq 0 ]
   [[ "$output" == *"Cancelled"* ]]
   [[ "$output" != *"Skills installed"* ]]
-  [ "$(_fzf_call_count)" -eq 2 ]   # skill + scope+target(Esc)
+  [ "$(_fzf_call_count)" -eq 2 ]   # skill + target(Esc)
+}
+
+@test "interactive loop: cancel on scope selection exits loop cleanly" {
+  # Fresh install: action skipped. Target selected, Esc on scope → cancel.
+  _write_responses \
+    "$(_skill_line "${SKILL1_NAME}" "${SKILL1_VER}" "${SKILL1_BUNDLE}" "${SKILL1_SRC}")" \
+    "$(_target_line "claude")" \
+    ""  # Esc on scope
+
+  run _run_interactive --force
+
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"Cancelled"* ]]
+  [[ "$output" != *"Skills installed"* ]]
+  [ "$(_fzf_call_count)" -eq 3 ]   # skill + target + scope(Esc)
 }
 
 @test "interactive loop: cancel on action selection exits loop cleanly" {
@@ -256,10 +282,11 @@ _skill_version() {
   local two_skills
   two_skills="$(_skill_line "${SKILL1_NAME}" "${SKILL1_VER}" "${SKILL1_BUNDLE}" "${SKILL1_SRC}")<NL>$(_skill_line "${SKILL2_NAME}" "${SKILL2_VER}" "${SKILL2_BUNDLE}" "${SKILL2_SRC}")"
 
-  # Fresh install: action skipped, scope+target combined.
+  # Fresh install: action skipped, target then scope.
   _write_responses \
     "$two_skills" \
-    "$(_scope_target_line "user" "claude")" \
+    "$(_target_line "claude")" \
+    "$(_scope_line "user")" \
     ""
 
   run _run_interactive --force
@@ -267,14 +294,14 @@ _skill_version() {
   [ "$status" -eq 0 ]
   [ -f "${MOCK_HOME}/.claude/skills/${SKILL1_NAME}/SKILL.md" ]
   [ -f "${MOCK_HOME}/.claude/skills/${SKILL2_NAME}/SKILL.md" ]
-  [ "$(_fzf_call_count)" -eq 3 ]   # skill-select + scope+target + loop-back
+  [ "$(_fzf_call_count)" -eq 4 ]   # skill-select + target + scope + loop-back
 }
 
 @test "interactive multi-select: both skill names appear in success output" {
   local two_skills
   two_skills="$(_skill_line "${SKILL1_NAME}" "${SKILL1_VER}" "${SKILL1_BUNDLE}" "${SKILL1_SRC}")<NL>$(_skill_line "${SKILL2_NAME}" "${SKILL2_VER}" "${SKILL2_BUNDLE}" "${SKILL2_SRC}")"
 
-  _write_responses "$two_skills" "$(_scope_target_line "user" "claude")" ""
+  _write_responses "$two_skills" "$(_target_line "claude")" "$(_scope_line "user")" ""
 
   run _run_interactive --force
 
@@ -316,11 +343,12 @@ _skill_version() {
   printf -- '---\nname: %s\nversion: %s\n---\n' "${SKILL1_NAME}" "${SKILL1_VER}" \
     > "${MOCK_HOME}/.claude/skills/${SKILL1_NAME}/SKILL.md"
 
-  # Skill is installed → action prompt shown; scope+target combined.
+  # Skill is installed → action prompt shown; target then scope.
   _write_responses \
     "$(_skill_line "${SKILL1_NAME}" "${SKILL1_VER}" "${SKILL1_BUNDLE}" "${SKILL1_SRC}")" \
     "install" \
-    "$(_scope_target_line "user" "claude")" \
+    "$(_target_line "claude")" \
+    "$(_scope_line "user")" \
     ""
 
   # No --force: up-to-date skill must be skipped.
@@ -337,11 +365,12 @@ _skill_version() {
   printf -- '---\nname: %s\nversion: 0.0.1\n---\n' "${SKILL1_NAME}" \
     > "${MOCK_HOME}/.claude/skills/${SKILL1_NAME}/SKILL.md"
 
-  # Skill is installed → action prompt shown; scope+target combined.
+  # Skill is installed → action prompt shown; target then scope.
   _write_responses \
     "$(_skill_line "${SKILL1_NAME}" "${SKILL1_VER}" "${SKILL1_BUNDLE}" "${SKILL1_SRC}")" \
     "install" \
-    "$(_scope_target_line "user" "claude")" \
+    "$(_target_line "claude")" \
+    "$(_scope_line "user")" \
     ""
 
   # No --force: outdated skill skipped without prompting.
@@ -361,7 +390,8 @@ _skill_version() {
   _write_responses \
     "$(_skill_line "${SKILL1_NAME}" "${SKILL1_VER}" "${SKILL1_BUNDLE}" "${SKILL1_SRC}")" \
     "install" \
-    "$(_scope_target_line "user" "claude")" \
+    "$(_target_line "claude")" \
+    "$(_scope_line "user")" \
     ""
 
   run _run_interactive --force
@@ -427,11 +457,12 @@ _skill_version() {
 
 @test "interactive: hook+skill combined selection installs both" {
   # anyInstalled=true: repo has check-similar-branch in .claude/hooks/ (project scope).
-  # Action prompt IS shown. Skill uses combined scope+target; hook keeps separate scope+target.
+  # Action prompt IS shown. Skill uses target-then-scope; hook keeps scope-then-target.
   _write_responses \
     "$(_skill_line "${SKILL1_NAME}" "${SKILL1_VER}" "${SKILL1_BUNDLE}" "${SKILL1_SRC}")<NL>$(_hook_line "${HOOK_NAME_INTERACTIVE}" "${HOOK_VER_INTERACTIVE}" "${HOOK_SRC_INTERACTIVE}")" \
     "install" \
-    "$(_scope_target_line "user" "claude")" \
+    "$(_target_line "claude")" \
+    "$(_scope_line "user")" \
     "user" \
     "claude" \
     ""
@@ -446,10 +477,11 @@ _skill_version() {
   local project_dir="${TEST_DIR}/my-project"
   mkdir -p "${project_dir}"
 
-  # Fresh install from a clean project dir: action skipped, scope+target combined.
+  # Fresh install from a clean project dir: action skipped, target then scope.
   _write_responses \
     "$(_skill_line "${SKILL1_NAME}" "${SKILL1_VER}" "${SKILL1_BUNDLE}" "${SKILL1_SRC}")" \
-    "$(_scope_target_line "project" "claude")" \
+    "$(_target_line "claude")" \
+    "$(_scope_line "project")" \
     ""
 
   # Run from project_dir so process.cwd() points there.
