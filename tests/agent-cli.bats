@@ -74,7 +74,8 @@ _stderr() {
   run _cli list --json
   [ "$status" -eq 0 ]
   echo "$output" | node -e "JSON.parse(require('fs').readFileSync('/dev/stdin','utf8'))"
-  [[ "$output" == *'"bundles"'* ]]
+  [[ "$output" == *'"skills"'* ]]
+  [[ "$output" == *'"bundle"'* ]]
 }
 
 @test "outdated --json emits valid single JSON object to stdout" {
