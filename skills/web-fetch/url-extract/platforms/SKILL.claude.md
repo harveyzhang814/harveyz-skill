@@ -25,7 +25,6 @@ sessions_spawn \
 | 抽象变量 | 实际语法 |
 |----------|----------|
 | `VAULT_PATH` | `{{VAULT_PATH}}` |
-| `SKILL_DIR` | `{{SKILL_DIR}}` |
 | `CHROME_PROFILE` | `{{CHROME_PROFILE}}` |
 
-执行 SKILL.md 中的代码时，将所有 `VAULT_PATH`、`SKILL_DIR`、`CHROME_PROFILE` 占位替换为对应的 `{{变量名}}`，由 vars.json 注入实际值。
+`SKILL_DIR` 由平台自动提供，无需用户配置：值固定为 `$HOME/.claude/skills/url-extract`（Claude Code skill 的标准安装路径）。执行代码时直接将 `SKILL_DIR` 替换为该路径。
