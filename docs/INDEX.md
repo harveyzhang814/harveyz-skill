@@ -1,3 +1,7 @@
+---
+methodology: diataxis
+---
+
 # docs/ 文档索引
 
 ## tutorials/ — 教程

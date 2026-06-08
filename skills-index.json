@@ -52,6 +52,15 @@
       "matcher": "Bash",
       "timeout": 60,
       "statusMessage": "检查相似分支..."
+    },
+    {
+      "name": "dir-manage-guard",
+      "description": "检测目标文件是否在受方法论管理的目录中，提醒调用 dir-manage skill",
+      "path": "hooks/dir-manage-guard",
+      "event": "PreToolUse",
+      "matcher": "Edit|Write",
+      "timeout": 10,
+      "statusMessage": "检查目录方法论..."
     }
   ]
 }
