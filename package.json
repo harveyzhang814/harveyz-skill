@@ -32,10 +32,11 @@
     "skills/design/sync-design-html/",
     "skills/analysis/git-cleanup/",
     "skills/meta/contribute-skill/",
-    "skills/workflow/add-todo/",
     "skills/harness/migrate-specs/",
+    "skills/workflow/add-todo/",
     "skills/harness/dir-manage/",
     "skills/writing/capture-insight/",
+    "skills/meta/skill-publish/",
     "tools/p-launch/",
     "hooks/check-similar-branch/"
   ],

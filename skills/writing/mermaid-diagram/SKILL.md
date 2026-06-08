@@ -1,11 +1,6 @@
 ---
 name: mermaid-diagram
-description: >
-  Mermaid 专业作图标准。只要用户提到"画图"、"mermaid"、"流程图"、"产业链"、
-  "板块地图"、"时序图"、"序列图"、"状态机"、"甘特图"、"象限图"、"思维导图"、
-  "接口调用"、"系统交互"，或需要在 Markdown 文档中嵌入任何 Mermaid 图表，
-  立即调用本 skill。支持 flowchart / sequenceDiagram / stateDiagram / timeline /
-  gantt / quadrantChart / mindmap 全类型。
+description: "Professional Mermaid diagramming standards. Triggers immediately when the user mentions drawing diagrams, flowcharts, sequence diagrams, state machines, Gantt charts, quadrant charts, mind maps, or needs to embed any Mermaid chart in a Markdown document. Supports flowchart, sequenceDiagram, stateDiagram, timeline, gantt, quadrantChart, and mindmap."
 user_invocable: true
 version: "1.3.0"
 ---

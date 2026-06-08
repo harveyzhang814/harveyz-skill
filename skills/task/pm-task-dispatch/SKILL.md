@@ -1,7 +1,8 @@
 ---
 name: pm-task-dispatch
 version: "1.0.0"
-description: PM 任务派发技能。当需要创建新任务并派发给其他 Agent 时触发。流程：理解任务 → 需求澄清 → 分析细化 → 创建任务文档 → sessions_send 派发 → 追踪反馈。触发场景包括：（1）Harvey 提出新任务需求，（2）要求向特定 Agent 分派任务，（3）询问任务如何派发。
+description: "PM task dispatch skill. Triggers when a new task needs to be created and dispatched to another Agent. Workflow: understand task → clarify requirements → analyze and refine → create task document → dispatch via sessions_send → track feedback. Trigger scenarios: (1) Harvey proposes a new task, (2) asks to dispatch a task to a specific Agent, (3) asks how to dispatch a task."
+user_invocable: true
 ---
 
 # PM Task Dispatch

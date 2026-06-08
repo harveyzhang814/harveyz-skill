@@ -41,7 +41,8 @@
     { "path": "harness/migrate-specs", "bundle": "harness" },
     { "path": "workflow/add-todo", "bundle": "workflow" },
     { "path": "harness/dir-manage", "bundle": "document" },
-    { "path": "writing/capture-insight", "bundle": "writing" }
+    { "path": "writing/capture-insight", "bundle": "writing" },
+    { "path": "meta/skill-publish", "bundle": "meta" }
   ],
   "hooks": [
     {

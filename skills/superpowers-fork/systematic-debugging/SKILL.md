@@ -1,6 +1,6 @@
 ---
 name: systematic-debugging
-description: "遇到任何 bug、测试失败或意外行为时使用。在提出修复方案之前，必须先系统化地找到根本原因。核心原则：永远先找根本原因，再尝试修复。禁止在未完成第一阶段调查前提出任何修复方案。"
+description: "Use when encountering any bug, test failure, or unexpected behavior. Must systematically find the root cause before proposing any fix. Core principle: always find the root cause first; symptom fixes are failures. No fix proposals before completing the first-phase investigation."
 user_invocable: true
 version: "1.0.0"
 ---

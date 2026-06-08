@@ -1,6 +1,6 @@
 ---
 name: git-cleanup
-description: "梳理并清理本地 git 分支。规则匹配 + LLM 语义分析，分组确认后批量删除废弃分支。触发词：清理分支、branch cleanup、梳理分支、删除旧分支、整理分支"
+description: "Tidy and clean up local git branches using rule matching and LLM semantic analysis, then batch-delete stale branches after grouped confirmation. Triggers: clean up branches, branch cleanup, tidy branches, delete old branches, organize branches."
 user_invocable: true
 version: "1.0.0"
 ---

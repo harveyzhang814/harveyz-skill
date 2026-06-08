@@ -2,7 +2,7 @@
 name: capture-insight
 version: "1.1.0"
 user_invocable: true
-description: 用来捕捉和记录灵感/insight。当用户表达一个观察、判断或灵感——说"我注意到"、"有个观察"、"记录一下"、"灵感"、"insight"、"有个判断"、或者直接抛出一个带有判断性的想法——立即触发。注意区别于"我有个想法要执行"（那是任务，不触发本 skill）。触发后通过 2-3 个一问一答澄清核心，保存到 insights/ 文件夹。不要等用户说完整，越早触发越好——灵感是易碎的。
+description: "Capture and record a fleeting insight or observation. Triggers immediately when the user expresses an observation, judgment, or idea — phrases like 'I noticed', 'just an observation', 'record this', 'insight', 'I have a judgment', or tossing out an opinionated thought. Distinct from 'I have an idea to execute' (that's a task). Clarifies the core with 2-3 quick Q&As, then saves to the insights/ folder. Trigger early — insights are fragile."
 ---
 
 # Capture Insight
