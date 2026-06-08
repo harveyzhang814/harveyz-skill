@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.11.0] - 2026-06-09
+
+### Added
+- `hskill list`：新增 Bundle 列并按 bundle 名称排序（替换旧的分组标题格式）；`hskill status` skills 列表同步增加 Bundle 列
+
+### Changed
+- `hskill` 内部重构：平台列表从 `SKILL_TARGETS` 单一来源派生，消除 `bundles.js` / `preview.mjs` 中的硬编码数组
+
+### Fixed
+- `url-extract`：移除 `SKILL_DIR` 用户配置变量
+- `preview`：安装状态侧边栏补全 openclaw、hermes 平台（USER LEVEL）
+- `npm-release`：中间步骤跳过 push 操作，最终统一给出推送 + 发布指令清单
+
 ## [0.10.0] - 2026-06-08
 
 ### Added
