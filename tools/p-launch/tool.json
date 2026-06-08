@@ -1,0 +1,11 @@
+{
+  "name": "p-launch",
+  "version": "3.0.0",
+  "description": "local repository manager (Python + Textual)",
+  "uninstallPaths": [
+    "~/.local/share/hskill/p-launch-venv"
+  ],
+  "configPaths": [
+    "~/.config/p-launch"
+  ]
+}

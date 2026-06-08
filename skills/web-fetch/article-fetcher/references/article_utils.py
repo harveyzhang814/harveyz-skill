@@ -1,7 +1,7 @@
 """
 共享工具函数：格式化 block、构建文章、修复 frontmatter
 """
-import re, os, json, sqlite3
+import re, os, json, sqlite3, yaml
 from datetime import datetime, timezone, timedelta
 
 # ------------------------------------------------------------
@@ -186,16 +186,43 @@ def record_issues(url, issues_text, db_path=None):
     """将 issues 写入 SQLite"""
     if db_path is None:
         db_path = os.path.expanduser(
-            '{{SKILL_DIR}}/scripts/url-index.db'
+            '{{VAULT_PATH}}/url-index.db'
         )
     conn = sqlite3.connect(db_path)
-    conn.execute('UPDATE url_index SET issues=? WHERE source_url=?',
+    conn.execute('UPDATE url_index SET issues=? WHERE url=?',
                  (issues_text, url))
     conn.commit()
 
 
 # ------------------------------------------------------------
-# 6. validate_and_repair: 完整校验 + 自动修复流程
+# 6. write_url_index: 写入 SQLite url_index 表
+# ------------------------------------------------------------
+def write_url_index(url, origin_path, article_path, db_path, category=''):
+    """Insert or replace a URL index entry after successful fetch+translate."""
+    fetch_date = datetime.now(timezone(timedelta(hours=8))).strftime('%Y-%m-%d')
+    fm = {}
+    try:
+        with open(article_path, encoding='utf-8') as f:
+            content = f.read()
+        if content.startswith('---'):
+            parts = content.split('---', 2)
+            if len(parts) >= 3:
+                fm = yaml.safe_load(parts[1]) or {}
+    except Exception:
+        pass
+    cat = category or (fm.get('category') or '')
+    conn = sqlite3.connect(db_path)
+    conn.execute(
+        "INSERT OR REPLACE INTO url_index "
+        "(url, title, fetched_at, issues, category, origin_path, article_path) "
+        "VALUES (?,?,?,?,?,?,?)",
+        (url, os.path.basename(article_path), fetch_date, '', cat, origin_path, article_path)
+    )
+    conn.commit()
+
+
+# ------------------------------------------------------------
+# 8. validate_and_repair: 完整校验 + 自动修复流程
 # ------------------------------------------------------------
 def validate_and_repair(origin_path, article_path, url, defaults=None):
     """
@@ -216,7 +243,7 @@ def validate_and_repair(origin_path, article_path, url, defaults=None):
 
 
 # ------------------------------------------------------------
-# 7. sanitize_filename: 文件名清理
+# 9. sanitize_filename: 文件名清理
 # ------------------------------------------------------------
 def sanitize_filename(name):
     """移除文件名中的特殊字符"""

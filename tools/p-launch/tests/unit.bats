@@ -1,151 +1,139 @@
 #!/usr/bin/env bats
-# Unit tests for p-launch internal functions.
+# Launcher tests for p-launch.sh
+# Logic (git operations, branch status) is covered in test_p_launch.py.
 # Requires: bats-core (brew install bats-core)
 
 setup() {
   SCRIPT="$(cd "${BATS_TEST_DIRNAME}/.." && pwd)/p-launch.sh"
   TEST_DIR="$(mktemp -d)"
   MOCK_HOME="${TEST_DIR}/home"
-  mkdir -p "${MOCK_HOME}"
+  MOCK_BIN="${TEST_DIR}/bin"
+  mkdir -p "${MOCK_HOME}" "${MOCK_BIN}"
+
+  export GIT_CONFIG_NOSYSTEM=1
+  export HOME="${MOCK_HOME}"
 }
 
 teardown() {
   rm -rf "${TEST_DIR}"
 }
 
-# Helper: run a zsh snippet that sources the script in test mode.
-# PROJECT_DIRS is overridden AFTER sourcing so the script's default
-# doesn't interfere.
-_src() {
-  local dirs="$1" code="$2"
-  zsh -c "
-    export _P_LAUNCH_TEST=1
-    export HOME='${MOCK_HOME}'
-    source '${SCRIPT}'
-    PROJECT_DIRS=(${dirs})
-    ${code}
-  "
-}
+# ── Dependency checks ─────────────────────────────────────────────────────────
 
-# ── _collect ──────────────────────────────────────────────────────────────────
-
-@test "_collect: fails when project dir does not exist" {
-  run _src "'${TEST_DIR}/nonexistent'" "_collect"
-  [ "$status" -eq 1 ]
-  [ -z "$output" ]
-}
-
-@test "_collect: fails when project dir is empty" {
-  mkdir -p "${TEST_DIR}/projects"
-  run _src "'${TEST_DIR}/projects'" "_collect"
-  [ "$status" -eq 1 ]
-}
-
-@test "_collect: lists subdirectories" {
-  mkdir -p "${TEST_DIR}/projects/alpha" "${TEST_DIR}/projects/beta"
-  run _src "'${TEST_DIR}/projects'" "_collect"
-  [ "$status" -eq 0 ]
-  [ "${#lines[@]}" -eq 2 ]
-}
-
-@test "_collect: sorts by mtime descending (newest first)" {
-  mkdir -p "${TEST_DIR}/projects/old" \
-            "${TEST_DIR}/projects/mid" \
-            "${TEST_DIR}/projects/new"
-  touch -t 202001010000 "${TEST_DIR}/projects/old"
-  touch -t 202006010000 "${TEST_DIR}/projects/mid"
-  touch -t 202101010000 "${TEST_DIR}/projects/new"
-
-  run _src "'${TEST_DIR}/projects'" "_collect"
-  [ "$status" -eq 0 ]
-  [[ "${lines[0]}" == *"/new" ]]
-  [[ "${lines[1]}" == *"/mid" ]]
-  [[ "${lines[2]}" == *"/old" ]]
-}
-
-@test "_collect: merges multiple base dirs" {
-  mkdir -p "${TEST_DIR}/dir1/proj-a" "${TEST_DIR}/dir2/proj-b"
-  run _src "'${TEST_DIR}/dir1' '${TEST_DIR}/dir2'" "_collect"
-  [ "$status" -eq 0 ]
-  [ "${#lines[@]}" -eq 2 ]
-}
-
-@test "_collect: skips files, only returns directories" {
-  mkdir -p "${TEST_DIR}/projects/valid-dir"
-  touch    "${TEST_DIR}/projects/afile.txt"
-  run _src "'${TEST_DIR}/projects'" "_collect"
-  [ "$status" -eq 0 ]
-  [ "${#lines[@]}" -eq 1 ]
-  [[ "${lines[0]}" == *"valid-dir" ]]
-}
-
-@test "_collect: skips non-existent base dirs silently" {
-  mkdir -p "${TEST_DIR}/real/proj-a"
-  run _src "'${TEST_DIR}/real' '${TEST_DIR}/ghost'" "_collect"
-  [ "$status" -eq 0 ]
-  [ "${#lines[@]}" -eq 1 ]
-}
-
-# ── _format ───────────────────────────────────────────────────────────────────
-
-@test "_format: outputs exactly three tab-delimited fields" {
+@test "launcher: exits with error when python3 is missing" {
+  local fake_bin="${TEST_DIR}/fake-bin"
+  mkdir -p "$fake_bin"
   run zsh -c "
-    export _P_LAUNCH_TEST=1
-    export HOME='${MOCK_HOME}'
+    export PATH='${fake_bin}'
     source '${SCRIPT}'
-    printf '%s\n' '${MOCK_HOME}/projects/myapp' | _format
   "
+  [ "$status" -ne 0 ]
+  [[ "$output" == *"python3"* ]]
+}
+
+# ── venv setup ───────────────────────────────────────────────────────────────
+
+@test "launcher: creates venv on first run" {
+  local real_python3
+  real_python3=$(command -v python3)
+
+  local fake_bin="${TEST_DIR}/fake-bin"
+  mkdir -p "$fake_bin"
+  # Fake pip that silently succeeds
+  cat > "${fake_bin}/pip" <<'EOF'
+#!/bin/sh
+exit 0
+EOF
+  chmod +x "${fake_bin}/pip"
+
+  # Fake python3: creates a minimal venv structure when called with -m venv,
+  # delegates real python3 -m venv for proper creation, passes dep checks
+  cat > "${fake_bin}/python3" <<EOF
+#!/bin/sh
+# Pass through to real python3 for venv creation and script execution
+exec "${real_python3}" "\$@"
+EOF
+  chmod +x "${fake_bin}/python3"
+
+  local venv_dir="${MOCK_HOME}/.local/share/hskill/p-launch-venv"
+  [ ! -d "$venv_dir" ]
+
+  # Create a minimal py file so the launcher can exec it
+  local tools_dir="${MOCK_HOME}/.local/share/hskill/tools"
+  mkdir -p "$tools_dir"
+  printf 'import sys\nprint("launched")\n' > "${tools_dir}/p-launch.py"
+
+  run env PATH="${fake_bin}:${PATH}" HOME="${MOCK_HOME}" \
+    zsh "${SCRIPT}"
+  [ -d "$venv_dir" ]
+}
+
+@test "launcher: skips venv setup when venv already exists" {
+  local real_python3
+  real_python3=$(command -v python3)
+
+  # Pre-create a venv
+  local venv_dir="${MOCK_HOME}/.local/share/hskill/p-launch-venv"
+  "${real_python3}" -m venv "$venv_dir"
+
+  # Put a minimal p-launch.py in place
+  local tools_dir="${MOCK_HOME}/.local/share/hskill/tools"
+  mkdir -p "$tools_dir"
+  printf 'print("launched")\n' > "${tools_dir}/p-launch.py"
+
+  # Fake python3 that would fail if called for venv creation
+  local fake_bin="${TEST_DIR}/fake-bin"
+  mkdir -p "$fake_bin"
+  cat > "${fake_bin}/python3" <<EOF
+#!/bin/sh
+if echo "\$*" | grep -q "venv"; then
+  echo "ERROR: venv should not be created again" >&2
+  exit 1
+fi
+exec "${real_python3}" "\$@"
+EOF
+  chmod +x "${fake_bin}/python3"
+
+  run env PATH="${fake_bin}:${PATH}" HOME="${MOCK_HOME}" \
+    zsh "${SCRIPT}"
+  [[ "$output" != *"Setting up"* ]]
   [ "$status" -eq 0 ]
-  local tabs
-  tabs=$(printf '%s' "${lines[0]}" | tr -cd '\t' | wc -c | tr -d ' ')
-  [ "$tabs" -eq 2 ]
 }
 
-@test "_format: first field is the project name (basename)" {
-  run zsh -c "
-    export _P_LAUNCH_TEST=1
-    export HOME='${MOCK_HOME}'
-    source '${SCRIPT}'
-    printf '%s\n' '${TEST_DIR}/some/deep/path/myproject' | _format
-  "
-  local name
-  name=$(printf '%s' "${lines[0]}" | cut -f1)
-  [ "$name" = "myproject" ]
+@test "launcher: exits with error when p-launch.py is not found" {
+  local real_python3
+  real_python3=$(command -v python3)
+
+  # Pre-create a venv with real python so dep setup is skipped
+  local venv_dir="${MOCK_HOME}/.local/share/hskill/p-launch-venv"
+  "${real_python3}" -m venv "$venv_dir"
+
+  # No p-launch.py installed, no dev fallback
+  local dir="${TEST_DIR}/tool"
+  mkdir -p "$dir"
+  cp "${SCRIPT}" "${dir}/p-launch.sh"
+  # Do NOT create p-launch.py next to the script
+
+  run env HOME="${MOCK_HOME}" zsh "${dir}/p-launch.sh"
+  [ "$status" -ne 0 ]
+  [[ "$output" == *"p-launch.py not found"* ]]
 }
 
-@test "_format: second field is the full path unchanged" {
-  local proj="${TEST_DIR}/myproject"
-  run zsh -c "
-    export _P_LAUNCH_TEST=1
-    export HOME='${MOCK_HOME}'
-    source '${SCRIPT}'
-    printf '%s\n' '${proj}' | _format
-  "
-  local full_path
-  full_path=$(printf '%s' "${lines[0]}" | cut -f2)
-  [ "$full_path" = "${proj}" ]
-}
+@test "launcher: dev fallback runs p-launch.py next to script" {
+  local real_python3
+  real_python3=$(command -v python3)
 
-@test "_format: third field replaces HOME with ~" {
-  run zsh -c "
-    export _P_LAUNCH_TEST=1
-    export HOME='${MOCK_HOME}'
-    source '${SCRIPT}'
-    printf '%s\n' '${MOCK_HOME}/projects/myapp' | _format
-  "
-  local parent
-  parent=$(printf '%s' "${lines[0]}" | cut -f3)
-  [[ "$parent" == "~"* ]]
-  [[ "$parent" != *"${MOCK_HOME}"* ]]
-}
+  # Pre-create a venv so setup is skipped
+  local venv_dir="${MOCK_HOME}/.local/share/hskill/p-launch-venv"
+  "${real_python3}" -m venv "$venv_dir"
 
-@test "_format: handles multiple projects" {
-  run zsh -c "
-    export _P_LAUNCH_TEST=1
-    export HOME='${MOCK_HOME}'
-    source '${SCRIPT}'
-    printf '%s\n%s\n' '${TEST_DIR}/proj-a' '${TEST_DIR}/proj-b' | _format
-  "
+  # Place launcher + minimal py side-by-side (dev setup)
+  local dir="${TEST_DIR}/tool"
+  mkdir -p "$dir"
+  cp "${SCRIPT}" "${dir}/p-launch.sh"
+  printf 'print("ok-from-py")\n' > "${dir}/p-launch.py"
+
+  run env HOME="${MOCK_HOME}" zsh "${dir}/p-launch.sh"
   [ "$status" -eq 0 ]
-  [ "${#lines[@]}" -eq 2 ]
+  [[ "$output" == *"ok-from-py"* ]]
 }

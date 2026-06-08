@@ -1,6 +1,6 @@
 ---
 name: using-git-worktrees
-description: "当需要创建隔离工作区（新分支）进行特性开发时使用。在执行实施计划或开始任何需要与当前工作隔离的任务前，必须先创建 worktree、运行项目设置、验证干净的测试基线。适用于：开始新功能开发、修复 bug、需要隔离环境的任何代码工作。"
+description: "Use when starting feature work that needs isolation from the current workspace. Before executing implementation plans or any task requiring isolation, create a worktree, run project setup, and verify a clean test baseline. Applies to: new feature development, bug fixes, or any code work needing an isolated environment."
 user_invocable: true
 version: "1.0.0"
 ---

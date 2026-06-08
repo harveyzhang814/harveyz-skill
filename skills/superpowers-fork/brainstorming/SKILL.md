@@ -1,6 +1,6 @@
 ---
 name: brainstorming
-description: "设计前强制探索阶段。在进行任何实现工作之前（创建功能、编写代码、修改行为），必须先理解用户意图、需求和设计方案。此技能确保每个任务都经过设计阶段再进入实现阶段（HARD-GATE）。触发场景：用户提出新功能需求、代码修改请求、或者需要将想法转化为具体实现方案时。"
+description: "Mandatory exploration phase before any implementation work — creating features, writing code, or modifying behavior. Ensures every task goes through a design phase before implementation (HARD-GATE). Triggers: user proposes a new feature, requests code changes, or needs to turn an idea into a concrete implementation plan."
 user_invocable: true
 version: "1.0.0"
 ---

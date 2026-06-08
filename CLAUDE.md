@@ -9,8 +9,9 @@ Personal Claude Code skills repository for Harvey. Skills are self-contained dir
 ## Installation
 
 ```bash
-# Recommended: npx one-click install
-npx harveyz-skill
+# Recommended: global install
+npm install -g harveyz-skill
+hskill                          # interactive install
 
 # Or manual install
 mkdir -p ~/.claude/skills
@@ -24,22 +25,12 @@ The git hooks block direct commits to `main` and `staging` — use feature/fix/c
 
 ## Skill Structure
 
-Skills live under `skills/`. Two patterns exist:
+Skills live under `skills/`. Two patterns:
 
-**Flat skill** (`skills/harvey-plain/`):
-```
-harvey-plain/
-├── SKILL.md        # Skill definition — sole entry point
-└── references/     # (optional) reference docs
-```
-
-**Skill group** (`skills/superpowers/`): subdirectory containing multiple related skills, each with their own `SKILL.md`.
-
-The `skill-analyzer` skill uses an extended layout with a `research/` directory holding iteration records and analysis — it tracks its own development history.
+- **Flat skill** (`skills/harvey-plain/`): single `SKILL.md` + optional `references/`
+- **Skill group** (`skills/superpowers/`): subdirectory with multiple skills, each with their own `SKILL.md`
 
 ## SKILL.md Format
-
-Standard frontmatter (required for Claude Code to register the skill):
 
 ```yaml
 ---
@@ -50,63 +41,40 @@ version: "x.x.x"
 ---
 ```
 
-The `skill-analyzer` skill omits this frontmatter (uses a custom header instead) — this is intentional but non-standard.
-
 ## Naming Convention
 
 - Flat skills: `harvey-` prefix (e.g., `harvey-plain`)
-- Skill groups: group name as directory, skills inside use plain `{name}` (e.g., `brainstorming` inside `superpowers-fork/`)
+- Skill groups: group name as directory, skills inside use plain `{name}`
 
 ## Shared Output Conventions
 
-Skills that produce org-mode output follow these rules:
+Skills that produce org-mode output:
 
-**Org-mode syntax:**
-- Bold: `*text*` (single asterisk — never `**text**`)
-- Headings start at `*`, no skipped levels
+**Org-mode syntax:** Bold: `*text*` (single asterisk). Headings start at `*`, no skipped levels.
 
-**Denote file naming:** `{YYYYMMDDTHHMMSS}--{title}__{type}.org`  
-**Output directory:** `~/Documents/notes/`  
-**Timestamp command:** `date +%Y%m%dT%H%M%S`
+**Denote file naming:** `{YYYYMMDDTHHMMSS}--{title}__{type}.org` → `~/Documents/notes/`
 
-**ASCII art** — allowed: `+ - | / \ > < v ^ * = ~ . : # [ ] ( ) _ , ; ! ' "`  
-Forbidden: Unicode box-drawing characters (e.g., `┌ │ └`)
+**ASCII art** — allowed: `+ - | / \ > < v ^ * = ~ . : # [ ] ( ) _ , ; ! ' "` — no Unicode box-drawing characters.
 
-## Plugin Manifest
+## Publishing a New Skill
 
-`.claude-plugin/plugin.json` declares the plugin metadata for Claude Code's skill discovery. The `"skills": "./skills"` field points to the skills directory.
+1. Create `skills/<category>/<skill-name>/SKILL.md`
+2. Add to `skills-index.json` under `skills[]` with `path` and `bundle`; add to `bundleMeta` if bundle is new
 
-## Development Workflow
+`skills-index.json` is the single source of truth. Skills absent from it are excluded from npm.
 
-**Run the CLI locally:**
+## 测试
+
 ```bash
-node bin/cli.js                          # interactive mode
-node bin/cli.js --bundle dev --target claude   # non-interactive
-node bin/cli.js list                     # list available bundles
+npm test
 ```
 
-**Publish a new skill** — two steps:
-1. Create the skill under `skills/<category>/<skill-name>/SKILL.md`
-2. Add an entry to `skills-index.json` under `skills[]`, specifying `path` and `bundle`:
-   ```json
-   { "path": "web-fetch/my-skill", "bundle": "web-fetch" }
-   ```
-   If the bundle is new, also add it to `bundleMeta` with a description. `skills-index.json` is the single source of truth — no other file needs updating.
+hskill CLI 行为（安装、交互、JSON 输出）+ 所有 skill 的 SKILL.md 格式校验。
 
-**Before `npm publish`:**
-```bash
-node scripts/generate-npmignore.js   # updates package.json `files` + .npmignore from skills-index.json
-```
-This is run automatically via the `prepack` hook.
-
-**Install targets:** `claude` → `~/.claude/skills/`, `cursor` → `~/.cursor/skills/`, `codex` → `~/.codex/skills/`
-
-## Skills Not Yet Published
-
-Skills present in `skills/` but absent from `skills-index.json` are excluded from npm. The `generate-npmignore.js` script enforces this by generating `.npmignore` entries for all unlisted skill directories.
+写新测试前读 [docs/reference/testing-guide.md](docs/reference/testing-guide.md)。
 
 ## Git 工作流
 
-分支命名规范、保护规则与合并流程详见 [docs/reference/git-workflow.md](docs/reference/git-workflow.md)。
+分支命名规范与合并流程详见 [docs/reference/git-workflow.md](docs/reference/git-workflow.md)。
 
-**分支使用规范：** 一个功能或迭代使用一个分支，在该分支上积累所有相关改动，只在用户明确说"合并"或"完成"时才 merge 到 staging。不要为每次 commit 单独创建新分支。
+**分支使用规范：** 一个功能或迭代使用一个分支，积累所有相关改动，只在用户明确说"合并"或"完成"时才 merge 到 staging。不要为每次 commit 单独创建新分支。

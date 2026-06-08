@@ -1,5 +1,22 @@
 # CHANGELOG — skill-analyzer
 
+## v1.0.0 (2026-05-12)
+
+**基于：** v0.9 + 结构性重构
+
+### 主要变更
+
+- 补全 YAML frontmatter（新增 `name`、`description`、`user_invocable`、`version` 字段）
+- 新增 `references/` 目录，抽象三份模版：
+  - `prohibitions.md` — 完整 23 条禁忌（原 SKILL.md 仅保留第 23 条）
+  - `output-template.md` — 分析报告骨架模版
+  - `evaluation-template.md` — 评估报告骨架模版
+- SKILL.md 中 `禁忌` / `输出格式` / `Layer 1-4` 三个 section 改为引用 references
+- 新增 `输出路径` 规范：输出文件保存在被分析项目根目录 `skill-analysis/` 下
+- 删除 `research/` 目录（历史实验产物，路径不符合输出规范）
+
+---
+
 ## v0.7 (2026-03-28)
 
 **基于：** v0.6 + 第5轮评估反馈
