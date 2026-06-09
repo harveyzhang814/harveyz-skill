@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.12.0] - 2026-06-09
+
+### Added
+- `url-extract`：新增 `detect_chrome_profile.py` 脚本，扫描本机 Chrome profile 并检测 X.com 登录态
+- `url-extract`：安装时 `CHROME_PROFILE` 变量改为 select 选择列表（自动列出所有 profile + 对应 Google 账号），保留手动输入兜底
+- `hskill`：安装/卸载完成后新增 "按 Enter 返回列表" 提示，避免 summary 被 fzf 立即覆盖
+
+### Changed
+- `url-extract` `vars.json`：`CHROME_PROFILE` 默认值从 `Profile 2` 更新为 `Default`
+
 ## [0.11.0] - 2026-06-09
 
 ### Added
