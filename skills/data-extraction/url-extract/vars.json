@@ -6,7 +6,8 @@
   },
   {
     "name": "CHROME_PROFILE",
-    "description": "Chrome 用户配置目录（X.com 登录态所需）。macOS 默认：~/Library/Application Support/Google/Chrome/Default",
+    "description": "Chrome 用户配置目录（X.com 登录态所需）",
+    "type": "chrome_profile_select",
     "default": "{{HOME}}/Library/Application Support/Google/Chrome/Default"
   }
 ]
