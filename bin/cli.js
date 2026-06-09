@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { select } from '@inquirer/prompts'
+import { select, input } from '@inquirer/prompts'
 import chalk from 'chalk'
 import { execSync, spawnSync } from 'child_process'
 import { createRequire } from 'module'
@@ -1068,6 +1068,8 @@ try {
 
       // In test mode with HSKILL_TEST_ACTION, run once and exit
       if (process.env.HSKILL_TEST_ACTION) break
+
+      if (process.stdout.isTTY) await input({ message: chalk.dim('按 Enter 返回列表…'), default: '' })
 
       // Loop back to skill selector automatically
     }
