@@ -1,0 +1,156 @@
+@page {
+  size: A4;
+  margin: 2.54cm;
+}
+
+body {
+  font-family: "Songti SC", "STSong", "SimSun", "宋体", "Times New Roman", serif;
+  font-size: 12pt;
+  line-height: 1.8;
+  color: #000000;
+  max-width: 100%;
+}
+
+h1 {
+  font-family: "Heiti SC", "STHeiti", "SimHei", "黑体", "Arial", sans-serif;
+  font-size: 22pt;
+  font-weight: bold;
+  color: #000000;
+  text-align: center;
+  margin-top: 24pt;
+  margin-bottom: 12pt;
+}
+
+h2 {
+  font-family: "Heiti SC", "STHeiti", "SimHei", "黑体", "Arial", sans-serif;
+  font-size: 16pt;
+  font-weight: bold;
+  color: #000000;
+  text-align: left;
+  margin-top: 18pt;
+  margin-bottom: 9pt;
+}
+
+h3 {
+  font-family: "Heiti SC", "STHeiti", "SimHei", "黑体", "Arial", sans-serif;
+  font-size: 14pt;
+  font-weight: bold;
+  color: #333333;
+  text-align: left;
+  margin-top: 12pt;
+  margin-bottom: 6pt;
+}
+
+h4 {
+  font-family: "STFangsong", "FangSong", "仿宋", "Arial", sans-serif;
+  font-size: 12pt;
+  font-weight: bold;
+  color: #333333;
+  text-align: left;
+  margin-top: 10pt;
+  margin-bottom: 4pt;
+}
+
+p {
+  text-indent: 2em;
+  margin-top: 0;
+  margin-bottom: 6pt;
+}
+
+table {
+  border-collapse: collapse;
+  width: 100%;
+  margin-top: 8pt;
+  margin-bottom: 8pt;
+  font-family: "Songti SC", "STSong", "SimSun", "宋体", "Times New Roman", serif;
+  font-size: 11pt;
+}
+
+th {
+  background-color: #D9E1F2;
+  font-weight: bold;
+  border: 1px solid #AAAAAA;
+  padding: 4pt 6pt;
+  text-align: left;
+}
+
+td {
+  border: 1px solid #AAAAAA;
+  padding: 4pt 6pt;
+}
+
+pre {
+  background-color: #F5F5F5;
+  border: 1px solid #DDDDDD;
+  border-radius: 3px;
+  padding: 8pt 10pt;
+  margin: 6pt 0 6pt 1cm;
+  overflow-x: auto;
+  font-family: "Courier New", "Consolas", monospace;
+  font-size: 10pt;
+  line-height: 1.4;
+}
+
+code {
+  font-family: "Courier New", "Consolas", monospace;
+  font-size: 10pt;
+  background-color: #F5F5F5;
+  padding: 1px 3px;
+  border-radius: 2px;
+}
+
+pre code {
+  background-color: transparent;
+  padding: 0;
+  border-radius: 0;
+}
+
+blockquote {
+  font-family: "STFangsong", "FangSong", "仿宋", "Times New Roman", serif;
+  font-size: 11pt;
+  color: #555555;
+  margin-left: 1cm;
+  margin-top: 4pt;
+  margin-bottom: 4pt;
+  padding-left: 0;
+}
+
+pre.mermaid {
+  background-color: transparent;
+  border: none;
+  text-align: center;
+  margin: 12pt auto;
+  padding: 0;
+}
+
+pre.mermaid svg {
+  max-width: 100%;
+  height: auto;
+}
+
+img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+  margin: 8pt auto;
+}
+
+ul, ol {
+  margin-top: 2pt;
+  margin-bottom: 2pt;
+  padding-left: 1.5em;
+}
+
+li {
+  margin-bottom: 2pt;
+}
+
+hr {
+  border: none;
+  border-top: 1px solid #AAAAAA;
+  margin: 8pt 0;
+}
+
+a {
+  color: #1155CC;
+}
