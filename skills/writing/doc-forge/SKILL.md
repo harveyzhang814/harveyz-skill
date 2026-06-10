@@ -1,6 +1,6 @@
 ---
-name: md-to-docx
-description: "Convert Markdown (.md) files to Word (.docx) or PDF format. Trigger whenever the user wants to: convert/export a .md file to Word or docx, says 'md转docx', 'markdown转word', '生成Word文档', 'export as docx', '导出Word'; OR convert to PDF, says 'md转pdf', 'markdown转pdf', '导出PDF', 'export as pdf', '生成PDF'; OR has a markdown file they need to share or browse as Word/PDF. Also trigger when the user writes a document in the conversation and wants it as .docx or .pdf."
+name: doc-forge
+description: "Convert documents between formats. Trigger whenever the user wants to: convert/export a .md file to Word or docx, says 'md转docx', 'markdown转word', '生成Word文档', 'export as docx', '导出Word'; OR convert to PDF, says 'md转pdf', 'markdown转pdf', '导出PDF', 'export as pdf', '生成PDF'; OR has a markdown file they need to share or browse as Word/PDF. Also trigger when the user writes a document in the conversation and wants it as .docx or .pdf."
 user_invocable: true
 version: "2.0.0"
 ---
@@ -10,8 +10,8 @@ version: "2.0.0"
 Convert a Markdown file to Word (.docx) or PDF. Both formats support headings, tables, code blocks, lists, inline formatting, blockquotes, and embedded images. PDF additionally supports Mermaid diagrams (rendered as vector SVG).
 
 **Script locations (after `hskill` install):**
-- DOCX: `~/.claude/skills/md-to-docx/scripts/md_to_docx.py`
-- PDF:  `~/.claude/skills/md-to-docx/scripts/md_to_pdf.py`
+- DOCX: `~/.claude/skills/doc-forge/scripts/md_to_docx.py`
+- PDF:  `~/.claude/skills/doc-forge/scripts/md_to_pdf.py`
 
 ---
 
@@ -19,23 +19,23 @@ Convert a Markdown file to Word (.docx) or PDF. Both formats support headings, t
 
 **Basic:**
 ```bash
-python3 ~/.claude/skills/md-to-docx/scripts/md_to_docx.py input.md
+python3 ~/.claude/skills/doc-forge/scripts/md_to_docx.py input.md
 # → input.docx in the same directory
 ```
 
 **Specify output:**
 ```bash
-python3 ~/.claude/skills/md-to-docx/scripts/md_to_docx.py input.md output.docx
+python3 ~/.claude/skills/doc-forge/scripts/md_to_docx.py input.md output.docx
 ```
 
 **Custom style:**
 ```bash
-python3 ~/.claude/skills/md-to-docx/scripts/md_to_docx.py input.md --style custom.json
+python3 ~/.claude/skills/doc-forge/scripts/md_to_docx.py input.md --style custom.json
 ```
 
 **Dump default style to customize:**
 ```bash
-python3 ~/.claude/skills/md-to-docx/scripts/md_to_docx.py --dump-style > style.json
+python3 ~/.claude/skills/doc-forge/scripts/md_to_docx.py --dump-style > style.json
 ```
 
 **Dependencies:** `pip install python-docx`
@@ -46,23 +46,23 @@ python3 ~/.claude/skills/md-to-docx/scripts/md_to_docx.py --dump-style > style.j
 
 **Basic:**
 ```bash
-python3 ~/.claude/skills/md-to-docx/scripts/md_to_pdf.py input.md
+python3 ~/.claude/skills/doc-forge/scripts/md_to_pdf.py input.md
 # → input.pdf in the same directory
 ```
 
 **Specify output:**
 ```bash
-python3 ~/.claude/skills/md-to-docx/scripts/md_to_pdf.py input.md output.pdf
+python3 ~/.claude/skills/doc-forge/scripts/md_to_pdf.py input.md output.pdf
 ```
 
 **Custom style:**
 ```bash
-python3 ~/.claude/skills/md-to-docx/scripts/md_to_pdf.py input.md --style custom.css
+python3 ~/.claude/skills/doc-forge/scripts/md_to_pdf.py input.md --style custom.css
 ```
 
 **Dump default CSS to customize:**
 ```bash
-python3 ~/.claude/skills/md-to-docx/scripts/md_to_pdf.py --dump-style > style.css
+python3 ~/.claude/skills/doc-forge/scripts/md_to_pdf.py --dump-style > style.css
 ```
 
 **Dependencies:** `pip install markdown` (playwright already required)
@@ -102,5 +102,5 @@ python3 ~/.claude/skills/md-to-docx/scripts/md_to_pdf.py --dump-style > style.cs
 # DOCX
 python3 tools/md-formatter/md_to_docx.py input.md
 # PDF
-python3 skills/writing/md-to-docx/scripts/md_to_pdf.py input.md
+python3 skills/writing/doc-forge/scripts/md_to_pdf.py input.md
 ```
