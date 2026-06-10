@@ -1108,7 +1108,7 @@ try {
     // When only --skill is given and no --target, use the combined selector.
     if (targetArg) {
       const scope = scopeArg ?? 'user'
-      const selectedTargets = targetArg === 'all' ? ['claude', 'cursor', 'codex', 'openclaw', 'hermes'] : [targetArg]
+      const selectedTargets = targetArg === 'all' ? ['claude', 'cursor', 'codex', 'openclaw', 'hermes', 'opencode'] : [targetArg]
       const targets = resolveTargets(selectedTargets, scope)
       console.log('')
       skillSummary = await installSkills(skillItems, targets, forceFlag)
