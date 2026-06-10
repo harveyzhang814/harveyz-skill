@@ -73,12 +73,11 @@ def build_html(md_text: str, css_path: Path) -> tuple[str, int]:
 
 
 def render_pdf(html: str, output_path: Path, base_url: str, mermaid_count: int) -> None:
-    from pathlib import Path as _Path
     from playwright.sync_api import sync_playwright
 
     # Write temp HTML into the same directory as the source MD so that
     # relative image paths (e.g. ./diagram.png) resolve correctly.
-    base_dir = _Path(base_url.removeprefix("file://").rstrip("/"))
+    base_dir = Path(base_url.removeprefix("file://").rstrip("/"))
     tmp_html = base_dir / f"_md_to_pdf_tmp_{output_path.stem}.html"
     try:
         tmp_html.write_text(html, encoding="utf-8")
