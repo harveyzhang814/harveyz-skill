@@ -83,16 +83,11 @@ _skill_version() {
   [ ! -f "${MOCK_HOME}/.config/opencode/skills/${SKILL1_NAME}/SKILL.md" ]
 }
 
-@test "install --skill --target all: also installs to opencode" {
-  _install --skill "${SKILL1_NAME}" --target all --scope user --force
-  [ -f "${MOCK_HOME}/.claude/skills/${SKILL1_NAME}/SKILL.md" ]
-  [ -f "${MOCK_HOME}/.config/opencode/skills/${SKILL1_NAME}/SKILL.md" ]
-}
-
-@test "install --skill --target all: installs to every target" {
+@test "install --skill --target all: installs to every target including opencode" {
   _install --skill "${SKILL1_NAME}" --target all --scope user --force
   [ -f "${MOCK_HOME}/.claude/skills/${SKILL1_NAME}/SKILL.md" ]
   [ -f "${MOCK_HOME}/.cursor/skills/${SKILL1_NAME}/SKILL.md" ]
+  [ -f "${MOCK_HOME}/.config/opencode/skills/${SKILL1_NAME}/SKILL.md" ]
 }
 
 # ── project scope ─────────────────────────────────────────────────────────────
