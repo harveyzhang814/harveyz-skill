@@ -124,10 +124,27 @@ def repair_frontmatter(fp, url, defaults=None):
         return {}, [], ['无frontmatter']
 
     fm = {}
-    for line in m.group(1).split('\n'):
-        if ':' in line:
+    raw_fm_lines = m.group(1).split('\n')
+    i = 0
+    while i < len(raw_fm_lines):
+        line = raw_fm_lines[i]
+        if ':' in line and not line.startswith(' ') and not line.startswith('-'):
             k, v = line.split(':', 1)
-            fm[k.strip()] = v.strip()
+            k, v = k.strip(), v.strip()
+            # collect indented continuation lines (multi-line YAML values e.g. tags list)
+            j = i + 1
+            sub_lines = []
+            while j < len(raw_fm_lines) and (raw_fm_lines[j].startswith('  ') or raw_fm_lines[j].startswith('\t')):
+                sub_lines.append(raw_fm_lines[j])
+                j += 1
+            if sub_lines:
+                fm[k] = (v + '\n' + '\n'.join(sub_lines)) if v else '\n'.join(sub_lines)
+                i = j
+            else:
+                fm[k] = v
+                i += 1
+        else:
+            i += 1
 
     fixed, remaining = [], []
 
@@ -137,20 +154,33 @@ def repair_frontmatter(fp, url, defaults=None):
             fm[field] = value
             fixed.append(f'{field}={value}')
 
+    def _norm_tag(t):
+        t = t.strip().strip('[]').strip()
+        if re.search(r'[\u4e00-\u9fff]', t):
+            return t.lower()
+        return t.lower().replace(' ', '-')
+
     # tags 格式修复：逗号分隔 → YAML 列表
     tags_raw = fm.get('tags', '')
-    if tags_raw and ',' in tags_raw and not tags_raw.startswith('-'):
+    if tags_raw and ',' in tags_raw and not tags_raw.strip().startswith('-') and '[' not in tags_raw:
         raw_list = [t.strip() for t in tags_raw.split(',') if t.strip()]
-        def _norm_tag(t):
-            if re.search(r'[\u4e00-\u9fff]', t):
-                return t.lower()
-            return t.lower().replace(' ', '-')
         fm['tags'] = '\n  - ' + '\n  - '.join(_norm_tag(t) for t in raw_list)
         fixed.append('tags=YAML列表')
 
+    # tags 方括号格式修复：- [item1  /  - item2] → 正常 YAML 列表
+    tags_raw = fm.get('tags', '')
+    if tags_raw and ('[' in tags_raw or ']' in tags_raw):
+        tag_lines = [l for l in tags_raw.split('\n') if l.strip().startswith('-')]
+        clean = [_norm_tag(l.lstrip('- ').strip()) for l in tag_lines]
+        clean = [t for t in clean if t]
+        if clean:
+            fm['tags'] = '\n  - ' + '\n  - '.join(clean)
+            fixed.append('tags=去方括号')
+
     # tags 大写修复
-    if fm.get('tags', '').startswith('-'):
-        tag_lines = [l for l in fm['tags'].strip().split('\n') if l.strip().startswith('-')]
+    tags_raw = fm.get('tags', '')
+    if tags_raw.strip().startswith('-') or '\n  -' in tags_raw:
+        tag_lines = [l for l in tags_raw.strip().split('\n') if l.strip().startswith('-')]
         new_lines = []
         for tl in tag_lines:
             tag_val = tl.lstrip('- ').strip()
@@ -158,11 +188,47 @@ def repair_frontmatter(fp, url, defaults=None):
                 new_lines.append(f'  - {tag_val.lower()}')
                 fixed.append(f'tag-lowercase={tag_val}')
             else:
-                new_lines.append(tl)
-        fm['tags'] = '\n'.join(new_lines)
+                new_lines.append(f'  - {tag_val}' if not tl.startswith('  ') else tl)
+        fm['tags'] = '\n' + '\n'.join(new_lines)
+
+    # 日期格式修复：YYYY-MM-DD（含 ISO 8601 时间戳）
+    _date_re = re.compile(r'^\d{4}-\d{2}-\d{2}$')
+    for date_fld in ['publish_date', 'fetch_date']:
+        val = fm.get(date_fld, '').strip().strip("'\"")
+        if val and not _date_re.match(val):
+            _extracted = re.search(r'(\d{4})[/-](\d{1,2})[/-](\d{1,2})', val)
+            if _extracted:
+                y, mo, d = _extracted.groups()
+                fm[date_fld] = f'{y}-{int(mo):02d}-{int(d):02d}'
+                fixed.append(f'{date_fld}=日期格式修复')
+            else:
+                remaining.append(f'{date_fld}格式错误: {val!r}')
+
+    # 单引号包裹修复：去掉不必要的单引号
+    for k in list(fm.keys()):
+        v = fm[k]
+        if isinstance(v, str) and v.startswith("'") and v.endswith("'") and len(v) > 1:
+            fm[k] = v[1:-1]
+            fixed.append(f'{k}=去单引号')
+
+    # 含冒号的文本字段加双引号（排除 URL、已引号、多行值）
+    _text_fields = {'origin_title', 'description', 'author'}
+    for k in _text_fields:
+        v = fm.get(k, '')
+        if not v or v.startswith('\n'):
+            continue
+        v = v.strip()
+        if ':' in v and not v.startswith('"'):
+            fm[k] = '"' + v.replace('"', '\\"') + '"'
+            fixed.append(f'{k}=加引号')
 
     # 写回文件
-    fm_lines = [f'{k}: {v}' for k, v in fm.items()]
+    fm_lines = []
+    for k, v in fm.items():
+        if v.startswith('\n'):
+            fm_lines.append(f'{k}:{v}')
+        else:
+            fm_lines.append(f'{k}: {v}')
     fm_str = '---\n' + '\n'.join(fm_lines) + '\n---\n'
     with open(fp, 'w', encoding='utf-8') as f:
         f.write(fm_str + content[m.end():])
