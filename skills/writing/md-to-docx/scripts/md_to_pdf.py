@@ -73,14 +73,15 @@ def build_html(md_text: str, css_path: Path) -> tuple[str, int]:
 
 
 def render_pdf(html: str, output_path: Path, base_url: str, mermaid_count: int) -> None:
-    import tempfile
+    from pathlib import Path as _Path
     from playwright.sync_api import sync_playwright
 
-    with tempfile.NamedTemporaryFile(suffix=".html", mode="w", encoding="utf-8", delete=False) as f:
-        f.write(html)
-        tmp_html = Path(f.name)
-
+    # Write temp HTML into the same directory as the source MD so that
+    # relative image paths (e.g. ./diagram.png) resolve correctly.
+    base_dir = _Path(base_url.removeprefix("file://").rstrip("/"))
+    tmp_html = base_dir / f"_md_to_pdf_tmp_{output_path.stem}.html"
     try:
+        tmp_html.write_text(html, encoding="utf-8")
         with sync_playwright() as p:
             browser = p.chromium.launch()
             page = browser.new_page()
@@ -93,7 +94,8 @@ def render_pdf(html: str, output_path: Path, base_url: str, mermaid_count: int) 
             page.pdf(path=str(output_path), format="A4", print_background=True)
             browser.close()
     finally:
-        tmp_html.unlink(missing_ok=True)
+        if tmp_html.exists():
+            tmp_html.unlink()
 
 
 def main() -> None:
