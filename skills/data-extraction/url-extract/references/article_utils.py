@@ -191,6 +191,37 @@ def repair_frontmatter(fp, url, defaults=None):
                 new_lines.append(f'  - {tag_val}' if not tl.startswith('  ') else tl)
         fm['tags'] = '\n' + '\n'.join(new_lines)
 
+    # 日期格式修复：YYYY-MM-DD（含 ISO 8601 时间戳）
+    _date_re = re.compile(r'^\d{4}-\d{2}-\d{2}$')
+    for date_fld in ['publish_date', 'fetch_date']:
+        val = fm.get(date_fld, '').strip().strip("'\"")
+        if val and not _date_re.match(val):
+            _extracted = re.search(r'(\d{4})[/-](\d{1,2})[/-](\d{1,2})', val)
+            if _extracted:
+                y, mo, d = _extracted.groups()
+                fm[date_fld] = f'{y}-{int(mo):02d}-{int(d):02d}'
+                fixed.append(f'{date_fld}=日期格式修复')
+            else:
+                remaining.append(f'{date_fld}格式错误: {val!r}')
+
+    # 单引号包裹修复：去掉不必要的单引号
+    for k in list(fm.keys()):
+        v = fm[k]
+        if isinstance(v, str) and v.startswith("'") and v.endswith("'") and len(v) > 1:
+            fm[k] = v[1:-1]
+            fixed.append(f'{k}=去单引号')
+
+    # 含冒号的文本字段加双引号（排除 URL、已引号、多行值）
+    _text_fields = {'origin_title', 'description', 'author'}
+    for k in _text_fields:
+        v = fm.get(k, '')
+        if not v or v.startswith('\n'):
+            continue
+        v = v.strip()
+        if ':' in v and not v.startswith('"'):
+            fm[k] = '"' + v.replace('"', '\\"') + '"'
+            fixed.append(f'{k}=加引号')
+
     # 写回文件
     fm_lines = []
     for k, v in fm.items():
@@ -201,20 +232,6 @@ def repair_frontmatter(fp, url, defaults=None):
     fm_str = '---\n' + '\n'.join(fm_lines) + '\n---\n'
     with open(fp, 'w', encoding='utf-8') as f:
         f.write(fm_str + content[m.end():])
-
-    # 日期格式修复：YYYY-MM-DD
-    _date_re = re.compile(r'^\d{4}-\d{2}-\d{2}$')
-    for date_fld in ['publish_date', 'fetch_date']:
-        val = fm.get(date_fld, '').strip()
-        if val and not _date_re.match(val):
-            # 尝试从常见格式中提取日期
-            _extracted = re.search(r'(\d{4})[/-](\d{1,2})[/-](\d{1,2})', val)
-            if _extracted:
-                y, mo, d = _extracted.groups()
-                fm[date_fld] = f'{y}-{int(mo):02d}-{int(d):02d}'
-                fixed.append(f'{date_fld}=日期格式修复')
-            else:
-                remaining.append(f'{date_fld}格式错误: {val!r}')
 
     # 检查剩余问题
     for fld in ['publish_date', 'author', 'source_url']:
