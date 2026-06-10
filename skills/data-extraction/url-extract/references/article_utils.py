@@ -124,10 +124,27 @@ def repair_frontmatter(fp, url, defaults=None):
         return {}, [], ['无frontmatter']
 
     fm = {}
-    for line in m.group(1).split('\n'):
-        if ':' in line:
+    raw_fm_lines = m.group(1).split('\n')
+    i = 0
+    while i < len(raw_fm_lines):
+        line = raw_fm_lines[i]
+        if ':' in line and not line.startswith(' ') and not line.startswith('-'):
             k, v = line.split(':', 1)
-            fm[k.strip()] = v.strip()
+            k, v = k.strip(), v.strip()
+            # collect indented continuation lines (multi-line YAML values e.g. tags list)
+            j = i + 1
+            sub_lines = []
+            while j < len(raw_fm_lines) and (raw_fm_lines[j].startswith('  ') or raw_fm_lines[j].startswith('\t')):
+                sub_lines.append(raw_fm_lines[j])
+                j += 1
+            if sub_lines:
+                fm[k] = (v + '\n' + '\n'.join(sub_lines)) if v else '\n'.join(sub_lines)
+                i = j
+            else:
+                fm[k] = v
+                i += 1
+        else:
+            i += 1
 
     fixed, remaining = [], []
 
@@ -137,20 +154,33 @@ def repair_frontmatter(fp, url, defaults=None):
             fm[field] = value
             fixed.append(f'{field}={value}')
 
+    def _norm_tag(t):
+        t = t.strip().strip('[]').strip()
+        if re.search(r'[\u4e00-\u9fff]', t):
+            return t.lower()
+        return t.lower().replace(' ', '-')
+
     # tags 格式修复：逗号分隔 → YAML 列表
     tags_raw = fm.get('tags', '')
-    if tags_raw and ',' in tags_raw and not tags_raw.startswith('-'):
+    if tags_raw and ',' in tags_raw and not tags_raw.strip().startswith('-') and '[' not in tags_raw:
         raw_list = [t.strip() for t in tags_raw.split(',') if t.strip()]
-        def _norm_tag(t):
-            if re.search(r'[\u4e00-\u9fff]', t):
-                return t.lower()
-            return t.lower().replace(' ', '-')
         fm['tags'] = '\n  - ' + '\n  - '.join(_norm_tag(t) for t in raw_list)
         fixed.append('tags=YAML列表')
 
+    # tags 方括号格式修复：- [item1  /  - item2] → 正常 YAML 列表
+    tags_raw = fm.get('tags', '')
+    if tags_raw and ('[' in tags_raw or ']' in tags_raw):
+        tag_lines = [l for l in tags_raw.split('\n') if l.strip().startswith('-')]
+        clean = [_norm_tag(l.lstrip('- ').strip()) for l in tag_lines]
+        clean = [t for t in clean if t]
+        if clean:
+            fm['tags'] = '\n  - ' + '\n  - '.join(clean)
+            fixed.append('tags=去方括号')
+
     # tags 大写修复
-    if fm.get('tags', '').startswith('-'):
-        tag_lines = [l for l in fm['tags'].strip().split('\n') if l.strip().startswith('-')]
+    tags_raw = fm.get('tags', '')
+    if tags_raw.strip().startswith('-') or '\n  -' in tags_raw:
+        tag_lines = [l for l in tags_raw.strip().split('\n') if l.strip().startswith('-')]
         new_lines = []
         for tl in tag_lines:
             tag_val = tl.lstrip('- ').strip()
@@ -158,7 +188,7 @@ def repair_frontmatter(fp, url, defaults=None):
                 new_lines.append(f'  - {tag_val.lower()}')
                 fixed.append(f'tag-lowercase={tag_val}')
             else:
-                new_lines.append(tl)
+                new_lines.append(f'  - {tag_val}' if not tl.startswith('  ') else tl)
         fm['tags'] = '\n'.join(new_lines)
 
     # 写回文件
