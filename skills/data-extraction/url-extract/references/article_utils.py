@@ -202,6 +202,20 @@ def repair_frontmatter(fp, url, defaults=None):
     with open(fp, 'w', encoding='utf-8') as f:
         f.write(fm_str + content[m.end():])
 
+    # 日期格式修复：YYYY-MM-DD
+    _date_re = re.compile(r'^\d{4}-\d{2}-\d{2}$')
+    for date_fld in ['publish_date', 'fetch_date']:
+        val = fm.get(date_fld, '').strip()
+        if val and not _date_re.match(val):
+            # 尝试从常见格式中提取日期
+            _extracted = re.search(r'(\d{4})[/-](\d{1,2})[/-](\d{1,2})', val)
+            if _extracted:
+                y, mo, d = _extracted.groups()
+                fm[date_fld] = f'{y}-{int(mo):02d}-{int(d):02d}'
+                fixed.append(f'{date_fld}=日期格式修复')
+            else:
+                remaining.append(f'{date_fld}格式错误: {val!r}')
+
     # 检查剩余问题
     for fld in ['publish_date', 'author', 'source_url']:
         if not fm.get(fld, '').strip():
