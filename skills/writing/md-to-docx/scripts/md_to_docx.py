@@ -5,7 +5,7 @@ Convert Markdown to DOCX with customizable formatting.
 Usage:
     python3 tools/md_to_docx.py input.md [output.docx] [--style style.json]
 
-Style config: JSON file with format spec. See DEFAULT_STYLE below.
+Style config: JSON file with format spec. See assets/default-style.json.
 """
 
 import argparse
@@ -423,7 +423,11 @@ def main():
     args = parser.parse_args()
 
     if args.dump_style:
-        print((ASSETS_DIR / "default-style.json").read_text(encoding="utf-8"))
+        _style_file = ASSETS_DIR / "default-style.json"
+        if not _style_file.exists():
+            print(f"Error: {_style_file} not found — reinstall the skill", file=sys.stderr)
+            sys.exit(1)
+        print(_style_file.read_text(encoding="utf-8"))
         return
 
     if not args.input:
@@ -435,7 +439,11 @@ def main():
 
     output_path = Path(args.output) if args.output else input_path.with_suffix(".docx")
 
-    with open(ASSETS_DIR / "default-style.json", encoding="utf-8") as f:
+    _style_file = ASSETS_DIR / "default-style.json"
+    if not _style_file.exists():
+        print(f"Error: {_style_file} not found — reinstall the skill", file=sys.stderr)
+        sys.exit(1)
+    with open(_style_file, encoding="utf-8") as f:
         style = json.load(f)
     if args.style:
         with open(args.style, encoding="utf-8") as f:
