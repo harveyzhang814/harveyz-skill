@@ -16,7 +16,7 @@
     "harness": "测试工具（full-stack-debug-env）",
     "task": "任务管理（pm-task-dispatch + task-close）",
     "data-extraction": "数据提取工具（article-fetcher + url-extract + vision-extract + youtube-learner）",
-    "writing": "写作工具（mermaid-diagram）",
+    "writing": "写作工具（mermaid-diagram + md-to-docx）",
     "design": "设计同步工具（sync-design-html）",
     "meta": "元操作工具（对 harveyz-skill 仓库本身的管理）",
     "workflow": "工作流工具（backlog 管理、TODO 追踪）"
@@ -38,6 +38,7 @@
     { "path": "data-extraction/vision-extract", "bundle": "data-extraction" },
     { "path": "data-extraction/youtube-learner", "bundle": "data-extraction" },
     { "path": "writing/mermaid-diagram", "bundle": "writing" },
+    { "path": "writing/md-to-docx", "bundle": "writing" },
     { "path": "design/sync-design-html", "bundle": "design" },
     { "path": "analysis/git-cleanup", "bundle": "analysis" },
     { "path": "meta/contribute-skill", "bundle": "meta" },
