@@ -1,6 +1,6 @@
 {
   "name": "harveyz-skill",
-  "version": "0.12.0",
+  "version": "0.12.1",
   "description": "Skill manager for Claude Code, Cursor, and Codex",
   "type": "module",
   "bin": {
@@ -27,8 +27,8 @@
     "skills/superpowers-fork/writing-plans/",
     "skills/task/pm-task-dispatch/",
     "skills/task/task-close/",
-    "skills/web-fetch/article-fetcher/",
-    "skills/web-fetch/url-extract/",
+    "skills/data-extraction/article-fetcher/",
+    "skills/data-extraction/url-extract/",
     "skills/data-extraction/vision-extract/",
     "skills/writing/mermaid-diagram/",
     "skills/design/sync-design-html/",
