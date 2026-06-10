@@ -27,6 +27,7 @@ setup() {
   MOCK_HOME="${TEST_DIR}/home"
   mkdir -p "${MOCK_HOME}/.claude/skills"
   mkdir -p "${MOCK_HOME}/.cursor/skills"
+  mkdir -p "${MOCK_HOME}/.config/opencode/skills"
   mkdir -p "${MOCK_HOME}/.local/bin"
   mkdir -p "${MOCK_HOME}/.local/share/hskill/tools"
 }
@@ -67,10 +68,26 @@ _skill_version() {
   [ ! -f "${MOCK_HOME}/.claude/skills/${SKILL1_NAME}/SKILL.md" ]
 }
 
-@test "install --skill --target all: installs to every target" {
+@test "install --skill --target opencode: installs to ~/.config/opencode/skills" {
+  _install --skill "${SKILL1_NAME}" --target opencode --scope user --force
+  [ -f "${MOCK_HOME}/.config/opencode/skills/${SKILL1_NAME}/SKILL.md" ]
+  [ ! -f "${MOCK_HOME}/.claude/skills/${SKILL1_NAME}/SKILL.md" ]
+}
+
+@test "install --skill --target opencode --scope project: installs to .opencode/skills" {
+  local project_dir="${TEST_DIR}/opencode-proj"
+  mkdir -p "${project_dir}"
+  (cd "${project_dir}" && HOME="${MOCK_HOME}" node "${CLI}" install \
+    --skill "${SKILL1_NAME}" --target opencode --scope project --force 2>/dev/null | cat)
+  [ -f "${project_dir}/.opencode/skills/${SKILL1_NAME}/SKILL.md" ]
+  [ ! -f "${MOCK_HOME}/.config/opencode/skills/${SKILL1_NAME}/SKILL.md" ]
+}
+
+@test "install --skill --target all: installs to every target including opencode" {
   _install --skill "${SKILL1_NAME}" --target all --scope user --force
   [ -f "${MOCK_HOME}/.claude/skills/${SKILL1_NAME}/SKILL.md" ]
   [ -f "${MOCK_HOME}/.cursor/skills/${SKILL1_NAME}/SKILL.md" ]
+  [ -f "${MOCK_HOME}/.config/opencode/skills/${SKILL1_NAME}/SKILL.md" ]
 }
 
 # ── project scope ─────────────────────────────────────────────────────────────
