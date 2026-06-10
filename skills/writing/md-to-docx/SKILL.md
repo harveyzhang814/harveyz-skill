@@ -1,97 +1,106 @@
 ---
 name: md-to-docx
-description: "Convert Markdown (.md) files to Word (.docx) documents using the bundled md_to_docx.py script. Trigger whenever the user wants to: convert/export a .md file to Word or docx, says 'md转docx', 'markdown转word', '生成Word文档', 'export as docx', '导出Word', or has a markdown file they need to share as a Word document. Also trigger when the user writes a document in the conversation and wants it as a .docx."
+description: "Convert Markdown (.md) files to Word (.docx) or PDF format. Trigger whenever the user wants to: convert/export a .md file to Word or docx, says 'md转docx', 'markdown转word', '生成Word文档', 'export as docx', '导出Word'; OR convert to PDF, says 'md转pdf', 'markdown转pdf', '导出PDF', 'export as pdf', '生成PDF'; OR has a markdown file they need to share or browse as Word/PDF. Also trigger when the user writes a document in the conversation and wants it as .docx or .pdf."
 user_invocable: true
-version: "1.0.0"
+version: "2.0.0"
 ---
 
 ## Overview
 
-Convert a Markdown file to a formatted Word document (.docx). The script handles headings, paragraphs, tables, code blocks, lists, inline formatting, and blockquotes — with sensible Chinese-document defaults out of the box.
+Convert a Markdown file to Word (.docx) or PDF. Both formats support headings, tables, code blocks, lists, inline formatting, blockquotes, and embedded images. PDF additionally supports Mermaid diagrams (rendered as vector SVG).
 
-**Script location (after `hskill` install):** `~/.claude/skills/md-to-docx/scripts/md_to_docx.py`
-
----
-
-## Steps
-
-1. **Identify the input file** — get the `.md` path from context or ask the user.
-2. **Determine the output path** — default is the same name with `.docx` extension in the same directory. Confirm with the user if they want a different location.
-3. **Check dependencies** — if `python-docx` isn't installed, install it first (see below).
-4. **Run the conversion.**
-5. **Report** the output path.
+**Script locations (after `hskill` install):**
+- DOCX: `~/.claude/skills/md-to-docx/scripts/md_to_docx.py`
+- PDF:  `~/.claude/skills/md-to-docx/scripts/md_to_pdf.py`
 
 ---
 
-## Commands
+## DOCX Conversion
 
-**Basic conversion:**
+**Basic:**
 ```bash
 python3 ~/.claude/skills/md-to-docx/scripts/md_to_docx.py input.md
-# → saves input.docx next to input.md
+# → input.docx in the same directory
 ```
 
-**Specify output path:**
+**Specify output:**
 ```bash
 python3 ~/.claude/skills/md-to-docx/scripts/md_to_docx.py input.md output.docx
 ```
 
 **Custom style:**
 ```bash
-python3 ~/.claude/skills/md-to-docx/scripts/md_to_docx.py input.md --style style.json
+python3 ~/.claude/skills/md-to-docx/scripts/md_to_docx.py input.md --style custom.json
 ```
 
-**Dump default style (to customize):**
+**Dump default style to customize:**
 ```bash
 python3 ~/.claude/skills/md-to-docx/scripts/md_to_docx.py --dump-style > style.json
 ```
 
+**Dependencies:** `pip install python-docx`
+
 ---
 
-## Dependencies
+## PDF Conversion
 
+**Basic:**
 ```bash
-pip install python-docx
+python3 ~/.claude/skills/md-to-docx/scripts/md_to_pdf.py input.md
+# → input.pdf in the same directory
 ```
 
-If the conversion fails with `ModuleNotFoundError: No module named 'docx'`, run the above and retry.
+**Specify output:**
+```bash
+python3 ~/.claude/skills/md-to-docx/scripts/md_to_pdf.py input.md output.pdf
+```
+
+**Custom style:**
+```bash
+python3 ~/.claude/skills/md-to-docx/scripts/md_to_pdf.py input.md --style custom.css
+```
+
+**Dump default CSS to customize:**
+```bash
+python3 ~/.claude/skills/md-to-docx/scripts/md_to_pdf.py --dump-style > style.css
+```
+
+**Dependencies:** `pip install markdown` (playwright already required)
+
+**Mermaid (optional, for offline use):** `npm install mermaid` inside the skill directory. Without this, mermaid.js is loaded from CDN.
 
 ---
 
-## What gets converted
+## What Gets Converted
 
-| Markdown | Word output |
-|----------|-------------|
-| `# H1` … `#### H4` | Styled headings (黑体/Arial, sized by level) |
-| Paragraphs | 宋体/Times New Roman, 12pt, 2-char first-line indent |
-| `**bold**`, `*italic*`, `` `code` ``, `~~strike~~`, `[link](url)` | Inline runs with correct formatting |
-| ` ``` ` fenced code | Courier New monospace block |
-| `>` blockquote | 仿宋, indented |
-| `- / * / +` unordered list | Bullet `•` with nesting |
-| `1.` ordered list | Numbered with nesting |
-| Pipe tables | Styled table with header shading |
-| `---` horizontal rule | Thin gray line |
-
-Headings deeper than H4 are styled as H4. HTML comments are stripped.
+| Markdown | DOCX | PDF |
+|----------|------|-----|
+| `# H1` … `#### H4` | Styled headings | Styled headings |
+| Paragraphs | 2-char indent, 宋体 | 2em indent |
+| **bold**, *italic*, `code`, ~~strike~~, [links](url) | Inline runs | Inline HTML |
+| ` ``` ` code blocks | Courier New, indented | Monospace, shaded |
+| `>` blockquotes | 仿宋, indented | Indented, grey |
+| Lists (ordered & unordered) | Bullets/numbers | Standard HTML lists |
+| Pipe tables | Styled with header shading | Styled with header shading |
+| `---` horizontal rule | Grey line | Grey line |
+| `![alt](path)` images | ❌ Not supported | ✅ Loaded via base_url |
+| ` ```mermaid` diagrams | ❌ Not supported | ✅ Rendered as SVG |
 
 ---
 
 ## Style Customization
 
-The default style follows Chinese government-document standards. To tweak it:
+**DOCX** — style.json keys: `page`, `body`, `headings` (h1–h4), `code_block`, `blockquote`, `table`. Only include sections to override; rest uses defaults.
 
-1. Dump the defaults: `python3 ~/.claude/skills/md-to-docx/scripts/md_to_docx.py --dump-style > style.json`
-2. Edit the JSON (any section: `page`, `body`, `headings`, `code_block`, `blockquote`, `table`)
-3. Pass it: `python3 ~/.claude/skills/md-to-docx/scripts/md_to_docx.py input.md --style style.json`
-
-You only need to include the sections you want to override — the rest uses the defaults.
+**PDF** — style.css: standard CSS file. Use `--dump-style` to get the full default as a starting point. Supports all CSS properties recognized by Chromium (including `@page` for margins/size).
 
 ---
 
 ## If the skill directory isn't installed
 
-If `~/.claude/skills/md-to-docx/` doesn't exist (e.g., running in the repo itself during development), find the script relative to the repo root:
-
 ```bash
+# DOCX
 python3 tools/md-formatter/md_to_docx.py input.md
+# PDF
+python3 skills/writing/md-to-docx/scripts/md_to_pdf.py input.md
 ```
