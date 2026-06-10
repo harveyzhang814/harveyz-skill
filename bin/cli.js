@@ -221,7 +221,7 @@ if (subcommand === 'status' || subcommand === 'outdated') {
   })
 
   if (jsonFlag) {
-    const targets = ['claude', 'cursor', 'codex', 'openclaw', 'hermes']
+    const targets = ['claude', 'cursor', 'codex', 'openclaw', 'hermes', 'opencode']
     const jsonSkills = skillRows.map(r => ({
       name: r.name,
       version: r.version,
@@ -253,7 +253,7 @@ if (subcommand === 'status' || subcommand === 'outdated') {
       process.exit(0)
     }
 
-    const targets = ['claude', 'cursor', 'codex', 'openclaw', 'hermes']
+    const targets = ['claude', 'cursor', 'codex', 'openclaw', 'hermes', 'opencode']
 
     if (outdatedSkills.length) {
       console.log('\n  ' + chalk.bold('SKILLS WITH UPDATES'))
@@ -438,7 +438,7 @@ if (subcommand === 'uninstall') {
   const scope = scopeArg2
   const selectedTargets = targetArg2
     ? [targetArg2]
-    : ['claude', 'cursor', 'codex', 'openclaw', 'hermes']
+    : ['claude', 'cursor', 'codex', 'openclaw', 'hermes', 'opencode']
   const targets = resolveTargets(selectedTargets, scope)
 
   let anyRemoved = false
