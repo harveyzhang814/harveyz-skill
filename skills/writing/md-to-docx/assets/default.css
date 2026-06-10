@@ -1,156 +1,211 @@
+/* ─────────────────────────────────────────────
+   Roland Berger – inspired consulting style
+   Primary : #002B6C (deep navy)
+   Accent  : #C5002B (deep red)
+   ───────────────────────────────────────────── */
+
 @page {
   size: A4;
-  margin: 2.54cm;
+  margin: 2cm 2.5cm 2.2cm 2.5cm;
 }
 
+/* ── Base ───────────────────────────────────── */
+
 body {
-  font-family: "Songti SC", "STSong", "SimSun", "宋体", "Times New Roman", serif;
-  font-size: 12pt;
-  line-height: 1.8;
-  color: #000000;
+  font-family: "PingFang SC", "Helvetica Neue", "Arial", "STHeiti", "Microsoft YaHei", sans-serif;
+  font-size: 10.5pt;
+  line-height: 1.65;
+  color: #1A1A2E;
   max-width: 100%;
 }
 
+/* ── Headings ───────────────────────────────── */
+
 h1 {
-  font-family: "Heiti SC", "STHeiti", "SimHei", "黑体", "Arial", sans-serif;
-  font-size: 22pt;
-  font-weight: bold;
-  color: #000000;
-  text-align: center;
-  margin-top: 24pt;
-  margin-bottom: 12pt;
+  font-family: "PingFang SC", "Helvetica Neue", "Arial", "STHeiti", sans-serif;
+  font-size: 20pt;
+  font-weight: 700;
+  color: #002B6C;
+  text-align: left;
+  margin-top: 0;
+  margin-bottom: 14pt;
+  padding-bottom: 7pt;
+  border-bottom: 2.5px solid #002B6C;
+  letter-spacing: 0.02em;
 }
 
 h2 {
-  font-family: "Heiti SC", "STHeiti", "SimHei", "黑体", "Arial", sans-serif;
-  font-size: 16pt;
-  font-weight: bold;
-  color: #000000;
+  font-family: "PingFang SC", "Helvetica Neue", "Arial", "STHeiti", sans-serif;
+  font-size: 14pt;
+  font-weight: 700;
+  color: #002B6C;
   text-align: left;
-  margin-top: 18pt;
-  margin-bottom: 9pt;
+  margin-top: 22pt;
+  margin-bottom: 8pt;
+  padding-bottom: 4pt;
+  border-bottom: 1.5px solid #002B6C;
 }
 
 h3 {
-  font-family: "Heiti SC", "STHeiti", "SimHei", "黑体", "Arial", sans-serif;
-  font-size: 14pt;
-  font-weight: bold;
-  color: #333333;
+  font-family: "PingFang SC", "Helvetica Neue", "Arial", "STHeiti", sans-serif;
+  font-size: 11.5pt;
+  font-weight: 700;
+  color: #002B6C;
   text-align: left;
-  margin-top: 12pt;
-  margin-bottom: 6pt;
+  margin-top: 16pt;
+  margin-bottom: 5pt;
+  padding-left: 8pt;
+  border-left: 3px solid #C5002B;
 }
 
 h4 {
-  font-family: "STFangsong", "FangSong", "仿宋", "Arial", sans-serif;
-  font-size: 12pt;
-  font-weight: bold;
-  color: #333333;
+  font-family: "PingFang SC", "Helvetica Neue", "Arial", "STHeiti", sans-serif;
+  font-size: 10.5pt;
+  font-weight: 700;
+  color: #4A5568;
   text-align: left;
-  margin-top: 10pt;
+  margin-top: 12pt;
   margin-bottom: 4pt;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
 }
 
+/* ── Paragraph ──────────────────────────────── */
+
 p {
-  text-indent: 2em;
+  text-indent: 0;
   margin-top: 0;
-  margin-bottom: 6pt;
+  margin-bottom: 7pt;
 }
+
+/* ── Tables ─────────────────────────────────── */
 
 table {
   border-collapse: collapse;
   width: 100%;
-  margin-top: 8pt;
-  margin-bottom: 8pt;
-  font-family: "Songti SC", "STSong", "SimSun", "宋体", "Times New Roman", serif;
-  font-size: 11pt;
+  margin-top: 10pt;
+  margin-bottom: 10pt;
+  font-family: "PingFang SC", "Helvetica Neue", "Arial", sans-serif;
+  font-size: 9.5pt;
 }
 
 th {
-  background-color: #D9E1F2;
-  font-weight: bold;
-  border: 1px solid #AAAAAA;
-  padding: 4pt 6pt;
+  background-color: #002B6C;
+  color: #FFFFFF;
+  font-weight: 700;
+  border: 1px solid #002B6C;
+  padding: 5pt 8pt;
   text-align: left;
+  letter-spacing: 0.02em;
 }
 
 td {
-  border: 1px solid #AAAAAA;
-  padding: 4pt 6pt;
+  border: 1px solid #BFC8DC;
+  padding: 4.5pt 8pt;
+  color: #1A1A2E;
 }
 
+tr:nth-child(even) td {
+  background-color: #EBF0FA;
+}
+
+/* ── Code ───────────────────────────────────── */
+
 pre {
-  background-color: #F5F5F5;
-  border: 1px solid #DDDDDD;
-  border-radius: 3px;
-  padding: 8pt 10pt;
-  margin: 6pt 0 6pt 1cm;
-  overflow-x: auto;
-  font-family: "Courier New", "Consolas", monospace;
-  font-size: 10pt;
-  line-height: 1.4;
+  background-color: #F4F6FA;
+  border: 1px solid #D1D9EC;
+  border-left: 3px solid #002B6C;
+  border-radius: 0 3px 3px 0;
+  padding: 8pt 12pt;
+  margin: 8pt 0;
+  font-family: "JetBrains Mono", "Cascadia Code", "Courier New", "Consolas", monospace;
+  font-size: 9pt;
+  line-height: 1.5;
 }
 
 code {
-  font-family: "Courier New", "Consolas", monospace;
-  font-size: 10pt;
-  background-color: #F5F5F5;
-  padding: 1px 3px;
+  font-family: "JetBrains Mono", "Cascadia Code", "Courier New", "Consolas", monospace;
+  font-size: 9pt;
+  background-color: #EEF1F8;
+  color: #002B6C;
+  padding: 1px 4px;
   border-radius: 2px;
 }
 
 pre code {
   background-color: transparent;
+  color: inherit;
   padding: 0;
   border-radius: 0;
 }
 
+/* ── Blockquote ─────────────────────────────── */
+
 blockquote {
-  font-family: "STFangsong", "FangSong", "仿宋", "Times New Roman", serif;
-  font-size: 11pt;
-  color: #555555;
-  margin-left: 1cm;
-  margin-top: 4pt;
-  margin-bottom: 4pt;
-  padding-left: 0;
+  font-family: "PingFang SC", "Helvetica Neue", "Arial", sans-serif;
+  font-size: 10pt;
+  font-style: italic;
+  color: #4A5568;
+  border-left: 3.5px solid #C5002B;
+  margin: 10pt 0;
+  padding: 4pt 0 4pt 14pt;
+  background-color: #FDF5F6;
 }
 
-pre.mermaid {
-  background-color: transparent;
+blockquote p {
+  margin: 0;
+  text-indent: 0;
+}
+
+/* ── Lists ──────────────────────────────────── */
+
+ul, ol {
+  margin-top: 3pt;
+  margin-bottom: 3pt;
+  padding-left: 1.6em;
+}
+
+li {
+  margin-bottom: 3pt;
+  line-height: 1.55;
+}
+
+/* ── Horizontal rule ────────────────────────── */
+
+hr {
   border: none;
-  text-align: center;
-  margin: 12pt auto;
-  padding: 0;
+  border-top: 1.5px solid #BFC8DC;
+  margin: 14pt 0;
 }
 
-pre.mermaid svg {
-  max-width: 100%;
-  height: auto;
+/* ── Links ──────────────────────────────────── */
+
+a {
+  color: #002B6C;
+  text-decoration: underline;
+  text-underline-offset: 2px;
 }
+
+/* ── Images ─────────────────────────────────── */
 
 img {
   max-width: 100%;
   height: auto;
   display: block;
-  margin: 8pt auto;
+  margin: 10pt auto;
 }
 
-ul, ol {
-  margin-top: 2pt;
-  margin-bottom: 2pt;
-  padding-left: 1.5em;
-}
+/* ── Mermaid ────────────────────────────────── */
 
-li {
-  margin-bottom: 2pt;
-}
-
-hr {
+pre.mermaid {
+  background-color: transparent;
   border: none;
-  border-top: 1px solid #AAAAAA;
-  margin: 8pt 0;
+  text-align: center;
+  margin: 14pt auto;
+  padding: 0;
 }
 
-a {
-  color: #1155CC;
+pre.mermaid svg {
+  max-width: 92%;
+  height: auto;
 }
