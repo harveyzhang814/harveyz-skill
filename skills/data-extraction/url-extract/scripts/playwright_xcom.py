@@ -18,9 +18,11 @@ if _parsed.scheme not in ('http', 'https') or not _parsed.netloc:
     print(f"ERROR: Rejected URL with scheme '{_parsed.scheme}' — only http/https allowed", file=sys.stderr)
     sys.exit(1)
 
-import json, urllib.request, hashlib
+import json, urllib.request, hashlib, shutil, tempfile
 from datetime import datetime, timezone, timedelta
+from pathlib import Path
 from playwright.sync_api import sync_playwright
+import pycookiecheat
 
 sys.path.insert(0, os.path.join(skill_dir, 'references'))
 from article_utils import infer_ext, format_block, sanitize_filename, repair_frontmatter, record_issues
@@ -48,12 +50,34 @@ def _is_safe_image_url(src):
     return True
 
 
+# --- Extract cookies from Chrome profile (works even when Chrome is running) ---
+_cookies_src = Path(chrome_profile) / 'Cookies'
+with tempfile.NamedTemporaryFile(suffix='.db', delete=False) as _f:
+    _tmp_cookies = _f.name
+shutil.copy2(_cookies_src, _tmp_cookies)
+try:
+    _cookies_dict = pycookiecheat.chrome_cookies('https://x.com', cookie_file=_tmp_cookies)
+finally:
+    os.unlink(_tmp_cookies)
+
+_pw_cookies = [
+    {'name': k, 'value': v, 'domain': '.x.com', 'path': '/', 'secure': True}
+    for k, v in _cookies_dict.items()
+]
+
 # --- Scrape ---
 with sync_playwright() as p:
-    ctx = p.chromium.launch_persistent_context(user_data_dir=chrome_profile, headless=False)
-    page = ctx.pages[0] if ctx.pages else ctx.new_page()
-    page.goto(url, timeout=30000)
-    page.wait_for_timeout(8000)
+    browser = p.chromium.launch(
+        headless=True,
+        args=['--disable-blink-features=AutomationControlled']
+    )
+    ctx = browser.new_context(
+        user_agent='Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36'
+    )
+    ctx.add_cookies(_pw_cookies)
+    page = ctx.new_page()
+    page.goto(url, timeout=60000, wait_until='domcontentloaded')
+    page.wait_for_selector('article[data-testid="tweet"]', timeout=20000)
 
     result = page.evaluate(r"""() => {
         const article = document.querySelector('article[data-testid="tweet"]');
@@ -146,7 +170,7 @@ with sync_playwright() as p:
     }""")
 
     result['publishDate'] = result.get('publishDate', '')
-    ctx.close()
+    browser.close()
 
 if result.get('error'):
     print(f"ERROR: {result['error']}", file=sys.stderr)
