@@ -20,65 +20,7 @@ from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 from docx.shared import Cm, Pt, RGBColor
 
-# ── Default style ─────────────────────────────────────────────────────────────
-
-DEFAULT_STYLE: dict = {
-    "page": {
-        "top_cm": 2.54, "bottom_cm": 2.54,
-        "left_cm": 3.17, "right_cm": 3.17
-    },
-    "body": {
-        "font": "宋体", "font_en": "Times New Roman",
-        "size_pt": 12, "line_spacing_pt": 22,
-        "space_before_pt": 0, "space_after_pt": 6,
-        "first_line_indent_chars": 2
-    },
-    "headings": {
-        "h1": {
-            "font": "黑体", "font_en": "Arial",
-            "size_pt": 22, "bold": True, "color": "000000",
-            "align": "center",
-            "space_before_pt": 24, "space_after_pt": 12
-        },
-        "h2": {
-            "font": "黑体", "font_en": "Arial",
-            "size_pt": 16, "bold": True, "color": "000000",
-            "align": "left",
-            "space_before_pt": 18, "space_after_pt": 9
-        },
-        "h3": {
-            "font": "黑体", "font_en": "Arial",
-            "size_pt": 14, "bold": True, "color": "333333",
-            "align": "left",
-            "space_before_pt": 12, "space_after_pt": 6
-        },
-        "h4": {
-            "font": "仿宋", "font_en": "Arial",
-            "size_pt": 12, "bold": True, "color": "333333",
-            "align": "left",
-            "space_before_pt": 10, "space_after_pt": 4
-        }
-    },
-    "code_block": {
-        "font": "Courier New", "size_pt": 10,
-        "bg_color": None
-    },
-    "blockquote": {
-        "font": "仿宋", "font_en": "Times New Roman",
-        "size_pt": 11, "color": "555555",
-        "left_indent_cm": 1.0
-    },
-    "table": {
-        "font": "宋体", "font_en": "Times New Roman",
-        "size_pt": 11,
-        "header_bold": True,
-        "header_bg_color": "D9E1F2",
-        "border_color": "AAAAAA",
-        "cell_padding_pt": 4,
-        "space_before_pt": 8,
-        "space_after_pt": 8
-    }
-}
+ASSETS_DIR = Path(__file__).parent.parent / "assets"
 
 # ── Helpers ────────────────────────────────────────────────────────────────────
 
@@ -346,7 +288,7 @@ def build_docx(blocks: list[dict], style: dict) -> Document:
     headings = style["headings"]
     code_cfg = style["code_block"]
     bq_cfg = style["blockquote"]
-    tbl_cfg = style.get("table", DEFAULT_STYLE["table"])
+    tbl_cfg = style.get("table", {})
 
     # One char ≈ font_size pt; first-line indent in pt
     char_width_pt = body["size_pt"]
@@ -481,7 +423,7 @@ def main():
     args = parser.parse_args()
 
     if args.dump_style:
-        print(json.dumps(DEFAULT_STYLE, indent=2, ensure_ascii=False))
+        print((ASSETS_DIR / "default-style.json").read_text(encoding="utf-8"))
         return
 
     if not args.input:
@@ -493,11 +435,11 @@ def main():
 
     output_path = Path(args.output) if args.output else input_path.with_suffix(".docx")
 
-    style = DEFAULT_STYLE
+    with open(ASSETS_DIR / "default-style.json", encoding="utf-8") as f:
+        style = json.load(f)
     if args.style:
         with open(args.style, encoding="utf-8") as f:
             user_style = json.load(f)
-        # Deep merge: user overrides defaults
         for section, values in user_style.items():
             if section in style and isinstance(style[section], dict):
                 if section == "headings":
