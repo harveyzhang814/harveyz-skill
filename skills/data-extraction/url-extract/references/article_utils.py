@@ -189,10 +189,15 @@ def repair_frontmatter(fp, url, defaults=None):
                 fixed.append(f'tag-lowercase={tag_val}')
             else:
                 new_lines.append(f'  - {tag_val}' if not tl.startswith('  ') else tl)
-        fm['tags'] = '\n'.join(new_lines)
+        fm['tags'] = '\n' + '\n'.join(new_lines)
 
     # 写回文件
-    fm_lines = [f'{k}: {v}' for k, v in fm.items()]
+    fm_lines = []
+    for k, v in fm.items():
+        if v.startswith('\n'):
+            fm_lines.append(f'{k}:{v}')
+        else:
+            fm_lines.append(f'{k}: {v}')
     fm_str = '---\n' + '\n'.join(fm_lines) + '\n---\n'
     with open(fp, 'w', encoding='utf-8') as f:
         f.write(fm_str + content[m.end():])
