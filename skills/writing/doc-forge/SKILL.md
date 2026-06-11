@@ -5,20 +5,44 @@ user_invocable: true
 version: "2.5.0"
 ---
 
-## 执行前必做：询问样式
+## 执行前必做：样式预览 → 选择样式
 
-**在运行任何转换命令之前**，若用户未显式指定样式，必须先用 `AskUserQuestion` 工具询问：
+### Step 0 — 询问是否查看样式预览
+
+**在运行任何转换命令之前**，若用户未显式指定样式，先用 `AskUserQuestion` 询问：
+
+```
+问题：是否先查看所有样式的预览效果？
+选项：
+  1. 查看样式预览（推荐）— 自动生成并打开预览 HTML
+  2. 跳过预览，直接选择样式
+```
+
+**如果用户选择"查看样式预览"，或未明确选择跳过**，执行：
+
+```bash
+python3 ~/.claude/skills/doc-forge/scripts/generate_style_preview.py
+open /tmp/doc-forge-style-preview.html
+```
+
+浏览器打开后告知用户："预览已打开，对比各样式后请回来选择。"
+
+---
+
+### Step 1 — 询问样式
+
+再用 `AskUserQuestion` 询问：
 
 ```
 问题：请选择输出样式
 选项：
-  1. Default（Harvey 自定义，深海军蓝）— 咨询报告、内部文档
-  2. Roland Berger（黑白+黄色品牌）— RB 正式输出
+  1. Bain & Company（红色品牌）— Bain 正式输出
+  2. BCG（深绿品牌，麦肯锡横线表格）— BCG 正式输出
   3. 中文学术论文（宋体/黑体，25磅行距）— 硕博论文、学术报告
   4. 自定义（用户提供路径或描述）
 ```
 
-用户选定后再执行转换。**不得跳过此步骤，不得默认使用 default 样式。**
+用户选定后再执行转换。**不得跳过此步骤，不得默认使用某一样式。**
 
 ---
 
@@ -54,8 +78,8 @@ python3 ~/.claude/skills/doc-forge/scripts/md_to_pdf.py /tmp/draft.md \
 
 | 文件 | 说明 | 适用场景 |
 |------|------|---------|
-| `default-style.json` / `default.css` | Harvey 自定义风格（深海军蓝，默认） | 咨询报告、内部文档 |
-| `rb-style.json` / `rb.css` | Roland Berger 官方品牌（黑白+黄色） | 需对齐 RB 品牌的正式输出 |
+| `bain-style.json` / `bain.css` | Bain & Company 官方品牌（红色） | Bain 正式输出 |
+| `bcg-style.json` / `bcg.css` | BCG 官方品牌（深绿，麦肯锡横线表格） | BCG 正式输出 |
 | `thesis-style.json` / `thesis.css` | 中文学术论文（宋体/黑体/Times New Roman，25磅行距） | 硕博学位论文、学术报告 |
 
 ---
@@ -139,15 +163,26 @@ python3 ~/.claude/skills/doc-forge/scripts/md_to_pdf.py --dump-style > style.css
 
 **PDF** — style.css：标准 CSS 文件。用 `--dump-style` 导出完整默认样式作为起点。支持 Chromium 识别的所有 CSS 属性（包括用于页边距/尺寸的 `@page`）。
 
-**切换内置风格（RB 官方品牌）：**
+**切换内置风格（Bain）：**
 ```bash
 # DOCX
 python3 ~/.claude/skills/doc-forge/scripts/md_to_docx.py input.md \
-  --style ~/.claude/skills/doc-forge/assets/rb-style.json
+  --style ~/.claude/skills/doc-forge/assets/bain-style.json
 
 # PDF
 python3 ~/.claude/skills/doc-forge/scripts/md_to_pdf.py input.md \
-  --style ~/.claude/skills/doc-forge/assets/rb.css
+  --style ~/.claude/skills/doc-forge/assets/bain.css
+```
+
+**切换内置风格（BCG）：**
+```bash
+# DOCX
+python3 ~/.claude/skills/doc-forge/scripts/md_to_docx.py input.md \
+  --style ~/.claude/skills/doc-forge/assets/bcg-style.json
+
+# PDF
+python3 ~/.claude/skills/doc-forge/scripts/md_to_pdf.py input.md \
+  --style ~/.claude/skills/doc-forge/assets/bcg.css
 ```
 
 **切换内置风格（中文学术论文）：**
