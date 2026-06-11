@@ -137,6 +137,7 @@ Markdown 渲染器页面宽度通常 700–900px，图表必须适配：
 ❌ sequenceDiagram 中文/空格参与者名不加处理 → 用 alias 或引号
 ❌ sequenceDiagram activate 未配对 deactivate → 必须一一对应
 ❌ sequenceDiagram 消息文本内换行 → 不支持，保持单行
+❌ %%{init:...}%% 多行块在 flowchart 中 → 导致渲染失败、颜色全部丢失；flowchart 配色只用 style 声明
 ```
 
 ---

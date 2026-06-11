@@ -8,14 +8,6 @@
 ## 1. flowchart TD — 三层产业链（核心场景）
 
 ```mermaid
-%%{init: {"theme": "base", "themeVariables": {
-  "primaryColor": "#96F878", "primaryBorderColor": "#87DF6C",
-  "primaryTextColor": "#212427", "secondaryColor": "#0C2B15",
-  "tertiaryColor": "#21BF61", "background": "#FFFFFF",
-  "mainBkg": "#96F878", "clusterBkg": "#06160B",
-  "titleColor": "#0C2B15", "lineColor": "#D4D4D4",
-  "edgeLabelBackground": "#FFFFFF"
-}}}%%
 flowchart TD
     subgraph UP["上游 算力基础设施"]
         U1["AI芯片 / 晶圆代工<br/>NVIDIA AMD Broadcom<br/>寒武纪 海光"] --- U2["设备 / 存储 HBM<br/>ASML 北方华创<br/>SK海力士 Micron"]
@@ -53,10 +45,6 @@ flowchart TD
 ## 2. flowchart TD — 语义辅助色（风险信号）
 
 ```mermaid
-%%{init: {"theme": "base", "themeVariables": {
-  "primaryColor": "#96F878", "primaryTextColor": "#212427",
-  "background": "#FFFFFF", "titleColor": "#0C2B15", "lineColor": "#D4D4D4"
-}}}%%
 flowchart TD
     subgraph ZONE["投资信号分区"]
         A["买入区<br/>估值低位 + 情绪修复"] --- B["持有区<br/>趋势延续 观察为主"]
