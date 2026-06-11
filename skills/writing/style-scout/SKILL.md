@@ -13,7 +13,7 @@ version: "2.1.0"
 
 调查分**两个阶段**：先全面调查主页（品牌色、导航、CTA 按钮、Hero 区域），再深入报告/文章正文页（排版、表格、引用块、代码块）。两阶段数据合并后写入知识文档。
 
-输出文档遵循 `knowledge/design/TEMPLATE.md` 的完整结构，覆盖：色彩体系（三维分类）、字体体系、间距体系、组件规则、视觉层级、图像处理、数据可视化、各格式推导指南。
+输出文档遵循 `skills/writing/style-scout/references/TEMPLATE.md` 的完整结构，覆盖：色彩体系（三维分类）、字体体系、间距体系、组件规则、视觉层级、图像处理、数据可视化、各格式推导指南。
 
 > **依赖：** 必须先通过 `/browse` skill 完成 browse 初始化。
 
@@ -329,7 +329,7 @@ $B screenshot /tmp/scout-quote.png --selector "blockquote,[class*=callout],[clas
 
 ### Step 13 — 合并两阶段数据，按三层 Token 模型写入知识文档
 
-综合主页调查（Step 3–6）和报告页调查（Step 8–12）的结果，按 `knowledge/design/TEMPLATE.md` 的三层 Token 结构填写，写到 `knowledge/design/<brand>-style.md`。
+综合主页调查（Step 3–6）和报告页调查（Step 8–12）的结果，按 `skills/writing/style-scout/references/TEMPLATE.md` 的三层 Token 结构填写，写到 `knowledge/design/<brand>-style.md`。
 
 **数据来源优先级：**
 
