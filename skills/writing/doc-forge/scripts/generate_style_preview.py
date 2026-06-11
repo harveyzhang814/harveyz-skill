@@ -138,11 +138,25 @@ def render_body(md_text: str) -> str:
     return md_lib.markdown(md_text, extensions=["tables", "fenced_code", "attr_list"])
 
 
+def is_up_to_date(output_path: Path, css_paths: list[Path]) -> bool:
+    """Return True if output_path exists and is newer than all CSS files and this script."""
+    if not output_path.exists():
+        return False
+    out_mtime = output_path.stat().st_mtime
+    sources = css_paths + [Path(__file__)]
+    return all(src.stat().st_mtime <= out_mtime for src in sources)
+
+
 def build_preview(output_path: Path) -> None:
     styles = discover_styles()
     if not styles:
         print("No CSS files found in assets directory.", file=sys.stderr)
         sys.exit(1)
+
+    css_paths = [p for _, p in styles]
+    if is_up_to_date(output_path, css_paths):
+        print(f"Up to date: {output_path}")
+        return
 
     body_html = render_body(SAMPLE_MD)
     cards_html = []
