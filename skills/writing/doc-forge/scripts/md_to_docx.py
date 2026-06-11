@@ -201,6 +201,15 @@ def add_inline(paragraph, text: str, base_font: str, base_font_en: str,
                          base_bold, base_italic, base_color)
 
 
+# ── Preprocessing ─────────────────────────────────────────────────────────────
+
+_WIKILINK_IMG_RE = re.compile(r"!\[\[([^\]]+)\]\]")
+
+def _expand_wikilink_images(text: str) -> str:
+    """Convert Obsidian-style ![[filename]] to standard ![filename](filename)."""
+    return _WIKILINK_IMG_RE.sub(lambda m: f"![{m.group(1)}]({m.group(1)})", text)
+
+
 # ── Block-level parser ────────────────────────────────────────────────────────
 
 def parse_md_blocks(md_text: str) -> list[dict]:
@@ -583,7 +592,7 @@ def main():
             else:
                 style[section] = values
 
-    md_text = input_path.read_text(encoding="utf-8")
+    md_text = _expand_wikilink_images(input_path.read_text(encoding="utf-8"))
     blocks = parse_md_blocks(md_text)
     doc = build_docx(blocks, style, base_dir=input_path.resolve().parent)
     doc.save(output_path)

@@ -16,6 +16,12 @@ import markdown as md_lib
 
 ASSETS_DIR = Path(__file__).parent.parent / "assets"
 MERMAID_RE = re.compile(r"```mermaid\n(.*?)```", re.DOTALL)
+_WIKILINK_IMG_RE = re.compile(r"!\[\[([^\]]+)\]\]")
+
+
+def _expand_wikilink_images(text: str) -> str:
+    """Convert Obsidian-style ![[filename]] to standard ![filename](filename)."""
+    return _WIKILINK_IMG_RE.sub(lambda m: f"![{m.group(1)}]({m.group(1)})", text)
 
 
 def _mermaid_js_src() -> str:
@@ -126,7 +132,7 @@ def main() -> None:
     css_path = Path(args.style) if args.style else ASSETS_DIR / "default.css"
     base_url = input_path.resolve().parent.as_uri() + "/"
 
-    md_text = input_path.read_text(encoding="utf-8")
+    md_text = _expand_wikilink_images(input_path.read_text(encoding="utf-8"))
     html, mermaid_count = build_html(md_text, css_path)
     render_pdf(html, output_path, base_url, mermaid_count)
     print(f"Saved: {output_path}")

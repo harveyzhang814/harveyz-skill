@@ -2,7 +2,24 @@
 name: doc-forge
 description: "Convert documents between formats. Trigger when the user wants to convert or export a Markdown file to Word (.docx) or PDF — e.g. 'export as docx', 'convert to Word', 'export as pdf', 'generate PDF' — or when the user writes a document in the conversation and wants it as .docx or .pdf."
 user_invocable: true
-version: "2.2.0"
+version: "2.4.0"
+---
+
+## 执行前必做：询问样式
+
+**在运行任何转换命令之前**，若用户未显式指定样式，必须先用 `AskUserQuestion` 工具询问：
+
+```
+问题：请选择输出样式
+选项：
+  1. Default（Harvey 自定义，深海军蓝）— 咨询报告、内部文档
+  2. Roland Berger（黑白+黄色品牌）— RB 正式输出
+  3. 中文学术论文（宋体/黑体，25磅行距）— 硕博论文、学术报告
+  4. 自定义（用户提供路径或描述）
+```
+
+用户选定后再执行转换。**不得跳过此步骤，不得默认使用 default 样式。**
+
 ---
 
 ## 概述
@@ -19,6 +36,7 @@ version: "2.2.0"
 |------|------|---------|
 | `default-style.json` / `default.css` | Harvey 自定义风格（深海军蓝，默认） | 咨询报告、内部文档 |
 | `rb-style.json` / `rb.css` | Roland Berger 官方品牌（黑白+黄色） | 需对齐 RB 品牌的正式输出 |
+| `thesis-style.json` / `thesis.css` | 中文学术论文（宋体/黑体/Times New Roman，25磅行距） | 硕博学位论文、学术报告 |
 
 ---
 
@@ -110,6 +128,17 @@ python3 ~/.claude/skills/doc-forge/scripts/md_to_docx.py input.md \
 # PDF
 python3 ~/.claude/skills/doc-forge/scripts/md_to_pdf.py input.md \
   --style ~/.claude/skills/doc-forge/assets/rb.css
+```
+
+**切换内置风格（中文学术论文）：**
+```bash
+# DOCX — 宋体/黑体正文，25磅行距，A4
+python3 ~/.claude/skills/doc-forge/scripts/md_to_docx.py input.md \
+  --style ~/.claude/skills/doc-forge/assets/thesis-style.json
+
+# PDF
+python3 ~/.claude/skills/doc-forge/scripts/md_to_pdf.py input.md \
+  --style ~/.claude/skills/doc-forge/assets/thesis.css
 ```
 
 ---
