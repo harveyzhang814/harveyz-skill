@@ -2,7 +2,7 @@
 name: doc-forge
 description: "Convert documents between formats. Trigger when the user wants to convert or export a Markdown file to Word (.docx) or PDF — e.g. 'export as docx', 'convert to Word', 'export as pdf', 'generate PDF' — or when the user writes a document in the conversation and wants it as .docx or .pdf."
 user_invocable: true
-version: "2.4.0"
+version: "2.5.0"
 ---
 
 ## 执行前必做：询问样式
@@ -19,6 +19,26 @@ version: "2.4.0"
 ```
 
 用户选定后再执行转换。**不得跳过此步骤，不得默认使用 default 样式。**
+
+---
+
+## 相对路径图片注意事项
+
+文档中含有相对路径图片（`![alt](./images/fig.png)` 或 `![[fig.png]]`）时，脚本以 MD 文件所在目录为根解析路径。
+
+**若 MD 文件不在图片的原始目录**（例如 Claude 将内容写入临时文件），必须通过 `--base-dir` 显式指定图片根目录：
+
+```bash
+# DOCX
+python3 ~/.claude/skills/doc-forge/scripts/md_to_docx.py /tmp/draft.md \
+  --base-dir /Users/harvey/Documents/my-paper
+
+# PDF
+python3 ~/.claude/skills/doc-forge/scripts/md_to_pdf.py /tmp/draft.md \
+  --base-dir /Users/harvey/Documents/my-paper
+```
+
+**最佳实践：转换用户已有的 MD 文件时，始终传入该文件的绝对路径，无需 `--base-dir`。**
 
 ---
 

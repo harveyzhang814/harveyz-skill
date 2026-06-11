@@ -108,6 +108,8 @@ def main() -> None:
     parser.add_argument("input", nargs="?", help="Input .md file")
     parser.add_argument("output", nargs="?", help="Output .pdf file (default: same name)")
     parser.add_argument("--style", help="CSS style file")
+    parser.add_argument("--base-dir", help="Base directory for resolving relative image paths "
+                        "(default: directory of the input .md file)")
     parser.add_argument("--dump-style", action="store_true",
                         help="Print default CSS and exit")
     args = parser.parse_args()
@@ -130,7 +132,8 @@ def main() -> None:
 
     output_path = Path(args.output) if args.output else input_path.with_suffix(".pdf")
     css_path = Path(args.style) if args.style else ASSETS_DIR / "default.css"
-    base_url = input_path.resolve().parent.as_uri() + "/"
+    base_dir = Path(args.base_dir).resolve() if args.base_dir else input_path.resolve().parent
+    base_url = base_dir.as_uri() + "/"
 
     md_text = _expand_wikilink_images(input_path.read_text(encoding="utf-8"))
     html, mermaid_count = build_html(md_text, css_path)

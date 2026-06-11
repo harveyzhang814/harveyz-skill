@@ -201,15 +201,6 @@ def add_inline(paragraph, text: str, base_font: str, base_font_en: str,
                          base_bold, base_italic, base_color)
 
 
-# ── Preprocessing ─────────────────────────────────────────────────────────────
-
-_WIKILINK_IMG_RE = re.compile(r"!\[\[([^\]]+)\]\]")
-
-def _expand_wikilink_images(text: str) -> str:
-    """Convert Obsidian-style ![[filename]] to standard ![filename](filename)."""
-    return _WIKILINK_IMG_RE.sub(lambda m: f"![{m.group(1)}]({m.group(1)})", text)
-
-
 # ── Block-level parser ────────────────────────────────────────────────────────
 
 def parse_md_blocks(md_text: str) -> list[dict]:
@@ -552,6 +543,8 @@ def main():
     parser.add_argument("input", nargs="?", help="Input .md file")
     parser.add_argument("output", nargs="?", help="Output .docx file (default: same name)")
     parser.add_argument("--style", help="JSON style config file")
+    parser.add_argument("--base-dir", help="Base directory for resolving relative image paths "
+                        "(default: directory of the input .md file)")
     parser.add_argument("--dump-style", action="store_true",
                         help="Print default style JSON and exit")
     args = parser.parse_args()
@@ -592,9 +585,10 @@ def main():
             else:
                 style[section] = values
 
+    base_dir = Path(args.base_dir).resolve() if args.base_dir else input_path.resolve().parent
     md_text = _expand_wikilink_images(input_path.read_text(encoding="utf-8"))
     blocks = parse_md_blocks(md_text)
-    doc = build_docx(blocks, style, base_dir=input_path.resolve().parent)
+    doc = build_docx(blocks, style, base_dir=base_dir)
     doc.save(output_path)
     print(f"Saved: {output_path}")
 
