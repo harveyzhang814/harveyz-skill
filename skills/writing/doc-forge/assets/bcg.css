@@ -28,35 +28,35 @@ body {
 
 h1 {
   font-family: "PingFang SC", "Palatino Linotype", "Palatino", "Garamond", "Georgia", "STSong", "Songti SC", serif;
-  font-size: 42pt;
+  font-size: 24pt;
   font-weight: 300;
   color: #0C2B15;
   text-align: left;
   margin-top: 0;
-  margin-bottom: 24pt;
+  margin-bottom: 16pt;
   border-bottom: none;
   letter-spacing: -0.01em;
 }
 
 h2 {
   font-family: "PingFang SC", "Palatino Linotype", "Palatino", "Garamond", "Georgia", "STSong", "Songti SC", serif;
-  font-size: 36pt;
+  font-size: 18pt;
   font-weight: 300;
   color: #0C2B15;
   text-align: left;
-  margin-top: 36pt;
-  margin-bottom: 12pt;
+  margin-top: 24pt;
+  margin-bottom: 8pt;
   border-bottom: none;
 }
 
 h3 {
   font-family: "PingFang SC", "Helvetica Neue", "Helvetica", "Arial", "STHeiti", sans-serif;
-  font-size: 30pt;
+  font-size: 14pt;
   font-weight: 300;
   color: #212427;
   text-align: left;
-  margin-top: 16pt;
-  margin-bottom: 6pt;
+  margin-top: 14pt;
+  margin-bottom: 5pt;
   border-left: none;
 }
 

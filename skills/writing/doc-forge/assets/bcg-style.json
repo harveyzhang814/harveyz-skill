@@ -20,31 +20,31 @@
     "h1": {
       "font": "PingFang SC",
       "font_en": "Palatino Linotype",
-      "size_pt": 42,
+      "size_pt": 24,
       "bold": false,
       "color": "0C2B15",
       "align": "left",
       "space_before_pt": 0,
-      "space_after_pt": 24
+      "space_after_pt": 16
     },
     "h2": {
       "font": "PingFang SC",
       "font_en": "Palatino Linotype",
-      "size_pt": 36,
+      "size_pt": 18,
       "bold": false,
       "color": "0C2B15",
       "align": "left",
-      "space_before_pt": 36,
-      "space_after_pt": 12
+      "space_before_pt": 24,
+      "space_after_pt": 8
     },
     "h3": {
       "font": "PingFang SC",
       "font_en": "Helvetica Neue",
-      "size_pt": 30,
+      "size_pt": 14,
       "bold": false,
       "color": "212427",
-      "space_before_pt": 16,
-      "space_after_pt": 6
+      "space_before_pt": 14,
+      "space_after_pt": 5
     },
     "h4": {
       "font": "PingFang SC",
