@@ -1,38 +1,39 @@
 {
   "_brand": "BCG",
   "_source": "knowledge/design/bcg-style.md",
+  "_derived_by": "design-derive v1.3.0",
   "init": {
     "theme": "base",
     "themeVariables": {
-      "primaryColor":       "#96F878",
-      "primaryBorderColor": "#5EC44A",
-      "primaryTextColor":   "#212427",
-      "secondaryColor":     "#0C2B15",
-      "tertiaryColor":      "#21BF61",
-      "background":         "#FFFFFF",
-      "mainBkg":            "#96F878",
-      "clusterBkg":         "#0C2B15",
-      "titleColor":         "#0C2B15",
-      "lineColor":          "#D4D4D4",
-      "edgeLabelBackground":"#FFFFFF"
+      "primaryColor":        "#96F878",
+      "primaryBorderColor":  "#87DF6C",
+      "primaryTextColor":    "#212427",
+      "secondaryColor":      "#0C2B15",
+      "tertiaryColor":       "#21BF61",
+      "background":          "#FFFFFF",
+      "mainBkg":             "#96F878",
+      "clusterBkg":          "#0A2211",
+      "titleColor":          "#0C2B15",
+      "lineColor":           "#D4D4D4",
+      "edgeLabelBackground": "#FFFFFF"
     }
   },
   "subgraph": {
-    "layer1": { "fill": "#0C2B15", "stroke": "#1E4A20", "note": "上游 / 最底层 / 核心" },
-    "layer2": { "fill": "#164A20", "stroke": "#266A30", "note": "中间层" },
-    "layer3": { "fill": "#1E6130", "stroke": "#2E8040", "note": "应用层 / 下游" }
+    "layer1": { "fill": "#0A2211", "stroke": "#0B2713", "note": "上游 / 核心 (H1×0.80)" },
+    "layer2": { "fill": "#0C2B15", "stroke": "#0E3118", "note": "中间层 (H1)" },
+    "layer3": { "fill": "#0E3419", "stroke": "#103A1C", "note": "下游 / 应用层 (H1×1.20)" }
   },
   "node": {
-    "layer1": { "fill": "#0F3A1E", "stroke": "#1E4A20" },
-    "layer2": { "fill": "#196128", "stroke": "#266A30" },
-    "layer3": { "fill": "#227A30", "stroke": "#2E8040" }
+    "layer1": { "fill": "#0B2613", "stroke": "#0B2713" },
+    "layer2": { "fill": "#0D3018", "stroke": "#0E3118" },
+    "layer3": { "fill": "#103A1C", "stroke": "#103A1C" }
   },
   "semantic": {
-    "alert":       { "fill": "#D82216", "stroke": "#F04030", "note": "预警 / 高风险" },
-    "opportunity": { "fill": "#21BF61", "stroke": "#33CC77", "note": "机会 / 增长" },
-    "hold":        { "fill": "#696969", "stroke": "#888888", "note": "中性 / 观察" },
-    "speculative": { "fill": "#0C2B15", "stroke": "#164A20", "note": "深度价值 / 长期" },
-    "value":       { "fill": "#96F878", "stroke": "#5EC44A", "note": "行动 / 推荐（浅色，用深字）" }
+    "alert":       { "fill": "#7B1010", "stroke": "#B52020", "note": "预警 / 高风险 (default)" },
+    "opportunity": { "fill": "#21BF61", "stroke": "#1A9950", "note": "机会 / 增长 (VIZ_3)" },
+    "hold":        { "fill": "#696969", "stroke": "#888888", "note": "中性 / 观察 (VIZ_4)" },
+    "speculative": { "fill": "#2E0078", "stroke": "#5A20A0", "note": "投机 / 主题 (default)" },
+    "value":       { "fill": "#0C2B15", "stroke": "#0E3419", "note": "价值 / 配置 (VIZ_2)" }
   },
   "edge": {
     "primary":   "#96F878",
@@ -41,7 +42,6 @@
   "rules": {
     "dark_text_threshold": "#4A4A4A",
     "dark_node_text":  "#FFFFFF",
-    "light_node_text": "#212427",
-    "note": "lime节点(#96F878)背景浅，必须用light_node_text(#212427)而非white"
+    "light_node_text": "#212427"
   }
 }
