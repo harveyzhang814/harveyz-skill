@@ -2,7 +2,7 @@
 name: design-derive
 description: "Derive format-specific configs from a brand design knowledge doc. Trigger when the user wants to generate doc-forge JSON/CSS, HTML CSS variables, Mermaid color scheme, or PPT theme from a design system. E.g. 'derive configs for BCG', 'generate doc-forge style for rb', 'create HTML theme from custom-style'."
 user_invocable: true
-version: "1.3.0"
+version: "1.4.0"
 ---
 
 ## 概述
@@ -229,6 +229,8 @@ comp.heading.h1.deco-line
 
 以 `H1_COLOR` 为基准按比例推算三层（RGB 各通道独立计算，上限 255，结果转 hex）：
 
+**标准倍数**（H1_COLOR RGB 三通道之和 ≥ 150）：
+
 | 字段 | 规则 |
 |------|------|
 | `subgraph.layer1.fill` | H1_COLOR × 0.80 |
@@ -240,7 +242,31 @@ comp.heading.h1.deco-line
 | `node.layerX.fill` | 同层 subgraph.fill × 1.12 |
 | `node.layerX.stroke` | 同层 subgraph.stroke |
 
-若品牌文件有 `color.surface.dark`，用它替代 `H1_COLOR × 0.80` 作为 layer1 subgraph fill。
+**例外规则 1 — 深色基准（RGB 三通道之和 < 150）：**
+
+× 0.80/1.20 在极深色上层次差仅 7%，改用宽倍数：
+
+| 字段 | 宽倍数规则 |
+|------|-----------|
+| `subgraph.layer1.fill` | H1_COLOR × 0.50 |
+| `subgraph.layer1.stroke` | H1_COLOR × 0.65 |
+| `subgraph.layer2.fill` | H1_COLOR |
+| `subgraph.layer2.stroke` | H1_COLOR × 1.30 |
+| `subgraph.layer3.fill` | H1_COLOR × 2.00 |
+| `subgraph.layer3.stroke` | H1_COLOR × 2.50 |
+
+若品牌文件有 `color.surface.dark`，用它替代 layer1 fill；以 `surface.dark × 2` 作为 layer2，`surface.dark × 4`（上限 `#888888`）作为 layer3；stroke = 同层 fill × 1.30。
+
+**例外规则 2 — node 改用 VIZ 序列（深色基准 或 surface.dark 覆盖生效时）：**
+
+subgraph 推导的节点色会与容器色几乎相同，不可见。改从 VIZ_1..5 中按序选出 3 个与 H1_COLOR 不同的色值：
+
+```
+node.layer1.fill = VIZ 序列中第 1 个与 H1_COLOR 不同的色
+node.layer2.fill = 第 2 个
+node.layer3.fill = 第 3 个
+node.layerX.stroke = 同层 fill × 0.80
+```
 
 #### 6.3 semantic 色推导
 

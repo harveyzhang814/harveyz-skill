@@ -1,7 +1,7 @@
 {
   "_brand": "Bain & Company",
   "_source": "knowledge/design/bain-style.md",
-  "_derived_by": "design-derive v1.3.0",
+  "_derived_by": "design-derive v1.4.0",
   "init": {
     "theme": "base",
     "themeVariables": {
@@ -19,21 +19,21 @@
     }
   },
   "subgraph": {
-    "layer1": { "fill": "#1A1A1A", "stroke": "#1D1D1D", "note": "上游 / 核心 (surface.dark)" },
-    "layer2": { "fill": "#212121", "stroke": "#262626", "note": "中间层 (surface.dark/0.80)" },
-    "layer3": { "fill": "#272727", "stroke": "#2C2C2C", "note": "下游 / 应用层 (surface.dark×1.50)" }
+    "layer1": { "fill": "#1A1A1A", "stroke": "#222222", "note": "上游 / 核心 (surface.dark)" },
+    "layer2": { "fill": "#343434", "stroke": "#444444", "note": "中间层 (surface.dark×2)" },
+    "layer3": { "fill": "#686868", "stroke": "#828282", "note": "下游 / 应用层 (surface.dark×4，上限#888888)" }
   },
   "node": {
-    "layer1": { "fill": "#1D1D1D", "stroke": "#1D1D1D" },
-    "layer2": { "fill": "#252525", "stroke": "#262626" },
-    "layer3": { "fill": "#2C2C2C", "stroke": "#2C2C2C" }
+    "layer1": { "fill": "#CC0000", "stroke": "#A30000", "note": "VIZ_1 Bain Red — 深色，用 #FFFFFF" },
+    "layer2": { "fill": "#666666", "stroke": "#525252", "note": "VIZ_2 gray" },
+    "layer3": { "fill": "#BBBBBB", "stroke": "#969696", "note": "VIZ_3 light gray — 浅色，用 #000000" }
   },
   "semantic": {
-    "alert":       { "fill": "#CC0000", "stroke": "#990000", "note": "风险 / 问题 (VIZ_1 = Bain Red)" },
-    "opportunity": { "fill": "#E87722", "stroke": "#C05010", "note": "机会 / 橙色 (VIZ_5)" },
-    "hold":        { "fill": "#666666", "stroke": "#888888", "note": "中性 / 观察 (VIZ_2)" },
+    "alert":       { "fill": "#CC0000", "stroke": "#A30000", "note": "风险 / 问题 (VIZ_1 = Bain Red)" },
+    "opportunity": { "fill": "#E87722", "stroke": "#BA5F1B", "note": "机会 / 橙色 (VIZ_5)" },
+    "hold":        { "fill": "#666666", "stroke": "#525252", "note": "中性 / 观察 (VIZ_2)" },
     "speculative": { "fill": "#2E0078", "stroke": "#5A20A0", "note": "投机 / 主题 (default)" },
-    "value":       { "fill": "#1A1A1A", "stroke": "#272727", "note": "权威 / 结论 (VIZ_4)" }
+    "value":       { "fill": "#1A1A1A", "stroke": "#222222", "note": "权威 / 结论 (VIZ_4)" }
   },
   "edge": {
     "primary":   "#CC0000",

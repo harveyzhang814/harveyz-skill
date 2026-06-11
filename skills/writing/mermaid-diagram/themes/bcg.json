@@ -1,7 +1,7 @@
 {
   "_brand": "BCG",
   "_source": "knowledge/design/bcg-style.md",
-  "_derived_by": "design-derive v1.3.0",
+  "_derived_by": "design-derive v1.4.0",
   "init": {
     "theme": "base",
     "themeVariables": {
@@ -12,28 +12,28 @@
       "tertiaryColor":       "#21BF61",
       "background":          "#FFFFFF",
       "mainBkg":             "#96F878",
-      "clusterBkg":          "#0A2211",
+      "clusterBkg":          "#06160B",
       "titleColor":          "#0C2B15",
       "lineColor":           "#D4D4D4",
       "edgeLabelBackground": "#FFFFFF"
     }
   },
   "subgraph": {
-    "layer1": { "fill": "#0A2211", "stroke": "#0B2713", "note": "上游 / 核心 (H1×0.80)" },
-    "layer2": { "fill": "#0C2B15", "stroke": "#0E3118", "note": "中间层 (H1)" },
-    "layer3": { "fill": "#0E3419", "stroke": "#103A1C", "note": "下游 / 应用层 (H1×1.20)" }
+    "layer1": { "fill": "#06160B", "stroke": "#081C0E", "note": "上游 / 核心 (H1×0.50，深色宽倍数)" },
+    "layer2": { "fill": "#0C2B15", "stroke": "#10381B", "note": "中间层 (H1×1.00)" },
+    "layer3": { "fill": "#18562A", "stroke": "#1E6C35", "note": "下游 / 应用层 (H1×2.00)" }
   },
   "node": {
-    "layer1": { "fill": "#0B2613", "stroke": "#0B2713" },
-    "layer2": { "fill": "#0D3018", "stroke": "#0E3118" },
-    "layer3": { "fill": "#103A1C", "stroke": "#103A1C" }
+    "layer1": { "fill": "#96F878", "stroke": "#78C660", "note": "VIZ_1 lime — 浅色，用深字 #212427" },
+    "layer2": { "fill": "#21BF61", "stroke": "#1A994E", "note": "VIZ_3 medium green (VIZ_2=H1_COLOR，跳过)" },
+    "layer3": { "fill": "#696969", "stroke": "#545454", "note": "VIZ_4 gray" }
   },
   "semantic": {
     "alert":       { "fill": "#7B1010", "stroke": "#B52020", "note": "预警 / 高风险 (default)" },
-    "opportunity": { "fill": "#21BF61", "stroke": "#1A9950", "note": "机会 / 增长 (VIZ_3)" },
-    "hold":        { "fill": "#696969", "stroke": "#888888", "note": "中性 / 观察 (VIZ_4)" },
+    "opportunity": { "fill": "#21BF61", "stroke": "#1A994E", "note": "机会 / 增长 (VIZ_3)" },
+    "hold":        { "fill": "#696969", "stroke": "#545454", "note": "中性 / 观察 (VIZ_4)" },
     "speculative": { "fill": "#2E0078", "stroke": "#5A20A0", "note": "投机 / 主题 (default)" },
-    "value":       { "fill": "#0C2B15", "stroke": "#0E3419", "note": "价值 / 配置 (VIZ_2)" }
+    "value":       { "fill": "#0C2B15", "stroke": "#10381B", "note": "价值 / 配置 (VIZ_2=H1)" }
   },
   "edge": {
     "primary":   "#96F878",
@@ -42,6 +42,7 @@
   "rules": {
     "dark_text_threshold": "#4A4A4A",
     "dark_node_text":  "#FFFFFF",
-    "light_node_text": "#212427"
+    "light_node_text": "#212427",
+    "note": "lime节点(#96F878)背景浅，必须用 light_node_text"
   }
 }
