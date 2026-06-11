@@ -1,0 +1,222 @@
+/* ─────────────────────────────────────────────
+   BCG – Boston Consulting Group brand style
+   Source: bcg.com/publications (2026)
+   Heading : #0C2B15 (deep forest green)
+   Body    : #212427 (near-black)
+   Accent  : #96F878 (bright lime green — small area only)
+   Card BG : #0E3E1B (dark green blocks)
+   Section : #F1EEEA (warm beige)
+   Fonts   : henderson-bcg-serif → Georgia (headlines)
+             henderson-bcg-sans  → Helvetica Neue (body)
+   ───────────────────────────────────────────── */
+
+@page {
+  size: A4;
+  margin: 2cm 2.5cm 2.2cm 2.5cm;
+}
+
+/* ── Base ───────────────────────────────────── */
+
+body {
+  font-family: "PingFang SC", "Helvetica Neue", "Arial", "STHeiti", "Microsoft YaHei", sans-serif;
+  font-size: 11pt;
+  line-height: 1.65;
+  color: #212427;
+  max-width: 100%;
+}
+
+/* ── Headings ───────────────────────────────── */
+
+h1 {
+  font-family: "Georgia", "STSong", "Songti SC", "SimSun", serif;
+  font-size: 28pt;
+  font-weight: 300;
+  color: #0C2B15;
+  text-align: left;
+  margin-top: 0;
+  margin-bottom: 14pt;
+  padding-bottom: 8pt;
+  border-bottom: 1.5px solid #DCD5CE;
+  letter-spacing: 0.01em;
+}
+
+h2 {
+  font-family: "Georgia", "STSong", "Songti SC", "SimSun", serif;
+  font-size: 18pt;
+  font-weight: 300;
+  color: #0C2B15;
+  text-align: left;
+  margin-top: 22pt;
+  margin-bottom: 8pt;
+  padding-bottom: 4pt;
+  border-bottom: 1px solid #DCD5CE;
+}
+
+h3 {
+  font-family: "PingFang SC", "Helvetica Neue", "Arial", sans-serif;
+  font-size: 13pt;
+  font-weight: 400;
+  color: #212427;
+  text-align: left;
+  margin-top: 16pt;
+  margin-bottom: 5pt;
+  padding-left: 8pt;
+  border-left: 3px solid #0C2B15;
+}
+
+h4 {
+  font-family: "PingFang SC", "Helvetica Neue", "Arial", sans-serif;
+  font-size: 10.5pt;
+  font-weight: 700;
+  color: #696969;
+  text-align: left;
+  margin-top: 12pt;
+  margin-bottom: 4pt;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+/* ── Paragraph ──────────────────────────────── */
+
+p {
+  text-indent: 0;
+  margin-top: 0;
+  margin-bottom: 7pt;
+}
+
+/* ── Tables — McKinsey horizontal-rule style ── */
+
+table {
+  border-collapse: collapse;
+  width: 100%;
+  margin-top: 10pt;
+  margin-bottom: 10pt;
+  font-family: "PingFang SC", "Helvetica Neue", "Arial", sans-serif;
+  font-size: 10pt;
+}
+
+thead tr {
+  border-top: 1.5px solid #212427;
+  border-bottom: 0.75px solid #212427;
+}
+
+th {
+  background-color: transparent;
+  color: #212427;
+  font-weight: 700;
+  border: none;
+  padding: 5pt 8pt;
+  text-align: left;
+}
+
+tbody tr:last-child td {
+  border-bottom: 0.75px solid #212427;
+}
+
+td {
+  border: none;
+  padding: 4.5pt 8pt;
+  color: #212427;
+}
+
+/* ── Code ───────────────────────────────────── */
+
+pre {
+  background-color: #F1EEEA;
+  border: none;
+  border-left: 3px solid #0C2B15;
+  border-radius: 0 3px 3px 0;
+  padding: 8pt 12pt;
+  margin: 8pt 0;
+  font-family: "JetBrains Mono", "Cascadia Code", "Courier New", monospace;
+  font-size: 9pt;
+  line-height: 1.5;
+}
+
+code {
+  font-family: "JetBrains Mono", "Cascadia Code", "Courier New", monospace;
+  font-size: 9pt;
+  background-color: #F1EEEA;
+  color: #0C2B15;
+  padding: 1px 4px;
+  border-radius: 2px;
+}
+
+pre code {
+  background-color: transparent;
+  color: inherit;
+  padding: 0;
+  border-radius: 0;
+}
+
+/* ── Blockquote ─────────────────────────────── */
+
+blockquote {
+  font-family: "Georgia", "STSong", "Songti SC", serif;
+  font-size: 13pt;
+  font-style: italic;
+  font-weight: 300;
+  color: #0C2B15;
+  border-left: 3.5px solid #0C2B15;
+  margin: 12pt 0;
+  padding: 6pt 0 6pt 16pt;
+  background-color: transparent;
+}
+
+blockquote p {
+  margin: 0;
+  text-indent: 0;
+}
+
+/* ── Lists ──────────────────────────────────── */
+
+ul, ol {
+  margin-top: 3pt;
+  margin-bottom: 3pt;
+  padding-left: 1.6em;
+}
+
+li {
+  margin-bottom: 3pt;
+  line-height: 1.6;
+}
+
+/* ── Horizontal rule ────────────────────────── */
+
+hr {
+  border: none;
+  border-top: 1px solid #DCD5CE;
+  margin: 14pt 0;
+}
+
+/* ── Links ──────────────────────────────────── */
+
+a {
+  color: #0C2B15;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+/* ── Images ─────────────────────────────────── */
+
+img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+  margin: 10pt auto;
+}
+
+/* ── Mermaid ────────────────────────────────── */
+
+pre.mermaid {
+  background-color: transparent;
+  border: none;
+  text-align: center;
+  margin: 14pt auto;
+  padding: 0;
+}
+
+pre.mermaid svg {
+  max-width: 92%;
+  height: auto;
+}
