@@ -10,6 +10,7 @@ Usage:
 import re
 import sys
 from pathlib import Path
+from typing import Callable, Union
 
 ASSETS_DIR = Path(__file__).parent.parent / "assets"
 DEFAULT_OUTPUT = Path(__file__).parent.parent / "preview" / "style-preview.html"
@@ -22,7 +23,10 @@ DISPLAY_NAMES: dict[str, str] = {
     "rb":      "Roland Berger",
 }
 
-ROWS: list[tuple[str, str]] = [
+RowContent = Union[str, Callable[[str, str], str]]  # (slug, css) -> html
+
+ROWS: list[tuple[str, RowContent]] = [
+    ("配色",  lambda slug, css: _palette_html(css)),
     ("H1",   "<h1>战略报告标题</h1>"),
     ("H2",   "<h2>一、执行摘要</h2>"),
     ("H3",   "<h3>1.1 背景与目标</h3>"),
@@ -39,6 +43,46 @@ ROWS: list[tuple[str, str]] = [
     ("代码块", "<pre><code>def calculate_gap(current, target):\n    return target - current</code></pre>"),
     ("分隔线", "<hr>"),
 ]
+
+
+def _palette_html(css: str) -> str:
+    """Extract unique brand colors from CSS and render as labeled swatches."""
+    raw = re.findall(r'#([0-9a-fA-F]{6}|[0-9a-fA-F]{3})\b', css)
+    seen: dict[str, int] = {}
+    for h in raw:
+        if len(h) == 3:
+            h = h[0] * 2 + h[1] * 2 + h[2] * 2
+        h = h.upper()
+        seen[h] = seen.get(h, 0) + 1
+
+    entries: list[tuple[float, int, str]] = []
+    for h, count in seen.items():
+        r, g, b = int(h[0:2], 16), int(h[2:4], 16), int(h[4:6], 16)
+        lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255
+        if lum > 0.96:  # skip near-whites
+            continue
+        entries.append((lum, count, h))
+
+    # sort dark → light, break ties by frequency
+    entries.sort(key=lambda x: (x[0], -x[1]))
+
+    swatches = []
+    for lum, _, h in entries:
+        text_color = "#fff" if lum < 0.45 else "#333"
+        swatches.append(
+            f'<div style="display:flex;flex-direction:column;align-items:center;gap:3px">'
+            f'<div title="#{h}" style="width:32px;height:32px;border-radius:7px;'
+            f'background:#{h};box-shadow:0 1px 4px rgba(0,0,0,.18);'
+            f'border:1px solid rgba(0,0,0,.08)"></div>'
+            f'<span style="font-family:monospace;font-size:7.5px;color:#555;letter-spacing:-.01em">#{h}</span>'
+            f'</div>'
+        )
+
+    return (
+        '<div style="display:flex;flex-wrap:wrap;gap:8px;padding:2px 0">'
+        + "".join(swatches)
+        + "</div>"
+    )
 
 GRID_CSS = """
 *, *::before, *::after { box-sizing: border-box; }
@@ -234,13 +278,16 @@ def build_preview(output_path: Path) -> None:
 
     n = len(styles)
 
-    # Build scoped CSS for each brand
-    brand_css_parts: list[str] = []
-    for slug, css_path in styles:
-        raw = css_path.read_text(encoding="utf-8")
-        brand_css_parts.append(f"/* ── {slug} ── */\n{scope_css(raw, slug)}")
+    # Read CSS content (needed for both scoping and palette extraction)
+    css_contents: dict[str, str] = {
+        slug: css_path.read_text(encoding="utf-8") for slug, css_path in styles
+    }
 
-    all_brand_css = "\n\n".join(brand_css_parts)
+    # Build scoped CSS for each brand
+    all_brand_css = "\n\n".join(
+        f"/* ── {slug} ── */\n{scope_css(raw, slug)}"
+        for slug, raw in css_contents.items()
+    )
 
     # Build grid rows
     cells: list[str] = []
@@ -257,12 +304,11 @@ def build_preview(output_path: Path) -> None:
         )
 
     # Content rows
-    for row_label, row_html in ROWS:
+    for row_label, row_content in ROWS:
         cells.append(f'<div class="cell cell-label">{row_label}</div>')
         for slug, _ in styles:
-            cells.append(
-                f'<div class="cell {slug}">{row_html}</div>'
-            )
+            html = row_content(slug, css_contents[slug]) if callable(row_content) else row_content
+            cells.append(f'<div class="cell {slug}">{html}</div>')
 
     html = f"""<!DOCTYPE html>
 <html lang="zh-CN">
