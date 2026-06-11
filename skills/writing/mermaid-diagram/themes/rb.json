@@ -1,0 +1,46 @@
+{
+  "_brand": "Roland Berger",
+  "_source": "knowledge/design/rb-style.md",
+  "init": {
+    "theme": "base",
+    "themeVariables": {
+      "primaryColor":       "#003E96",
+      "primaryBorderColor": "#1A6AC4",
+      "primaryTextColor":   "#FFFFFF",
+      "secondaryColor":     "#1E5C9E",
+      "tertiaryColor":      "#004060",
+      "background":         "#FFFFFF",
+      "mainBkg":            "#003E96",
+      "clusterBkg":         "#00205B",
+      "titleColor":         "#00205B",
+      "lineColor":          "#888888",
+      "edgeLabelBackground":"#FFFFFF"
+    }
+  },
+  "subgraph": {
+    "layer1": { "fill": "#00205B", "stroke": "#1E4A9A", "note": "上游 / 最底层 / 最重要" },
+    "layer2": { "fill": "#003E96", "stroke": "#1A6AC4", "note": "中间层 / 平台层" },
+    "layer3": { "fill": "#1E5C9E", "stroke": "#3A8ACC", "note": "应用层 / 下游" }
+  },
+  "node": {
+    "primary":   { "fill": "#0A2E7A", "stroke": "#1E4A9A", "note": "深蓝 — 关键实体 / 强调节点，最多 1-2 个" },
+    "secondary": { "fill": "#0050B8", "stroke": "#1A6AC4", "note": "中蓝 — 第二类型实体" },
+    "neutral":   { "fill": "#2A6EAE", "stroke": "#3A8ACC", "note": "浅蓝 — 同类内容节点的默认色" }
+  },
+  "semantic": {
+    "alert":       { "fill": "#7B1010", "stroke": "#B52020", "note": "预警 / 高风险 / 规避" },
+    "opportunity": { "fill": "#1A5E3A", "stroke": "#2A7E50", "note": "机会 / 买入 / 低风险" },
+    "hold":        { "fill": "#003E96", "stroke": "#1A6AC4", "note": "等待 / 持有 / 中性" },
+    "speculative": { "fill": "#2E0078", "stroke": "#5A20A0", "note": "投机 / 主题 / 高波动" },
+    "value":       { "fill": "#004060", "stroke": "#1A5E80", "note": "价值 / 配置 / 稳健" }
+  },
+  "edge": {
+    "primary":   "#003E96",
+    "secondary": "#888888"
+  },
+  "rules": {
+    "dark_text_threshold": "#4A4A4A",
+    "dark_node_text":  "#FFFFFF",
+    "light_node_text": "#000000"
+  }
+}

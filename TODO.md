@@ -1,5 +1,24 @@
 # TODO
 
+## mermaid-diagram — 渲染样式增强
+
+### [ ] CSS 注入提升 Mermaid 渲染质量
+**背景**：当前 doc-forge 用 Playwright 在浏览器中渲染 Mermaid，但样式控制依赖 `%%{init}%%` themeVariables，能力有限（无法控制节点圆角、阴影、字体等）。
+
+**方向**：在 HTML 页面注入 `<style>` 块直接重写 Mermaid 输出的 SVG 样式，无需自建渲染器。
+
+**可做的事**：
+- 节点圆角 `.node rect { border-radius: 4px; }`
+- 阴影效果 `filter: drop-shadow(...)`
+- 自定义字体 `.label { font-family: 'Gotham', 'PingFang SC'; }`
+- 边线粗细 `.edgePath path { stroke-width: 1.5px; }`
+- 更精细的 subgraph 样式
+
+**实现位置**：`skills/writing/doc-forge/scripts/md_to_pdf.py`，在渲染前向 HTML 注入品牌 CSS。
+**工作量**：2-3 天。
+
+---
+
 ## hskill — tool lifecycle
 
 ### [x] Tool uninstall mechanism

@@ -58,8 +58,8 @@
 | 代码块       | ✅        | ✅       |
 | 引用块       | ✅        | ✅       |
 | 分隔线       | ✅        | ✅       |
-| 图片         | ❌        | ✅       |
-| Mermaid 图表 | ❌        | ✅       |
+| 图片         | ✅        | ✅       |
+| Mermaid 图表 | ✅（PNG） | ✅       |
 
 ### 三级标题：数据表格
 
@@ -167,7 +167,7 @@ ORDER BY 平均分 DESC;
 
 ---
 
-## 二级标题：嵌入图片（仅 PDF）
+## 二级标题：嵌入图片
 
 下图为测试用样例图片，验证相对路径加载：
 
@@ -177,7 +177,7 @@ ORDER BY 平均分 DESC;
 
 ---
 
-## 二级标题：Mermaid 图表（仅 PDF）
+## 二级标题：Mermaid 图表
 
 ### 三级标题：流程图
 
@@ -278,9 +278,9 @@ classDiagram
    - 有序 / 无序列表（最多三级嵌套）
    - 表格（表头加深背景，边框统一）
    - 分隔线
-4. **富媒体（仅 PDF）**：
-   - 本地图片（`./relative/path.png`）
-   - Mermaid 图表（flowchart、sequence、pie、class）
+4. **富媒体**：
+   - 本地图片（`./relative/path.png`，DOCX 和 PDF 均支持）
+   - Mermaid 图表（flowchart、sequence、pie、class；DOCX 渲染为 PNG，PDF 渲染为 SVG）
 
 ---
 

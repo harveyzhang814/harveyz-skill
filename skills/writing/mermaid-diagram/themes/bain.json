@@ -1,0 +1,111 @@
+{
+  "_brand": "Bain & Company",
+  "_source": "knowledge/design/bain-style.md",
+  "_derived_by": "design-derive v1.5.0",
+
+  "flowchart": {
+    "subgraph": {
+      "layer1": { "fill": "#E8E8E8", "stroke": "#C8C8C8", "text": "#212427", "note": "上游 / 核心 — 最深弱背景" },
+      "layer2": { "fill": "#F0F0F0", "stroke": "#D0D0D0", "text": "#212427", "note": "中间层" },
+      "layer3": { "fill": "#F5F5F5", "stroke": "#D8D8D8", "text": "#212427", "note": "下游 / 应用层 — 最浅弱背景" }
+    },
+    "node": {
+      "neutral":   { "fill": "#FFFFFF", "stroke": "#BBBBBB", "text": "#212427", "note": "同类内容节点的默认色 — 白色卡片" },
+      "primary":   { "fill": "#CC0000", "stroke": "#A30000", "text": "#FFFFFF", "note": "Bain Red — 关键实体，每图最多 1-2 个" },
+      "secondary": { "fill": "#555555", "stroke": "#3A3A3A", "text": "#FFFFFF", "note": "深灰 — 第二类型实体" }
+    }
+  },
+
+  "stateDiagram": {
+    "classDef": {
+      "neutral":     "fill:#EBEBEB,stroke:#C8C8C8,color:#212427",
+      "opportunity": "fill:#E87722,stroke:#BA5F1B,color:#fff",
+      "hold":        "fill:#666666,stroke:#525252,color:#fff",
+      "danger":      "fill:#CC0000,stroke:#A30000,color:#fff"
+    }
+  },
+
+  "sequenceDiagram": {
+    "init": {
+      "theme": "base",
+      "themeVariables": {
+        "actorBkg":              "#FFFFFF",
+        "actorBorder":           "#CC0000",
+        "actorTextColor":        "#212427",
+        "actorLineColor":        "#888888",
+        "noteBkg":               "#F0F0F0",
+        "noteTextColor":         "#212427",
+        "activationBkgColor":    "#FFEEEE",
+        "activationBorderColor": "#CC0000",
+        "signalColor":           "#333333",
+        "signalTextColor":       "#212427",
+        "loopTextColor":         "#212427",
+        "labelBoxBkgColor":      "#F5F5F5",
+        "labelBoxBorderColor":   "#BBBBBB"
+      }
+    }
+  },
+
+  "gantt": {
+    "init": {
+      "theme": "base",
+      "themeVariables": {
+        "taskBkgColor":          "#E8E8E8",
+        "taskBorderColor":       "#BBBBBB",
+        "taskTextColor":         "#212427",
+        "taskTextDarkColor":     "#212427",
+        "taskTextLightColor":    "#FFFFFF",
+        "activeTaskBkgColor":    "#CC0000",
+        "activeTaskBorderColor": "#A30000",
+        "critBkgColor":          "#7B1010",
+        "critBorderColor":       "#B52020",
+        "doneTaskBkgColor":      "#F5F5F5",
+        "doneTaskBorderColor":   "#D8D8D8",
+        "sectionBkgColor":       "#FFFFFF",
+        "altSectionBkgColor":    "#F8F8F8",
+        "gridColor":             "#DDDDDD",
+        "titleColor":            "#212427"
+      }
+    }
+  },
+
+  "timeline": {
+    "init": {
+      "theme": "base",
+      "themeVariables": {
+        "cScale0":    "#CC0000",
+        "cScale1":    "#666666",
+        "cScale2":    "#CC0000",
+        "cScale3":    "#666666",
+        "cScale4":    "#CC0000",
+        "cScale5":    "#666666",
+        "cScale6":    "#CC0000",
+        "cScale7":    "#666666",
+        "cScale8":    "#CC0000",
+        "cScale9":    "#666666",
+        "cScale10":   "#CC0000",
+        "cScale11":   "#666666",
+        "titleColor": "#212427"
+      }
+    }
+  },
+
+  "semantic": {
+    "alert":       { "fill": "#CC0000", "stroke": "#A30000", "text": "#FFFFFF", "note": "风险 / 问题 (Bain Red)" },
+    "opportunity": { "fill": "#E87722", "stroke": "#BA5F1B", "text": "#FFFFFF", "note": "机会 / 橙色" },
+    "hold":        { "fill": "#666666", "stroke": "#525252", "text": "#FFFFFF", "note": "中性 / 观察" },
+    "speculative": { "fill": "#2E0078", "stroke": "#5A20A0", "text": "#FFFFFF", "note": "投机 / 主题" },
+    "value":       { "fill": "#1A1A1A", "stroke": "#222222", "text": "#FFFFFF", "note": "权威 / 结论" }
+  },
+
+  "edge": {
+    "primary":   "#CC0000",
+    "secondary": "#888888"
+  },
+
+  "rules": {
+    "dark_text_threshold": "#808080",
+    "dark_node_text":      "#FFFFFF",
+    "light_node_text":     "#212427"
+  }
+}

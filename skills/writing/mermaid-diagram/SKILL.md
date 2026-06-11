@@ -2,7 +2,7 @@
 name: mermaid-diagram
 description: "Professional Mermaid diagramming standards. Triggers immediately when the user mentions drawing diagrams, flowcharts, sequence diagrams, state machines, Gantt charts, quadrant charts, mind maps, or needs to embed any Mermaid chart in a Markdown document. Supports flowchart, sequenceDiagram, stateDiagram, timeline, gantt, quadrantChart, and mindmap."
 user_invocable: true
-version: "1.3.0"
+version: "1.4.0"
 ---
 
 # Mermaid 专业作图标准
@@ -75,38 +75,77 @@ Markdown 渲染器页面宽度通常 700–900px，图表必须适配：
 
 ---
 
-## 3. Roland Berger 配色体系
+## 3. 配色主题系统
 
-### 核心色板
+配色从品牌主题文件读取，**不在图中硬编码**。生成图表前先读取对应文件：
+
+| 品牌 | 主题文件 | 默认 |
+|------|---------|:----:|
+| Bain & Company | `themes/bain.json` | ✓ |
+| BCG | `themes/bcg.json` | |
+| Roland Berger | `themes/rb.json` | |
+
+用户未指定品牌时默认使用 Bain 主题。
+
+### 图类型 → 样式机制
+
+每种图类型使用不同的样式机制，主题文件按图类型分区存储配置：
+
+| 图类型 | 样式机制 | 主题路径 |
+|--------|---------|---------|
+| `flowchart` | 内联 `style` 声明（**禁用** `%%{init}%%`） | `flowchart.*` |
+| `stateDiagram-v2` | `classDef` + `class` | `stateDiagram.classDef.*` |
+| `sequenceDiagram` | `%%{init}%%` themeVariables | `sequenceDiagram.init` |
+| `gantt` | `%%{init}%%` themeVariables | `gantt.init` |
+| `timeline` | `%%{init}%%` themeVariables | `timeline.init` |
+| `quadrantChart` | 库默认（控制极度有限，不强制品牌色） | — |
+
+### flowchart — 内联 style
+
+subgraph 使用**弱色背景**（浅灰梯度）作为分组底色，节点色编码实体**类型**，不跟随 subgraph 层编号：
+
+| 场景 | 用法 |
+|------|------|
+| 同类实体（如供应链企业） | 全部用 `flowchart.node.neutral`（白色卡片） |
+| 不同实体类型 | `node.primary` / `node.secondary` 区分类型 |
+| 投资信号 / 风险状态 | `semantic.opportunity` / `semantic.alert` / `semantic.hold` |
+
+节点文字色：fill 浅于 `rules.dark_text_threshold` → `color:#212427`；否则 `color:#fff`。
+
+### stateDiagram-v2 — classDef
+
+从 `stateDiagram.classDef` 读取，逐行写入图顶部：
 
 ```
-主色 Deep Navy   #00205B   用于最重要/最底层/上游  subgraph
-主色 RB Blue     #003E96   用于中间层/平台层        subgraph
-中蓝 Medium Blue #1E5C9E   用于应用层/下游          subgraph
-节点 Navy Node   #0A2E7A   上游 subgraph 内节点
-节点 Blue Node   #0050B8   中游 subgraph 内节点
-节点 Mid Node    #2A6EAE   下游 subgraph 内节点
+classDef neutral     fill:#EBEBEB,stroke:#C8C8C8,color:#212427
+classDef opportunity fill:#E87722,stroke:#BA5F1B,color:#fff
+classDef hold        fill:#666666,stroke:#525252,color:#fff
+classDef danger      fill:#CC0000,stroke:#A30000,color:#fff
 ```
 
-### 语义辅助色
+### sequenceDiagram / gantt / timeline — %%{init}%%
+
+从各自 `<type>.init` 字段读取 themeVariables，写入图**首行**（仅这三种图类型允许 `%%{init}%%`）：
 
 ```
-预警 / 高风险    fill:#7B1010  stroke:#B52020
-机会 / 买入      fill:#1A5E3A  stroke:#2A7E50
-等待 / 持有      fill:#003E96  stroke:#1A6AC4
-投机 / 主题      fill:#2E0078  stroke:#5A20A0
-价值 / 配置      fill:#004060  stroke:#1A5E80
+%%{init: {"theme":"base","themeVariables":{...}}}%%
 ```
 
-### 配色规则
+完整键值见主题文件对应分区。
 
-- 深色背景（fill 暗于 `#4A4A4A`）**必须**加 `color:#fff`
-- subgraph 背景比节点背景**深 10–15%**（提供层次感）
-- 同一图内最多使用 **3 种主色** + 语义辅助色
-- `quadrantChart` 的 quadrant 标签不加颜色（库自动渲染）
-- `timeline` / `gantt` / `stateDiagram` 使用库默认颜色，不强制 RB 色
+### 语义辅助色（跨图类型共享）
 
-> 完整配色模板（含三层产业链示例）→ `references/color-templates.md`
+`semantic.*` 在所有图类型中语义一致：
+
+| 键 | 用途 | Bain 颜色 |
+|----|------|-----------|
+| `alert` | 风险 / 规避 | `#CC0000` 红 |
+| `opportunity` | 机会 / 买入 | `#E87722` 橙 |
+| `hold` | 中性 / 观察 | `#666666` 灰 |
+| `speculative` | 主题 / 高波动 | `#2E0078` 紫 |
+| `value` | 权威 / 核心配置 | `#1A1A1A` 近黑 |
+
+> 完整 Bain 配色示例 → `tests/bain-style-test.md`
 
 ---
 
@@ -135,6 +174,7 @@ Markdown 渲染器页面宽度通常 700–900px，图表必须适配：
 ❌ sequenceDiagram 中文/空格参与者名不加处理 → 用 alias 或引号
 ❌ sequenceDiagram activate 未配对 deactivate → 必须一一对应
 ❌ sequenceDiagram 消息文本内换行 → 不支持，保持单行
+❌ %%{init:...}%% 多行块在 flowchart 中 → 导致渲染失败、颜色全部丢失；flowchart 配色只用 style 声明
 ```
 
 ---
@@ -179,7 +219,9 @@ Markdown 渲染器页面宽度通常 700–900px，图表必须适配：
 知识树          → mindmap
 ```
 
-### RB 配色速查
+### 配色速查
+
+读取 `themes/<brand>.json` 获取完整色值；RB 默认速查：
 
 ```
 上游子图   fill:#00205B  stroke:#1E4A9A
@@ -194,6 +236,8 @@ Markdown 渲染器页面宽度通常 700–900px，图表必须适配：
 价值蓝绿   fill:#004060  stroke:#1A5E80
 所有深色背景加 color:#fff
 ```
+
+BCG / Bain 品牌色 → 读取 `themes/bcg.json` / `themes/bain.json`
 
 ### 禁用字符替换
 

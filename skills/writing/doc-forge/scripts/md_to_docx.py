@@ -9,9 +9,11 @@ Style config: JSON file with format spec. See assets/default-style.json.
 """
 
 import argparse
+import io
 import json
 import re
 import sys
+import tempfile
 from pathlib import Path
 
 from docx import Document
@@ -22,18 +24,68 @@ from docx.shared import Cm, Pt, RGBColor
 
 ASSETS_DIR = Path(__file__).parent.parent / "assets"
 
+
+def _mermaid_js_src() -> str:
+    local = Path(__file__).parent.parent / "node_modules" / "mermaid" / "dist" / "mermaid.min.js"
+    if local.exists():
+        return local.as_uri()
+    return "https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"
+
+
+def render_mermaid_png(mermaid_code: str) -> bytes | None:
+    """Render Mermaid diagram to PNG via Playwright. Returns None if unavailable."""
+    try:
+        from playwright.sync_api import sync_playwright
+    except ImportError:
+        return None
+
+    html = f"""<!DOCTYPE html>
+<html><head><meta charset="utf-8">
+<script src="{_mermaid_js_src()}"></script>
+<style>body{{margin:0;background:white}}.mermaid{{display:inline-block}}</style>
+</head><body>
+<pre class="mermaid">{mermaid_code}</pre>
+<script>mermaid.initialize({{startOnLoad:true}});</script>
+</body></html>"""
+
+    tmp = Path(tempfile.mktemp(suffix=".html"))
+    try:
+        tmp.write_text(html, encoding="utf-8")
+        with sync_playwright() as p:
+            browser = p.chromium.launch()
+            page = browser.new_page()
+            page.goto(tmp.as_uri())
+            page.wait_for_function(
+                "document.querySelector('pre.mermaid svg') !== null",
+                timeout=10000,
+            )
+            el = page.query_selector("pre.mermaid")
+            png = el.screenshot()
+            browser.close()
+        return png
+    except Exception:
+        return None
+    finally:
+        tmp.unlink(missing_ok=True)
+
 # ── Helpers ────────────────────────────────────────────────────────────────────
 
-def _set_cell_border(cell, color: str = "AAAAAA"):
-    """Apply thin border on all four sides of a table cell."""
+def _set_cell_borders(cell, top=None, bottom=None, left=None, right=None):
+    """Apply selective cell borders. Each side: dict {val, sz, color} or None to skip."""
     tc = cell._tc
     tcPr = tc.get_or_add_tcPr()
+    for existing in tcPr.findall(qn("w:tcBorders")):
+        tcPr.remove(existing)
     tcBorders = OxmlElement("w:tcBorders")
-    for side in ("top", "left", "bottom", "right"):
-        el = OxmlElement(f"w:{side}")
-        el.set(qn("w:val"), "single")
-        el.set(qn("w:sz"), "4")
-        el.set(qn("w:color"), color.lstrip("#"))
+    for side_name, cfg in [("top", top), ("bottom", bottom),
+                            ("left", left), ("right", right)]:
+        if cfg is None:
+            continue
+        el = OxmlElement(f"w:{side_name}")
+        el.set(qn("w:val"), cfg.get("val", "single"))
+        if cfg.get("val") != "nil":
+            el.set(qn("w:sz"), str(cfg.get("sz", 4)))
+            el.set(qn("w:color"), cfg.get("color", "000000").lstrip("#"))
         tcBorders.append(el)
     tcPr.append(tcBorders)
 
@@ -149,6 +201,15 @@ def add_inline(paragraph, text: str, base_font: str, base_font_en: str,
                          base_bold, base_italic, base_color)
 
 
+# ── Preprocessing ─────────────────────────────────────────────────────────────
+
+_WIKILINK_IMG_RE = re.compile(r"!\[\[([^\]]+)\]\]")
+
+def _expand_wikilink_images(text: str) -> str:
+    """Convert Obsidian-style ![[filename]] to standard ![filename](filename)."""
+    return _WIKILINK_IMG_RE.sub(lambda m: f"![{m.group(1)}]({m.group(1)})", text)
+
+
 # ── Block-level parser ────────────────────────────────────────────────────────
 
 def parse_md_blocks(md_text: str) -> list[dict]:
@@ -179,8 +240,11 @@ def parse_md_blocks(md_text: str) -> list[dict]:
             while i < len(lines) and not lines[i].startswith("```"):
                 code_lines.append(lines[i])
                 i += 1
-            blocks.append({"type": "code", "lang": lang,
-                           "text": "\n".join(code_lines)})
+            text = "\n".join(code_lines)
+            if lang == "mermaid":
+                blocks.append({"type": "mermaid", "text": text})
+            else:
+                blocks.append({"type": "code", "lang": lang, "text": text})
             i += 1
             continue
 
@@ -243,6 +307,13 @@ def parse_md_blocks(md_text: str) -> list[dict]:
             blocks.append({"type": "table", "header": header, "rows": rows})
             continue
 
+        # Standalone image: ![alt](path)
+        m = re.match(r"^\s*!\[([^\]]*)\]\(([^)]+)\)\s*$", line)
+        if m:
+            blocks.append({"type": "image", "alt": m.group(1), "src": m.group(2)})
+            i += 1
+            continue
+
         # Blank line
         if line.strip() == "":
             blocks.append({"type": "blank"})
@@ -273,7 +344,7 @@ def parse_md_blocks(md_text: str) -> list[dict]:
 
 # ── Document builder ──────────────────────────────────────────────────────────
 
-def build_docx(blocks: list[dict], style: dict) -> Document:
+def build_docx(blocks: list[dict], style: dict, base_dir: Path | None = None) -> Document:
     doc = Document()
 
     # Page margins
@@ -342,6 +413,38 @@ def build_docx(blocks: list[dict], style: dict) -> Document:
             set_paragraph_format(para, space_before=6, space_after=6,
                                  left_indent=1.0)
 
+        elif btype == "image":
+            src = block["src"]
+            img_path = Path(src) if Path(src).is_absolute() else (base_dir / src if base_dir else Path(src))
+            para = doc.add_paragraph()
+            set_paragraph_format(para, space_before=6, space_after=6, align="center")
+            run = para.add_run()
+            if img_path.exists():
+                run.add_picture(str(img_path), width=Cm(14))
+            else:
+                run.italic = True
+                run.text = f"[图片: {block['alt'] or src}]"
+                apply_run_format(run, body["font"], body["font_en"], body["size_pt"],
+                                 italic=True, color="888888")
+
+        elif btype == "mermaid":
+            png = render_mermaid_png(block["text"])
+            if png:
+                para = doc.add_paragraph()
+                set_paragraph_format(para, space_before=6, space_after=6,
+                                     align="center")
+                run = para.add_run()
+                run.add_picture(io.BytesIO(png), width=Cm(14))
+            else:
+                # Playwright unavailable — render as fenced code block
+                para = doc.add_paragraph()
+                run = para.add_run("```mermaid\n" + block["text"] + "\n```")
+                run.font.name = code_cfg["font"]
+                run._r.rPr.rFonts.set(qn("w:eastAsia"), code_cfg["font"])
+                run.font.size = Pt(code_cfg["size_pt"])
+                set_paragraph_format(para, space_before=6, space_after=6,
+                                     left_indent=1.0)
+
         elif btype == "blockquote":
             para = doc.add_paragraph()
             add_inline(para, block["text"],
@@ -380,19 +483,51 @@ def build_docx(blocks: list[dict], style: dict) -> Document:
             header = block["header"]
             rows = block["rows"]
             col_count = len(header)
-            # Pad all rows to same column count
             all_rows = [header] + [
                 r + [""] * (col_count - len(r)) for r in rows
             ]
+            border_mode = tbl_cfg.get("border_mode", "grid")
+            rule_color = tbl_cfg.get("rule_color", "000000")
             tbl = doc.add_table(rows=len(all_rows), cols=col_count)
             tbl.style = "Table Grid"
-            border_color = tbl_cfg.get("border_color", "AAAAAA")
+
+            _THICK = {"val": "single", "sz": 12, "color": rule_color}
+            _THIN  = {"val": "single", "sz": 6,  "color": rule_color}
+            _NIL   = {"val": "nil"}
+            accent_color = tbl_cfg.get("accent_color", rule_color)
+            row_sep_color = tbl_cfg.get("row_sep_color", "E0E0E0")
+            _ACCENT = {"val": "single", "sz": 8, "color": accent_color}
+            _ROW_SEP = {"val": "single", "sz": 4, "color": row_sep_color}
+
             for row_idx, row_data in enumerate(all_rows):
                 is_header = row_idx == 0
+                is_last   = row_idx == len(all_rows) - 1
                 tr = tbl.rows[row_idx]
                 for col_idx, cell_text in enumerate(row_data):
                     cell = tr.cells[col_idx]
-                    _set_cell_border(cell, border_color)
+
+                    if border_mode == "grid":
+                        c = tbl_cfg.get("border_color", "AAAAAA")
+                        b = {"val": "single", "sz": 4, "color": c}
+                        _set_cell_borders(cell, top=b, bottom=b, left=b, right=b)
+                    elif border_mode == "mckinsey":
+                        _set_cell_borders(
+                            cell,
+                            top=_THICK if is_header else _NIL,
+                            bottom=_THIN if (is_header or is_last) else _NIL,
+                            left=_NIL, right=_NIL,
+                        )
+                    elif border_mode == "rb":
+                        # Header: thick black top + accent-color bottom
+                        # Data rows: light gray separator between each row
+                        # Last row: thin black bottom
+                        _set_cell_borders(
+                            cell,
+                            top=_THICK if is_header else _NIL,
+                            bottom=_ACCENT if is_header else (_THIN if is_last else _ROW_SEP),
+                            left=_NIL, right=_NIL,
+                        )
+
                     if is_header and tbl_cfg.get("header_bg_color"):
                         _set_cell_shading(cell, tbl_cfg["header_bg_color"])
                     para = cell.paragraphs[0]
@@ -404,7 +539,6 @@ def build_docx(blocks: list[dict], style: dict) -> Document:
                     set_paragraph_format(para,
                                          space_before=tbl_cfg.get("cell_padding_pt", 4),
                                          space_after=tbl_cfg.get("cell_padding_pt", 4))
-            # Add spacing around table via an empty paragraph
             doc.add_paragraph()
 
     return doc
@@ -418,6 +552,8 @@ def main():
     parser.add_argument("input", nargs="?", help="Input .md file")
     parser.add_argument("output", nargs="?", help="Output .docx file (default: same name)")
     parser.add_argument("--style", help="JSON style config file")
+    parser.add_argument("--base-dir", help="Base directory for resolving relative image paths "
+                        "(default: directory of the input .md file)")
     parser.add_argument("--dump-style", action="store_true",
                         help="Print default style JSON and exit")
     args = parser.parse_args()
@@ -458,9 +594,10 @@ def main():
             else:
                 style[section] = values
 
-    md_text = input_path.read_text(encoding="utf-8")
+    base_dir = Path(args.base_dir).resolve() if args.base_dir else input_path.resolve().parent
+    md_text = _expand_wikilink_images(input_path.read_text(encoding="utf-8"))
     blocks = parse_md_blocks(md_text)
-    doc = build_docx(blocks, style)
+    doc = build_docx(blocks, style, base_dir=base_dir)
     doc.save(output_path)
     print(f"Saved: {output_path}")
 
