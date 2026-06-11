@@ -52,6 +52,11 @@
 !docs/**/
 !docs/**/*
 
+# 保留知识库目录
+!knowledge/
+!knowledge/**/
+!knowledge/**/*
+
 # 保留测试目录
 !tests/
 !tests/**
