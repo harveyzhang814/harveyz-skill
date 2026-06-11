@@ -1,145 +1,217 @@
 #!/usr/bin/env python3
 """
-Generate a single HTML file previewing all available doc-forge styles.
+Generate a comparison grid HTML: columns = styles, rows = element types.
 
 Usage:
     python3 generate_style_preview.py [output.html]
-    # defaults to /tmp/doc-forge-style-preview.html
+    # defaults to skills/writing/doc-forge/preview/style-preview.html
 """
 
+import re
 import sys
 from pathlib import Path
-
-import markdown as md_lib
 
 ASSETS_DIR = Path(__file__).parent.parent / "assets"
 DEFAULT_OUTPUT = Path(__file__).parent.parent / "preview" / "style-preview.html"
 
 DISPLAY_NAMES: dict[str, str] = {
-    "bain": "Bain & Company",
-    "bcg": "Boston Consulting Group (BCG)",
-    "thesis": "中文学术论文",
-    "default": "Default（Harvey 自定义）",
-    "rb": "Roland Berger",
+    "bain":    "Bain & Company",
+    "bcg":     "BCG",
+    "thesis":  "中文学术论文",
+    "default": "Default",
+    "rb":      "Roland Berger",
 }
 
-SAMPLE_MD = """\
-# 战略报告标题
+ROWS: list[tuple[str, str]] = [
+    ("H1",   "<h1>战略报告标题</h1>"),
+    ("H2",   "<h2>一、执行摘要</h2>"),
+    ("H3",   "<h3>1.1 背景与目标</h3>"),
+    ("H4",   "<h4>战略优先级</h4>"),
+    ("正文",  "<p>这是正文段落。报告分析了当前市场环境下的核心战略选项，结合数据驱动的洞察提出行动建议，助力企业保持领先地位。</p>"),
+    ("引用块", "<blockquote><p>关键发现：在竞争加剧的背景下，企业需要在18个月内完成数字化转型。</p></blockquote>"),
+    ("表格",  (
+        "<table><thead><tr><th>指标</th><th>当前值</th><th>目标值</th><th>差距</th></tr></thead>"
+        "<tbody>"
+        "<tr><td>市场份额</td><td>23%</td><td>30%</td><td>7pp</td></tr>"
+        "<tr><td>净推荐值</td><td>42</td><td>60</td><td>+18</td></tr>"
+        "</tbody></table>"
+    )),
+    ("代码块", "<pre><code>def calculate_gap(current, target):\n    return target - current</code></pre>"),
+    ("分隔线", "<hr>"),
+]
 
-## 一、执行摘要
-
-### 1.1 背景与目标
-
-#### 战略优先级
-
-这是正文段落。报告分析了当前市场环境下的核心战略选项，结合数据驱动的洞察提出行动建议，助力企业在竞争加剧的格局中保持领先。
-
-> 关键发现：在竞争加剧的背景下，企业需要在18个月内完成数字化转型，才能保持市场领先地位。
-
-| 指标 | 当前值 | 目标值 | 差距 |
-|------|--------|--------|------|
-| 市场份额 | 23% | 30% | 7pp |
-| 净推荐值 | 42 | 60 | +18 |
-| 运营效率 | 68% | 85% | 17pp |
-
-```python
-def calculate_gap(current, target):
-    return target - current
-```
-
----
-
-## 二、战略选项
-"""
-
-
-WRAPPER_CSS = """
-* { box-sizing: border-box; margin: 0; padding: 0; }
-body {
+GRID_CSS = """
+*, *::before, *::after { box-sizing: border-box; }
+html, body {
+  margin: 0; padding: 0;
   font-family: -apple-system, "Helvetica Neue", Arial, sans-serif;
-  background: #EBEBEB;
-  color: #1A1A1A;
-  padding: 32px 24px;
-}
-h1.page-title {
-  font-size: 22px;
-  font-weight: 600;
+  background: #CACACA;
   color: #111;
-  margin-bottom: 8px;
 }
-p.page-sub {
-  font-size: 13px;
-  color: #555;
-  margin-bottom: 32px;
+
+/* ── Page chrome ── */
+.page-header {
+  padding: 20px 24px 14px;
+  background: rgba(20, 20, 20, 0.88);
+  backdrop-filter: blur(8px);
+  color: #fff;
+  position: sticky;
+  top: 0;
+  z-index: 10;
 }
+.page-header h1 { font-size: 15px; font-weight: 600; margin: 0 0 3px; }
+.page-header p  { font-size: 11px; color: #999; margin: 0; }
+
+/* ── Grid shell ── */
+.grid-wrap { overflow-x: auto; padding: 20px; }
+
 .grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(520px, 1fr));
-  gap: 28px;
+  grid-template-columns: 64px repeat(var(--n-styles), minmax(280px, 1fr));
+  gap: 10px;
+  width: max-content;
+  min-width: 100%;
 }
-.card {
-  background: #fff;
+
+/* ── Base card ── */
+.cell {
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
   border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  padding: 16px 18px;
+  min-height: 52px;
   overflow: hidden;
-  box-shadow: 0 2px 12px rgba(0,0,0,.10);
 }
-.card-label {
-  padding: 10px 18px;
-  background: #1A1A1A;
+
+/* ── Row label card ── */
+.cell-label {
+  background: rgba(0, 0, 0, 0.12);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  border: 1px solid rgba(255, 255, 255, 0.20);
+  box-shadow: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-family: monospace;
+  color: rgba(255, 255, 255, 0.75);
+  font-weight: 600;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+  padding: 8px 4px;
+}
+
+/* ── Column header card ── */
+.cell-header {
+  background: rgba(20, 20, 20, 0.80);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.18);
   color: #fff;
   font-family: monospace;
-  font-size: 13px;
-  letter-spacing: .02em;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 10px 16px;
   display: flex;
-  justify-content: space-between;
-  align-items: center;
+  flex-direction: column;
+  gap: 3px;
 }
-.card-label .slug {
-  color: #aaa;
-  font-size: 11px;
-}
-iframe {
-  width: 100%;
-  height: 580px;
+.cell-header .slug { color: #888; font-size: 10px; font-weight: 400; }
+
+/* corner — invisible spacer */
+.cell-corner {
+  background: transparent;
   border: none;
-  display: block;
+  box-shadow: none;
+  backdrop-filter: none;
 }
 """
 
 
 def discover_styles() -> list[tuple[str, Path]]:
-    """Return (slug, css_path) pairs sorted by slug, skipping unknown stems."""
-    found = []
-    for css_file in sorted(ASSETS_DIR.glob("*.css")):
-        stem = css_file.stem
-        found.append((stem, css_file))
-    return found
+    return [(p.stem, p) for p in sorted(ASSETS_DIR.glob("*.css"))]
 
 
-def build_iframe_doc(css: str, body_html: str) -> str:
-    mermaid_src = "https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"
-    local_js = Path(__file__).parent.parent / "node_modules" / "mermaid" / "dist" / "mermaid.min.js"
-    if local_js.exists():
-        mermaid_src = local_js.as_uri()
-    return (
-        "<!DOCTYPE html><html lang='zh-CN'><head>"
-        "<meta charset='UTF-8'>"
-        f"<style>{css}</style>"
-        "</head><body>"
-        f"{body_html}"
-        f'<script src="{mermaid_src}"></script>'
-        "<script>if(typeof mermaid!=='undefined'){"
-        "mermaid.initialize({startOnLoad:true,theme:'neutral'});}</script>"
-        "</body></html>"
-    )
+def scope_css(css: str, prefix: str) -> str:
+    """Prefix all CSS selectors with .{prefix} for in-page isolation."""
+    out: list[str] = []
+    i = 0
+    n = len(css)
 
+    def find_block_end(start: int) -> int:
+        depth = 0
+        j = start
+        while j < n:
+            if css[j] == '{':
+                depth += 1
+            elif css[j] == '}':
+                depth -= 1
+                if depth == 0:
+                    return j
+            j += 1
+        return n - 1
 
-def render_body(md_text: str) -> str:
-    return md_lib.markdown(md_text, extensions=["tables", "fenced_code", "attr_list"])
+    while i < n:
+        # skip whitespace
+        while i < n and css[i] in ' \t\n\r':
+            i += 1
+        if i >= n:
+            break
+
+        # @page — drop entirely (controls print margins, irrelevant for preview)
+        if css[i:i+5] == '@page':
+            end = find_block_end(i)
+            i = end + 1
+            continue
+
+        # @media — keep wrapper, recurse into body
+        if css[i:i+6] == '@media':
+            brace = css.find('{', i)
+            rule_head = css[i:brace].strip()
+            end = find_block_end(brace)
+            inner = css[brace + 1:end]
+            out.append(f"{rule_head} {{\n{scope_css(inner, prefix)}\n}}")
+            i = end + 1
+            continue
+
+        # other @rules without block (e.g. @import, @charset)
+        if css[i] == '@':
+            semi = css.find(';', i)
+            brace = css.find('{', i)
+            if semi != -1 and (brace == -1 or semi < brace):
+                out.append(css[i:semi + 1])
+                i = semi + 1
+                continue
+
+        # regular rule: selector { ... }
+        brace = css.find('{', i)
+        if brace == -1:
+            break
+        selector_raw = css[i:brace]
+        end = find_block_end(brace)
+        body = css[brace:end + 1]  # includes { }
+
+        selectors = [s.strip() for s in selector_raw.split(',') if s.strip()]
+        scoped: list[str] = []
+        for sel in selectors:
+            if sel in ('body', ':root'):
+                scoped.append(f'.{prefix}')
+            elif re.match(r'^body[\s>+~[]', sel):
+                scoped.append(f'.{prefix} {sel[4:].lstrip()}')
+            else:
+                scoped.append(f'.{prefix} {sel}')
+        out.append(f"{', '.join(scoped)} {body}")
+        i = end + 1
+
+    return '\n'.join(out)
 
 
 def is_up_to_date(output_path: Path, css_paths: list[Path]) -> bool:
-    """Return True if output_path exists and is newer than all CSS files and this script."""
     if not output_path.exists():
         return False
     out_mtime = output_path.stat().st_mtime
@@ -160,24 +232,37 @@ def build_preview(output_path: Path) -> None:
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
-    body_html = render_body(SAMPLE_MD)
-    cards_html = []
+    n = len(styles)
+
+    # Build scoped CSS for each brand
+    brand_css_parts: list[str] = []
     for slug, css_path in styles:
+        raw = css_path.read_text(encoding="utf-8")
+        brand_css_parts.append(f"/* ── {slug} ── */\n{scope_css(raw, slug)}")
+
+    all_brand_css = "\n\n".join(brand_css_parts)
+
+    # Build grid rows
+    cells: list[str] = []
+
+    # Header row
+    cells.append('<div class="cell cell-corner"></div>')
+    for slug, _ in styles:
         display = DISPLAY_NAMES.get(slug, slug)
-        css = css_path.read_text(encoding="utf-8")
-        iframe_doc = build_iframe_doc(css, body_html)
-        # escape for srcdoc attribute (only & and " need escaping in attr values)
-        srcdoc = iframe_doc.replace("&", "&amp;").replace('"', "&quot;")
-        card = (
-            f'<div class="card">'
-            f'<div class="card-label">'
+        cells.append(
+            f'<div class="cell cell-header">'
             f'<span>{display}</span>'
             f'<span class="slug">{slug}.css</span>'
             f'</div>'
-            f'<iframe srcdoc="{srcdoc}" loading="lazy"></iframe>'
-            f'</div>'
         )
-        cards_html.append(card)
+
+    # Content rows
+    for row_label, row_html in ROWS:
+        cells.append(f'<div class="cell cell-label">{row_label}</div>')
+        for slug, _ in styles:
+            cells.append(
+                f'<div class="cell {slug}">{row_html}</div>'
+            )
 
     html = f"""<!DOCTYPE html>
 <html lang="zh-CN">
@@ -185,13 +270,20 @@ def build_preview(output_path: Path) -> None:
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Doc Forge — Style Preview</title>
-<style>{WRAPPER_CSS}</style>
+<style>
+{GRID_CSS}
+{all_brand_css}
+</style>
 </head>
 <body>
-<h1 class="page-title">Doc Forge — Style Preview</h1>
-<p class="page-sub">共 {len(styles)} 种内置样式 · 每个预览框使用相同示例内容渲染</p>
-<div class="grid">
-{"".join(cards_html)}
+<div class="page-header">
+  <h1>Doc Forge — Style Preview</h1>
+  <p>列 = 样式风格　行 = 元素类型　共 {n} 种样式</p>
+</div>
+<div class="grid-wrap">
+  <div class="grid" style="--n-styles: {n}">
+{"".join(f'    {c}' for c in cells)}
+  </div>
 </div>
 </body>
 </html>"""
