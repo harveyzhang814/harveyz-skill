@@ -22,7 +22,7 @@ version: "2.5.0"
 
 ```bash
 python3 ~/.claude/skills/doc-forge/scripts/generate_style_preview.py
-open /tmp/doc-forge-style-preview.html
+open ~/.claude/skills/doc-forge/preview/style-preview.html
 ```
 
 浏览器打开后告知用户："预览已打开，对比各样式后请回来选择。"

@@ -13,7 +13,7 @@ from pathlib import Path
 import markdown as md_lib
 
 ASSETS_DIR = Path(__file__).parent.parent / "assets"
-DEFAULT_OUTPUT = Path("/tmp/doc-forge-style-preview.html")
+DEFAULT_OUTPUT = Path(__file__).parent.parent / "preview" / "style-preview.html"
 
 DISPLAY_NAMES: dict[str, str] = {
     "bain": "Bain & Company",
@@ -157,6 +157,8 @@ def build_preview(output_path: Path) -> None:
     if is_up_to_date(output_path, css_paths):
         print(f"Up to date: {output_path}")
         return
+
+    output_path.parent.mkdir(parents=True, exist_ok=True)
 
     body_html = render_body(SAMPLE_MD)
     cards_html = []
