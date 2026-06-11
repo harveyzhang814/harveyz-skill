@@ -50,9 +50,10 @@
     "size_pt": 11,
     "header_bold": true,
     "header_bg_color": null,
-    "border_mode": "mckinsey",
+    "border_mode": "rb",
     "rule_color": "000000",
-    "border_color": "E0E0E0",
+    "accent_color": "F6F600",
+    "row_sep_color": "E0E0E0",
     "cell_padding_pt": 4,
     "space_before_pt": 8,
     "space_after_pt": 8

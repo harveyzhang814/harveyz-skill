@@ -485,6 +485,10 @@ def build_docx(blocks: list[dict], style: dict, base_dir: Path | None = None) ->
             _THICK = {"val": "single", "sz": 12, "color": rule_color}
             _THIN  = {"val": "single", "sz": 6,  "color": rule_color}
             _NIL   = {"val": "nil"}
+            accent_color = tbl_cfg.get("accent_color", rule_color)
+            row_sep_color = tbl_cfg.get("row_sep_color", "E0E0E0")
+            _ACCENT = {"val": "single", "sz": 8, "color": accent_color}
+            _ROW_SEP = {"val": "single", "sz": 4, "color": row_sep_color}
 
             for row_idx, row_data in enumerate(all_rows):
                 is_header = row_idx == 0
@@ -502,6 +506,16 @@ def build_docx(blocks: list[dict], style: dict, base_dir: Path | None = None) ->
                             cell,
                             top=_THICK if is_header else _NIL,
                             bottom=_THIN if (is_header or is_last) else _NIL,
+                            left=_NIL, right=_NIL,
+                        )
+                    elif border_mode == "rb":
+                        # Header: thick black top + accent-color bottom
+                        # Data rows: light gray separator between each row
+                        # Last row: thin black bottom
+                        _set_cell_borders(
+                            cell,
+                            top=_THICK if is_header else _NIL,
+                            bottom=_ACCENT if is_header else (_THIN if is_last else _ROW_SEP),
                             left=_NIL, right=_NIL,
                         )
 

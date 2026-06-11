@@ -80,7 +80,10 @@ p {
   margin-bottom: 7pt;
 }
 
-/* ── Tables — horizontal-rule style ─────────── */
+/* ── Tables — RB style ───────────────────────── */
+/* Header: thick black top + yellow accent bottom  */
+/* Data rows: light gray separator between each    */
+/* Last row: thin black bottom                     */
 
 table {
   border-collapse: collapse;
@@ -93,7 +96,7 @@ table {
 
 thead tr {
   border-top: 2px solid #000000;
-  border-bottom: 1px solid #000000;
+  border-bottom: 2px solid #f6f600;
 }
 
 th {
@@ -105,12 +108,17 @@ th {
   text-align: left;
 }
 
+tbody tr td {
+  border-bottom: 0.5px solid #e0e0e0;
+}
+
 tbody tr:last-child td {
   border-bottom: 1px solid #000000;
 }
 
 td {
-  border: none;
+  border-left: none;
+  border-right: none;
   padding: 4.5pt 8pt;
   color: #000000;
 }
