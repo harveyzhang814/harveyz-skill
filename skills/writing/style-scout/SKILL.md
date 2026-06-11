@@ -1,29 +1,29 @@
 ---
 name: style-scout
-description: "Survey a brand's visual design style from their official website and derive doc-forge style configs. Trigger when the user wants to analyze a company's design style, extract brand colors/fonts, or generate document style configs based on a real website — e.g. 'analyze McKinsey style', 'survey BCG design', 'extract style from URL'."
+description: "Survey a brand's visual design style from their official website and output a structured design knowledge document. Trigger when the user wants to analyze a company's design style — e.g. 'analyze McKinsey style', 'survey BCG design', 'extract style from URL'. Outputs to knowledge/design/<brand>-style.md only. Use /design-derive to generate format-specific configs from the knowledge doc."
 user_invocable: true
-version: "1.1.0"
+version: "2.0.0"
 ---
 
 ## 概述
 
-给定一个公司官网 URL，分两个阶段执行：
+给定一个公司官网 URL，调查其设计风格，输出 `knowledge/design/<brand>-style.md`。
 
-**阶段一（调查）：** 浏览报告页面，提取色彩体系、字体、排版规则，输出 `knowledge/design/<brand>-style.md` 品牌设计文档，等待用户确认。
+**只做调查，不生成配置。** 配置生成由 `/design-derive` 负责。
 
-**阶段二（推导）：** 用户确认知识文档后，从中推导 `doc-forge` 样式配置（`<brand>-style.json` + `<brand>.css`）。
+输出文档遵循 `knowledge/design/TEMPLATE.md` 的完整结构，覆盖：色彩体系（三维分类）、字体体系、间距体系、组件规则、视觉层级、图像处理、数据可视化、各格式推导指南。
 
 > **依赖：** 必须先通过 `/browse` skill 完成 browse 初始化。
 
 ---
 
-## 阶段一：调查品牌设计
+## 执行步骤
 
-### Step 1 — 确认目标 URL
+### Step 1 — 确认目标
 
-从对话上下文获取目标 URL。若未提供，询问：
+从对话上下文获取目标 URL 和品牌简称（用于文件命名）。若未提供，询问：
 
-> 请提供要分析的公司官网 URL（如 https://www.mckinsey.com）
+> 请提供官网 URL 和品牌简称（如 https://www.mckinsey.com，简称 mckinsey）
 
 ---
 
@@ -34,108 +34,105 @@ $B goto <URL>
 $B screenshot /tmp/scout-homepage.png
 ```
 
-用 Read 工具展示截图。然后寻找报告/出版物入口（关键词：Reports / Publications / Insights / Research / Knowledge / Thinking / 研究报告 / 白皮书）：
+用 Read 工具展示截图，确认页面加载。寻找报告/出版物入口（关键词：Reports / Publications / Insights / Research / Thinking / 研究报告 / 白皮书）：
 
 ```bash
 $B snapshot -i
-$B click @eN   # 点击找到的入口链接
+$B click @eN
 ```
 
 ---
 
 ### Step 3 — 进入具体报告正文页
 
-在报告列表页，点击进入**有 HTML 正文的报告页**（非 PDF 下载）。
-
-判断标准：页面有标题 + 正文段落 + 至少一张图或表格。
+点击进入**有 HTML 正文的报告页**（非 PDF 下载）。判断标准：有标题 + 正文段落 + 至少一张图或表格。
 
 ```bash
-$B screenshot /tmp/scout-report-page.png
+# 关闭 cookie 弹窗（若存在）
+$B snapshot -i
+$B click @eN   # accept/close 按钮
+
+$B screenshot /tmp/scout-report.png
 ```
 
 用 Read 工具展示截图，记录当前 URL。
 
 ---
 
-### Step 4 — 提取色彩体系（三维分类）
+### Step 4 — 提取色彩（三维分类）
 
-色彩必须按**用途角色**分类，不能只按频次排序。三个维度：
-
-| 维度 | 定义 | 提取方法 |
-|------|------|---------|
-| **品牌动作色** | CTA 按钮、hover 状态、标签徽章的背景色 | 查找 `button`, `a[class*=btn]`, `[class*=cta]` 的 `backgroundColor` |
-| **文字色** | 标题、正文、辅助文字的 `color` | 查 h1/h2/h3/p 的 computed `color` |
-| **装饰/线条色** | 下划线、左色条、分隔线、边框 | 查 `borderLeftColor`, `borderBottomColor`, `borderTopColor` |
-
-> **关键认知：装饰线的颜色决定文档的品牌感知，而非标题文字色。**
-> 深色标题（如 BCG `#0C2B15`）在文档里视觉上近黑，品牌色必须出现在线条/色条上才能被感知。
-> 品牌动作色（CTA 按钮色）往往是装饰线的最佳候选。
-
-**4a. 提取品牌动作色（最重要）：**
+**4a. 品牌动作色（最重要，装饰线首选）**
 
 ```bash
 $B js "
-  const actionEls = [...document.querySelectorAll('button, a, [class*=btn], [class*=cta], [class*=tag], [class*=badge], [class*=label]')];
+  const els = [...document.querySelectorAll('button,a,[class*=btn],[class*=cta],[class*=tag],[class*=badge],[class*=label],[class*=chip]')];
   const map = new Map();
-  for (const el of actionEls) {
+  for (const el of els) {
     const bg = window.getComputedStyle(el).backgroundColor;
-    if (!bg || bg === 'rgba(0, 0, 0, 0)' || bg === 'rgb(255, 255, 255)') continue;
-    map.set(bg, (map.get(bg)||0) + 1);
+    if (!bg || bg==='rgba(0, 0, 0, 0)' || bg==='rgb(255, 255, 255)' || bg==='rgb(0, 0, 0)') continue;
+    map.set(bg, (map.get(bg)||0)+1);
   }
-  [...map.entries()].sort((a,b)=>b[1]-a[1]).slice(0,8).map(([c,n]) => {
-    const m = c.match(/rgb\((\d+),\s*(\d+),\s*(\d+)\)/);
-    const hex = m ? '#'+[m[1],m[2],m[3]].map(x=>parseInt(x).toString(16).padStart(2,'0')).join('').toUpperCase() : c;
-    return hex + ' x' + n;
-  }).join('\n')
+  const toHex = c => { const m=c.match(/rgb\((\d+),\s*(\d+),\s*(\d+)\)/); return m?'#'+[m[1],m[2],m[3]].map(x=>parseInt(x).toString(16).padStart(2,'0')).join('').toUpperCase():c; };
+  [...map.entries()].sort((a,b)=>b[1]-a[1]).slice(0,8)
+    .map(([c,n])=>toHex(c)+' x'+n+'  bg:'+c).join('\n')
 "
 ```
 
-**4b. 提取文字色（按元素语义）：**
+**4b. 文字色（按元素语义）**
 
 ```bash
 $B js "
-  const tags = {h1:null, h2:null, h3:null, p:null, a:null};
-  for (const tag of Object.keys(tags)) {
-    const el = document.querySelector(tag);
-    if (!el) continue;
+  const toHex = c => { const m=c.match(/rgb\((\d+),\s*(\d+),\s*(\d+)\)/); return m?'#'+[m[1],m[2],m[3]].map(x=>parseInt(x).toString(16).padStart(2,'0')).join('').toUpperCase():c; };
+  ['h1','h2','h3','h4','p','a','small'].map(tag => {
+    const el = document.querySelector(tag); if(!el) return null;
     const s = window.getComputedStyle(el);
+    const hex = toHex(s.color);
     const px = parseFloat(s.fontSize);
-    tags[tag] = {
-      color: s.color,
-      hex: (()=>{ const m=s.color.match(/rgb\((\d+),\s*(\d+),\s*(\d+)\)/); return m?'#'+[m[1],m[2],m[3]].map(x=>parseInt(x).toString(16).padStart(2,'0')).join('').toUpperCase():s.color; })(),
-      font: s.fontFamily.split(',')[0].replace(/[\"']/g,'').trim(),
-      size: (px*0.75).toFixed(1)+'pt',
-      weight: s.fontWeight,
-    };
-  }
-  JSON.stringify(tags, null, 2)
+    // 判断是否视觉近黑（R+G+B < 150）
+    const m = s.color.match(/rgb\((\d+),\s*(\d+),\s*(\d+)\)/);
+    const nearBlack = m ? (parseInt(m[1])+parseInt(m[2])+parseInt(m[3]) < 150) : false;
+    return tag.padEnd(6)+hex+'  '+(nearBlack?'[视觉近黑]':'[有色]')+'  '+s.fontWeight+'w  '+(px*0.75).toFixed(0)+'pt';
+  }).filter(Boolean).join('\n')
 "
 ```
 
-**4c. 提取装饰/线条色：**
+**4c. 装饰/线条色（仅有实际宽度的 border）**
 
 ```bash
 $B js "
+  const toHex = c => { const m=c.match(/rgb\((\d+),\s*(\d+),\s*(\d+)\)/); return m?'#'+[m[1],m[2],m[3]].map(x=>parseInt(x).toString(16).padStart(2,'0')).join('').toUpperCase():c; };
   const map = new Map();
-  const all = [...document.querySelectorAll('*')];
-  for (const el of all) {
+  for (const el of document.querySelectorAll('*')) {
     const s = window.getComputedStyle(el);
-    for (const prop of ['borderLeftColor','borderBottomColor','borderTopColor','outlineColor']) {
-      const v = s[prop];
-      const w = parseFloat(s[prop.replace('Color','Width')] || '0');
-      if (!v || v==='rgba(0, 0, 0, 0)' || v==='rgb(0,0,0)' || v==='rgb(255,255,255)' || w < 0.5) continue;
-      map.set(v, (map.get(v)||0) + 1);
+    for (const side of ['Left','Bottom','Top','Right']) {
+      const w = parseFloat(s['border'+side+'Width']||0);
+      const c = s['border'+side+'Color'];
+      if (w < 0.5 || !c || c==='rgba(0, 0, 0, 0)' || c==='rgb(255, 255, 255)' || c==='rgb(0, 0, 0)') continue;
+      const key = toHex(c)+'|'+side.toLowerCase();
+      map.set(key, (map.get(key)||0)+1);
     }
   }
-  [...map.entries()].sort((a,b)=>b[1]-a[1]).slice(0,10).map(([c,n]) => {
-    const m = c.match(/rgb\((\d+),\s*(\d+),\s*(\d+)\)/);
-    const hex = m ? '#'+[m[1],m[2],m[3]].map(x=>parseInt(x).toString(16).padStart(2,'0')).join('').toUpperCase() : c;
-    return hex + ' x' + n;
-  }).join('\n')
+  [...map.entries()].sort((a,b)=>b[1]-a[1]).slice(0,10)
+    .map(([k,n])=>k.split('|')[0].padEnd(10)+'side:'+k.split('|')[1].padEnd(8)+'x'+n).join('\n')
 "
 ```
 
-**4d. 从 CSS bundle 补充（捕捉未渲染状态的色值）：**
+**4d. 背景色层级**
+
+```bash
+$B js "
+  const toHex = c => { const m=c.match(/rgb\((\d+),\s*(\d+),\s*(\d+)\)/); return m?'#'+[m[1],m[2],m[3]].map(x=>parseInt(x).toString(16).padStart(2,'0')).join('').toUpperCase():c; };
+  const map = new Map();
+  for (const el of document.querySelectorAll('section,article,div,header,footer,nav,aside,main,pre,code,[class*=card],[class*=block],[class*=section]')) {
+    const bg = window.getComputedStyle(el).backgroundColor;
+    if (!bg || bg==='rgba(0, 0, 0, 0)' || bg==='rgb(255, 255, 255)' || bg==='rgb(0, 0, 0)') continue;
+    map.set(toHex(bg), (map.get(toHex(bg))||0)+1);
+  }
+  [...map.entries()].sort((a,b)=>b[1]-a[1]).slice(0,10).map(([c,n])=>c+' x'+n).join('\n')
+"
+```
+
+**4e. CSS bundle 补充（捕捉未渲染颜色）**
 
 ```bash
 $B js "[...document.styleSheets].map(s=>s.href).filter(Boolean)"
@@ -150,268 +147,136 @@ grep -oE '#[0-9a-fA-F]{6}\b' /tmp/scout-bundle.css | tr '[:lower:]' '[:upper:]' 
 
 ```bash
 $B js "
-  const els = {
-    h1: document.querySelector('h1'),
-    h2: document.querySelector('h2'),
-    h3: document.querySelector('h3'),
-    body: document.body,
-    p: document.querySelector('p'),
-    code: document.querySelector('code, pre'),
-  };
-  Object.entries(els).filter(([,el])=>el).map(([name,el]) => {
+  const toHex = c => { const m=c.match(/rgb\((\d+),\s*(\d+),\s*(\d+)\)/); return m?'#'+[m[1],m[2],m[3]].map(x=>parseInt(x).toString(16).padStart(2,'0')).join('').toUpperCase():c; };
+  const tags = ['h1','h2','h3','h4','p','a','code','pre','small','blockquote'];
+  tags.map(tag => {
+    const el = document.querySelector(tag); if(!el) return null;
     const s = window.getComputedStyle(el);
     const px = parseFloat(s.fontSize);
-    const pt = (px*0.75).toFixed(1);
-    return name.padEnd(6) + s.fontFamily.split(',')[0].replace(/[\"']/g,'').trim().padEnd(30) + pt+'pt  w:'+s.fontWeight;
-  }).join('\n')
+    const lh = parseFloat(s.lineHeight);
+    return [
+      tag.padEnd(12),
+      s.fontFamily.split(',')[0].replace(/[\"']/g,'').trim().padEnd(28),
+      (px*0.75).toFixed(1)+'pt'.padEnd(8),
+      'w:'+s.fontWeight.padEnd(6),
+      'lh:'+(lh/px).toFixed(2),
+      toHex(s.color)
+    ].join('  ');
+  }).filter(Boolean).join('\n')
 "
 ```
 
 ---
 
-### Step 6 — 截图关键元素
+### Step 6 — 提取间距与版面参数
+
+```bash
+$B js "
+  const body = document.body;
+  const s = window.getComputedStyle(body);
+  const main = document.querySelector('main, article, [class*=content], [class*=body]');
+  const ms = main ? window.getComputedStyle(main) : null;
+  JSON.stringify({
+    bodyMaxWidth: s.maxWidth,
+    bodyPadding: s.padding,
+    mainMaxWidth: ms?.maxWidth,
+    mainPadding: ms?.padding,
+    h1MarginBottom: window.getComputedStyle(document.querySelector('h1')||body).marginBottom,
+    h2MarginTop: window.getComputedStyle(document.querySelector('h2')||body).marginTop,
+    pMarginBottom: window.getComputedStyle(document.querySelector('p')||body).marginBottom,
+    lineHeight: s.lineHeight,
+  }, null, 2)
+"
+```
+
+---
+
+### Step 7 — 提取组件样式
+
+**表格（若有）：**
+
+```bash
+$B js "
+  const t = document.querySelector('table');
+  if (!t) { 'no table found'; } else {
+    const th = t.querySelector('th');
+    const td = t.querySelector('td');
+    const s = window.getComputedStyle(th||t);
+    const toHex = c => { const m=c.match(/rgb\((\d+),\s*(\d+),\s*(\d+)\)/); return m?'#'+[m[1],m[2],m[3]].map(x=>parseInt(x).toString(16).padStart(2,'0')).join('').toUpperCase():c; };
+    JSON.stringify({
+      thBg: toHex(s.backgroundColor), thColor: toHex(s.color), thFontWeight: s.fontWeight,
+      thBorderBottom: window.getComputedStyle(th||t).borderBottom,
+      tdBorder: td ? window.getComputedStyle(td).border : 'N/A',
+    })
+  }
+"
+```
+
+**引用块（若有）：**
+
+```bash
+$B js "
+  const bq = document.querySelector('blockquote,[class*=quote],[class*=callout],[class*=pullquote]');
+  if (!bq) { 'no blockquote found'; } else {
+    const s = window.getComputedStyle(bq);
+    const toHex = c => { const m=c.match(/rgb\((\d+),\s*(\d+),\s*(\d+)\)/); return m?'#'+[m[1],m[2],m[3]].map(x=>parseInt(x).toString(16).padStart(2,'0')).join('').toUpperCase():c; };
+    JSON.stringify({ bg: toHex(s.backgroundColor), borderLeft: s.borderLeft, color: toHex(s.color), fontStyle: s.fontStyle })
+  }
+"
+```
+
+---
+
+### Step 8 — 截图关键元素
 
 ```bash
 $B viewport 1280x900
-# 关闭 cookie 弹窗（若存在）
-$B snapshot -i   # 找到 accept/close 按钮
-$B click @eN     # 关闭
+$B js "window.scrollTo(0,0)"
+$B screenshot /tmp/scout-top.png --clip 0,0,1280,600    # 标题区
 
-# 截图标题区
-$B screenshot /tmp/scout-heading.png --clip 0,0,1280,500
+$B js "window.scrollTo(0,800)"
+$B screenshot /tmp/scout-body.png --clip 0,0,1280,600   # 正文段落
 
-# 截图正文段落（含小标题）
-$B js "window.scrollTo(0, 600)"
-$B screenshot /tmp/scout-body.png --clip 0,0,1280,500
-
-# 截图表格（若有）
+# 表格（若有）
 $B screenshot /tmp/scout-table.png --selector "table"
 
-# 截图引用块（若有）
-$B screenshot /tmp/scout-quote.png --selector "blockquote, [class*=callout], [class*=pull-quote]"
+# 引用块（若有）
+$B screenshot /tmp/scout-quote.png --selector "blockquote,[class*=callout],[class*=pull-quote]"
 ```
 
-用 Read 工具逐一展示给用户。
+用 Read 工具逐一展示截图，**目测验证**：
+- 标题文字色是否视觉近黑？
+- 品牌动作色（按钮色）是否清晰可识别？
+- 装饰线颜色？
+- 表格边框模式？
 
 ---
 
-### Step 7 — 输出品牌设计知识文档
+### Step 9 — 整理并写入知识文档
 
-将以上调查结果整理，**直接写入** `knowledge/design/<brand>-style.md`，格式如下：
+读取 `knowledge/design/TEMPLATE.md` 的结构，将调查数据填入，写到 `knowledge/design/<brand>-style.md`。
 
-```markdown
-# <公司名> 品牌设计标准
+**填写规则：**
+- 第 2.2 节"品牌动作色"：填 Step 4a 的结果
+- 第 2.3 节"文字色"：填 Step 4b，并标注"[视觉近黑]"
+- 第 9 节"推导指南"的 PDF 装饰线颜色：**必须来自 2.2 动作色，不能用 2.3 近黑文字色**
+- 未能从页面提取到的字段：填 `待补充` 而非空着
 
-> 本文件由 `/style-scout` 自动分析 <domain> 报告页面生成。
-> 来源：<报告页 URL>
+写入后，**展示给用户确认**：
 
----
-
-## 1. 品牌概述
-
-（3–5 句话描述整体设计气质：颜色基调、字体风格、装饰风格、设计关键词）
-
----
-
-## 2. 色彩体系
-
-### 2.1 品牌动作色（装饰线首选）
-
-> 这些颜色出现在按钮、CTA、标签等"品牌动作"元素上，是文档装饰线（H1 下划线、H3 左色条）的首选色。
-
-| 角色 | 色值 | 来源元素 |
-|------|------|---------|
-| 主动作色 | `#XXXXXX` | button/CTA 背景 |
-| 次动作色 | `#XXXXXX` | tag/badge 背景 |
-
-### 2.2 文字色
-
-> 标题和正文的 color 值。注意：深色标题色（如深墨绿、深海军蓝）在文档中视觉上接近黑色，
-> 不能作为品牌识别色，须结合 2.1 的动作色使用。
-
-| 元素 | 色值 | 备注 |
-|------|------|------|
-| H1/H2 标题 | `#XXXXXX` | （是否视觉可见为"有色"？） |
-| H3/H4 | `#XXXXXX` | |
-| 正文 | `#XXXXXX` | |
-| 辅助/meta | `#XXXXXX` | |
-| 链接 | `#XXXXXX` | |
-
-### 2.3 装饰/线条色
-
-| 用途 | 色值 | 位置 |
-|------|------|------|
-| 主分隔线 | `#XXXXXX` | 标题下方 / 行间 |
-| 辅助分隔线 | `#XXXXXX` | 表格行间 |
-| 左色条 | `#XXXXXX` | blockquote / H3 |
-
-### 2.4 背景色
-
-| 用途 | 色值 |
-|------|------|
-| 页面背景 | `#FFFFFF` |
-| 分区背景 | `#XXXXXX` |
-| 卡片/深色背景 | `#XXXXXX` |
-| 代码块背景 | `#XXXXXX` |
-
----
-
-## 3. 字体体系
-
-### 3.1 官方字体（专有，需授权）
-
-| 场景 | 字体名 | 说明 |
-|------|--------|------|
-| 标题 | `<font-name>` | 衬线/无衬线，字重 |
-| 正文 | `<font-name>` | |
-
-### 3.2 降级字体栈
-
-**标题：** `"<fallback>", ..., serif/sans-serif`
-**正文：** `"PingFang SC", "Helvetica Neue", "Arial", "STHeiti", sans-serif`
-
-### 3.3 字号体系
-
-| 元素 | 字号 | 字重 | 颜色 |
-|------|------|------|------|
-| H1 | Xpt | 300/400/700 | `#XXXXXX` |
-| H2 | Xpt | | |
-| H3 | Xpt | | |
-| 正文 | Xpt | 400 | |
-
----
-
-## 4. 组件规则
-
-### 4.1 标题装饰
-
-| 级别 | 装饰 | 颜色 |
-|------|------|------|
-| H1 | 下划线 / 左色条 / 无 | `#XXXXXX`（来自 2.1 动作色） |
-| H2 | | |
-| H3 | | |
-
-### 4.2 表格
-
-- 边框模式：grid / 水平线(mckinsey) / 水平线+行间线(rb) / 无
-- 表头背景：有（`#XXXXXX`）/ 无
-- 斑马纹：有 / 无
-
-### 4.3 引用块
-
-- 装饰：左色条（`#XXXXXX`）/ 背景色块 / 无
-- 字体：衬线 / 无衬线，斜体 / 正体
-
-### 4.4 代码块
-
-- 背景：`#XXXXXX`，左色条：`#XXXXXX`
-
----
-
-## 5. 格式推导指南
-
-### → DOCX（`<brand>-style.json`）
-
-- 标题文字色：`<2.2 的标题色 hex，去掉 #>`
-- H1/H2 装饰线（在代码里不直接支持，用颜色参考）
-- 表格 border_mode：`<grid/mckinsey/rb>`，rule_color：`<hex>`
-- 正文无/有首行缩进
-
-### → PDF（`<brand>.css`）
-
-- H1 `border-bottom: Xpx solid <2.1 动作色>`（用动作色，不用文字色）
-- H2 `border-bottom: Xpx solid <2.1 动作色>`
-- H3 `border-left: Xpx solid <2.1 动作色>`
-- blockquote `border-left: <2.1 动作色 或 2.3 装饰色>`
-- pre 背景：`<2.4 代码块背景>`，左色条：`<2.1 动作色>`
-```
-
-将文件保存后，**展示给用户确认**，询问：
-
-> `knowledge/design/<brand>-style.md` 已生成，请确认色彩分类是否准确，特别是：
-> 1. 品牌动作色（2.1）是否为品牌最具识别性的颜色？
-> 2. 深色文字色（2.2）是否在截图中看起来接近黑色？
-> 3. 如有疑问，我可以返回网页继续截图验证。
+> `knowledge/design/<brand>-style.md` 已生成，请重点核查：
+> 1. **2.2 品牌动作色** — 这是文档装饰线的颜色，是否为最具识别性的品牌颜色？
+> 2. **2.3 文字色** — 标注为 [视觉近黑] 的颜色在截图中是否确实接近黑色？
+> 3. **9. 推导指南** — 各格式的装饰线颜色是否都来自动作色而非文字色？
 >
-> 确认后进入阶段二，生成 doc-forge 配置。
-
-**STOP — 等待用户确认后再执行阶段二。**
-
----
-
-## 阶段二：推导 doc-forge 配置
-
-### Step 8 — 从知识文档推导配置
-
-读取 `knowledge/design/<brand>-style.md` 的第 5 节"格式推导指南"，生成：
-
-**`skills/writing/doc-forge/assets/<brand>-style.json`**（DOCX）：
-
-```json
-{
-  "_source": "<报告页 URL>",
-  "_comment": "<公司名> brand style. Fonts: <官方字体> → fallback to <降级字体>.",
-  "page": { "top_cm": 2.54, "bottom_cm": 2.54, "left_cm": 3.17, "right_cm": 3.17 },
-  "body": {
-    "font": "PingFang SC", "font_en": "<降级英文字体>",
-    "size_pt": <正文字号>, "line_spacing_pt": 22,
-    "space_before_pt": 0, "space_after_pt": 7,
-    "first_line_indent_chars": <0 或 2>
-  },
-  "headings": {
-    "h1": { "font": "PingFang SC", "font_en": "<标题降级字体>", "size_pt": <字号>, "bold": <true/false>, "color": "<标题文字色>", "align": "left", "space_before_pt": 24, "space_after_pt": 14 },
-    "h2": { ... },
-    "h3": { ... },
-    "h4": { "font": "PingFang SC", "font_en": "<字体>", "size_pt": <字号>, "bold": true, "color": "<辅助色>", "align": "left", "space_before_pt": 10, "space_after_pt": 4 }
-  },
-  "code_block": { "font": "Courier New", "size_pt": 10, "bg_color": null },
-  "blockquote": { "font": "PingFang SC", "font_en": "<字体>", "size_pt": 11, "color": "<文字色>", "left_indent_cm": 1.0 },
-  "table": {
-    "font": "PingFang SC", "font_en": "<字体>", "size_pt": 11,
-    "header_bold": true, "header_bg_color": <null 或 "色值">,
-    "border_mode": "<grid/mckinsey/rb>",
-    "rule_color": "<表格线颜色>",
-    "accent_color": "<动作色>",
-    "row_sep_color": "<行间线色>",
-    "cell_padding_pt": 4, "space_before_pt": 8, "space_after_pt": 8
-  }
-}
-```
-
-**`skills/writing/doc-forge/assets/<brand>.css`**（PDF）：
-
-完整 CSS，**装饰线颜色必须来自知识文档 2.1 品牌动作色**，而非 2.2 文字色。结构参考 `skills/writing/doc-forge/assets/rb.css`。
-
----
-
-### Step 9 — 生成测试样本并提交
-
-```bash
-python3 skills/writing/doc-forge/scripts/md_to_pdf.py \
-  skills/writing/doc-forge/tests/fixtures/full-test.md \
-  skills/writing/doc-forge/tests/fixtures/full-test-<brand>.pdf \
-  --style skills/writing/doc-forge/assets/<brand>.css
-
-python3 skills/writing/doc-forge/scripts/md_to_docx.py \
-  skills/writing/doc-forge/tests/fixtures/full-test.md \
-  skills/writing/doc-forge/tests/fixtures/full-test-<brand>.docx \
-  --style skills/writing/doc-forge/assets/<brand>-style.json
-```
-
-打开 PDF 供用户预览，然后提交 commit（包含知识文档 + 配置文件）。
+> 确认后可运行 `/design-derive` 生成具体格式配置。
 
 ---
 
 ## 注意事项
 
-- **不要下载 PDF** — 只分析 HTML 报告页
-- **cookie 弹窗** — 先 `$B snapshot -i` 找到 accept 按钮并点击，再截图
-- **字体回退** — 专有字体（如 `henderson-bcg-serif`、`RBDesign`）不可在 doc-forge 使用，记录后降级
-- **色值去噪** — 忽略 `#fff`、`#000`、`rgba(0,0,0,0)`，聚焦品牌特征色
-- **深色 ≠ 有色** — 深墨绿/深海军蓝在文档里视觉接近黑色，不能作为装饰线颜色；选用动作色（按钮色）
-- **CSS 变量** — 如 bundle 色值稀少，说明该站用 CSS 变量，需用渲染层 API 补充
-- **表格边框模式判断**：
-  - 有竖线 → `grid`
-  - 仅头尾横线 → `mckinsey`
-  - 头尾横线 + 行间细线 → `rb`
-  - 无线 → `grid`（用浅色 border_color）
+- **不下载 PDF** — 只分析 HTML 页面
+- **先关弹窗再截图** — cookie/newsletter 弹窗会遮挡内容
+- **CSS 变量站点** — bundle 色值稀少时，说明该站用 CSS 变量，用渲染层 API 补充
+- **深色 ≠ 有色** — `[视觉近黑]` 颜色不适合做装饰线；选用动作色
+- **未找到的组件** — 表格/引用块在报告页没有时，可另找一篇或标记"待补充"
