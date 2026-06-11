@@ -78,7 +78,7 @@ p {
   margin-bottom: 7pt;
 }
 
-/* ── Tables ─────────────────────────────────── */
+/* ── Tables — McKinsey horizontal-rule style ── */
 
 table {
   border-collapse: collapse;
@@ -89,24 +89,28 @@ table {
   font-size: 9.5pt;
 }
 
+thead tr {
+  border-top: 1.5px solid #1A1A2E;
+  border-bottom: 0.75px solid #1A1A2E;
+}
+
 th {
-  background-color: #002B6C;
-  color: #FFFFFF;
+  background-color: transparent;
+  color: #1A1A2E;
   font-weight: 700;
-  border: 1px solid #002B6C;
+  border: none;
   padding: 5pt 8pt;
   text-align: left;
-  letter-spacing: 0.02em;
+}
+
+tbody tr:last-child td {
+  border-bottom: 0.75px solid #1A1A2E;
 }
 
 td {
-  border: 1px solid #BFC8DC;
+  border: none;
   padding: 4.5pt 8pt;
   color: #1A1A2E;
-}
-
-tr:nth-child(even) td {
-  background-color: #EBF0FA;
 }
 
 /* ── Code ───────────────────────────────────── */

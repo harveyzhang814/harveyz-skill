@@ -70,16 +70,22 @@ def render_mermaid_png(mermaid_code: str) -> bytes | None:
 
 # ── Helpers ────────────────────────────────────────────────────────────────────
 
-def _set_cell_border(cell, color: str = "AAAAAA"):
-    """Apply thin border on all four sides of a table cell."""
+def _set_cell_borders(cell, top=None, bottom=None, left=None, right=None):
+    """Apply selective cell borders. Each side: dict {val, sz, color} or None to skip."""
     tc = cell._tc
     tcPr = tc.get_or_add_tcPr()
+    for existing in tcPr.findall(qn("w:tcBorders")):
+        tcPr.remove(existing)
     tcBorders = OxmlElement("w:tcBorders")
-    for side in ("top", "left", "bottom", "right"):
-        el = OxmlElement(f"w:{side}")
-        el.set(qn("w:val"), "single")
-        el.set(qn("w:sz"), "4")
-        el.set(qn("w:color"), color.lstrip("#"))
+    for side_name, cfg in [("top", top), ("bottom", bottom),
+                            ("left", left), ("right", right)]:
+        if cfg is None:
+            continue
+        el = OxmlElement(f"w:{side_name}")
+        el.set(qn("w:val"), cfg.get("val", "single"))
+        if cfg.get("val") != "nil":
+            el.set(qn("w:sz"), str(cfg.get("sz", 4)))
+            el.set(qn("w:color"), cfg.get("color", "000000").lstrip("#"))
         tcBorders.append(el)
     tcPr.append(tcBorders)
 
@@ -468,19 +474,37 @@ def build_docx(blocks: list[dict], style: dict, base_dir: Path | None = None) ->
             header = block["header"]
             rows = block["rows"]
             col_count = len(header)
-            # Pad all rows to same column count
             all_rows = [header] + [
                 r + [""] * (col_count - len(r)) for r in rows
             ]
+            border_mode = tbl_cfg.get("border_mode", "grid")
+            rule_color = tbl_cfg.get("rule_color", "000000")
             tbl = doc.add_table(rows=len(all_rows), cols=col_count)
             tbl.style = "Table Grid"
-            border_color = tbl_cfg.get("border_color", "AAAAAA")
+
+            _THICK = {"val": "single", "sz": 12, "color": rule_color}
+            _THIN  = {"val": "single", "sz": 6,  "color": rule_color}
+            _NIL   = {"val": "nil"}
+
             for row_idx, row_data in enumerate(all_rows):
                 is_header = row_idx == 0
+                is_last   = row_idx == len(all_rows) - 1
                 tr = tbl.rows[row_idx]
                 for col_idx, cell_text in enumerate(row_data):
                     cell = tr.cells[col_idx]
-                    _set_cell_border(cell, border_color)
+
+                    if border_mode == "grid":
+                        c = tbl_cfg.get("border_color", "AAAAAA")
+                        b = {"val": "single", "sz": 4, "color": c}
+                        _set_cell_borders(cell, top=b, bottom=b, left=b, right=b)
+                    elif border_mode == "mckinsey":
+                        _set_cell_borders(
+                            cell,
+                            top=_THICK if is_header else _NIL,
+                            bottom=_THIN if (is_header or is_last) else _NIL,
+                            left=_NIL, right=_NIL,
+                        )
+
                     if is_header and tbl_cfg.get("header_bg_color"):
                         _set_cell_shading(cell, tbl_cfg["header_bg_color"])
                     para = cell.paragraphs[0]
@@ -492,7 +516,6 @@ def build_docx(blocks: list[dict], style: dict, base_dir: Path | None = None) ->
                     set_paragraph_format(para,
                                          space_before=tbl_cfg.get("cell_padding_pt", 4),
                                          space_after=tbl_cfg.get("cell_padding_pt", 4))
-            # Add spacing around table via an empty paragraph
             doc.add_paragraph()
 
     return doc
