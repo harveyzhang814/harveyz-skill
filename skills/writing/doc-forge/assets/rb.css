@@ -2,8 +2,10 @@
    Roland Berger – authentic brand style
    Based on knowledge/design/rb-style.md
    Primary   : #000000 (black)
-   Brand 1   : #f6f600 (yellow)
+   Brand 1   : #f6f600 (yellow) — dominant accent
    Brand 2   : #00aac9 (cyan)
+   Nav/Dark  : #003b46 (dark teal, RB "bg-darkgreen")
+   CTA Red   : #ff3532 (buttons only)
    ───────────────────────────────────────────── */
 
 @page {
@@ -207,6 +209,21 @@ img {
   height: auto;
   display: block;
   margin: 10pt auto;
+}
+
+/* ── Dark section (RB nav / hero block) ─────── */
+/* Use class="rb-dark" on a div wrapping section content */
+
+.rb-dark {
+  background-color: #003b46;
+  color: #ffffff;
+  padding: 16pt 20pt;
+  margin: 14pt 0;
+}
+
+.rb-dark h1, .rb-dark h2, .rb-dark h3 {
+  color: #ffffff;
+  border-color: #f6f600;
 }
 
 /* ── Mermaid ────────────────────────────────── */

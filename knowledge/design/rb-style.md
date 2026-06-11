@@ -34,7 +34,7 @@ Roland Berger 官方品牌的核心特征：
 | 角色 | 色值 | 用途 |
 |------|------|------|
 | CTA Red | `#ff3532` | 主要行动按钮背景（"Download", "Contact us"） |
-| Dark Teal | `#003b46` | 深色背景区块（hero 区、卡片背景） |
+| Dark Teal | `#003b46` | 导航栏背景、深色区块底色（hero 区、卡片背景）；CSS 类名 `bg-darkgreen` |
 | Subtle Gray | `#f5f5f5` | 卡片背景、交替行背景 |
 | Border Gray | `#e0e0e0` | 分隔线、边框 |
 | Body Gray | `#333333` | 正文辅助文字 |
