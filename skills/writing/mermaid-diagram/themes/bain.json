@@ -12,21 +12,21 @@
       "tertiaryColor":       "#BBBBBB",
       "background":          "#FFFFFF",
       "mainBkg":             "#CC0000",
-      "clusterBkg":          "#1A1A1A",
+      "clusterBkg":          "#F5F5F5",
       "titleColor":          "#CC0000",
       "lineColor":           "#DDDDDD",
       "edgeLabelBackground": "#FFFFFF"
     }
   },
   "subgraph": {
-    "layer1": { "fill": "#1A1A1A", "stroke": "#222222", "note": "上游 / 核心 (surface.dark)" },
-    "layer2": { "fill": "#343434", "stroke": "#444444", "note": "中间层 (surface.dark×2)" },
-    "layer3": { "fill": "#686868", "stroke": "#828282", "note": "下游 / 应用层 (surface.dark×4，上限#888888)" }
+    "layer1": { "fill": "#F5F5F5", "stroke": "#D0D0D0", "note": "上游 / 核心 — 弱背景分组，浅灰" },
+    "layer2": { "fill": "#EEEEEE", "stroke": "#C8C8C8", "note": "中间层 — 弱背景分组" },
+    "layer3": { "fill": "#E5E5E5", "stroke": "#BFBFBF", "note": "下游 / 应用层 — 弱背景分组" }
   },
   "node": {
     "primary":   { "fill": "#CC0000", "stroke": "#A30000", "note": "VIZ_1 Bain Red — 关键实体 / 强调节点，最多 1-2 个" },
-    "secondary": { "fill": "#666666", "stroke": "#525252", "note": "VIZ_2 gray — 第二类型实体" },
-    "neutral":   { "fill": "#BBBBBB", "stroke": "#969696", "note": "VIZ_3 light gray — 同类内容节点的默认色，浅色用 #000000" }
+    "secondary": { "fill": "#555555", "stroke": "#3A3A3A", "note": "深灰 — 第二类型实体" },
+    "neutral":   { "fill": "#FFFFFF", "stroke": "#BBBBBB", "note": "白色卡片 — 同类内容节点的默认色，用 #212427" }
   },
   "semantic": {
     "alert":       { "fill": "#CC0000", "stroke": "#A30000", "note": "风险 / 问题 (VIZ_1 = Bain Red)" },

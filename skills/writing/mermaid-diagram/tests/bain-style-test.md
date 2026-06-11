@@ -26,18 +26,18 @@ flowchart TD
     UP -->|"卖铲子"| MID
     MID -->|"挖金子"| DOWN
 
-    style UP   fill:#1A1A1A,color:#fff,stroke:#222222
-    style MID  fill:#343434,color:#fff,stroke:#444444
-    style DOWN fill:#686868,color:#fff,stroke:#828282
-    style U1 fill:#BBBBBB,color:#000,stroke:#969696
-    style U2 fill:#BBBBBB,color:#000,stroke:#969696
-    style U3 fill:#BBBBBB,color:#000,stroke:#969696
-    style U4 fill:#BBBBBB,color:#000,stroke:#969696
-    style M1 fill:#BBBBBB,color:#000,stroke:#969696
-    style M2 fill:#BBBBBB,color:#000,stroke:#969696
-    style D1 fill:#BBBBBB,color:#000,stroke:#969696
-    style D2 fill:#BBBBBB,color:#000,stroke:#969696
-    style D3 fill:#BBBBBB,color:#000,stroke:#969696
+    style UP   fill:#F5F5F5,color:#212427,stroke:#D0D0D0
+    style MID  fill:#EEEEEE,color:#212427,stroke:#C8C8C8
+    style DOWN fill:#E5E5E5,color:#212427,stroke:#BFBFBF
+    style U1 fill:#FFFFFF,color:#212427,stroke:#BBBBBB
+    style U2 fill:#FFFFFF,color:#212427,stroke:#BBBBBB
+    style U3 fill:#FFFFFF,color:#212427,stroke:#BBBBBB
+    style U4 fill:#FFFFFF,color:#212427,stroke:#BBBBBB
+    style M1 fill:#FFFFFF,color:#212427,stroke:#BBBBBB
+    style M2 fill:#FFFFFF,color:#212427,stroke:#BBBBBB
+    style D1 fill:#FFFFFF,color:#212427,stroke:#BBBBBB
+    style D2 fill:#FFFFFF,color:#212427,stroke:#BBBBBB
+    style D3 fill:#FFFFFF,color:#212427,stroke:#BBBBBB
 ```
 
 ---
@@ -55,7 +55,7 @@ flowchart TD
     B -->|"风险升温"| C
     C -->|"超跌反弹"| A
 
-    style ZONE fill:#1A1A1A,color:#fff,stroke:#222222
+    style ZONE fill:#F5F5F5,color:#212427,stroke:#D0D0D0
     style A fill:#E87722,color:#fff,stroke:#BA5F1B
     style B fill:#666666,color:#fff,stroke:#525252
     style C fill:#CC0000,color:#fff,stroke:#A30000

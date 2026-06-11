@@ -114,8 +114,9 @@ Markdown 渲染器页面宽度通常 700–900px，图表必须适配：
 
 ### 配色规则（通用）
 
-- 深色背景（fill 深于 `rules.dark_text_threshold`）**必须**加 `color:#fff`
-- subgraph 背景比节点背景**深**（提供层次感）；**节点色不跟随 subgraph 层编号**
+- subgraph 使用**弱色背景**（浅灰 #E5–#F5 段）作为分组底色，不与节点抢视觉
+- 节点浅色背景（fill 浅于 `rules.dark_text_threshold`）用 `color:#212427`；深色节点用 `color:#fff`
+- **节点色不跟随 subgraph 层编号**；subgraph 层次通过深浅梯度体现
 - 同一图内最多使用 **3 种主色** + 语义辅助色
 - `quadrantChart` 的 quadrant 标签不加颜色（库自动渲染）
 - `timeline` / `gantt` / `stateDiagram` 使用库默认颜色，不强制品牌色
