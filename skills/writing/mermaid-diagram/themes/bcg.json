@@ -1,48 +1,112 @@
 {
   "_brand": "BCG",
   "_source": "knowledge/design/bcg-style.md",
-  "_derived_by": "design-derive v1.4.0",
-  "init": {
-    "theme": "base",
-    "themeVariables": {
-      "primaryColor":        "#96F878",
-      "primaryBorderColor":  "#87DF6C",
-      "primaryTextColor":    "#212427",
-      "secondaryColor":      "#0C2B15",
-      "tertiaryColor":       "#21BF61",
-      "background":          "#FFFFFF",
-      "mainBkg":             "#96F878",
-      "clusterBkg":          "#06160B",
-      "titleColor":          "#0C2B15",
-      "lineColor":           "#D4D4D4",
-      "edgeLabelBackground": "#FFFFFF"
+  "_derived_by": "design-derive v1.5.0",
+
+  "flowchart": {
+    "subgraph": {
+      "layer1": { "fill": "#E8E8E8", "stroke": "#C8C8C8", "text": "#212427", "note": "上游 / 核心 — 最深弱背景（固定浅灰梯度）" },
+      "layer2": { "fill": "#F0F0F0", "stroke": "#D0D0D0", "text": "#212427", "note": "中间层" },
+      "layer3": { "fill": "#F5F5F5", "stroke": "#D8D8D8", "text": "#212427", "note": "下游 / 应用层 — 最浅弱背景" }
+    },
+    "node": {
+      "neutral":   { "fill": "#FFFFFF", "stroke": "#BBBBBB", "text": "#212427", "note": "默认节点 — 白色卡片" },
+      "primary":   { "fill": "#0C2B15", "stroke": "#0A2211", "text": "#FFFFFF",  "note": "BCG midnight-green — 关键实体。若需石灰绿强调节点：fill:#96F878,color:#212427" },
+      "secondary": { "fill": "#555555", "stroke": "#3A3A3A", "text": "#FFFFFF",  "note": "中性深灰 — 第二类型实体" }
     }
   },
-  "subgraph": {
-    "layer1": { "fill": "#06160B", "stroke": "#081C0E", "note": "上游 / 核心 (H1×0.50，深色宽倍数)" },
-    "layer2": { "fill": "#0C2B15", "stroke": "#10381B", "note": "中间层 (H1×1.00)" },
-    "layer3": { "fill": "#18562A", "stroke": "#1E6C35", "note": "下游 / 应用层 (H1×2.00)" }
+
+  "stateDiagram": {
+    "classDef": {
+      "neutral":     "fill:#EBEBEB,stroke:#C8C8C8,color:#212427",
+      "opportunity": "fill:#21BF61,stroke:#1A994D,color:#fff",
+      "hold":        "fill:#696969,stroke:#545454,color:#fff",
+      "danger":      "fill:#D82216,stroke:#AD1B11,color:#fff"
+    }
   },
-  "node": {
-    "primary":   { "fill": "#96F878", "stroke": "#78C660", "note": "VIZ_1 lime — 关键实体 / 强调节点，浅色用 #212427" },
-    "secondary": { "fill": "#21BF61", "stroke": "#1A994E", "note": "VIZ_3 medium green — 第二类型实体" },
-    "neutral":   { "fill": "#696969", "stroke": "#545454", "note": "VIZ_4 gray — 同类内容节点的默认色" }
+
+  "sequenceDiagram": {
+    "init": {
+      "theme": "base",
+      "themeVariables": {
+        "actorBkg":              "#FFFFFF",
+        "actorBorder":           "#0C2B15",
+        "actorTextColor":        "#212427",
+        "actorLineColor":        "#696969",
+        "noteBkg":               "#F1EEEA",
+        "noteTextColor":         "#212427",
+        "activationBkgColor":    "#F3F4F3",
+        "activationBorderColor": "#0C2B15",
+        "signalColor":           "#333333",
+        "signalTextColor":       "#212427",
+        "loopTextColor":         "#212427",
+        "labelBoxBkgColor":      "#F5F5F5",
+        "labelBoxBorderColor":   "#BBBBBB"
+      }
+    }
   },
+
+  "gantt": {
+    "init": {
+      "theme": "base",
+      "themeVariables": {
+        "taskBkgColor":          "#E8E8E8",
+        "taskBorderColor":       "#BBBBBB",
+        "taskTextColor":         "#212427",
+        "taskTextDarkColor":     "#212427",
+        "taskTextLightColor":    "#FFFFFF",
+        "activeTaskBkgColor":    "#0C2B15",
+        "activeTaskBorderColor": "#0A2211",
+        "critBkgColor":          "#D82216",
+        "critBorderColor":       "#AD1B11",
+        "doneTaskBkgColor":      "#F5F5F5",
+        "doneTaskBorderColor":   "#D8D8D8",
+        "sectionBkgColor":       "#FFFFFF",
+        "altSectionBkgColor":    "#F8F8F8",
+        "gridColor":             "#D4D4D4",
+        "titleColor":            "#212427"
+      }
+    }
+  },
+
+  "timeline": {
+    "init": {
+      "theme": "base",
+      "themeVariables": {
+        "cScale0":    "#0C2B15",
+        "cScale1":    "#696969",
+        "cScale2":    "#0C2B15",
+        "cScale3":    "#696969",
+        "cScale4":    "#0C2B15",
+        "cScale5":    "#696969",
+        "cScale6":    "#0C2B15",
+        "cScale7":    "#696969",
+        "cScale8":    "#0C2B15",
+        "cScale9":    "#696969",
+        "cScale10":   "#0C2B15",
+        "cScale11":   "#696969",
+        "titleColor": "#212427"
+      }
+    }
+  },
+
   "semantic": {
-    "alert":       { "fill": "#7B1010", "stroke": "#B52020", "note": "预警 / 高风险 (default)" },
-    "opportunity": { "fill": "#21BF61", "stroke": "#1A994E", "note": "机会 / 增长 (VIZ_3)" },
-    "hold":        { "fill": "#696969", "stroke": "#545454", "note": "中性 / 观察 (VIZ_4)" },
-    "speculative": { "fill": "#2E0078", "stroke": "#5A20A0", "note": "投机 / 主题 (default)" },
-    "value":       { "fill": "#0C2B15", "stroke": "#10381B", "note": "价值 / 配置 (VIZ_2=H1)" }
+    "alert":       { "fill": "#D82216", "stroke": "#AD1B11", "text": "#FFFFFF", "note": "风险 / 问题 (color.status.danger)" },
+    "opportunity": { "fill": "#21BF61", "stroke": "#1A994D", "text": "#FFFFFF", "note": "机会 / 增长 (color.status.success, BCG mid-green)" },
+    "hold":        { "fill": "#696969", "stroke": "#545454", "text": "#FFFFFF", "note": "中性 / 观察 (color.text.muted, gray-500)" },
+    "speculative": { "fill": "#96F878", "stroke": "#78C660", "text": "#212427", "note": "推测 / 新兴 (lime-400, 浅色 → 深文字)" },
+    "value":       { "fill": "#0C2B15", "stroke": "#0B3B23", "text": "#FFFFFF", "note": "价值 / 结论 (color.surface.dark, midnight-green)" }
   },
+
   "edge": {
-    "primary":   "#96F878",
+    "primary":   "#0C2B15",
     "secondary": "#D4D4D4"
   },
+
   "rules": {
-    "dark_text_threshold": "#4A4A4A",
-    "dark_node_text":  "#FFFFFF",
-    "light_node_text": "#212427",
-    "note": "lime节点(#96F878)背景浅，必须用 light_node_text"
+    "dark_text_threshold": "#808080",
+    "dark_node_text":      "#FFFFFF",
+    "light_node_text":     "#212427",
+    "note": "speculative(#96F878) 和 lime 强调节点属浅色，必须用 light_node_text(#212427)"
   }
 }
