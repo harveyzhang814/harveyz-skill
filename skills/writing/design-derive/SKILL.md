@@ -2,7 +2,7 @@
 name: design-derive
 description: "Derive format-specific configs from a brand design knowledge doc. Trigger when the user wants to generate doc-forge JSON/CSS, HTML CSS variables, Mermaid color scheme, or PPT theme from a design system. E.g. 'derive configs for BCG', 'generate doc-forge style for rb', 'create HTML theme from custom-style'."
 user_invocable: true
-version: "1.2.0"
+version: "1.3.0"
 ---
 
 ## 概述
@@ -202,19 +202,94 @@ comp.heading.h1.deco-line
 
 ---
 
-### Step 6 — 推导 Mermaid 配色（按需）
+### Step 6 — 推导 Mermaid 主题并写入配置文件（按需）
 
-**themeVariables 键名查阅 `skills/writing/design-derive/references/FORMAT-MAPPING.md` 第七节（Mermaid themeVariables 完整映射）。**
+**themeVariables 键名查阅 `skills/writing/design-derive/references/FORMAT-MAPPING.md` 第七节。**
 
-按 Step 2 提取的 `VIZ_1..5`、`BG_PAGE`、`H1_COLOR`、`HR_COLOR` 填入，生成：
+写入 `skills/writing/mermaid-diagram/themes/<brand>.json`，同时在对话中打印可直接嵌入的 `%%{init}%%` 块。
 
+#### 6.1 themeVariables
+
+按 FORMAT-MAPPING.md 第七节，用 Step 2 提取的变量填入：
+
+| themeVariables 键 | 来源 |
+|------------------|------|
+| `primaryColor` | VIZ_1 |
+| `primaryBorderColor` | VIZ_1 略深 10% |
+| `primaryTextColor` | VIZ_1 深色→`#FFFFFF`，浅色→`#000000` |
+| `secondaryColor` | VIZ_2 |
+| `tertiaryColor` | VIZ_3 |
+| `background` / `edgeLabelBackground` | `#FFFFFF` |
+| `mainBkg` | VIZ_1 |
+| `clusterBkg` | H1_COLOR × 0.80（见 6.2） |
+| `titleColor` | H1_COLOR |
+| `lineColor` | HR_COLOR |
+
+#### 6.2 subgraph / node 层级色推导
+
+以 `H1_COLOR` 为基准按比例推算三层（RGB 各通道独立计算，上限 255，结果转 hex）：
+
+| 字段 | 规则 |
+|------|------|
+| `subgraph.layer1.fill` | H1_COLOR × 0.80 |
+| `subgraph.layer1.stroke` | H1_COLOR × 0.90 |
+| `subgraph.layer2.fill` | H1_COLOR |
+| `subgraph.layer2.stroke` | H1_COLOR × 1.15 |
+| `subgraph.layer3.fill` | H1_COLOR × 1.20 |
+| `subgraph.layer3.stroke` | H1_COLOR × 1.35 |
+| `node.layerX.fill` | 同层 subgraph.fill × 1.12 |
+| `node.layerX.stroke` | 同层 subgraph.stroke |
+
+若品牌文件有 `color.surface.dark`，用它替代 `H1_COLOR × 0.80` 作为 layer1 subgraph fill。
+
+#### 6.3 semantic 色推导
+
+| 字段 | 首选来源 | 无值时默认 |
+|------|---------|----------|
+| `semantic.alert` | `color.status.danger` | `#7B1010` / `#B52020` |
+| `semantic.opportunity` | `color.status.success` 或 VIZ_3 | `#1A5E3A` / `#2A7E50` |
+| `semantic.hold` | VIZ_4 或 `color.text.muted` | `#666666` / `#888888` |
+| `semantic.speculative` | VIZ_5 或 `color.interactive.secondary` | `#2E0078` / `#5A20A0` |
+| `semantic.value` | VIZ_2 | H1_COLOR / H1_COLOR × 1.20 |
+
+#### 6.4 输出文件结构
+
+```json
+{
+  "_brand": "<品牌名>",
+  "_source": "knowledge/design/<brand>-style.md",
+  "init": {
+    "theme": "base",
+    "themeVariables": { "primaryColor": "VIZ_1", ... }
+  },
+  "subgraph": {
+    "layer1": { "fill": "...", "stroke": "...", "note": "上游 / 核心" },
+    "layer2": { "fill": "...", "stroke": "...", "note": "中间层" },
+    "layer3": { "fill": "...", "stroke": "...", "note": "下游 / 应用层" }
+  },
+  "node": {
+    "layer1": { "fill": "...", "stroke": "..." },
+    "layer2": { "fill": "...", "stroke": "..." },
+    "layer3": { "fill": "...", "stroke": "..." }
+  },
+  "semantic": {
+    "alert":       { "fill": "...", "stroke": "...", "note": "预警 / 高风险" },
+    "opportunity": { "fill": "...", "stroke": "...", "note": "机会 / 增长" },
+    "hold":        { "fill": "...", "stroke": "...", "note": "中性 / 观察" },
+    "speculative": { "fill": "...", "stroke": "...", "note": "投机 / 主题" },
+    "value":       { "fill": "...", "stroke": "...", "note": "价值 / 配置" }
+  },
+  "edge": {
+    "primary":   "H1_DECO_COLOR",
+    "secondary": "HR_COLOR"
+  },
+  "rules": {
+    "dark_text_threshold": "#4A4A4A",
+    "dark_node_text":  "#FFFFFF",
+    "light_node_text": "#000000"
+  }
+}
 ```
-%%{init: {"theme": "base", "themeVariables": { ... }}}%%
-```
-
-深色节点（dataviz 色深）→ `color:#FFFFFF`；浅色节点（dataviz 色浅）→ `color:#000000`。
-
-同时输出 subgraph 三层配色建议（前三色）和语义节点颜色。
 
 ---
 
@@ -232,13 +307,15 @@ comp.heading.h1.deco-line
 
 > `doc-forge/<brand>-style.json` 已生成  
 > `doc-forge/<brand>.css` 已生成  
+> `mermaid-diagram/themes/<brand>.json` 已生成（若包含 Step 6）
 >
 > 请重点核查：
 > 1. **装饰线颜色** — H1/H2 border-bottom、H3 border-left 是否都使用了动作色（非文字色）？
 > 2. **字体降级** — 中文字体是否为 `PingFang SC`（macOS）或合适替代？
 > 3. **表格模式** — `border_mode` 是否与设计文档一致？
+> 4. **Mermaid 深色节点** — subgraph/node 所有 fill 深于 `#4A4A4A` 的是否都有 `color:#fff`？
 >
-> 确认后可运行 `/doc-forge` 生成测试文档验证效果。
+> 确认后可运行 `/doc-forge` 生成测试文档，或用 `/mermaid-diagram` 测试配色效果。
 
 ---
 
