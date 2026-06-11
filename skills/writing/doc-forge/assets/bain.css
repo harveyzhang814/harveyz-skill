@@ -1,0 +1,134 @@
+/* ─────────────────────────────────────────────
+   Bain & Company brand style
+   Heading : #CC0000 (Bain Red — H1/H2 text + borders)
+   Body    : #2D2D2D (Body Charcoal)
+   Accent  : #CC0000 (table header top line, blockquote bar, code bar)
+   Fonts   : Gotham — proprietary, fall back to Gill Sans (headlines)
+             Gotham — proprietary, fall back to Helvetica Neue (body)
+   ───────────────────────────────────────────── */
+
+@page {
+  size: A4;
+  margin: 2.0cm 2.5cm 2.0cm 2.5cm;
+}
+
+body {
+  font-family: "Gotham", "PingFang SC", "Helvetica Neue", "Arial", "STHeiti", "Microsoft YaHei", sans-serif;
+  font-size: 11pt;
+  line-height: 1.55;
+  color: #2D2D2D;
+  max-width: 100%;
+}
+
+h1 {
+  font-family: "Gotham", "Gill Sans", "Trebuchet MS", "Helvetica Neue", "Arial", sans-serif;
+  font-size: 28pt;
+  font-weight: 700;
+  color: #CC0000;
+  margin-top: 0;
+  margin-bottom: 8pt;
+  padding-bottom: 6pt;
+  border-bottom: 2.5px solid #CC0000;
+}
+
+h2 {
+  font-family: "Gotham", "Gill Sans", "Trebuchet MS", "Helvetica Neue", "Arial", sans-serif;
+  font-size: 18pt;
+  font-weight: 700;
+  color: #CC0000;
+  margin-top: 24pt;
+  margin-bottom: 8pt;
+  padding-left: 8pt;
+  border-left: 3px solid #CC0000;
+}
+
+h3 {
+  font-family: "Gotham", "PingFang SC", "Helvetica Neue", "Arial", sans-serif;
+  font-size: 14pt;
+  font-weight: 700;
+  color: #1A1A1A;
+  margin-top: 16pt;
+  margin-bottom: 5pt;
+  padding-left: 8pt;
+  border-left: 3px solid #CC0000;
+}
+
+h4 {
+  font-family: "Gotham", "PingFang SC", "Helvetica Neue", "Arial", sans-serif;
+  font-size: 11pt;
+  font-weight: 700;
+  color: #666666;
+  margin-top: 12pt;
+  margin-bottom: 4pt;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+p {
+  text-indent: 0;
+  margin-top: 0;
+  margin-bottom: 7pt;
+}
+
+/* bain 模式: 表头上方红线 2px / 下方黑线 1px / 行间灰线 0.5px / 末行黑线 1px */
+table { border-collapse: collapse; width: 100%; font-size: 10pt; }
+thead tr { border-top: 2px solid #CC0000; border-bottom: 1px solid #1A1A1A; }
+th { background-color: transparent; font-weight: 700; border: none; padding: 5pt 8pt; color: #1A1A1A; }
+tbody td { border-bottom: 0.5px solid #DDDDDD; }
+tbody tr:last-child td { border-bottom: 1px solid #1A1A1A; }
+td { border: none; padding: 4.5pt 8pt; color: #2D2D2D; }
+
+pre {
+  background-color: #F5F5F5;
+  border: none;
+  border-left: 3px solid #CC0000;
+  border-radius: 0;
+  padding: 8pt 12pt;
+  font-family: "JetBrains Mono", "Courier New", monospace;
+  font-size: 9pt;
+  line-height: 1.5;
+}
+
+code {
+  font-family: "JetBrains Mono", "Courier New", monospace;
+  font-size: 9pt;
+  background-color: #F5F5F5;
+  color: #1A1A1A;
+  padding: 1px 4px;
+  border-radius: 0;
+}
+
+pre code { background-color: transparent; color: inherit; padding: 0; }
+
+blockquote {
+  font-family: "Gotham", "PingFang SC", "Helvetica Neue", "Arial", sans-serif;
+  font-size: 12pt;
+  font-style: italic;
+  font-weight: 400;
+  color: #2D2D2D;
+  border-left: 4px solid #CC0000;
+  background-color: #FFF5F5;
+  margin: 12pt 0;
+  padding: 6pt 0 6pt 16pt;
+}
+
+blockquote p { margin: 0; text-indent: 0; }
+
+ul, ol { margin-top: 3pt; margin-bottom: 3pt; padding-left: 1.6em; }
+li { margin-bottom: 3pt; line-height: 1.55; }
+
+hr { border: none; border-top: 1px solid #DDDDDD; margin: 14pt 0; }
+
+a { color: #CC0000; text-decoration: underline; text-underline-offset: 2px; }
+
+img { max-width: 100%; height: auto; display: block; margin: 10pt auto; }
+
+pre.mermaid {
+  background-color: transparent;
+  border: none;
+  text-align: center;
+  margin: 14pt auto;
+  padding: 0;
+}
+
+pre.mermaid svg { max-width: 92%; height: auto; }

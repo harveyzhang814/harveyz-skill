@@ -148,7 +148,7 @@ comp.heading.h1.deco-line
     "h4": { "font": "PingFang SC", "font_en": "FONT_BODY_EN", "size_pt": H4_PT, "bold": true, "color": "H4_COLOR（无#）", "space_before_pt": 12, "space_after_pt": 4 }
   },
   "code_block": { "font": "Courier New", "size_pt": 10, "bg_color": null },
-  "blockquote": { "font": "PingFang SC", "font_en": "FONT_HEADING_EN", "size_pt": H3_PT, "color": "H1_COLOR（无#）", "left_indent_cm": 1.0 },
+  "blockquote": { "font": "PingFang SC", "font_en": "FONT_BODY_EN", "size_pt": "BODY_PT+1（略大于正文；若品牌文件有明确 blockquote 字号则以文件为准）", "color": "BQ_COLOR（无#）", "left_indent_cm": 1.0 },
   "table": {
     "font": "PingFang SC", "font_en": "FONT_BODY_EN", "size_pt": 11,
     "header_bold": true, "header_bg_color": TABLE_HEADER_BG,
