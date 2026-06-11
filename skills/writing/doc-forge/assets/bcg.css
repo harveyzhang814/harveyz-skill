@@ -36,7 +36,7 @@ h1 {
   margin-top: 0;
   margin-bottom: 14pt;
   padding-bottom: 8pt;
-  border-bottom: 1.5px solid #DCD5CE;
+  border-bottom: 2px solid #96F878;
   letter-spacing: 0.01em;
 }
 
@@ -49,7 +49,7 @@ h2 {
   margin-top: 22pt;
   margin-bottom: 8pt;
   padding-bottom: 4pt;
-  border-bottom: 1px solid #DCD5CE;
+  border-bottom: 1.5px solid #96F878;
 }
 
 h3 {
@@ -61,7 +61,7 @@ h3 {
   margin-top: 16pt;
   margin-bottom: 5pt;
   padding-left: 8pt;
-  border-left: 3px solid #0C2B15;
+  border-left: 3px solid #96F878;
 }
 
 h4 {
