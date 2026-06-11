@@ -26,9 +26,9 @@ flowchart TD
     UP -->|"卖铲子"| MID
     MID -->|"挖金子"| DOWN
 
-    style UP   fill:#F5F5F5,color:#212427,stroke:#D0D0D0
-    style MID  fill:#EEEEEE,color:#212427,stroke:#C8C8C8
-    style DOWN fill:#E5E5E5,color:#212427,stroke:#BFBFBF
+    style UP   fill:#E8E8E8,color:#212427,stroke:#C8C8C8
+    style MID  fill:#F0F0F0,color:#212427,stroke:#D0D0D0
+    style DOWN fill:#F5F5F5,color:#212427,stroke:#D8D8D8
     style U1 fill:#FFFFFF,color:#212427,stroke:#BBBBBB
     style U2 fill:#FFFFFF,color:#212427,stroke:#BBBBBB
     style U3 fill:#FFFFFF,color:#212427,stroke:#BBBBBB
@@ -55,7 +55,7 @@ flowchart TD
     B -->|"风险升温"| C
     C -->|"超跌反弹"| A
 
-    style ZONE fill:#F5F5F5,color:#212427,stroke:#D0D0D0
+    style ZONE fill:#E8E8E8,color:#212427,stroke:#C8C8C8
     style A fill:#E87722,color:#fff,stroke:#BA5F1B
     style B fill:#666666,color:#fff,stroke:#525252
     style C fill:#CC0000,color:#fff,stroke:#A30000

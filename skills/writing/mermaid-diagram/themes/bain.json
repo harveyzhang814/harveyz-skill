@@ -12,16 +12,16 @@
       "tertiaryColor":       "#BBBBBB",
       "background":          "#FFFFFF",
       "mainBkg":             "#CC0000",
-      "clusterBkg":          "#F5F5F5",
+      "clusterBkg":          "#E8E8E8",
       "titleColor":          "#CC0000",
       "lineColor":           "#DDDDDD",
       "edgeLabelBackground": "#FFFFFF"
     }
   },
   "subgraph": {
-    "layer1": { "fill": "#F5F5F5", "stroke": "#D0D0D0", "note": "上游 / 核心 — 弱背景分组，浅灰" },
-    "layer2": { "fill": "#EEEEEE", "stroke": "#C8C8C8", "note": "中间层 — 弱背景分组" },
-    "layer3": { "fill": "#E5E5E5", "stroke": "#BFBFBF", "note": "下游 / 应用层 — 弱背景分组" }
+    "layer1": { "fill": "#E8E8E8", "stroke": "#C8C8C8", "note": "上游 / 核心 — 弱背景分组，最深" },
+    "layer2": { "fill": "#F0F0F0", "stroke": "#D0D0D0", "note": "中间层 — 弱背景分组" },
+    "layer3": { "fill": "#F5F5F5", "stroke": "#D8D8D8", "note": "下游 / 应用层 — 弱背景分组，最浅" }
   },
   "node": {
     "primary":   { "fill": "#CC0000", "stroke": "#A30000", "note": "VIZ_1 Bain Red — 关键实体 / 强调节点，最多 1-2 个" },
