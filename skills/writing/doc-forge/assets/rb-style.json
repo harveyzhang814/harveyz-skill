@@ -13,19 +13,19 @@
   "headings": {
     "h1": {
       "font": "PingFang SC", "font_en": "Helvetica Neue",
-      "size_pt": 28, "bold": true, "color": "000000",
+      "size_pt": 28, "bold": true, "color": "003B46",
       "align": "left",
       "space_before_pt": 24, "space_after_pt": 14
     },
     "h2": {
       "font": "PingFang SC", "font_en": "Helvetica Neue",
-      "size_pt": 20, "bold": true, "color": "000000",
+      "size_pt": 20, "bold": true, "color": "003B46",
       "align": "left",
       "space_before_pt": 20, "space_after_pt": 10
     },
     "h3": {
       "font": "PingFang SC", "font_en": "Helvetica Neue",
-      "size_pt": 16, "bold": true, "color": "000000",
+      "size_pt": 16, "bold": true, "color": "003B46",
       "align": "left",
       "space_before_pt": 14, "space_after_pt": 6
     },

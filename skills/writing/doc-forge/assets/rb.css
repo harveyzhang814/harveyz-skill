@@ -2,9 +2,9 @@
    Roland Berger – authentic brand style
    Based on knowledge/design/rb-style.md
    Primary   : #000000 (black)
-   Brand 1   : #f6f600 (yellow) — dominant accent
+   Dark Teal : #003b46 (nav/doc accent — RB "bg-darkgreen")
+   Yellow    : #f6f600 (small-area accent: table header line only)
    Brand 2   : #00aac9 (cyan)
-   Nav/Dark  : #003b46 (dark teal, RB "bg-darkgreen")
    CTA Red   : #ff3532 (buttons only)
    ───────────────────────────────────────────── */
 
@@ -34,7 +34,7 @@ h1 {
   margin-top: 0;
   margin-bottom: 14pt;
   padding-bottom: 6pt;
-  border-bottom: 3px solid #f6f600;
+  border-bottom: 3px solid #003b46;
   letter-spacing: 0.01em;
 }
 
@@ -47,7 +47,7 @@ h2 {
   margin-top: 22pt;
   margin-bottom: 8pt;
   padding-bottom: 4pt;
-  border-bottom: 2px solid #000000;
+  border-bottom: 2px solid #003b46;
 }
 
 h3 {
@@ -59,7 +59,7 @@ h3 {
   margin-top: 16pt;
   margin-bottom: 5pt;
   padding-left: 8pt;
-  border-left: 3px solid #f6f600;
+  border-left: 3px solid #003b46;
 }
 
 h4 {
@@ -130,7 +130,7 @@ td {
 pre {
   background-color: #f5f5f5;
   border: none;
-  border-left: 3px solid #000000;
+  border-left: 3px solid #003b46;
   border-radius: 0 3px 3px 0;
   padding: 8pt 12pt;
   margin: 8pt 0;
@@ -162,7 +162,7 @@ blockquote {
   font-size: 10.5pt;
   font-style: italic;
   color: #333333;
-  border-left: 3.5px solid #f6f600;
+  border-left: 3.5px solid #003b46;
   margin: 10pt 0;
   padding: 4pt 0 4pt 14pt;
   background-color: #fafafa;
@@ -197,7 +197,7 @@ hr {
 /* ── Links ──────────────────────────────────── */
 
 a {
-  color: #156c9c;
+  color: #003b46;
   text-decoration: underline;
   text-underline-offset: 2px;
 }
