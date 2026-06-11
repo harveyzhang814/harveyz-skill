@@ -24,9 +24,9 @@
     "layer3": { "fill": "#686868", "stroke": "#828282", "note": "下游 / 应用层 (surface.dark×4，上限#888888)" }
   },
   "node": {
-    "layer1": { "fill": "#CC0000", "stroke": "#A30000", "note": "VIZ_1 Bain Red — 深色，用 #FFFFFF" },
-    "layer2": { "fill": "#666666", "stroke": "#525252", "note": "VIZ_2 gray" },
-    "layer3": { "fill": "#BBBBBB", "stroke": "#969696", "note": "VIZ_3 light gray — 浅色，用 #000000" }
+    "primary":   { "fill": "#CC0000", "stroke": "#A30000", "note": "VIZ_1 Bain Red — 关键实体 / 强调节点，最多 1-2 个" },
+    "secondary": { "fill": "#666666", "stroke": "#525252", "note": "VIZ_2 gray — 第二类型实体" },
+    "neutral":   { "fill": "#BBBBBB", "stroke": "#969696", "note": "VIZ_3 light gray — 同类内容节点的默认色，浅色用 #000000" }
   },
   "semantic": {
     "alert":       { "fill": "#CC0000", "stroke": "#A30000", "note": "风险 / 问题 (VIZ_1 = Bain Red)" },

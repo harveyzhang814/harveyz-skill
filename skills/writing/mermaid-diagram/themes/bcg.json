@@ -24,9 +24,9 @@
     "layer3": { "fill": "#18562A", "stroke": "#1E6C35", "note": "下游 / 应用层 (H1×2.00)" }
   },
   "node": {
-    "layer1": { "fill": "#96F878", "stroke": "#78C660", "note": "VIZ_1 lime — 浅色，用深字 #212427" },
-    "layer2": { "fill": "#21BF61", "stroke": "#1A994E", "note": "VIZ_3 medium green (VIZ_2=H1_COLOR，跳过)" },
-    "layer3": { "fill": "#696969", "stroke": "#545454", "note": "VIZ_4 gray" }
+    "primary":   { "fill": "#96F878", "stroke": "#78C660", "note": "VIZ_1 lime — 关键实体 / 强调节点，浅色用 #212427" },
+    "secondary": { "fill": "#21BF61", "stroke": "#1A994E", "note": "VIZ_3 medium green — 第二类型实体" },
+    "neutral":   { "fill": "#696969", "stroke": "#545454", "note": "VIZ_4 gray — 同类内容节点的默认色" }
   },
   "semantic": {
     "alert":       { "fill": "#7B1010", "stroke": "#B52020", "note": "预警 / 高风险 (default)" },

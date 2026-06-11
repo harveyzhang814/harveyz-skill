@@ -28,7 +28,7 @@ version: "1.4.0"
 
 从对话上下文推断品牌名（用于文件命名和路径查找）。若未提供，询问：
 
-> 请提供品牌名（如 bcg / rb / custom），或完整路径（如 knowledge/design/bcg-style.md）
+> 请提供品牌名（如 bain / custom），或完整路径（如 knowledge/design/bain-style.md）
 
 确认目标格式（若未指定，默认推导 DOCX + PDF）：
 
@@ -239,8 +239,10 @@ comp.heading.h1.deco-line
 | `subgraph.layer2.stroke` | H1_COLOR × 1.15 |
 | `subgraph.layer3.fill` | H1_COLOR × 1.20 |
 | `subgraph.layer3.stroke` | H1_COLOR × 1.35 |
-| `node.layerX.fill` | 同层 subgraph.fill × 1.12 |
-| `node.layerX.stroke` | 同层 subgraph.stroke |
+| `node.primary.fill` | subgraph.layer1.fill × 1.12 |
+| `node.secondary.fill` | subgraph.layer2.fill × 1.12 |
+| `node.neutral.fill` | subgraph.layer3.fill × 1.12 |
+| `node.*.stroke` | 同色 subgraph.stroke |
 
 **例外规则 1 — 深色基准（RGB 三通道之和 < 150）：**
 
@@ -262,10 +264,10 @@ comp.heading.h1.deco-line
 subgraph 推导的节点色会与容器色几乎相同，不可见。改从 VIZ_1..5 中按序选出 3 个与 H1_COLOR 不同的色值：
 
 ```
-node.layer1.fill = VIZ 序列中第 1 个与 H1_COLOR 不同的色
-node.layer2.fill = 第 2 个
-node.layer3.fill = 第 3 个
-node.layerX.stroke = 同层 fill × 0.80
+node.primary.fill   = VIZ 序列中第 1 个与 H1_COLOR 不同的色
+node.secondary.fill = 第 2 个
+node.neutral.fill   = 第 3 个
+node.*.stroke       = 同层 fill × 0.80
 ```
 
 #### 6.3 semantic 色推导
@@ -294,9 +296,9 @@ node.layerX.stroke = 同层 fill × 0.80
     "layer3": { "fill": "...", "stroke": "...", "note": "下游 / 应用层" }
   },
   "node": {
-    "layer1": { "fill": "...", "stroke": "..." },
-    "layer2": { "fill": "...", "stroke": "..." },
-    "layer3": { "fill": "...", "stroke": "..." }
+    "primary":   { "fill": "...", "stroke": "...", "note": "关键实体 / 强调节点" },
+    "secondary": { "fill": "...", "stroke": "...", "note": "第二类型实体" },
+    "neutral":   { "fill": "...", "stroke": "...", "note": "同类内容节点的默认色" }
   },
   "semantic": {
     "alert":       { "fill": "...", "stroke": "...", "note": "预警 / 高风险" },

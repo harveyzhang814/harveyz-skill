@@ -23,9 +23,9 @@
     "layer3": { "fill": "#1E5C9E", "stroke": "#3A8ACC", "note": "应用层 / 下游" }
   },
   "node": {
-    "layer1": { "fill": "#0A2E7A", "stroke": "#1E4A9A" },
-    "layer2": { "fill": "#0050B8", "stroke": "#1A6AC4" },
-    "layer3": { "fill": "#2A6EAE", "stroke": "#3A8ACC" }
+    "primary":   { "fill": "#0A2E7A", "stroke": "#1E4A9A", "note": "深蓝 — 关键实体 / 强调节点，最多 1-2 个" },
+    "secondary": { "fill": "#0050B8", "stroke": "#1A6AC4", "note": "中蓝 — 第二类型实体" },
+    "neutral":   { "fill": "#2A6EAE", "stroke": "#3A8ACC", "note": "浅蓝 — 同类内容节点的默认色" }
   },
   "semantic": {
     "alert":       { "fill": "#7B1010", "stroke": "#B52020", "note": "预警 / 高风险 / 规避" },

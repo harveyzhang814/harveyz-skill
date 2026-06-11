@@ -29,12 +29,12 @@ flowchart TD
     style UP   fill:#1A1A1A,color:#fff,stroke:#222222
     style MID  fill:#343434,color:#fff,stroke:#444444
     style DOWN fill:#686868,color:#fff,stroke:#828282
-    style U1 fill:#CC0000,color:#fff,stroke:#A30000
-    style U2 fill:#CC0000,color:#fff,stroke:#A30000
-    style U3 fill:#CC0000,color:#fff,stroke:#A30000
-    style U4 fill:#CC0000,color:#fff,stroke:#A30000
-    style M1 fill:#666666,color:#fff,stroke:#525252
-    style M2 fill:#666666,color:#fff,stroke:#525252
+    style U1 fill:#BBBBBB,color:#000,stroke:#969696
+    style U2 fill:#BBBBBB,color:#000,stroke:#969696
+    style U3 fill:#BBBBBB,color:#000,stroke:#969696
+    style U4 fill:#BBBBBB,color:#000,stroke:#969696
+    style M1 fill:#BBBBBB,color:#000,stroke:#969696
+    style M2 fill:#BBBBBB,color:#000,stroke:#969696
     style D1 fill:#BBBBBB,color:#000,stroke:#969696
     style D2 fill:#BBBBBB,color:#000,stroke:#969696
     style D3 fill:#BBBBBB,color:#000,stroke:#969696

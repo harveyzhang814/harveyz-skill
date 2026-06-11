@@ -81,11 +81,11 @@ Markdown 渲染器页面宽度通常 700–900px，图表必须适配：
 
 | 品牌 | 主题文件 | 默认 |
 |------|---------|:----:|
-| Roland Berger | `themes/rb.json` | ✓ |
+| Bain & Company | `themes/bain.json` | ✓ |
 | BCG | `themes/bcg.json` | |
-| Bain | `themes/bain.json` | |
+| Roland Berger | `themes/rb.json` | |
 
-用户未指定品牌时默认使用 RB 主题。
+用户未指定品牌时默认使用 Bain 主题。
 
 ### 主题文件结构
 
@@ -95,15 +95,27 @@ Markdown 渲染器页面宽度通常 700–900px，图表必须适配：
 |------|------|
 | `init.themeVariables` | 填入 `%%{init: {"theme":"base","themeVariables":{...}}}%%` |
 | `subgraph.layer1/2/3` | 各层 subgraph `fill`/`stroke`（layer1 = 最重要/上游） |
-| `node.layer1/2/3` | 各层节点 `fill`/`stroke` |
+| `node.primary` | 强调节点色 — 关键实体，每图最多 1–2 个节点使用 |
+| `node.secondary` | 第二类型节点色 — 不同实体类型时使用 |
+| `node.neutral` | 默认内容节点色 — 同类实体的统一背景色 |
 | `semantic.*` | 语义辅助色（alert / opportunity / hold / speculative / value） |
 | `edge.primary/secondary` | 主路径 / 次路径颜色 |
 | `rules` | 深色阈值、深色/浅色节点文字色 |
 
+### 节点配色原则
+
+**subgraph 层次感 ≠ 节点颜色**：subgraph 的深浅梯度已承载层次信息，节点色应编码**节点属性/类型**，而非重复层编号。
+
+| 场景 | 节点着色 |
+|------|---------|
+| 同类实体（如供应链公司节点） | 全部用 `node.neutral` — 统一色 |
+| 不同实体类型（如硬件 vs 软件） | `node.primary` / `node.secondary` 区分类型 |
+| 投资信号 / 状态节点 | `semantic.opportunity` / `semantic.alert` / `semantic.hold` |
+
 ### 配色规则（通用）
 
 - 深色背景（fill 深于 `rules.dark_text_threshold`）**必须**加 `color:#fff`
-- subgraph 背景比节点背景**深 10–15%**（提供层次感）
+- subgraph 背景比节点背景**深**（提供层次感）；**节点色不跟随 subgraph 层编号**
 - 同一图内最多使用 **3 种主色** + 语义辅助色
 - `quadrantChart` 的 quadrant 标签不加颜色（库自动渲染）
 - `timeline` / `gantt` / `stateDiagram` 使用库默认颜色，不强制品牌色
