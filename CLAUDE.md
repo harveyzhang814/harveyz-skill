@@ -4,7 +4,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Overview
 
-Personal Claude Code skills repository for Harvey. Skills are self-contained directories installed to `~/.claude/skills/` to extend Claude Code's capabilities.
+This is the **source maintenance repository** for Harvey's Claude Code skills. Skills are authored and maintained here under `skills/`, then published/installed to `~/.claude/skills/`.
+
+**Important:** This repo is the authoritative source for all skills. When looking up, reading, or editing any skill's content, always work within the `skills/` directory here — never in the installed copy at `~/.claude/skills/` or any Claude user-level directory. `~/.claude/skills/` is the deployment target; its contents may lag behind this repo.
+
+Skills are self-contained directories installed to `~/.claude/skills/` to extend Claude Code's capabilities.
 
 ## Installation
 
