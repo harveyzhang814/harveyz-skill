@@ -2,7 +2,7 @@
 name: doc-forge
 description: "Convert documents between formats. Trigger when the user wants to convert or export a Markdown file to Word (.docx) or PDF — e.g. 'export as docx', 'convert to Word', 'export as pdf', 'generate PDF' — or when the user writes a document in the conversation and wants it as .docx or .pdf."
 user_invocable: true
-version: "2.1.0"
+version: "2.2.0"
 ---
 
 ## 概述
@@ -12,6 +12,13 @@ version: "2.1.0"
 **脚本位置（`hskill` 安装后）：**
 - DOCX：`~/.claude/skills/doc-forge/scripts/md_to_docx.py`
 - PDF：`~/.claude/skills/doc-forge/scripts/md_to_pdf.py`
+
+**内置样式（`assets/` 目录）：**
+
+| 文件 | 说明 | 适用场景 |
+|------|------|---------|
+| `default-style.json` / `default.css` | Harvey 自定义风格（深海军蓝，默认） | 咨询报告、内部文档 |
+| `rb-style.json` / `rb.css` | Roland Berger 官方品牌（黑白+黄色） | 需对齐 RB 品牌的正式输出 |
 
 ---
 
@@ -93,6 +100,17 @@ python3 ~/.claude/skills/doc-forge/scripts/md_to_pdf.py --dump-style > style.css
 **DOCX** — style.json 键：`page`、`body`、`headings`（h1–h4）、`code_block`、`blockquote`、`table`。只需包含要覆盖的部分，其余使用默认值。
 
 **PDF** — style.css：标准 CSS 文件。用 `--dump-style` 导出完整默认样式作为起点。支持 Chromium 识别的所有 CSS 属性（包括用于页边距/尺寸的 `@page`）。
+
+**切换内置风格（RB 官方品牌）：**
+```bash
+# DOCX
+python3 ~/.claude/skills/doc-forge/scripts/md_to_docx.py input.md \
+  --style ~/.claude/skills/doc-forge/assets/rb-style.json
+
+# PDF
+python3 ~/.claude/skills/doc-forge/scripts/md_to_pdf.py input.md \
+  --style ~/.claude/skills/doc-forge/assets/rb.css
+```
 
 ---
 
