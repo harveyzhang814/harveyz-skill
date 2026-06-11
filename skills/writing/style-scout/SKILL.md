@@ -327,34 +327,51 @@ $B screenshot /tmp/scout-quote.png --selector "blockquote,[class*=callout],[clas
 
 ## 阶段三：整理与输出
 
-### Step 13 — 合并两阶段数据，写入知识文档
+### Step 13 — 合并两阶段数据，按三层 Token 模型写入知识文档
 
-综合主页调查（Step 3–6）和报告页调查（Step 8–12）的结果，读取 `knowledge/design/TEMPLATE.md` 的结构，将数据填入，写到 `knowledge/design/<brand>-style.md`。
+综合主页调查（Step 3–6）和报告页调查（Step 8–12）的结果，按 `knowledge/design/TEMPLATE.md` 的三层 Token 结构填写，写到 `knowledge/design/<brand>-style.md`。
 
 **数据来源优先级：**
 
-| 字段 | 优先来源 | 补充来源 |
-|------|---------|---------|
-| 2.2 品牌动作色 | 主页 Hero/CTA 按钮（Step 3） | 报告页按钮（Step 8a）交叉确认 |
-| 2.3 文字色 | 报告页（Step 8b） | — |
-| 2.4 背景色层级 | 主页（Step 4）更丰富 | 报告页补充 |
-| 2.5 装饰线色 | 报告页（Step 8c） | — |
-| 3 字体体系 | 报告页（Step 9）语义最清晰 | 主页 CSS bundle 确认 |
-| 4 间距 | 报告页（Step 10） | — |
-| 5 组件规则 | 报告页（Step 11） | — |
+| Token 层 | 字段 | 优先来源 | 补充来源 |
+|---------|------|---------|---------|
+| 2.1 Primitive | 所有原始色值 | 主页 CSS bundle（Step 5）频率最高 | 报告页渲染层补充 |
+| 2.2 Semantic：Interactive | 主 CTA 按钮色 | **主页 Hero/CTA 按钮**（Step 3） | 报告页（Step 8a）交叉确认 |
+| 2.2 Semantic：Text | 文字色层级 | 报告页（Step 8b）语义最清晰 | — |
+| 2.2 Semantic：Surface | 背景色层级 | 主页（Step 4）更丰富 | 报告页补充 |
+| 2.2 Semantic：Border | 装饰/线条色 | 报告页（Step 8c） | — |
+| 2.3 Component | 组件映射 | 参照 TEMPLATE.md 默认值 | 报告页截图目测覆盖 |
+| 3 字体体系 | — | 报告页（Step 9） | 主页 CSS bundle 确认字体名 |
+| 4 间距 | — | 报告页（Step 10） | — |
+| 5 组件规则 | — | 报告页（Step 11） | — |
 
-**填写规则：**
-- 第 2.2 节"品牌动作色"：**以主页 CTA 按钮色为准**，报告页交叉确认
-- 第 2.3 节"文字色"：填 Step 8b，并标注 `[视觉近黑]`
-- 第 9 节"推导指南"的 PDF 装饰线颜色：**必须来自 2.2 动作色，不能用 2.3 近黑文字色**
+**填写规则（按层次）：**
+
+**2.1 Primitive Tokens：**
+- 将所有发现的原始色值整理为 `色相-明度` 命名格式
+- 只写"是什么"，不写用途
+
+**2.2 Semantic Tokens：**
+- `color.interactive.primary`：**必须是主页 CTA 按钮色**，不能是文字色
+- `color.text.*` 中标注 `[视觉近黑]`（RGB 三通道和 < 150）
+- `color.border.accent` 指向 `{color.interactive.primary}`，无需填原始值
+
+**2.3 Component Tokens：**
+- 大多数保持 TEMPLATE.md 默认映射（指向 Interactive/Text/Border）
+- 若目测截图与默认映射不符（如 H3 实际无左色条、blockquote 用背景块而非左色条），修改对应行
+- 表格模式（grid/mckinsey/rb）在此层的 `comp.table.*` 中注明
+
+**通用规则：**
 - 未能从页面提取到的字段：填 `待补充` 而非空着
+- 不在 2.3 Component 层以外重复写颜色规则（"装饰线用动作色"已硬编码在 Component Tokens）
 
 写入后，**展示给用户确认**：
 
 > `knowledge/design/<brand>-style.md` 已生成，请重点核查：
-> 1. **2.2 品牌动作色** — 以主页 CTA 按钮色为准，是否为最具品牌识别性的颜色？
-> 2. **2.3 文字色** — 标注为 [视觉近黑] 的颜色在截图中是否确实接近黑色？
-> 3. **9. 推导指南** — 各格式的装饰线颜色是否都来自动作色而非文字色？
+> 1. **2.1 Primitives** — 品牌调色盘是否完整？有无遗漏的特征色？
+> 2. **2.2 Interactive** — `color.interactive.primary` 是否为主页最显眼的 CTA 按钮色？
+> 3. **2.2 Text** — `[视觉近黑]` 标注是否准确？这些颜色是否确实在截图中接近黑色？
+> 4. **2.3 Component** — 若有非默认映射（如 blockquote 颜色），是否已修改对应行？
 >
 > 确认后可运行 `/design-derive` 生成具体格式配置。
 

@@ -2,7 +2,7 @@
 name: design-derive
 description: "Derive format-specific configs from a brand design knowledge doc. Trigger when the user wants to generate doc-forge JSON/CSS, HTML CSS variables, Mermaid color scheme, or PPT theme from a design system. E.g. 'derive configs for BCG', 'generate doc-forge style for rb', 'create HTML theme from custom-style'."
 user_invocable: true
-version: "1.0.0"
+version: "1.1.0"
 ---
 
 ## 概述
@@ -40,61 +40,75 @@ version: "1.0.0"
 
 ---
 
-### Step 2 — 读取设计文档
+### Step 2 — 读取设计文档并解析 Token 链
 
 ```bash
 BRAND="<brand>"
 KNOWLEDGE_FILE="knowledge/design/${BRAND}-style.md"
 ```
 
-用 Read 工具读取 `$KNOWLEDGE_FILE`，提取以下字段（按 TEMPLATE.md 结构）：
+用 Read 工具读取 `$KNOWLEDGE_FILE`。
 
-**色彩：**
-- `ACTION_COLOR` — 2.2 主动作色（装饰线首选）
-- `HEADING_COLOR` — 2.3 主标题色
-- `BODY_COLOR` — 2.3 正文色
-- `MUTED_COLOR` — 2.3 辅助色
-- `LINK_COLOR` — 2.3 链接色
-- `BG_PAGE` — 2.4 页面背景（通常 #FFFFFF）
-- `BG_SECTION` — 2.4 分区背景
-- `BG_CARD` — 2.4 卡片背景
-- `BG_DARK` — 2.4 深色块背景
-- `BORDER_COLOR` — 2.5 主分隔线
-- `ACCENT_LINE` — 2.5 强调左色条
-- `CODE_BG` — 2.4 代码块背景
-- `VIZ_COLORS[]` — 2.7 数据可视化色序（至少 5 色）
+**Token 解析方式（三层引用链）：**
 
-**字体：**
-- `FONT_HEADING_EN` — 3.2 标题降级字体（第一个英文字体名）
-- `FONT_HEADING_SERIF` — 3.2 标题完整字体栈
-- `FONT_BODY_EN` — 3.2 正文降级字体（第一个英文字体名）
+值格式为 `{token-name}` 时，顺着引用链向上查，直到得到原始 hex：
+
+```
+comp.heading.h1.deco-line
+  → {color.interactive.primary}   (2.2 Semantic)
+    → {lime-400}                   (2.1 Primitive 引用名)
+      → #96F878                    ← 最终写入配置的值
+```
+
+若 style.md 按旧格式写成（直接写 hex 而非 token 引用），直接读取对应 hex。
+
+**从文档提取以下变量：**
+
+**色彩（通过 Token 链解析到 hex）：**
+
+| 变量名 | 来源 Token | 备注 |
+|-------|-----------|------|
+| `H1_DECO_COLOR` | `comp.heading.h1.deco-line` → resolve | H1/H2 装饰线颜色 |
+| `H3_BAR_COLOR` | `comp.heading.h3.left-bar` → resolve | H3 左色条颜色 |
+| `H1_COLOR` | `comp.heading.h1.color` → resolve | H1 文字色 |
+| `H2_COLOR` | `comp.heading.h2.color` → resolve | H2 文字色 |
+| `H3_COLOR` | `comp.heading.h3.color` → resolve | H3 文字色 |
+| `H4_COLOR` | `comp.heading.h4.color` → resolve | H4 文字色 |
+| `BODY_COLOR` | `comp.body.color` → resolve | 正文色 |
+| `LINK_COLOR` | `comp.link.color` → resolve | 链接色 |
+| `BQ_BAR_COLOR` | `comp.blockquote.left-bar` → resolve | 引用块左色条 |
+| `BQ_COLOR` | `comp.blockquote.color` → resolve | 引用文字色 |
+| `TABLE_HEADER_LINE` | `comp.table.border-header` → resolve | 表头横线色 |
+| `TABLE_ROW_LINE` | `comp.table.border-row` → resolve | 行分隔线色 |
+| `TABLE_ACCENT` | `comp.table.accent-line` → resolve | 表头强调线（rb） |
+| `CODE_BG` | `comp.code.bg` → resolve | 代码块背景 |
+| `CODE_BAR` | `comp.code.left-bar` → resolve | 代码块左色条 |
+| `HR_COLOR` | `comp.hr.color` → resolve | 水平线色 |
+| `BG_SECTION` | `color.surface.section` → resolve | 分区背景 |
+| `BG_DARK` | `color.surface.dark` → resolve | 深色块背景 |
+| `VIZ_1..5` | `color.dataviz.1..5` → resolve | 数据可视化色序 |
+
+**字体（直接读 3 节）：**
+- `FONT_HEADING_EN` — 3.2 标题降级字体第一项
+- `FONT_HEADING_STACK` — 3.2 标题完整字体栈
+- `FONT_BODY_EN` — 3.2 正文降级字体第一项
 - `FONT_BODY_STACK` — 3.2 正文完整字体栈
 - `FONT_MONO_STACK` — 3.2 等宽字体栈
 
-**字号：**
-- `H1_PT`, `H2_PT`, `H3_PT`, `H4_PT`, `BODY_PT` — 3.3 字号尺度
-- `LINE_SPACING_PT` — 正文行距（pt）
+**字号（直接读 3.3）：**
+- `H1_PT`, `H2_PT`, `H3_PT`, `H4_PT`, `BODY_PT`
+- `LINE_SPACING_PT` — 正文行距
 - `H1_BOLD`, `H2_BOLD`, `H3_BOLD` — 是否加粗
 
-**间距：**
-- `PAGE_TOP_CM`, `PAGE_BOTTOM_CM`, `PAGE_LEFT_CM`, `PAGE_RIGHT_CM` — 4.2 页边距
-- `H1_SPACE_BEFORE`, `H1_SPACE_AFTER`, `H2_SPACE_BEFORE`, `H2_SPACE_AFTER` — 4.3
-- `PARA_SPACE_AFTER` — 段落后间距
-- `FIRST_LINE_INDENT` — 首行缩进（0 或字符数）
+**间距（直接读 4 节）：**
+- `PAGE_TOP_CM`, `PAGE_BOTTOM_CM`, `PAGE_LEFT_CM`, `PAGE_RIGHT_CM`
+- `H1_SPACE_BEFORE`, `H1_SPACE_AFTER`, `H2_SPACE_BEFORE`, `H2_SPACE_AFTER`
+- `PARA_SPACE_AFTER`, `FIRST_LINE_INDENT`
 
-**组件：**
-- `TABLE_MODE` — 5.2 边框模式（grid / mckinsey / rb / 无框）
-- `TABLE_RULE_COLOR` — 5.2 表格线颜色
-- `TABLE_ACCENT_COLOR` — 5.2 表格强调色（rb 模式用）
-- `TABLE_ROW_SEP_COLOR` — 5.2 行分隔色（rb 模式用）
-- `TABLE_HEADER_BG` — 5.2 表头背景（null = 无）
-- `H3_LEFT_BAR` — 5.1 H3 是否有左色条
-
-> **关键规则（必须严格遵守）：**
-> - 装饰线（H1/H2 border-bottom、H3 border-left）颜色来自 **2.2 动作色（ACTION_COLOR）**
-> - 若 2.2 动作色视觉近黑，改用 2.5 装饰线色（ACCENT_LINE）
-> - 绝不用 2.3 文字色做装饰线
-> - 若文档第 5 节有明确覆盖（如"H3 左色条用 XXX"），以第 5 节为准
+**组件（直接读 5.2）：**
+- `TABLE_MODE` — grid / mckinsey / rb / 无框
+- `TABLE_HEADER_BG` — 表头背景（null = 无）
+- `H3_HAS_LEFT_BAR` — H3 是否有左色条（从 5.1 读取）
 
 ---
 
