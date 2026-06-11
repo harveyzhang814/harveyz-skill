@@ -114,6 +114,38 @@ comp.heading.h1.deco-line
 
 ---
 
+### Step 2b — 网页尺度 → 文档尺度换算
+
+品牌知识文档的字号来自官网 CSS 测量，往往是面向全屏 display 的展示尺度，**不能直接用于 A4 文档**，需换算后再写入配置。
+
+**触发条件（全部满足时执行）：**
+- `H1_PT > 28`
+- `BODY_PT ≤ 14`
+
+**换算算法（等比双锚点插值）：**
+
+以 H1=24pt 为上锚点，H4 为下锚点（若 H4 已合理 ≤ 14 则保留，否则取 11pt）：
+
+```
+H4_doc = H4_PT  if H4_PT ≤ 14,  else 11
+ratio  = (24 / H4_doc) ^ (1/3)       # 三步等比
+H3_doc = round(H4_doc × ratio)
+H2_doc = round(H3_doc × ratio)
+H1_doc = 24
+```
+
+**安全检查（换算后验证）：**
+- `H1_doc > H2_doc > H3_doc > H4_doc`
+- `H3_doc ≥ BODY_PT`（H3 不应小于正文）
+
+若 H3_doc < BODY_PT，将 H3_doc 设为 `BODY_PT + 2`，并重新向上推导 H2_doc。
+
+**换算完成后，用 `H1_doc / H2_doc / H3_doc / H4_doc` 替换 Step 2 提取的 `H1_PT / H2_PT / H3_PT / H4_PT`**，后续 Step 3–4 统一使用换算后的值。
+
+**BCG 示例：** H1=42, H4=11 → ratio=(24/11)^(1/3)≈1.30 → H3=round(11×1.30)=14, H2=round(14×1.30)=18, H1=24 → **24/18/14/11pt**
+
+---
+
 ### Step 3 — 推导 DOCX 配置（按需）
 
 生成 `skills/writing/doc-forge/assets/<brand>-style.json`。
