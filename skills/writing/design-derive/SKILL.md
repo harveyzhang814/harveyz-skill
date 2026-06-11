@@ -208,113 +208,177 @@ comp.heading.h1.deco-line
 
 写入 `skills/writing/mermaid-diagram/themes/<brand>.json`，同时在对话中打印可直接嵌入的 `%%{init}%%` 块。
 
-#### 6.1 themeVariables
+主题文件按图类型分区存储，不同图类型使用不同样式机制。
 
-按 FORMAT-MAPPING.md 第七节，用 Step 2 提取的变量填入：
+#### 6.1 flowchart — subgraph / node 推导
 
-| themeVariables 键 | 来源 |
-|------------------|------|
-| `primaryColor` | VIZ_1 |
-| `primaryBorderColor` | VIZ_1 略深 10% |
-| `primaryTextColor` | VIZ_1 深色→`#FFFFFF`，浅色→`#000000` |
-| `secondaryColor` | VIZ_2 |
-| `tertiaryColor` | VIZ_3 |
-| `background` / `edgeLabelBackground` | `#FFFFFF` |
-| `mainBkg` | VIZ_1 |
-| `clusterBkg` | H1_COLOR × 0.80（见 6.2） |
-| `titleColor` | H1_COLOR |
-| `lineColor` | HR_COLOR |
+`flowchart.subgraph` 以 H1_COLOR 为基准推算三层弱背景色（RGB 各通道独立，上限 255，结果转 hex）。
 
-#### 6.2 subgraph / node 层级色推导
+**目标：** 三层浅灰梯度，最深层差 ≈ 15%，提供可见但不抢视觉的分组底色。
 
-以 `H1_COLOR` 为基准按比例推算三层（RGB 各通道独立计算，上限 255，结果转 hex）：
-
-**标准倍数**（H1_COLOR RGB 三通道之和 ≥ 150）：
+**标准路径**（H1_COLOR RGB 三通道均值 ≥ 128，属亮色）：
 
 | 字段 | 规则 |
 |------|------|
-| `subgraph.layer1.fill` | H1_COLOR × 0.80 |
-| `subgraph.layer1.stroke` | H1_COLOR × 0.90 |
-| `subgraph.layer2.fill` | H1_COLOR |
-| `subgraph.layer2.stroke` | H1_COLOR × 1.15 |
-| `subgraph.layer3.fill` | H1_COLOR × 1.20 |
-| `subgraph.layer3.stroke` | H1_COLOR × 1.35 |
-| `node.primary.fill` | subgraph.layer1.fill × 1.12 |
-| `node.secondary.fill` | subgraph.layer2.fill × 1.12 |
-| `node.neutral.fill` | subgraph.layer3.fill × 1.12 |
-| `node.*.stroke` | 同色 subgraph.stroke |
+| `flowchart.subgraph.layer1.fill` | 白色 `#FFFFFF` 与 H1_COLOR 按 80:20 混合后再向灰偏移，取 `#E8E8E8` 段 |
+| `flowchart.subgraph.layer2.fill` | 同上向浅推 → `#F0F0F0` 段 |
+| `flowchart.subgraph.layer3.fill` | 同上继续 → `#F5F5F5` 段 |
+| `flowchart.subgraph.*.stroke` | 同层 fill × 0.85（略深） |
+| `flowchart.subgraph.*.text` | `#212427`（固定深色） |
 
-**例外规则 1 — 深色基准（RGB 三通道之和 < 150）：**
+> 简化规则：无论品牌色如何，subgraph 固定使用 `#E8→#F0→#F5` 浅灰梯度，保持弱背景特性。
 
-× 0.80/1.20 在极深色上层次差仅 7%，改用宽倍数：
+**深色品牌基准**（H1_COLOR RGB 均值 < 128）同上，不从 H1_COLOR 推导，直接用固定浅灰。
 
-| 字段 | 宽倍数规则 |
-|------|-----------|
-| `subgraph.layer1.fill` | H1_COLOR × 0.50 |
-| `subgraph.layer1.stroke` | H1_COLOR × 0.65 |
-| `subgraph.layer2.fill` | H1_COLOR |
-| `subgraph.layer2.stroke` | H1_COLOR × 1.30 |
-| `subgraph.layer3.fill` | H1_COLOR × 2.00 |
-| `subgraph.layer3.stroke` | H1_COLOR × 2.50 |
+**flowchart.node 推导：**
 
-若品牌文件有 `color.surface.dark`，用它替代 layer1 fill；以 `surface.dark × 2` 作为 layer2，`surface.dark × 4`（上限 `#888888`）作为 layer3；stroke = 同层 fill × 1.30。
+| 字段 | 规则 |
+|------|------|
+| `node.neutral.fill` | `#FFFFFF`（固定白色卡片） |
+| `node.neutral.stroke` | `#BBBBBB` |
+| `node.neutral.text` | `#212427` |
+| `node.primary.fill` | H1_COLOR（品牌主色，关键节点） |
+| `node.primary.stroke` | H1_COLOR × 0.80 |
+| `node.primary.text` | H1_COLOR 深于 `rules.dark_text_threshold` → `#FFFFFF`，否则 `#212427` |
+| `node.secondary.fill` | `color.text.primary` 或深灰 `#555555` |
+| `node.secondary.stroke` | 同上 × 0.70 |
+| `node.secondary.text` | `#FFFFFF` |
 
-**例外规则 2 — node 改用 VIZ 序列（深色基准 或 surface.dark 覆盖生效时）：**
+#### 6.2 stateDiagram — classDef 推导
 
-subgraph 推导的节点色会与容器色几乎相同，不可见。改从 VIZ_1..5 中按序选出 3 个与 H1_COLOR 不同的色值：
+从 semantic 色直接映射，`neutral` 取固定浅灰：
 
-```
-node.primary.fill   = VIZ 序列中第 1 个与 H1_COLOR 不同的色
-node.secondary.fill = 第 2 个
-node.neutral.fill   = 第 3 个
-node.*.stroke       = 同层 fill × 0.80
-```
+| classDef 名 | 来源 |
+|------------|------|
+| `neutral` | `fill:#EBEBEB,stroke:#C8C8C8,color:#212427`（固定） |
+| `opportunity` | `semantic.opportunity`（fill / stroke / `color:#fff`） |
+| `hold` | `semantic.hold` |
+| `danger` | `semantic.alert` |
 
-#### 6.3 semantic 色推导
+输出为可直接粘贴的 classDef 字符串（如 `fill:#E87722,stroke:#BA5F1B,color:#fff`）。
+
+#### 6.3 sequenceDiagram — themeVariables 推导
+
+| themeVariables 键 | 规则 |
+|------------------|------|
+| `actorBkg` | `#FFFFFF`（固定白色） |
+| `actorBorder` | H1_COLOR（品牌主色边框） |
+| `actorTextColor` | `#212427` |
+| `actorLineColor` | `color.text.muted` 或 `#888888` |
+| `noteBkg` | `#F0F0F0` |
+| `noteTextColor` | `#212427` |
+| `activationBkgColor` | H1_COLOR 加白至 95% 亮度（极浅品牌色调） |
+| `activationBorderColor` | H1_COLOR |
+| `signalColor` | `#333333` |
+| `signalTextColor` | `#212427` |
+
+#### 6.4 gantt — themeVariables 推导
+
+| themeVariables 键 | 规则 |
+|------------------|------|
+| `taskBkgColor` | `#E8E8E8`（中性任务） |
+| `taskBorderColor` | `#BBBBBB` |
+| `taskTextColor` | `#212427` |
+| `activeTaskBkgColor` | H1_COLOR（当前进行任务） |
+| `activeTaskBorderColor` | H1_COLOR × 0.80 |
+| `critBkgColor` | `semantic.alert.fill`（关键路径） |
+| `critBorderColor` | `semantic.alert.stroke` |
+| `doneTaskBkgColor` | `#F5F5F5` |
+| `sectionBkgColor` | `#FFFFFF` |
+| `altSectionBkgColor` | `#F8F8F8` |
+| `gridColor` | `#DDDDDD` |
+| `titleColor` | `#212427` |
+
+#### 6.5 timeline — themeVariables 推导
+
+`cScale0–11` 按双色交替，保持阅读节奏：
+
+| cScale | 规则 |
+|--------|------|
+| 偶数位（0/2/4...） | H1_COLOR（品牌主色） |
+| 奇数位（1/3/5...） | `color.text.secondary` 或 `#666666`（中性灰） |
+| `titleColor` | `#212427` |
+
+#### 6.6 semantic 色推导
 
 | 字段 | 首选来源 | 无值时默认 |
 |------|---------|----------|
-| `semantic.alert` | `color.status.danger` | `#7B1010` / `#B52020` |
-| `semantic.opportunity` | `color.status.success` 或 VIZ_3 | `#1A5E3A` / `#2A7E50` |
-| `semantic.hold` | VIZ_4 或 `color.text.muted` | `#666666` / `#888888` |
+| `semantic.alert` | `color.status.danger` | `#CC0000` / `#A30000`（Bain Red） |
+| `semantic.opportunity` | `color.status.success` 或 VIZ_3 | `#E87722` / `#BA5F1B` |
+| `semantic.hold` | VIZ_4 或 `color.text.muted` | `#666666` / `#525252` |
 | `semantic.speculative` | VIZ_5 或 `color.interactive.secondary` | `#2E0078` / `#5A20A0` |
-| `semantic.value` | VIZ_2 | H1_COLOR / H1_COLOR × 1.20 |
+| `semantic.value` | `color.surface.dark` 或 VIZ_2 | `#1A1A1A` / `#222222` |
 
-#### 6.4 输出文件结构
+semantic 的 `text` 字段：fill 深于 `rules.dark_text_threshold` → `#FFFFFF`。
+
+#### 6.7 输出文件结构
 
 ```json
 {
   "_brand": "<品牌名>",
   "_source": "knowledge/design/<brand>-style.md",
-  "init": {
-    "theme": "base",
-    "themeVariables": { "primaryColor": "VIZ_1", ... }
+  "_derived_by": "design-derive v1.5.0",
+
+  "flowchart": {
+    "subgraph": {
+      "layer1": { "fill": "#E8E8E8", "stroke": "#C8C8C8", "text": "#212427", "note": "..." },
+      "layer2": { "fill": "#F0F0F0", "stroke": "#D0D0D0", "text": "#212427", "note": "..." },
+      "layer3": { "fill": "#F5F5F5", "stroke": "#D8D8D8", "text": "#212427", "note": "..." }
+    },
+    "node": {
+      "neutral":   { "fill": "#FFFFFF", "stroke": "#BBBBBB", "text": "#212427", "note": "..." },
+      "primary":   { "fill": "H1_COLOR", "stroke": "...", "text": "...", "note": "..." },
+      "secondary": { "fill": "#555555", "stroke": "#3A3A3A", "text": "#FFFFFF", "note": "..." }
+    }
   },
-  "subgraph": {
-    "layer1": { "fill": "...", "stroke": "...", "note": "上游 / 核心" },
-    "layer2": { "fill": "...", "stroke": "...", "note": "中间层" },
-    "layer3": { "fill": "...", "stroke": "...", "note": "下游 / 应用层" }
+
+  "stateDiagram": {
+    "classDef": {
+      "neutral":     "fill:#EBEBEB,stroke:#C8C8C8,color:#212427",
+      "opportunity": "fill:...,stroke:...,color:#fff",
+      "hold":        "fill:...,stroke:...,color:#fff",
+      "danger":      "fill:...,stroke:...,color:#fff"
+    }
   },
-  "node": {
-    "primary":   { "fill": "...", "stroke": "...", "note": "关键实体 / 强调节点" },
-    "secondary": { "fill": "...", "stroke": "...", "note": "第二类型实体" },
-    "neutral":   { "fill": "...", "stroke": "...", "note": "同类内容节点的默认色" }
+
+  "sequenceDiagram": {
+    "init": {
+      "theme": "base",
+      "themeVariables": { "actorBkg": "#FFFFFF", "actorBorder": "H1_COLOR", "..." : "..." }
+    }
   },
+
+  "gantt": {
+    "init": {
+      "theme": "base",
+      "themeVariables": { "taskBkgColor": "#E8E8E8", "activeTaskBkgColor": "H1_COLOR", "..." : "..." }
+    }
+  },
+
+  "timeline": {
+    "init": {
+      "theme": "base",
+      "themeVariables": { "cScale0": "H1_COLOR", "cScale1": "#666666", "..." : "..." }
+    }
+  },
+
   "semantic": {
-    "alert":       { "fill": "...", "stroke": "...", "note": "预警 / 高风险" },
-    "opportunity": { "fill": "...", "stroke": "...", "note": "机会 / 增长" },
-    "hold":        { "fill": "...", "stroke": "...", "note": "中性 / 观察" },
-    "speculative": { "fill": "...", "stroke": "...", "note": "投机 / 主题" },
-    "value":       { "fill": "...", "stroke": "...", "note": "价值 / 配置" }
+    "alert":       { "fill": "...", "stroke": "...", "text": "#FFFFFF", "note": "..." },
+    "opportunity": { "fill": "...", "stroke": "...", "text": "#FFFFFF", "note": "..." },
+    "hold":        { "fill": "...", "stroke": "...", "text": "#FFFFFF", "note": "..." },
+    "speculative": { "fill": "...", "stroke": "...", "text": "#FFFFFF", "note": "..." },
+    "value":       { "fill": "...", "stroke": "...", "text": "#FFFFFF", "note": "..." }
   },
+
   "edge": {
-    "primary":   "H1_DECO_COLOR",
-    "secondary": "HR_COLOR"
+    "primary":   "H1_COLOR",
+    "secondary": "#888888"
   },
+
   "rules": {
-    "dark_text_threshold": "#4A4A4A",
-    "dark_node_text":  "#FFFFFF",
-    "light_node_text": "#000000"
+    "dark_text_threshold": "#808080",
+    "dark_node_text":      "#FFFFFF",
+    "light_node_text":     "#212427"
   }
 }
 ```

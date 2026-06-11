@@ -87,41 +87,65 @@ Markdown 渲染器页面宽度通常 700–900px，图表必须适配：
 
 用户未指定品牌时默认使用 Bain 主题。
 
-### 主题文件结构
+### 图类型 → 样式机制
 
-每个 `themes/<brand>.json` 包含以下字段，读取后按需使用：
+每种图类型使用不同的样式机制，主题文件按图类型分区存储配置：
 
-| 字段 | 用途 |
+| 图类型 | 样式机制 | 主题路径 |
+|--------|---------|---------|
+| `flowchart` | 内联 `style` 声明（**禁用** `%%{init}%%`） | `flowchart.*` |
+| `stateDiagram-v2` | `classDef` + `class` | `stateDiagram.classDef.*` |
+| `sequenceDiagram` | `%%{init}%%` themeVariables | `sequenceDiagram.init` |
+| `gantt` | `%%{init}%%` themeVariables | `gantt.init` |
+| `timeline` | `%%{init}%%` themeVariables | `timeline.init` |
+| `quadrantChart` | 库默认（控制极度有限，不强制品牌色） | — |
+
+### flowchart — 内联 style
+
+subgraph 使用**弱色背景**（浅灰梯度）作为分组底色，节点色编码实体**类型**，不跟随 subgraph 层编号：
+
+| 场景 | 用法 |
 |------|------|
-| `init.themeVariables` | 填入 `%%{init: {"theme":"base","themeVariables":{...}}}%%` |
-| `subgraph.layer1/2/3` | 各层 subgraph `fill`/`stroke`（layer1 = 最重要/上游） |
-| `node.primary` | 强调节点色 — 关键实体，每图最多 1–2 个节点使用 |
-| `node.secondary` | 第二类型节点色 — 不同实体类型时使用 |
-| `node.neutral` | 默认内容节点色 — 同类实体的统一背景色 |
-| `semantic.*` | 语义辅助色（alert / opportunity / hold / speculative / value） |
-| `edge.primary/secondary` | 主路径 / 次路径颜色 |
-| `rules` | 深色阈值、深色/浅色节点文字色 |
+| 同类实体（如供应链企业） | 全部用 `flowchart.node.neutral`（白色卡片） |
+| 不同实体类型 | `node.primary` / `node.secondary` 区分类型 |
+| 投资信号 / 风险状态 | `semantic.opportunity` / `semantic.alert` / `semantic.hold` |
 
-### 节点配色原则
+节点文字色：fill 浅于 `rules.dark_text_threshold` → `color:#212427`；否则 `color:#fff`。
 
-**subgraph 层次感 ≠ 节点颜色**：subgraph 的深浅梯度已承载层次信息，节点色应编码**节点属性/类型**，而非重复层编号。
+### stateDiagram-v2 — classDef
 
-| 场景 | 节点着色 |
-|------|---------|
-| 同类实体（如供应链公司节点） | 全部用 `node.neutral` — 统一色 |
-| 不同实体类型（如硬件 vs 软件） | `node.primary` / `node.secondary` 区分类型 |
-| 投资信号 / 状态节点 | `semantic.opportunity` / `semantic.alert` / `semantic.hold` |
+从 `stateDiagram.classDef` 读取，逐行写入图顶部：
 
-### 配色规则（通用）
+```
+classDef neutral     fill:#EBEBEB,stroke:#C8C8C8,color:#212427
+classDef opportunity fill:#E87722,stroke:#BA5F1B,color:#fff
+classDef hold        fill:#666666,stroke:#525252,color:#fff
+classDef danger      fill:#CC0000,stroke:#A30000,color:#fff
+```
 
-- subgraph 使用**弱色背景**（浅灰 #E5–#F5 段）作为分组底色，不与节点抢视觉
-- 节点浅色背景（fill 浅于 `rules.dark_text_threshold`）用 `color:#212427`；深色节点用 `color:#fff`
-- **节点色不跟随 subgraph 层编号**；subgraph 层次通过深浅梯度体现
-- 同一图内最多使用 **3 种主色** + 语义辅助色
-- `quadrantChart` 的 quadrant 标签不加颜色（库自动渲染）
-- `timeline` / `gantt` / `stateDiagram` 使用库默认颜色，不强制品牌色
+### sequenceDiagram / gantt / timeline — %%{init}%%
 
-> 完整 RB 配色模板（含三层产业链示例）→ `references/color-templates.md`
+从各自 `<type>.init` 字段读取 themeVariables，写入图**首行**（仅这三种图类型允许 `%%{init}%%`）：
+
+```
+%%{init: {"theme":"base","themeVariables":{...}}}%%
+```
+
+完整键值见主题文件对应分区。
+
+### 语义辅助色（跨图类型共享）
+
+`semantic.*` 在所有图类型中语义一致：
+
+| 键 | 用途 | Bain 颜色 |
+|----|------|-----------|
+| `alert` | 风险 / 规避 | `#CC0000` 红 |
+| `opportunity` | 机会 / 买入 | `#E87722` 橙 |
+| `hold` | 中性 / 观察 | `#666666` 灰 |
+| `speculative` | 主题 / 高波动 | `#2E0078` 紫 |
+| `value` | 权威 / 核心配置 | `#1A1A1A` 近黑 |
+
+> 完整 Bain 配色示例 → `tests/bain-style-test.md`
 
 ---
 

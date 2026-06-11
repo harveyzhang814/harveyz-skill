@@ -1,6 +1,6 @@
 # Mermaid 配色测试 — Bain & Company 风格
 
-用于验证 Bain 近黑 subgraph + Bain Red 节点配色在各图类型下的视觉效果。
+用于验证 Bain 品牌配色在各图类型下的视觉效果。每种图类型使用对应的样式机制。
 主题文件：`themes/bain.json`
 
 ---
@@ -63,9 +63,10 @@ flowchart TD
 
 ---
 
-## 3. sequenceDiagram — 系统调用时序（库默认色）
+## 3. sequenceDiagram — 系统调用时序（%%{init}%% themeVariables）
 
 ```mermaid
+%%{init: {"theme":"base","themeVariables":{"actorBkg":"#FFFFFF","actorBorder":"#CC0000","actorTextColor":"#212427","actorLineColor":"#888888","noteBkg":"#F0F0F0","noteTextColor":"#212427","activationBkgColor":"#FFEEEE","activationBorderColor":"#CC0000","signalColor":"#333333","signalTextColor":"#212427"}}}%%
 sequenceDiagram
     participant U as 用户
     participant C as Claude Code
@@ -89,11 +90,12 @@ sequenceDiagram
 
 ---
 
-## 4. stateDiagram-v2 — 估值周期状态机
+## 4. stateDiagram-v2 — 估值周期状态机（classDef）
 
 ```mermaid
 stateDiagram-v2
     direction TB
+    classDef neutral     fill:#EBEBEB,stroke:#C8C8C8,color:#212427
     classDef opportunity fill:#E87722,stroke:#BA5F1B,color:#fff
     classDef hold        fill:#666666,stroke:#525252,color:#fff
     classDef danger      fill:#CC0000,stroke:#A30000,color:#fff
@@ -139,9 +141,10 @@ quadrantChart
 
 ---
 
-## 6. timeline — 里程碑时间轴（库默认色）
+## 6. timeline — 里程碑时间轴（%%{init}%% cScale）
 
 ```mermaid
+%%{init: {"theme":"base","themeVariables":{"cScale0":"#CC0000","cScale1":"#666666","cScale2":"#CC0000","cScale3":"#666666","cScale4":"#CC0000","cScale5":"#666666","titleColor":"#212427"}}}%%
 timeline
     title AI 大模型发展里程碑
     2017 : Transformer 架构发布
@@ -154,9 +157,10 @@ timeline
 
 ---
 
-## 7. gantt — 项目计划（库默认色）
+## 7. gantt — 项目计划（%%{init}%% themeVariables）
 
 ```mermaid
+%%{init: {"theme":"base","themeVariables":{"taskBkgColor":"#E8E8E8","taskBorderColor":"#BBBBBB","taskTextColor":"#212427","activeTaskBkgColor":"#CC0000","activeTaskBorderColor":"#A30000","critBkgColor":"#7B1010","critBorderColor":"#B52020","doneTaskBkgColor":"#F5F5F5","doneTaskBorderColor":"#D8D8D8","sectionBkgColor":"#FFFFFF","altSectionBkgColor":"#F8F8F8","gridColor":"#DDDDDD","titleColor":"#212427"}}}%%
 gantt
     title 报告生产排期
     dateFormat  YYYY-MM-DD
