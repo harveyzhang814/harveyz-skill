@@ -1,26 +1,63 @@
 {
+  "toolBundleMeta": {
+    "shell-tools": "终端工具（p-launch 本地仓库管理器）"
+  },
+  "tools": [
+    {
+      "name": "p-launch",
+      "bundle": "shell-tools"
+    }
+  ],
   "bundleMeta": {
-    "analysis": "分析工具（skill-analyzer）",
+    "analysis": "分析工具（skill-analyzer + git-cleanup）",
     "brainstorming": "设计与规划工具（brainstorming + writing-plans）",
-    "dev": "开发工作流（executing-plans + systematic-debugging + using-git-worktrees）",
+    "dev": "开发工作流（executing-plans + systematic-debugging + using-git-worktrees + git-workflow-init）",
     "document": "文档工具（diataxis-docs）",
     "harness": "测试工具（full-stack-debug-env）",
     "task": "任务管理（pm-task-dispatch + task-close）",
-    "web-fetch": "网页抓取工具（article-fetcher）",
-    "writing": "写作工具（mermaid-diagram）"
+    "data-extraction": "数据提取工具（article-fetcher + url-extract + vision-extract + youtube-learner）",
+    "writing": "写作工具（mermaid-diagram + doc-forge）",
+    "design": "设计同步工具（sync-design-html）",
+    "meta": "元操作工具（对 harveyz-skill 仓库本身的管理）",
+    "workflow": "工作流工具（backlog 管理、TODO 追踪）"
   },
   "skills": [
-    { "path": "analysis/skill-analyzer", "bundle": "analysis", "exclude": ["research/"] },
+    { "path": "analysis/skill-analyzer", "bundle": "analysis" },
     { "path": "harness/diataxis-docs", "bundle": "document" },
     { "path": "harness/full-stack-debug-env", "bundle": "harness" },
     { "path": "superpowers-fork/brainstorming", "bundle": "brainstorming" },
+    { "path": "harness/git-workflow-init", "bundle": "dev" },
     { "path": "superpowers-fork/executing-plans", "bundle": "dev" },
     { "path": "superpowers-fork/systematic-debugging", "bundle": "dev" },
     { "path": "superpowers-fork/using-git-worktrees", "bundle": "dev" },
     { "path": "superpowers-fork/writing-plans", "bundle": "brainstorming" },
     { "path": "task/pm-task-dispatch", "bundle": "task" },
     { "path": "task/task-close", "bundle": "task" },
-    { "path": "web-fetch/article-fetcher", "bundle": "web-fetch" },
-    { "path": "writing/mermaid-diagram", "bundle": "writing" }
+    { "path": "data-extraction/article-fetcher", "bundle": "data-extraction" },
+    { "path": "data-extraction/url-extract", "bundle": "data-extraction" },
+    { "path": "data-extraction/vision-extract", "bundle": "data-extraction" },
+    { "path": "data-extraction/youtube-learner", "bundle": "data-extraction" },
+    { "path": "writing/mermaid-diagram", "bundle": "writing" },
+    { "path": "writing/doc-forge", "bundle": "writing" },
+    { "path": "design/sync-design-html", "bundle": "design" },
+    { "path": "analysis/git-cleanup", "bundle": "analysis" },
+    { "path": "meta/contribute-skill", "bundle": "meta" },
+    { "path": "harness/migrate-specs", "bundle": "harness" },
+    { "path": "workflow/add-todo", "bundle": "workflow" },
+    { "path": "harness/dir-manage", "bundle": "document" },
+    { "path": "writing/capture-insight", "bundle": "writing" },
+    { "path": "meta/skill-publish", "bundle": "meta" },
+    { "path": "meta/npm-release", "bundle": "meta" }
+  ],
+  "hooks": [
+    {
+      "name": "check-similar-branch",
+      "description": "用 LLM 语义分析检测相似分支",
+      "path": "hooks/check-similar-branch",
+      "event": "PreToolUse",
+      "matcher": "Bash",
+      "timeout": 60,
+      "statusMessage": "检查相似分支..."
+    }
   ]
 }

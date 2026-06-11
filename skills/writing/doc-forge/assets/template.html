@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+{{CSS_CONTENT}}
+</style>
+</head>
+<body>
+{{BODY_CONTENT}}
+<script src="{{MERMAID_JS_PATH}}"></script>
+<script>
+if (typeof mermaid !== 'undefined') {
+  mermaid.initialize({ startOnLoad: true, theme: 'neutral' });
+}
+</script>
+</body>
+</html>

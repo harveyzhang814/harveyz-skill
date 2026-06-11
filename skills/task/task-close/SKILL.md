@@ -1,6 +1,8 @@
 ---
 name: task-close
-description: 任务收尾技能。当 Agent 完成接受的任务后自触发，执行任务验收、总结、文档归档和问题记录。触发条件：Agent 已实际完成任务，需要进行收尾工作时使用。
+version: "1.0.0"
+description: "Task wrap-up skill. Self-triggers after an Agent has completed its assigned task — performs task acceptance, summary, document archiving, and lessons-learned recording. Triggers when an Agent has actually finished a task and needs to carry out closing work."
+user_invocable: true
 ---
 
 # Task Acceptance - 任务收尾技能

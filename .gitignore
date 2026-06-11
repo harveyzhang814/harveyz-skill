@@ -4,7 +4,9 @@
 # 保留根目录文件
 !.gitignore
 !README.md
+!CHANGELOG.md
 !CLAUDE.md
+!TODO.md
 !package.json
 !package-lock.json
 !bundles.json
@@ -35,10 +37,24 @@
 !skills/**/
 !skills/**/*
 
+# 保留工具目录
+!tools/
+!tools/**/
+!tools/**/*
+
+# 保留 hooks 目录
+!hooks/
+!hooks/**/
+!hooks/**/*
+
 # 保留文档目录
 !docs/
 !docs/**/
 !docs/**/*
+
+# 保留测试目录
+!tests/
+!tests/**
 
 
 
@@ -52,5 +68,10 @@ node_modules/
 __pycache__/
 *.log
 
-# 本地插件配置
+# .claude 配置文件
+!.claude/
+!.claude/**
 .claude/*.local.md
+.claude/settings.local.json
+.claude/skills/
+.gstack/

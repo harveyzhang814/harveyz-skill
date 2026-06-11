@@ -1,0 +1,9 @@
+[
+  {
+    "name": "PROJECT_DIR",
+    "description": "Project root directory (add more paths later in ~/.config/p-launch/config.zsh)",
+    "default": "{{HOME}}/Projects",
+    "configFile": "~/.config/p-launch/config.zsh",
+    "configKey": "PROJECT_DIRS"
+  }
+]
