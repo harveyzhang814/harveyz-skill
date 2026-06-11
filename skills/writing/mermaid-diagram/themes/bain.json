@@ -1,0 +1,46 @@
+{
+  "_brand": "Bain & Company",
+  "_source": "knowledge/design/bain-style.md",
+  "init": {
+    "theme": "base",
+    "themeVariables": {
+      "primaryColor":       "#CC0000",
+      "primaryBorderColor": "#990000",
+      "primaryTextColor":   "#FFFFFF",
+      "secondaryColor":     "#666666",
+      "tertiaryColor":      "#BBBBBB",
+      "background":         "#FFFFFF",
+      "mainBkg":            "#CC0000",
+      "clusterBkg":         "#1A1A1A",
+      "titleColor":         "#1A1A1A",
+      "lineColor":          "#DDDDDD",
+      "edgeLabelBackground":"#FFFFFF"
+    }
+  },
+  "subgraph": {
+    "layer1": { "fill": "#1A1A1A", "stroke": "#3D3D3D", "note": "上游 / 核心结构层" },
+    "layer2": { "fill": "#2D2D2D", "stroke": "#4D4D4D", "note": "中间层" },
+    "layer3": { "fill": "#3D3D3D", "stroke": "#5D5D5D", "note": "应用层 / 下游" }
+  },
+  "node": {
+    "layer1": { "fill": "#CC0000", "stroke": "#990000", "note": "Bain Red — 关键节点 / 结论" },
+    "layer2": { "fill": "#990000", "stroke": "#660000", "note": "Deep Red — 次级重点" },
+    "layer3": { "fill": "#444444", "stroke": "#666666", "note": "深灰 — 支撑节点" }
+  },
+  "semantic": {
+    "alert":       { "fill": "#CC0000", "stroke": "#990000", "note": "风险 / 问题（Bain Red）" },
+    "opportunity": { "fill": "#E87722", "stroke": "#C05010", "note": "机会 / 橙色第三维度" },
+    "hold":        { "fill": "#666666", "stroke": "#888888", "note": "中性 / 观察" },
+    "speculative": { "fill": "#003366", "stroke": "#1A4D99", "note": "外部对比方 / 竞争对手" },
+    "value":       { "fill": "#1A1A1A", "stroke": "#3D3D3D", "note": "权威 / 结论性陈述" }
+  },
+  "edge": {
+    "primary":   "#CC0000",
+    "secondary": "#888888"
+  },
+  "rules": {
+    "dark_text_threshold": "#4A4A4A",
+    "dark_node_text":  "#FFFFFF",
+    "light_node_text": "#000000"
+  }
+}

@@ -2,7 +2,7 @@
 name: mermaid-diagram
 description: "Professional Mermaid diagramming standards. Triggers immediately when the user mentions drawing diagrams, flowcharts, sequence diagrams, state machines, Gantt charts, quadrant charts, mind maps, or needs to embed any Mermaid chart in a Markdown document. Supports flowchart, sequenceDiagram, stateDiagram, timeline, gantt, quadrantChart, and mindmap."
 user_invocable: true
-version: "1.3.0"
+version: "1.4.0"
 ---
 
 # Mermaid 专业作图标准
@@ -75,38 +75,40 @@ Markdown 渲染器页面宽度通常 700–900px，图表必须适配：
 
 ---
 
-## 3. Roland Berger 配色体系
+## 3. 配色主题系统
 
-### 核心色板
+配色从品牌主题文件读取，**不在图中硬编码**。生成图表前先读取对应文件：
 
-```
-主色 Deep Navy   #00205B   用于最重要/最底层/上游  subgraph
-主色 RB Blue     #003E96   用于中间层/平台层        subgraph
-中蓝 Medium Blue #1E5C9E   用于应用层/下游          subgraph
-节点 Navy Node   #0A2E7A   上游 subgraph 内节点
-节点 Blue Node   #0050B8   中游 subgraph 内节点
-节点 Mid Node    #2A6EAE   下游 subgraph 内节点
-```
+| 品牌 | 主题文件 | 默认 |
+|------|---------|:----:|
+| Roland Berger | `themes/rb.json` | ✓ |
+| BCG | `themes/bcg.json` | |
+| Bain | `themes/bain.json` | |
 
-### 语义辅助色
+用户未指定品牌时默认使用 RB 主题。
 
-```
-预警 / 高风险    fill:#7B1010  stroke:#B52020
-机会 / 买入      fill:#1A5E3A  stroke:#2A7E50
-等待 / 持有      fill:#003E96  stroke:#1A6AC4
-投机 / 主题      fill:#2E0078  stroke:#5A20A0
-价值 / 配置      fill:#004060  stroke:#1A5E80
-```
+### 主题文件结构
 
-### 配色规则
+每个 `themes/<brand>.json` 包含以下字段，读取后按需使用：
 
-- 深色背景（fill 暗于 `#4A4A4A`）**必须**加 `color:#fff`
+| 字段 | 用途 |
+|------|------|
+| `init.themeVariables` | 填入 `%%{init: {"theme":"base","themeVariables":{...}}}%%` |
+| `subgraph.layer1/2/3` | 各层 subgraph `fill`/`stroke`（layer1 = 最重要/上游） |
+| `node.layer1/2/3` | 各层节点 `fill`/`stroke` |
+| `semantic.*` | 语义辅助色（alert / opportunity / hold / speculative / value） |
+| `edge.primary/secondary` | 主路径 / 次路径颜色 |
+| `rules` | 深色阈值、深色/浅色节点文字色 |
+
+### 配色规则（通用）
+
+- 深色背景（fill 深于 `rules.dark_text_threshold`）**必须**加 `color:#fff`
 - subgraph 背景比节点背景**深 10–15%**（提供层次感）
 - 同一图内最多使用 **3 种主色** + 语义辅助色
 - `quadrantChart` 的 quadrant 标签不加颜色（库自动渲染）
-- `timeline` / `gantt` / `stateDiagram` 使用库默认颜色，不强制 RB 色
+- `timeline` / `gantt` / `stateDiagram` 使用库默认颜色，不强制品牌色
 
-> 完整配色模板（含三层产业链示例）→ `references/color-templates.md`
+> 完整 RB 配色模板（含三层产业链示例）→ `references/color-templates.md`
 
 ---
 
@@ -179,7 +181,9 @@ Markdown 渲染器页面宽度通常 700–900px，图表必须适配：
 知识树          → mindmap
 ```
 
-### RB 配色速查
+### 配色速查
+
+读取 `themes/<brand>.json` 获取完整色值；RB 默认速查：
 
 ```
 上游子图   fill:#00205B  stroke:#1E4A9A
@@ -194,6 +198,8 @@ Markdown 渲染器页面宽度通常 700–900px，图表必须适配：
 价值蓝绿   fill:#004060  stroke:#1A5E80
 所有深色背景加 color:#fff
 ```
+
+BCG / Bain 品牌色 → 读取 `themes/bcg.json` / `themes/bain.json`
 
 ### 禁用字符替换
 
