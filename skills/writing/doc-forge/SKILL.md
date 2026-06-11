@@ -1,106 +1,106 @@
 ---
 name: doc-forge
-description: "Convert documents between formats. Trigger whenever the user wants to: convert/export a .md file to Word or docx, says 'md转docx', 'markdown转word', '生成Word文档', 'export as docx', '导出Word'; OR convert to PDF, says 'md转pdf', 'markdown转pdf', '导出PDF', 'export as pdf', '生成PDF'; OR has a markdown file they need to share or browse as Word/PDF. Also trigger when the user writes a document in the conversation and wants it as .docx or .pdf."
+description: "Convert documents between formats. Trigger when the user wants to convert or export a Markdown file to Word (.docx) or PDF — e.g. 'export as docx', 'convert to Word', 'export as pdf', 'generate PDF' — or when the user writes a document in the conversation and wants it as .docx or .pdf."
 user_invocable: true
-version: "2.0.0"
+version: "2.1.0"
 ---
 
-## Overview
+## 概述
 
-Convert a Markdown file to Word (.docx) or PDF. Both formats support headings, tables, code blocks, lists, inline formatting, blockquotes, and embedded images. PDF additionally supports Mermaid diagrams (rendered as vector SVG).
+将 Markdown 文件转换为 Word（.docx）或 PDF。两种格式均支持标题、表格、代码块、列表、行内格式、引用块、嵌入图片和 Mermaid 图表（DOCX 渲染为 PNG，PDF 渲染为矢量 SVG）。
 
-**Script locations (after `hskill` install):**
-- DOCX: `~/.claude/skills/doc-forge/scripts/md_to_docx.py`
-- PDF:  `~/.claude/skills/doc-forge/scripts/md_to_pdf.py`
+**脚本位置（`hskill` 安装后）：**
+- DOCX：`~/.claude/skills/doc-forge/scripts/md_to_docx.py`
+- PDF：`~/.claude/skills/doc-forge/scripts/md_to_pdf.py`
 
 ---
 
-## DOCX Conversion
+## DOCX 转换
 
-**Basic:**
+**基础用法：**
 ```bash
 python3 ~/.claude/skills/doc-forge/scripts/md_to_docx.py input.md
-# → input.docx in the same directory
+# → 在同目录生成 input.docx
 ```
 
-**Specify output:**
+**指定输出路径：**
 ```bash
 python3 ~/.claude/skills/doc-forge/scripts/md_to_docx.py input.md output.docx
 ```
 
-**Custom style:**
+**自定义样式：**
 ```bash
 python3 ~/.claude/skills/doc-forge/scripts/md_to_docx.py input.md --style custom.json
 ```
 
-**Dump default style to customize:**
+**导出默认样式以便修改：**
 ```bash
 python3 ~/.claude/skills/doc-forge/scripts/md_to_docx.py --dump-style > style.json
 ```
 
-**Dependencies:** `pip install python-docx`
+**依赖：** `pip install python-docx`（Mermaid 图表需额外安装 playwright，同 PDF 转换）
 
 ---
 
-## PDF Conversion
+## PDF 转换
 
-**Basic:**
+**基础用法：**
 ```bash
 python3 ~/.claude/skills/doc-forge/scripts/md_to_pdf.py input.md
-# → input.pdf in the same directory
+# → 在同目录生成 input.pdf
 ```
 
-**Specify output:**
+**指定输出路径：**
 ```bash
 python3 ~/.claude/skills/doc-forge/scripts/md_to_pdf.py input.md output.pdf
 ```
 
-**Custom style:**
+**自定义样式：**
 ```bash
 python3 ~/.claude/skills/doc-forge/scripts/md_to_pdf.py input.md --style custom.css
 ```
 
-**Dump default CSS to customize:**
+**导出默认 CSS 以便修改：**
 ```bash
 python3 ~/.claude/skills/doc-forge/scripts/md_to_pdf.py --dump-style > style.css
 ```
 
-**Dependencies:** `pip install markdown` (playwright already required)
+**依赖：** `pip install markdown`（playwright 已为必需项）
 
-**Mermaid (optional, for offline use):** `npm install mermaid` inside the skill directory. Without this, mermaid.js is loaded from CDN.
+**Mermaid（可选，离线使用）：** 在 skill 目录内执行 `npm install mermaid`。不安装时从 CDN 加载。
 
 ---
 
-## What Gets Converted
+## 支持的元素
 
 | Markdown | DOCX | PDF |
 |----------|------|-----|
-| `# H1` … `#### H4` | Styled headings | Styled headings |
-| Paragraphs | 2-char indent, 宋体 | 2em indent |
-| **bold**, *italic*, `code`, ~~strike~~, [links](url) | Inline runs | Inline HTML |
-| ` ``` ` code blocks | Courier New, indented | Monospace, shaded |
-| `>` blockquotes | 仿宋, indented | Indented, grey |
-| Lists (ordered & unordered) | Bullets/numbers | Standard HTML lists |
-| Pipe tables | Styled with header shading | Styled with header shading |
-| `---` horizontal rule | Grey line | Grey line |
-| `![alt](path)` images | ❌ Not supported | ✅ Loaded via base_url |
-| ` ```mermaid` diagrams | ❌ Not supported | ✅ Rendered as SVG |
+| `# H1` … `#### H4` | 带样式标题 | 带样式标题 |
+| 段落 | 首行缩进 2 字符，宋体 | 2em 缩进 |
+| **粗体**、*斜体*、`行内代码`、~~删除线~~、[链接](url) | 行内 runs | 行内 HTML |
+| 代码块（` ``` `） | Courier New，带缩进 | 等宽字体，灰底 |
+| `>` 引用块 | 仿宋，带缩进 | 缩进，灰色 |
+| 有序/无序列表 | 项目符号/编号 | 标准 HTML 列表 |
+| 管道表格 | 带表头底色 | 带表头底色 |
+| `---` 分隔线 | 灰色横线 | 灰色横线 |
+| `![alt](path)` 图片 | ✅ 相对/绝对路径均支持 | ✅ 通过 base_url 加载 |
+| ` ```mermaid` 图表 | ✅ 渲染为 PNG（需 playwright） | ✅ 渲染为 SVG |
 
 ---
 
-## Style Customization
+## 样式定制
 
-**DOCX** — style.json keys: `page`, `body`, `headings` (h1–h4), `code_block`, `blockquote`, `table`. Only include sections to override; rest uses defaults.
+**DOCX** — style.json 键：`page`、`body`、`headings`（h1–h4）、`code_block`、`blockquote`、`table`。只需包含要覆盖的部分，其余使用默认值。
 
-**PDF** — style.css: standard CSS file. Use `--dump-style` to get the full default as a starting point. Supports all CSS properties recognized by Chromium (including `@page` for margins/size).
+**PDF** — style.css：标准 CSS 文件。用 `--dump-style` 导出完整默认样式作为起点。支持 Chromium 识别的所有 CSS 属性（包括用于页边距/尺寸的 `@page`）。
 
 ---
 
-## If the skill directory isn't installed
+## 未安装 skill 目录时
 
 ```bash
 # DOCX
-python3 tools/md-formatter/md_to_docx.py input.md
+python3 skills/writing/doc-forge/scripts/md_to_docx.py input.md
 # PDF
 python3 skills/writing/doc-forge/scripts/md_to_pdf.py input.md
 ```

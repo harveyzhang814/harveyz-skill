@@ -9,9 +9,11 @@ Style config: JSON file with format spec. See assets/default-style.json.
 """
 
 import argparse
+import io
 import json
 import re
 import sys
+import tempfile
 from pathlib import Path
 
 from docx import Document
@@ -21,6 +23,50 @@ from docx.oxml.ns import qn
 from docx.shared import Cm, Pt, RGBColor
 
 ASSETS_DIR = Path(__file__).parent.parent / "assets"
+
+
+def _mermaid_js_src() -> str:
+    local = Path(__file__).parent.parent / "node_modules" / "mermaid" / "dist" / "mermaid.min.js"
+    if local.exists():
+        return local.as_uri()
+    return "https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"
+
+
+def render_mermaid_png(mermaid_code: str) -> bytes | None:
+    """Render Mermaid diagram to PNG via Playwright. Returns None if unavailable."""
+    try:
+        from playwright.sync_api import sync_playwright
+    except ImportError:
+        return None
+
+    html = f"""<!DOCTYPE html>
+<html><head><meta charset="utf-8">
+<script src="{_mermaid_js_src()}"></script>
+<style>body{{margin:0;background:white}}.mermaid{{display:inline-block}}</style>
+</head><body>
+<pre class="mermaid">{mermaid_code}</pre>
+<script>mermaid.initialize({{startOnLoad:true}});</script>
+</body></html>"""
+
+    tmp = Path(tempfile.mktemp(suffix=".html"))
+    try:
+        tmp.write_text(html, encoding="utf-8")
+        with sync_playwright() as p:
+            browser = p.chromium.launch()
+            page = browser.new_page()
+            page.goto(tmp.as_uri())
+            page.wait_for_function(
+                "document.querySelector('pre.mermaid svg') !== null",
+                timeout=10000,
+            )
+            el = page.query_selector("pre.mermaid")
+            png = el.screenshot()
+            browser.close()
+        return png
+    except Exception:
+        return None
+    finally:
+        tmp.unlink(missing_ok=True)
 
 # ── Helpers ────────────────────────────────────────────────────────────────────
 
@@ -179,8 +225,11 @@ def parse_md_blocks(md_text: str) -> list[dict]:
             while i < len(lines) and not lines[i].startswith("```"):
                 code_lines.append(lines[i])
                 i += 1
-            blocks.append({"type": "code", "lang": lang,
-                           "text": "\n".join(code_lines)})
+            text = "\n".join(code_lines)
+            if lang == "mermaid":
+                blocks.append({"type": "mermaid", "text": text})
+            else:
+                blocks.append({"type": "code", "lang": lang, "text": text})
             i += 1
             continue
 
@@ -243,6 +292,13 @@ def parse_md_blocks(md_text: str) -> list[dict]:
             blocks.append({"type": "table", "header": header, "rows": rows})
             continue
 
+        # Standalone image: ![alt](path)
+        m = re.match(r"^\s*!\[([^\]]*)\]\(([^)]+)\)\s*$", line)
+        if m:
+            blocks.append({"type": "image", "alt": m.group(1), "src": m.group(2)})
+            i += 1
+            continue
+
         # Blank line
         if line.strip() == "":
             blocks.append({"type": "blank"})
@@ -273,7 +329,7 @@ def parse_md_blocks(md_text: str) -> list[dict]:
 
 # ── Document builder ──────────────────────────────────────────────────────────
 
-def build_docx(blocks: list[dict], style: dict) -> Document:
+def build_docx(blocks: list[dict], style: dict, base_dir: Path | None = None) -> Document:
     doc = Document()
 
     # Page margins
@@ -341,6 +397,38 @@ def build_docx(blocks: list[dict], style: dict) -> Document:
             run.font.size = Pt(code_cfg["size_pt"])
             set_paragraph_format(para, space_before=6, space_after=6,
                                  left_indent=1.0)
+
+        elif btype == "image":
+            src = block["src"]
+            img_path = Path(src) if Path(src).is_absolute() else (base_dir / src if base_dir else Path(src))
+            para = doc.add_paragraph()
+            set_paragraph_format(para, space_before=6, space_after=6, align="center")
+            run = para.add_run()
+            if img_path.exists():
+                run.add_picture(str(img_path), width=Cm(14))
+            else:
+                run.italic = True
+                run.text = f"[图片: {block['alt'] or src}]"
+                apply_run_format(run, body["font"], body["font_en"], body["size_pt"],
+                                 italic=True, color="888888")
+
+        elif btype == "mermaid":
+            png = render_mermaid_png(block["text"])
+            if png:
+                para = doc.add_paragraph()
+                set_paragraph_format(para, space_before=6, space_after=6,
+                                     align="center")
+                run = para.add_run()
+                run.add_picture(io.BytesIO(png), width=Cm(14))
+            else:
+                # Playwright unavailable — render as fenced code block
+                para = doc.add_paragraph()
+                run = para.add_run("```mermaid\n" + block["text"] + "\n```")
+                run.font.name = code_cfg["font"]
+                run._r.rPr.rFonts.set(qn("w:eastAsia"), code_cfg["font"])
+                run.font.size = Pt(code_cfg["size_pt"])
+                set_paragraph_format(para, space_before=6, space_after=6,
+                                     left_indent=1.0)
 
         elif btype == "blockquote":
             para = doc.add_paragraph()
@@ -460,7 +548,7 @@ def main():
 
     md_text = input_path.read_text(encoding="utf-8")
     blocks = parse_md_blocks(md_text)
-    doc = build_docx(blocks, style)
+    doc = build_docx(blocks, style, base_dir=input_path.resolve().parent)
     doc.save(output_path)
     print(f"Saved: {output_path}")
 
