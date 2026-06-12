@@ -13,11 +13,11 @@ CLI="${REPO_ROOT}/bin/cli.js"
 NODE="$(which node)"
 
 SKILL1_NAME="skill-analyzer"
-SKILL1_SRC="${REPO_ROOT}/skills/analysis/skill-analyzer"
+SKILL1_SRC="${REPO_ROOT}/skills/meta/skill-analyzer"
 SKILL1_VER="1.0.0"
 
 SKILL2_NAME="diataxis-docs"
-SKILL2_SRC="${REPO_ROOT}/skills/harness/diataxis-docs"
+SKILL2_SRC="${REPO_ROOT}/skills/writing/diataxis-docs"
 
 TOOL_NAME="p-launch"
 TOOL_SRC="${REPO_ROOT}/tools/p-launch"
@@ -147,21 +147,21 @@ _skill_version() {
 
 # ── bundle installation ───────────────────────────────────────────────────────
 
-@test "install --bundle analysis: installs all skills in the bundle" {
-  _install --bundle analysis --target claude --scope user --force
-  # analysis bundle contains skill-analyzer.
+@test "install --bundle meta: installs all skills in the bundle" {
+  _install --bundle meta --target claude --scope user --force
+  # meta bundle contains skill-analyzer.
   [ -f "${MOCK_HOME}/.claude/skills/${SKILL1_NAME}/SKILL.md" ]
 }
 
-@test "install --bundle document: installs all skills in the bundle" {
-  _install --bundle document --target claude --scope user --force
+@test "install --bundle writing: installs all skills in the bundle" {
+  _install --bundle writing --target claude --scope user --force
   [ -f "${MOCK_HOME}/.claude/skills/${SKILL2_NAME}/SKILL.md" ]
 }
 
 @test "install --bundle: --json reports installed list" {
   local out
   out=$(HOME="${MOCK_HOME}" node "${CLI}" install \
-    --bundle analysis --target claude --scope user --force --json 2>/dev/null | cat)
+    --bundle meta --target claude --scope user --force --json 2>/dev/null | cat)
   echo "$out" | node -e "JSON.parse(require('fs').readFileSync('/dev/stdin','utf8'))"
   [[ "$out" == *'"installed"'* ]]
   [[ "$out" == *"${SKILL1_NAME}"* ]]
