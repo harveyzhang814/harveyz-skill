@@ -2,7 +2,7 @@
 name: npm-release
 description: "Complete npm publish workflow for harveyz-skill: bump version, update CHANGELOG, create release branch, merge to staging then main, tag, and publish to npm. Use this skill whenever the user wants to release, publish, cut a version, bump version, ship to npm, or deploy a new package version."
 user_invocable: true
-version: "1.1.0"
+version: "1.2.0"
 ---
 
 # npm-release
@@ -100,14 +100,26 @@ npm version <new-version> --no-git-tag-version
 
 ---
 
+## Step 3.5 — 同步 .npmignore 和 package.json files 字段
+
+运行生成脚本，确保 `.npmignore` 和 `package.json` 中的 `files` 字段与当前 `skills-index.json` 保持一致：
+
+```bash
+node scripts/generate-npmignore.js
+```
+
+检查输出有无报错。此步骤必须在提交前完成，否则新增或重命名的 skill 路径不会被正确包含/排除。
+
+---
+
 ## Step 4 — 创建 release 分支并提交
 
 ```bash
 # 从当前 staging 切出 release 分支
 git checkout -b release/<new-version>
 
-# 只提交 CHANGELOG 和 package.json、package-lock.json
-git add CHANGELOG.md package.json package-lock.json
+# 提交 CHANGELOG、package.json、package-lock.json 和 .npmignore
+git add CHANGELOG.md package.json package-lock.json .npmignore
 git commit -m "chore(release): bump version to <new-version>"
 ```
 
