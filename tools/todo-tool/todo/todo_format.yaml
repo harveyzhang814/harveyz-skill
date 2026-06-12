@@ -1,0 +1,29 @@
+version: "1.0"
+
+file_structure:
+  sections:
+    pending: "## 🚧 待开发"
+    done: "## ✅ 已完成"
+  task_separator: "---"
+
+task_block:
+  heading:
+    level: 3
+    max_length: 20
+  metadata_line:
+    template: "**优先级**: {priority} | **日期**: {date} | **ID**: {id}"
+    pattern: '^\*\*优先级\*\*:\s*(?P<priority>P[0-3])\s*\|\s*\*\*日期\*\*:\s*(?P<date>\d{4}-\d{2}-\d{2})(?:\s*\|\s*\*\*ID\*\*:\s*(?P<id>\d+))?'
+    fields:
+      priority:
+        type: enum
+        values: [P0, P1, P2, P3]
+        default: P2
+      date:
+        type: string
+        format: "YYYY-MM-DD"
+      id:
+        type: integer
+        optional: true
+  description:
+    type: string
+    required: false
