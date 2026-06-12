@@ -11,19 +11,73 @@ def isolated_db(tmp_path, monkeypatch):
     monkeypatch.setenv("TODO_DB_PATH", str(tmp_path / "test.db"))
 
 
+def _add_project(name: str, path: str = None):
+    args = ["project", "add", name]
+    if path:
+        args += ["--path", path]
+    return runner.invoke(app, args)
+
+
+# ── Project command tests ─────────────────────────────────────────────────────
+
+def test_project_add():
+    result = _add_project("myapp")
+    assert result.exit_code == 0
+    assert "myapp" in result.output
+
+
+def test_project_add_with_path():
+    result = _add_project("myapp", path="/home/user/myapp")
+    assert result.exit_code == 0
+    assert "myapp" in result.output
+
+
+def test_project_list():
+    _add_project("alpha")
+    _add_project("beta")
+    result = runner.invoke(app, ["project", "list"])
+    assert result.exit_code == 0
+    assert "alpha" in result.output
+    assert "beta" in result.output
+
+
+def test_project_set_path():
+    _add_project("myapp")
+    result = runner.invoke(app, ["project", "set-path", "myapp", "/new/path"])
+    assert result.exit_code == 0
+    assert "/new/path" in result.output
+
+
+def test_project_set_path_unknown():
+    result = runner.invoke(app, ["project", "set-path", "nope", "/x"])
+    assert result.exit_code == 1
+
+
+# ── Task command tests ────────────────────────────────────────────────────────
+
 def test_add_command():
+    _add_project("myapp")
     result = runner.invoke(app, ["add", "My task", "--project", "myapp"])
     assert result.exit_code == 0
     assert "My task" in result.output
 
 
+def test_add_command_unknown_project_fails():
+    result = runner.invoke(app, ["add", "My task", "--project", "nope"])
+    assert result.exit_code == 1
+    assert "not found" in result.output
+
+
 def test_add_command_with_priority():
+    _add_project("myapp")
     result = runner.invoke(app, ["add", "Urgent", "--project", "myapp", "--priority", "P0"])
     assert result.exit_code == 0
     assert "Urgent" in result.output
 
 
 def test_list_command():
+    _add_project("myapp")
+    _add_project("other")
     runner.invoke(app, ["add", "Task 1", "--project", "myapp"])
     runner.invoke(app, ["add", "Task 2", "--project", "other"])
     result = runner.invoke(app, ["list"])
@@ -33,6 +87,8 @@ def test_list_command():
 
 
 def test_list_filter_project():
+    _add_project("myapp")
+    _add_project("other")
     runner.invoke(app, ["add", "Task 1", "--project", "myapp"])
     runner.invoke(app, ["add", "Task 2", "--project", "other"])
     result = runner.invoke(app, ["list", "--project", "myapp"])
@@ -42,6 +98,7 @@ def test_list_filter_project():
 
 
 def test_list_json():
+    _add_project("myapp")
     runner.invoke(app, ["add", "Task 1", "--project", "myapp"])
     result = runner.invoke(app, ["list", "--json"])
     assert result.exit_code == 0
@@ -51,6 +108,7 @@ def test_list_json():
 
 
 def test_done_command():
+    _add_project("myapp")
     runner.invoke(app, ["add", "Task", "--project", "myapp"])
     result = runner.invoke(app, ["done", "1"])
     assert result.exit_code == 0
@@ -63,6 +121,7 @@ def test_done_missing_task():
 
 
 def test_show_command():
+    _add_project("myapp")
     runner.invoke(app, ["add", "My task", "--project", "myapp"])
     result = runner.invoke(app, ["show", "1"])
     assert result.exit_code == 0
@@ -76,17 +135,15 @@ def test_show_missing_task():
 
 
 def test_list_done_flag():
+    _add_project("myapp")
     runner.invoke(app, ["add", "Task A", "--project", "myapp"])
     runner.invoke(app, ["done", "1"])
-    # default list hides done tasks
-    result_default = runner.invoke(app, ["list"])
-    assert "Task A" not in result_default.output
-    # --done reveals them
-    result_done = runner.invoke(app, ["list", "--done"])
-    assert "Task A" in result_done.output
+    assert "Task A" not in runner.invoke(app, ["list"]).output
+    assert "Task A" in runner.invoke(app, ["list", "--done"]).output
 
 
 def test_list_priority_filter():
+    _add_project("myapp")
     runner.invoke(app, ["add", "High task", "--project", "myapp", "--priority", "P1"])
     runner.invoke(app, ["add", "Low task", "--project", "myapp", "--priority", "P3"])
     result = runner.invoke(app, ["list", "--priority", "P1"])
@@ -97,9 +154,6 @@ def test_list_priority_filter():
 
 def test_config_set_and_show(tmp_path, monkeypatch):
     import pathlib
-
-    # Replace Path.home at the module level so config_set/config_show resolve
-    # their paths under tmp_path instead of the real home directory.
     monkeypatch.setattr("todo.cli.Path", type(
         "FakePath", (pathlib.Path,), {"home": staticmethod(lambda: tmp_path)}
     ))

@@ -3,26 +3,75 @@ import typer
 from pathlib import Path
 
 from .db import TodoDB, get_db_path
-from .models import TaskCreate, TaskUpdate
+from .models import ProjectCreate, ProjectUpdate, TaskCreate, TaskUpdate
 
 app = typer.Typer(no_args_is_help=True)
 config_app = typer.Typer(no_args_is_help=True)
+project_app = typer.Typer(no_args_is_help=True)
 app.add_typer(config_app, name="config")
+app.add_typer(project_app, name="project")
 
 
 def get_db() -> TodoDB:
     return TodoDB(db_path=get_db_path())
 
 
+# ── project commands ──────────────────────────────────────────────────────────
+
+@project_app.command(name="add")
+def project_add(
+    repo_name: str = typer.Argument(..., help="GitHub repo name (e.g. video-learner)"),
+    path: str = typer.Option(None, "--path", help="Local directory path"),
+):
+    """Register a new project."""
+    db = get_db()
+    p = db.create_project(ProjectCreate(repo_name=repo_name, local_path=path))
+    typer.echo(f"✓ Project '{p.repo_name}' added (id={p.id})")
+
+
+@project_app.command(name="list")
+def project_list():
+    """List all projects."""
+    db = get_db()
+    projects = db.list_projects()
+    if not projects:
+        typer.echo("No projects found.")
+        return
+    for p in projects:
+        path_str = f"  {p.local_path}" if p.local_path else ""
+        typer.echo(f"  [{p.id}] {p.repo_name}{path_str}")
+
+
+@project_app.command(name="set-path")
+def project_set_path(
+    repo_name: str = typer.Argument(..., help="Project repo name"),
+    local_path: str = typer.Argument(..., help="Local directory path"),
+):
+    """Set the local path for a project."""
+    db = get_db()
+    project = db.get_project_by_name(repo_name)
+    if not project:
+        typer.echo(f"Project '{repo_name}' not found", err=True)
+        raise typer.Exit(1)
+    updated = db.update_project(project.id, ProjectUpdate(local_path=local_path))
+    typer.echo(f"✓ '{updated.repo_name}' local path set to {updated.local_path}")
+
+
+# ── task commands ─────────────────────────────────────────────────────────────
+
 @app.command()
 def add(
     title: str = typer.Argument(..., help="Task title"),
-    project: str = typer.Option(..., "--project", "-p", help="Project name"),
+    project: str = typer.Option(..., "--project", "-p", help="Project repo name"),
     priority: str = typer.Option("P2", "--priority", help="P0/P1/P2/P3"),
 ):
     """Add a new task."""
     db = get_db()
-    task = db.create(TaskCreate(title=title, project=project, priority=priority))
+    try:
+        task = db.create(TaskCreate(title=title, project=project, priority=priority))
+    except ValueError as e:
+        typer.echo(str(e), err=True)
+        raise typer.Exit(1)
     typer.echo(f"✓ [{task.id}] {task.title} added to {task.project}")
 
 
