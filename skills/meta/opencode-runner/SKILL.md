@@ -1,6 +1,6 @@
 ---
 name: opencode-runner
-description: "Use opencode as an independent AI agent to verify a Claude skill's instruction logic, or A/B compare Claude vs opencode following the same skill. Trigger when user says: verify this skill with opencode, validate skill logic, use opencode to check this skill, compare Claude vs opencode on this skill, 用 opencode 验证 skill, 让 opencode 独立验证这个 skill. Always use this skill when the user mentions opencode and skill validation together."
+description: "Use opencode as an independent AI agent to verify a Claude skill's instruction logic, or A/B compare Claude vs opencode following the same skill. Trigger when user says: verify this skill with opencode, validate skill logic, use opencode to check this skill, compare Claude vs opencode on this skill. Always use this skill when the user mentions opencode and skill validation together."
 user_invocable: true
 version: "1.1.0"
 ---
