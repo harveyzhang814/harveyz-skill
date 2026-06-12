@@ -192,7 +192,17 @@ TODO 文件路径按项目存储在 `.claude/todo-config.json`：
 - 序号：扫描同前缀的已有 ID，取最大值 + 1，从 `001` 起
 - 若需求横跨多个模块，用主要模块的前缀
 
-写入后确认："✅ 已将 **[MODULE-NNN] 标题** 写入 `<文件路径>`。"
+写入后，执行以下命令同步到 SQLite（若 `todo` CLI 未安装则静默跳过）：
+
+```bash
+command -v todo >/dev/null 2>&1 \
+  && todo add "{条目标题}" --project "$(basename $PWD)" --priority "{优先级前缀}" \
+  || true
+```
+
+其中 `{优先级前缀}` 取优先级标签的首两字符，如 `P2-中` → `P2`。
+
+确认："✅ 已将 **[MODULE-NNN] 标题** 写入 `<文件路径>`。"
 
 ---
 
