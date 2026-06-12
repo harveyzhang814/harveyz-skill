@@ -157,3 +157,41 @@ def test_list_tasks_filter_priority(client):
     assert r.status_code == 200
     assert len(r.json()) == 1
     assert r.json()[0]["title"] == "High"
+
+
+def test_list_tasks_lazy_sync(client, tmp_path):
+    todo_md = tmp_path / "TODO.md"
+    todo_md.write_text(
+        "# TODO\n\n## 🚧 待开发\n\n### 自动同步任务\n**优先级**: P2 | **日期**: 2026-01-01\n\n描述内容\n\n---\n\n## ✅ 已完成\n",
+        encoding="utf-8",
+    )
+    _add_project(client, "lazy-proj", path=str(tmp_path))
+
+    r = client.get("/api/tasks")
+    assert r.status_code == 200
+    tasks = r.json()
+    assert len(tasks) == 1
+    assert tasks[0]["title"] == "自动同步任务"
+    assert tasks[0]["priority"] == "P2"
+    assert "**ID**:" in todo_md.read_text(encoding="utf-8")
+
+
+def test_list_tasks_lazy_sync_idempotent(client, tmp_path):
+    todo_md = tmp_path / "TODO.md"
+    todo_md.write_text(
+        "# TODO\n\n## 🚧 待开发\n\n### 幂等测试任务\n**优先级**: P1 | **日期**: 2026-01-01\n\n描述\n\n---\n\n## ✅ 已完成\n",
+        encoding="utf-8",
+    )
+    _add_project(client, "idem-proj", path=str(tmp_path))
+
+    client.get("/api/tasks")  # first sync
+    client.get("/api/tasks")  # second sync — should not duplicate
+    r = client.get("/api/tasks")
+    assert len(r.json()) == 1
+
+
+def test_list_tasks_lazy_sync_skips_missing_todo(client, tmp_path):
+    _add_project(client, "no-todo-proj", path=str(tmp_path))
+    r = client.get("/api/tasks")
+    assert r.status_code == 200
+    assert r.json() == []

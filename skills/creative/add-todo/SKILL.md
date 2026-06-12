@@ -120,18 +120,6 @@ todo project set-path [项目名] [本地路径]
 ## ✅ 已完成
 ```
 
----
+写入后确认：
 
-## 阶段四 — 同步到 SQLite
-
-写入 TODO.md 后立即执行 sync，SQLite 分配 ID 并写回文件：
-
-```bash
-command -v todo >/dev/null 2>&1 \
-  && todo sync "[项目名]" \
-  || python3 -m todo.cli sync "[项目名]"
-```
-
-sync 成功后确认：
-
-> "✅ 已将 **[任务标题]** 写入 `{local_path}/TODO.md` 并同步到 SQLite。"
+> "✅ 已将 **[任务标题]** 写入 `{local_path}/TODO.md`。"

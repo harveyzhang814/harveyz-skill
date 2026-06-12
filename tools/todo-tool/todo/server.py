@@ -1,3 +1,4 @@
+import sys
 from pathlib import Path
 from typing import Optional
 
@@ -48,6 +49,14 @@ def create_app(db: TodoDB = None) -> FastAPI:
         status: Optional[str] = None,
         priority: Optional[str] = None,
     ):
+        for proj in db.list_projects():
+            if proj.local_path:
+                todo_md = Path(proj.local_path) / "TODO.md"
+                if todo_md.exists():
+                    try:
+                        db.sync_from_file(todo_md, proj.id)
+                    except Exception as e:
+                        print(f"Warning: sync failed for {proj.repo_name}: {e}", file=sys.stderr)
         return db.list_tasks(project=project, status=status, priority=priority)
 
     @app.post("/api/tasks", response_model=Task, status_code=201)
