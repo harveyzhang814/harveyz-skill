@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.13.0] - 2026-06-12
+
+### Fixed
+- `opencode-runner`：description 移除中文字符，符合 F3 英文规范
+- `doc-forge`：测试 CSS 路径改为动态选取首个可用文件，不再依赖不存在的 `default.css`
+
 ## [0.12.1] - 2026-06-10
 
 ## [0.12.0] - 2026-06-09
