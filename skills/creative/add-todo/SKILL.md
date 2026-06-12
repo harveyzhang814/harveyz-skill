@@ -1,13 +1,13 @@
 ---
 name: add-todo
-version: "2.0.0"
+version: "2.1.0"
 user_invocable: true
 description: "Add a new requirement, task, or feature request to the project TODO list and SQLite task database. Triggers whenever the user wants to capture a new need — even phrased casually like 'we should do X later', 'add this to the backlog', 'note this down', 'remember to build X', or 'we need to do Y at some point'."
 ---
 
 # 写入 TODO
 
-快速捕获需求：用 2-4 个问题确认**需要做什么**（不是怎么做），然后写入 SQLite 任务库，再同步到项目 TODO.md。
+快速捕获需求：用 2-4 个问题确认**需要做什么**（不是怎么做），生成标题，然后写入 SQLite 任务库，再同步到项目 TODO.md。
 
 ## 核心原则
 
@@ -31,8 +31,23 @@ description: "Add a new requirement, task, or feature request to the project TOD
 - 优先给选项而非开放题："这个更像 (A) 缺失功能 还是 (B) 现有功能的问题？"
 - 2 轮够用时不要凑到 4 轮
 
-完成后展示一句摘要等用户确认：
-> "记录为：**[项目名]** — [任务标题]，[优先级]。确认吗？"
+### 生成标题
+
+需求信息收集完毕后，根据对话内容生成任务标题：
+
+- 祈使句，动词开头，直接说明要做什么
+- 足够具体，让人一眼看出任务核心，避免泛泛的"优化"、"修复"
+- 不堆砌细节，只抓最关键的区分点
+
+**示例：**
+- ✗ "优化系统" → ✓ "重构视频解析模块以支持多格式输入"
+- ✗ "修复 bug" → ✓ "修复字幕导出时 UTF-8 编码乱码"
+- ✗ "添加功能" → ✓ "为 add-todo skill 添加 SQLite 持久化层"
+
+展示摘要等用户确认：
+> "记录为：**[项目名]** — [生成的标题]，[优先级]。确认吗？"
+
+用户可直接确认，也可要求调整标题。
 
 ---
 
@@ -76,10 +91,10 @@ command -v todo >/dev/null 2>&1 \
 追加到 `## 🚧 待开发` 末尾：
 
 ```markdown
-### [任务标题]（祈使句，≤25 字）
+### [任务标题]
 **优先级**: P? | **项目**: [项目名] | **日期**: YYYY-MM-DD
 
-[1-3 句描述：做什么、为什么。不写怎么做。]
+[描述：做什么、为什么。不写怎么做。篇幅以说清楚为准，不限长短。]
 
 ---
 ```
