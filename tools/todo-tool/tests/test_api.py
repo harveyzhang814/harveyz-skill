@@ -1,11 +1,13 @@
 import pytest
 from fastapi.testclient import TestClient
 from todo.db import TodoDB
+from todo.projects_index import save_project
 from todo.server import create_app
 
 
 @pytest.fixture
-def client(tmp_path):
+def client(tmp_path, monkeypatch):
+    monkeypatch.setenv("TODO_INDEX_PATH", str(tmp_path / "PROJECTS.md"))
     db = TodoDB(db_path=tmp_path / "test.db")
     return TestClient(create_app(db=db))
 
@@ -17,6 +19,11 @@ def _add_project(client, name: str, path: str = None):
     r = client.post("/api/projects", json=body)
     assert r.status_code == 201, r.text
     return r.json()
+
+
+def _register_in_index(name: str, path: str, description: str = ""):
+    """Write project to PROJECTS.md so the server lazy sync picks it up."""
+    save_project(name, path, description)
 
 
 # ── Project endpoint tests ────────────────────────────────────────────────────
@@ -165,7 +172,7 @@ def test_list_tasks_lazy_sync(client, tmp_path):
         "# TODO\n\n## 🚧 待开发\n\n### 自动同步任务\n**优先级**: P2 | **日期**: 2026-01-01\n\n描述内容\n\n---\n\n## ✅ 已完成\n",
         encoding="utf-8",
     )
-    _add_project(client, "lazy-proj", path=str(tmp_path))
+    _register_in_index("lazy-proj", str(tmp_path))
 
     r = client.get("/api/tasks")
     assert r.status_code == 200
@@ -184,7 +191,7 @@ def test_list_tasks_lazy_sync_idempotent(client, tmp_path):
         "# TODO\n\n## 🚧 待开发\n\n### 幂等测试任务\n**优先级**: P1 | **日期**: 2026-01-01\n\n描述\n\n---\n\n## ✅ 已完成\n",
         encoding="utf-8",
     )
-    _add_project(client, "idem-proj", path=str(tmp_path))
+    _register_in_index("idem-proj", str(tmp_path))
 
     client.get("/api/tasks")  # first sync
     client.get("/api/tasks")  # second sync — should not duplicate
@@ -193,7 +200,7 @@ def test_list_tasks_lazy_sync_idempotent(client, tmp_path):
 
 
 def test_list_tasks_lazy_sync_skips_missing_todo(client, tmp_path):
-    _add_project(client, "no-todo-proj", path=str(tmp_path))
+    _register_in_index("no-todo-proj", str(tmp_path))
     r = client.get("/api/tasks")
     assert r.status_code == 200
     assert r.json() == []
@@ -206,10 +213,9 @@ def test_list_tasks_lazy_sync_skips_unchanged_file(client, tmp_path):
         "# TODO\n\n## 🚧 待开发\n\n### 初始任务\n**优先级**: P2 | **日期**: 2026-01-01\n\n---\n\n## ✅ 已完成\n",
         encoding="utf-8",
     )
-    _add_project(client, "skip-proj", path=str(tmp_path))
+    _register_in_index("skip-proj", str(tmp_path))
     client.get("/api/tasks")  # first sync — inserts task, records mtime
 
-    # Write a new task but backdate the mtime to before last_synced_at
     proj = next(p for p in client.get("/api/projects").json() if p["repo_name"] == "skip-proj")
     synced_at = proj["last_synced_at"]
     content = todo_md.read_text(encoding="utf-8")

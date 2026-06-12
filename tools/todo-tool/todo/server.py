@@ -8,6 +8,7 @@ from fastapi.staticfiles import StaticFiles
 
 from .db import TodoDB
 from .models import Project, ProjectCreate, ProjectUpdate, Task, TaskCreate, TaskUpdate
+from .projects_index import load_projects
 
 
 def create_app(db: TodoDB = None) -> FastAPI:
@@ -49,6 +50,7 @@ def create_app(db: TodoDB = None) -> FastAPI:
         status: Optional[str] = None,
         priority: Optional[str] = None,
     ):
+        db.sync_projects_from_index(load_projects())
         for proj in db.list_projects():
             if proj.local_path:
                 todo_md = Path(proj.local_path) / "TODO.md"

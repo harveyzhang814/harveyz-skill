@@ -212,6 +212,22 @@ class TodoDB:
             cur = conn.execute("DELETE FROM tasks WHERE id = ?", (task_id,))
             return cur.rowcount > 0
 
+    def sync_projects_from_index(self, projects: list[dict]) -> None:
+        """Upsert projects from PROJECTS.md into the projects table."""
+        if not projects:
+            return
+        now = datetime.now(timezone.utc).isoformat()
+        with self._conn() as conn:
+            for p in projects:
+                conn.execute(
+                    """
+                    INSERT INTO projects (repo_name, local_path, created_at)
+                    VALUES (?, ?, ?)
+                    ON CONFLICT(repo_name) DO UPDATE SET local_path = excluded.local_path
+                    """,
+                    (p["name"], p["path"] or None, now),
+                )
+
     def projects(self) -> list[Project]:
         return self.list_projects()
 

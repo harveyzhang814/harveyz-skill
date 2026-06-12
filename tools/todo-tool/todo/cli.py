@@ -4,6 +4,7 @@ from pathlib import Path
 
 from .db import TodoDB, get_db_path
 from .models import ProjectCreate, ProjectUpdate, TaskCreate, TaskUpdate
+from .projects_index import load_projects, save_project, set_project_path as index_set_path
 
 app = typer.Typer(no_args_is_help=True)
 config_app = typer.Typer(no_args_is_help=True)
@@ -22,24 +23,32 @@ def get_db() -> TodoDB:
 def project_add(
     repo_name: str = typer.Argument(..., help="GitHub repo name (e.g. video-learner)"),
     path: str = typer.Option(None, "--path", help="Local directory path"),
+    description: str = typer.Option("", "--desc", help="Short project description"),
 ):
     """Register a new project."""
     db = get_db()
-    p = db.create_project(ProjectCreate(repo_name=repo_name, local_path=path))
-    typer.echo(f"✓ Project '{p.repo_name}' added (id={p.id})")
+    existing = db.get_project_by_name(repo_name)
+    if not existing:
+        db.create_project(ProjectCreate(repo_name=repo_name, local_path=path))
+    elif path:
+        db.update_project(existing.id, ProjectUpdate(local_path=path))
+    if path:
+        save_project(repo_name, path, description)
+        db.sync_projects_from_index(load_projects())
+    typer.echo(f"✓ Project '{repo_name}' added")
 
 
 @project_app.command(name="list")
 def project_list():
-    """List all projects."""
-    db = get_db()
-    projects = db.list_projects()
+    """List all registered projects with local paths."""
+    projects = load_projects()
     if not projects:
         typer.echo("No projects found.")
         return
     for p in projects:
-        path_str = f"  {p.local_path}" if p.local_path else ""
-        typer.echo(f"  [{p.id}] {p.repo_name}{path_str}")
+        typer.echo(f"  {p['name']}  {p['path']}")
+        if p.get("description"):
+            typer.echo(f"    {p['description']}")
 
 
 @project_app.command(name="set-path")
@@ -49,12 +58,12 @@ def project_set_path(
 ):
     """Set the local path for a project."""
     db = get_db()
-    project = db.get_project_by_name(repo_name)
-    if not project:
+    if not db.get_project_by_name(repo_name):
         typer.echo(f"Project '{repo_name}' not found", err=True)
         raise typer.Exit(1)
-    updated = db.update_project(project.id, ProjectUpdate(local_path=local_path))
-    typer.echo(f"✓ '{updated.repo_name}' local path set to {updated.local_path}")
+    save_project(repo_name, local_path)
+    db.sync_projects_from_index(load_projects())
+    typer.echo(f"✓ '{repo_name}' local path set to {local_path}")
 
 
 # ── task commands ─────────────────────────────────────────────────────────────
@@ -135,6 +144,7 @@ def sync(
 ):
     """Sync TODO.md into SQLite. Writes IDs back to TODO.md."""
     db = get_db()
+    db.sync_projects_from_index(load_projects())
     proj = db.get_project_by_name(project)
     if not proj:
         typer.echo(f"Project '{project}' not found", err=True)

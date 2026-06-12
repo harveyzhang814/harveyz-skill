@@ -2,8 +2,6 @@ import json
 import pytest
 from typer.testing import CliRunner
 from todo.cli import app
-from todo.db import TodoDB
-from todo.models import ProjectCreate
 
 runner = CliRunner()
 
@@ -11,6 +9,7 @@ runner = CliRunner()
 @pytest.fixture(autouse=True)
 def isolated_db(tmp_path, monkeypatch):
     monkeypatch.setenv("TODO_DB_PATH", str(tmp_path / "test.db"))
+    monkeypatch.setenv("TODO_INDEX_PATH", str(tmp_path / "PROJECTS.md"))
 
 
 def _add_project(name: str, path: str = None):
@@ -35,8 +34,8 @@ def test_project_add_with_path():
 
 
 def test_project_list():
-    _add_project("alpha")
-    _add_project("beta")
+    _add_project("alpha", path="/path/alpha")
+    _add_project("beta", path="/path/beta")
     result = runner.invoke(app, ["project", "list"])
     assert result.exit_code == 0
     assert "alpha" in result.output
@@ -168,18 +167,19 @@ def test_config_set_and_show(tmp_path, monkeypatch):
     assert "mydb.db" in result2.output
 
 
+_TODO_CONTENT = (
+    "# TODO / Backlog\n\n"
+    "## 🚧 待开发\n\n"
+    "### Sync 测试任务\n"
+    "**优先级**: P1 | **日期**: 2026-06-12\n\n"
+    "---\n\n"
+    "## ✅ 已完成\n"
+)
+
+
 def test_sync_command_inserts_and_echoes(tmp_path):
-    db = TodoDB()
-    db.create_project(ProjectCreate(repo_name="sync-proj", local_path=str(tmp_path)))
-    (tmp_path / "TODO.md").write_text(
-        "# TODO / Backlog\n\n"
-        "## 🚧 待开发\n\n"
-        "### Sync 测试任务\n"
-        "**优先级**: P1 | **日期**: 2026-06-12\n\n"
-        "---\n\n"
-        "## ✅ 已完成\n",
-        encoding="utf-8",
-    )
+    runner.invoke(app, ["project", "add", "sync-proj", "--path", str(tmp_path)])
+    (tmp_path / "TODO.md").write_text(_TODO_CONTENT, encoding="utf-8")
     result = runner.invoke(app, ["sync", "sync-proj"])
     assert result.exit_code == 0
     assert "1 条新增" in result.output
@@ -192,16 +192,14 @@ def test_sync_command_project_not_found():
 
 
 def test_sync_command_no_todo_md(tmp_path):
-    db = TodoDB()
-    db.create_project(ProjectCreate(repo_name="no-file-proj", local_path=str(tmp_path)))
+    runner.invoke(app, ["project", "add", "no-file-proj", "--path", str(tmp_path)])
     result = runner.invoke(app, ["sync", "no-file-proj"])
     assert result.exit_code == 1
     assert "TODO.md not found" in result.output
 
 
 def test_sync_command_path_override(tmp_path):
-    db = TodoDB()
-    db.create_project(ProjectCreate(repo_name="path-proj"))  # no local_path
+    runner.invoke(app, ["project", "add", "path-proj"])  # no local_path
     (tmp_path / "TODO.md").write_text(
         "# TODO / Backlog\n\n"
         "## 🚧 待开发\n\n"
