@@ -1,13 +1,15 @@
 ---
 name: opencode-runner
-description: "Run a Claude skill through the local opencode CLI, or A/B compare Claude vs opencode on the same skill+prompt. Trigger when user says: test this skill with opencode, run [skill] in opencode, compare Claude vs opencode, A/B test a skill, 用 opencode 测试/执行 skill, 让 opencode 跑这个 skill. Always use this skill when the user mentions opencode and skill testing together."
+description: "Use opencode as an independent AI agent to verify a Claude skill's instruction logic, or A/B compare Claude vs opencode following the same skill instructions. Trigger when user says: verify this skill with opencode, validate skill logic, use opencode to check this skill, compare Claude vs opencode on this skill, 用 opencode 验证 skill 指令, 让 opencode 独立验证这个 skill. Always use this skill when the user mentions opencode and skill validation together."
 user_invocable: true
 version: "1.0.0"
 ---
 
 # opencode-runner
 
-通过本地 `opencode` CLI 执行某个 skill，或对比 Claude 和 opencode 在同一 skill 下的表现差异。
+将 SKILL.md 的指令内容作为任务说明传给 opencode，让它作为**独立 AI agent** 执行——不依赖 Claude Code 的 skill 加载机制，而是验证 skill 的自然语言指令本身是否足够清晰、在不同 AI 下是否产出一致结果。
+
+> **定位说明**：这不是"让 opencode 运行 Claude skill"，而是"把 skill 指令当成 prompt，用 opencode 做独立验证"。如果两个 AI 都能按指令产出正确结果，说明 skill 的逻辑表达是健壮的。
 
 ---
 
@@ -41,9 +43,9 @@ find ~/Projects/harveyz-skill/skills -name "SKILL.md" -path "*<skill-name>*"
 
 ---
 
-## 模式 1：Execute — 用 opencode 执行 skill
+## 模式 1：Verify — 用 opencode 独立验证 skill
 
-将 SKILL.md 作为文件附件传给 opencode，让它按 skill 指引完成任务。
+将 SKILL.md 作为指令文本传给 opencode，让它按内容完成任务，验证指令逻辑是否清晰可执行。
 
 ### 执行步骤
 
@@ -89,13 +91,13 @@ cat /tmp/opencode-run-output.jsonl | \
 **Step 4** — 向用户展示结果：
 - opencode 的完整输出文本
 - token 用量（input / output / total）
-- 询问：「这个输出是否符合 skill 的预期行为？」
+- 询问：「opencode 是否正确理解并执行了 skill 的指令？如果没有，是哪部分指令不够清晰？」
 
 ---
 
-## 模式 2：Compare — Claude vs opencode A/B 对比
+## 模式 2：Compare — Claude vs opencode 独立性验证
 
-同一个 skill + prompt，同时跑 Claude（作为 subagent）和 opencode，对比输出质量。
+同一份 skill 指令 + 相同 prompt，分别交给 Claude subagent 和 opencode 独立执行，对比输出一致性。两者都产出正确结果 = skill 指令健壮；只有一方正确 = 指令存在歧义需要改进。
 
 ### 执行步骤
 
@@ -163,7 +165,10 @@ cat /tmp/opencode-ab/opencode-output.jsonl | \
 | 主要差异 | ... | ... |
 ```
 
-**Step 4** — 询问用户：「哪个输出更符合 skill 的意图？有什么观察？」
+**Step 4** — 引导用户分析：
+- 两者都正确 → skill 指令表达清晰，逻辑健壮
+- 仅一方正确 → 找出哪段指令产生了歧义，建议修改
+- 两者都偏差 → skill 的核心意图表述需要重写
 
 ---
 
