@@ -1,0 +1,189 @@
+{
+  "_brand": "rolandberger",
+  "_source": "knowledge/design/rolandberger-style.md",
+  "_derived_by": "design-derive v1.5.0",
+  "_notes": "Primary viz color = #156C9C (RB blue, not CTA red) per brand guidance. CTA red #FF3532 reserved for alert/danger semantic nodes.",
+
+  "flowchart": {
+    "subgraph": {
+      "layer1": {
+        "fill": "#E8E8E8",
+        "stroke": "#C8C8C8",
+        "text": "#212427",
+        "note": "outermost subgraph — lightest neutral"
+      },
+      "layer2": {
+        "fill": "#F0F0F0",
+        "stroke": "#D0D0D0",
+        "text": "#212427",
+        "note": "mid-level subgraph"
+      },
+      "layer3": {
+        "fill": "#F5F5F5",
+        "stroke": "#D8D8D8",
+        "text": "#212427",
+        "note": "innermost subgraph — near-white"
+      }
+    },
+    "node": {
+      "neutral": {
+        "fill": "#FFFFFF",
+        "stroke": "#BBBBBB",
+        "text": "#212427",
+        "note": "default node — white card"
+      },
+      "primary": {
+        "fill": "#156C9C",
+        "stroke": "#11567D",
+        "text": "#FFFFFF",
+        "note": "key node — RB consulting blue, white text (dark fill)"
+      },
+      "secondary": {
+        "fill": "#555555",
+        "stroke": "#3A3A3A",
+        "text": "#FFFFFF",
+        "note": "secondary emphasis node — dark gray"
+      }
+    }
+  },
+
+  "stateDiagram": {
+    "classDef": {
+      "neutral":     "fill:#EBEBEB,stroke:#C8C8C8,color:#212427",
+      "opportunity": "fill:#72B656,stroke:#5B9245,color:#fff",
+      "hold":        "fill:#8D9399,stroke:#71767A,color:#fff",
+      "danger":      "fill:#FF3532,stroke:#CC2A28,color:#fff"
+    }
+  },
+
+  "sequenceDiagram": {
+    "init": {
+      "theme": "base",
+      "themeVariables": {
+        "actorBkg": "#FFFFFF",
+        "actorBorder": "#156C9C",
+        "actorTextColor": "#212427",
+        "actorLineColor": "#8D9399",
+        "noteBkg": "#F0F0F0",
+        "noteTextColor": "#212427",
+        "activationBkgColor": "#F3F8FA",
+        "activationBorderColor": "#156C9C",
+        "signalColor": "#333333",
+        "signalTextColor": "#212427",
+        "labelBoxBkgColor": "#FFFFFF",
+        "labelBoxBorderColor": "#C8C8C8",
+        "labelTextColor": "#212427",
+        "loopTextColor": "#212427",
+        "sequenceNumberColor": "#FFFFFF"
+      }
+    }
+  },
+
+  "gantt": {
+    "init": {
+      "theme": "base",
+      "themeVariables": {
+        "taskBkgColor": "#E8E8E8",
+        "taskBorderColor": "#BBBBBB",
+        "taskTextColor": "#212427",
+        "taskTextLightColor": "#666666",
+        "taskTextOutsideColor": "#212427",
+        "taskTextClickableColor": "#156C9C",
+        "activeTaskBkgColor": "#156C9C",
+        "activeTaskBorderColor": "#11567D",
+        "critBkgColor": "#FF3532",
+        "critBorderColor": "#CC2A28",
+        "doneTaskBkgColor": "#F5F5F5",
+        "doneTaskBorderColor": "#BBBBBB",
+        "sectionBkgColor": "#FFFFFF",
+        "altSectionBkgColor": "#F8F8F8",
+        "sectionBkgColor2": "#FFFFFF",
+        "gridColor": "#DDDDDD",
+        "titleColor": "#212427",
+        "todayLineColor": "#FF3532"
+      }
+    }
+  },
+
+  "timeline": {
+    "init": {
+      "theme": "base",
+      "themeVariables": {
+        "cScale0": "#156C9C",
+        "cScale1": "#666666",
+        "cScale2": "#156C9C",
+        "cScale3": "#666666",
+        "cScale4": "#156C9C",
+        "cScale5": "#666666",
+        "cScale6": "#156C9C",
+        "cScale7": "#666666",
+        "cScale8": "#156C9C",
+        "cScale9": "#666666",
+        "cScale10": "#156C9C",
+        "cScale11": "#666666",
+        "titleColor": "#212427"
+      }
+    }
+  },
+
+  "semantic": {
+    "alert": {
+      "fill": "#FF3532",
+      "stroke": "#CC2A28",
+      "text": "#FFFFFF",
+      "note": "from color.status.danger = red-500"
+    },
+    "opportunity": {
+      "fill": "#72B656",
+      "stroke": "#5B9245",
+      "text": "#FFFFFF",
+      "note": "from color.status.success = lime-500"
+    },
+    "hold": {
+      "fill": "#8D9399",
+      "stroke": "#71767A",
+      "text": "#FFFFFF",
+      "note": "from color.text.muted = neutral-600"
+    },
+    "speculative": {
+      "fill": "#E6006E",
+      "stroke": "#B80058",
+      "text": "#FFFFFF",
+      "note": "from color.dataviz.5 = pink-500"
+    },
+    "value": {
+      "fill": "#000000",
+      "stroke": "#333333",
+      "text": "#FFFFFF",
+      "note": "from color.surface.dark = neutral-900"
+    }
+  },
+
+  "edge": {
+    "primary": "#156C9C",
+    "secondary": "#888888"
+  },
+
+  "rules": {
+    "dark_text_threshold": "#808080",
+    "dark_node_text": "#FFFFFF",
+    "light_node_text": "#212427"
+  },
+
+  "flowchart_init": {
+    "theme": "base",
+    "themeVariables": {
+      "primaryColor": "#156C9C",
+      "primaryBorderColor": "#13618C",
+      "primaryTextColor": "#FFFFFF",
+      "secondaryColor": "#00AAC9",
+      "tertiaryColor": "#D1FCDE",
+      "background": "#FFFFFF",
+      "mainBkg": "#156C9C",
+      "clusterBkg": "#F0F0F0",
+      "titleColor": "#000000",
+      "lineColor": "#C8C8C8",
+      "edgeLabelBackground": "#FFFFFF"
+    }
+  }
+}

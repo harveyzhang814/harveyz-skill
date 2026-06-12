@@ -13,11 +13,11 @@ CLI="${REPO_ROOT}/bin/cli.js"
 NODE="$(which node)"
 
 SKILL1_NAME="skill-analyzer"
-SKILL1_SRC="${REPO_ROOT}/skills/analysis/skill-analyzer"
+SKILL1_SRC="${REPO_ROOT}/skills/meta/skill-analyzer"
 SKILL1_VER="1.0.0"
 
 SKILL2_NAME="diataxis-docs"
-SKILL2_SRC="${REPO_ROOT}/skills/harness/diataxis-docs"
+SKILL2_SRC="${REPO_ROOT}/skills/writing/diataxis-docs"
 
 TOOL_NAME="p-launch"
 TOOL_SRC="${REPO_ROOT}/tools/p-launch"
@@ -27,8 +27,9 @@ setup() {
   MOCK_HOME="${TEST_DIR}/home"
   mkdir -p "${MOCK_HOME}/.claude/skills"
   mkdir -p "${MOCK_HOME}/.cursor/skills"
+  mkdir -p "${MOCK_HOME}/.config/opencode/skills"
   mkdir -p "${MOCK_HOME}/.local/bin"
-  mkdir -p "${MOCK_HOME}/.local/share/hskill/tools"
+  mkdir -p "${MOCK_HOME}/.hskill/tools"
 }
 
 teardown() {
@@ -67,10 +68,26 @@ _skill_version() {
   [ ! -f "${MOCK_HOME}/.claude/skills/${SKILL1_NAME}/SKILL.md" ]
 }
 
-@test "install --skill --target all: installs to every target" {
+@test "install --skill --target opencode: installs to ~/.config/opencode/skills" {
+  _install --skill "${SKILL1_NAME}" --target opencode --scope user --force
+  [ -f "${MOCK_HOME}/.config/opencode/skills/${SKILL1_NAME}/SKILL.md" ]
+  [ ! -f "${MOCK_HOME}/.claude/skills/${SKILL1_NAME}/SKILL.md" ]
+}
+
+@test "install --skill --target opencode --scope project: installs to .opencode/skills" {
+  local project_dir="${TEST_DIR}/opencode-proj"
+  mkdir -p "${project_dir}"
+  (cd "${project_dir}" && HOME="${MOCK_HOME}" node "${CLI}" install \
+    --skill "${SKILL1_NAME}" --target opencode --scope project --force 2>/dev/null | cat)
+  [ -f "${project_dir}/.opencode/skills/${SKILL1_NAME}/SKILL.md" ]
+  [ ! -f "${MOCK_HOME}/.config/opencode/skills/${SKILL1_NAME}/SKILL.md" ]
+}
+
+@test "install --skill --target all: installs to every target including opencode" {
   _install --skill "${SKILL1_NAME}" --target all --scope user --force
   [ -f "${MOCK_HOME}/.claude/skills/${SKILL1_NAME}/SKILL.md" ]
   [ -f "${MOCK_HOME}/.cursor/skills/${SKILL1_NAME}/SKILL.md" ]
+  [ -f "${MOCK_HOME}/.config/opencode/skills/${SKILL1_NAME}/SKILL.md" ]
 }
 
 # ── project scope ─────────────────────────────────────────────────────────────
@@ -130,21 +147,21 @@ _skill_version() {
 
 # ── bundle installation ───────────────────────────────────────────────────────
 
-@test "install --bundle analysis: installs all skills in the bundle" {
-  _install --bundle analysis --target claude --scope user --force
-  # analysis bundle contains skill-analyzer.
+@test "install --bundle meta: installs all skills in the bundle" {
+  _install --bundle meta --target claude --scope user --force
+  # meta bundle contains skill-analyzer.
   [ -f "${MOCK_HOME}/.claude/skills/${SKILL1_NAME}/SKILL.md" ]
 }
 
-@test "install --bundle document: installs all skills in the bundle" {
-  _install --bundle document --target claude --scope user --force
+@test "install --bundle writing: installs all skills in the bundle" {
+  _install --bundle writing --target claude --scope user --force
   [ -f "${MOCK_HOME}/.claude/skills/${SKILL2_NAME}/SKILL.md" ]
 }
 
 @test "install --bundle: --json reports installed list" {
   local out
   out=$(HOME="${MOCK_HOME}" node "${CLI}" install \
-    --bundle analysis --target claude --scope user --force --json 2>/dev/null | cat)
+    --bundle meta --target claude --scope user --force --json 2>/dev/null | cat)
   echo "$out" | node -e "JSON.parse(require('fs').readFileSync('/dev/stdin','utf8'))"
   [[ "$out" == *'"installed"'* ]]
   [[ "$out" == *"${SKILL1_NAME}"* ]]
@@ -164,7 +181,7 @@ _skill_version() {
 
 @test "install --tool: tool.json written to data dir" {
   _install --tool "${TOOL_NAME}" --force
-  [ -f "${MOCK_HOME}/.local/share/hskill/tools/${TOOL_NAME}.json" ]
+  [ -f "${MOCK_HOME}/.hskill/tools/${TOOL_NAME}.json" ]
 }
 
 @test "install --tool (no --force): already-installed tool is skipped" {
@@ -240,20 +257,20 @@ _uninstall() {
 @test "uninstall: removes tool.json from share dir" {
   _install --tool "${TOOL_NAME}" --force
   _uninstall "${TOOL_NAME}" --yes
-  [ ! -f "${MOCK_HOME}/.local/share/hskill/tools/${TOOL_NAME}.json" ]
+  [ ! -f "${MOCK_HOME}/.hskill/tools/${TOOL_NAME}.json" ]
 }
 
 @test "uninstall: removes companion .py from share dir" {
   _install --tool "${TOOL_NAME}" --force
   _uninstall "${TOOL_NAME}" --yes
-  [ ! -f "${MOCK_HOME}/.local/share/hskill/tools/${TOOL_NAME}.py" ]
+  [ ! -f "${MOCK_HOME}/.hskill/tools/${TOOL_NAME}.py" ]
 }
 
 @test "uninstall: removes uninstallPaths declared in tool.json" {
   _install --tool "${TOOL_NAME}" --force
-  mkdir -p "${MOCK_HOME}/.local/share/hskill/p-launch-venv"
+  mkdir -p "${MOCK_HOME}/.hskill/p-launch/venv"
   _uninstall "${TOOL_NAME}" --yes
-  [ ! -d "${MOCK_HOME}/.local/share/hskill/p-launch-venv" ]
+  [ ! -d "${MOCK_HOME}/.hskill/p-launch/venv" ]
 }
 
 @test "uninstall: keeps configPaths without --yes in non-TTY" {
@@ -310,7 +327,7 @@ _uninstall() {
 
 @test "install --tool: skips with outdated message in non-TTY when version differs" {
   _install --tool "${TOOL_NAME}" --force
-  local meta="${MOCK_HOME}/.local/share/hskill/tools/${TOOL_NAME}.json"
+  local meta="${MOCK_HOME}/.hskill/tools/${TOOL_NAME}.json"
   node -e "const f='${meta}'; const fs=require('fs'); const d=JSON.parse(fs.readFileSync(f,'utf8')); d.version='0.0.1'; fs.writeFileSync(f,JSON.stringify(d))"
   run env HOME="${MOCK_HOME}" node "${CLI}" install --tool "${TOOL_NAME}" 2>&1
   [[ "$output" == *"outdated"* ]]
@@ -319,7 +336,7 @@ _uninstall() {
 
 @test "install --tool --force: removes uninstallPaths before reinstalling" {
   _install --tool "${TOOL_NAME}" --force
-  local venv="${MOCK_HOME}/.local/share/hskill/p-launch-venv"
+  local venv="${MOCK_HOME}/.hskill/p-launch/venv"
   mkdir -p "$venv"
   _install --tool "${TOOL_NAME}" --force
   [ ! -d "$venv" ]

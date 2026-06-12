@@ -1,0 +1,222 @@
+/* ─────────────────────────────────────────────
+   中文学术论文格式 — 华东师范大学硕士论文规范
+   字号对照：三号=16pt 四号=14pt 小四=12pt 五号=10.5pt 小五=9pt
+   行距：正文及摘要、参考文献均为 25pt
+   ───────────────────────────────────────────── */
+
+@page {
+  size: A4;
+  margin: 3cm 2.5cm 2.5cm 3.2cm;
+}
+
+/* ── Base ───────────────────────────────────── */
+
+body {
+  font-family: "SimSun", "STSong", "Songti SC", serif;
+  font-size: 12pt;
+  line-height: 2.08;
+  color: #000000;
+  max-width: 100%;
+}
+
+/* ── Headings ───────────────────────────────── */
+
+/* 一级标题：黑体加粗，三号（16pt），居中 */
+h1 {
+  font-family: "SimHei", "STHeiti", "Heiti SC", sans-serif;
+  font-size: 16pt;
+  font-weight: 700;
+  color: #000000;
+  text-align: center;
+  margin-top: 24pt;
+  margin-bottom: 18pt;
+  page-break-before: always;
+}
+
+/* 二级标题：黑体加粗，四号（14pt），左对齐 */
+h2 {
+  font-family: "SimHei", "STHeiti", "Heiti SC", sans-serif;
+  font-size: 14pt;
+  font-weight: 700;
+  color: #000000;
+  text-align: left;
+  margin-top: 18pt;
+  margin-bottom: 12pt;
+}
+
+/* 三级标题：黑体加粗，小四号（12pt），左对齐 */
+h3 {
+  font-family: "SimHei", "STHeiti", "Heiti SC", sans-serif;
+  font-size: 12pt;
+  font-weight: 700;
+  color: #000000;
+  text-align: left;
+  margin-top: 12pt;
+  margin-bottom: 6pt;
+}
+
+h4 {
+  font-family: "SimHei", "STHeiti", "Heiti SC", sans-serif;
+  font-size: 12pt;
+  font-weight: normal;
+  color: #000000;
+  text-align: left;
+  margin-top: 10pt;
+  margin-bottom: 4pt;
+}
+
+/* ── Paragraph ──────────────────────────────── */
+
+p {
+  text-indent: 2em;
+  margin-top: 0;
+  margin-bottom: 0;
+  line-height: 2.08;
+}
+
+/* ── Tables ─────────────────────────────────── */
+/* 表题在表格上方居中，五号宋体（在 Markdown 中作为紧接在表格前的段落处理）*/
+
+table {
+  border-collapse: collapse;
+  width: 100%;
+  margin-top: 6pt;
+  margin-bottom: 6pt;
+  font-family: "SimSun", "STSong", "Songti SC", serif;
+  font-size: 10.5pt;
+  line-height: 1.5;
+}
+
+thead tr {
+  border-top: 1.5px solid #000000;
+  border-bottom: 1px solid #000000;
+}
+
+th {
+  background-color: transparent;
+  color: #000000;
+  font-weight: 700;
+  border: none;
+  padding: 4pt 6pt;
+  text-align: left;
+}
+
+tbody tr td {
+  border-bottom: none;
+}
+
+tbody tr:last-child td {
+  border-bottom: 1.5px solid #000000;
+}
+
+td {
+  border-left: none;
+  border-right: none;
+  padding: 3pt 6pt;
+  color: #000000;
+}
+
+/* ── Figure / table captions ────────────────── */
+/* 图题在图下方，表题在表上方；均居中，五号宋体 */
+
+figcaption, caption, .caption {
+  font-family: "SimSun", "STSong", "Songti SC", serif;
+  font-size: 10.5pt;
+  text-align: center;
+  margin: 4pt 0;
+  text-indent: 0;
+}
+
+/* ── Code ───────────────────────────────────── */
+
+pre {
+  background-color: #f5f5f5;
+  border: 1px solid #cccccc;
+  border-radius: 2px;
+  padding: 8pt 10pt;
+  margin: 8pt 0;
+  font-family: "Courier New", "Consolas", monospace;
+  font-size: 9pt;
+  line-height: 1.5;
+}
+
+code {
+  font-family: "Courier New", "Consolas", monospace;
+  font-size: 9pt;
+  background-color: #f5f5f5;
+  padding: 1px 3px;
+}
+
+pre code {
+  background-color: transparent;
+  padding: 0;
+}
+
+/* ── Blockquote ─────────────────────────────── */
+
+blockquote {
+  font-family: "SimSun", "STSong", "Songti SC", serif;
+  font-size: 12pt;
+  color: #333333;
+  margin: 8pt 0;
+  padding: 4pt 0 4pt 2em;
+  border-left: 2px solid #999999;
+}
+
+blockquote p {
+  text-indent: 0;
+}
+
+/* ── Lists ──────────────────────────────────── */
+
+ul, ol {
+  margin-top: 3pt;
+  margin-bottom: 3pt;
+  padding-left: 2em;
+  font-family: "SimSun", "STSong", "Songti SC", serif;
+  font-size: 12pt;
+  line-height: 2.08;
+}
+
+li {
+  margin-bottom: 0;
+}
+
+/* ── Horizontal rule ────────────────────────── */
+
+hr {
+  border: none;
+  border-top: 1px solid #000000;
+  margin: 12pt 0;
+}
+
+/* ── Links ──────────────────────────────────── */
+
+a {
+  color: #000000;
+  text-decoration: underline;
+}
+
+/* ── Images ─────────────────────────────────── */
+
+img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+  margin: 10pt auto;
+}
+
+/* ── Mermaid ────────────────────────────────── */
+
+pre.mermaid {
+  background-color: transparent;
+  border: none;
+  text-align: center;
+  margin: 12pt auto;
+  padding: 0;
+}
+
+pre.mermaid svg {
+  max-width: 90%;
+  height: auto;
+}

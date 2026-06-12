@@ -1,0 +1,86 @@
+{
+  "_source": "knowledge/design/bain-style.md",
+  "_comment": "Bain & Company brand style. Fonts: Gotham — proprietary, fall back to Gill Sans / Helvetica Neue.",
+  "page": {
+    "top_cm": 2.0,
+    "bottom_cm": 2.0,
+    "left_cm": 2.5,
+    "right_cm": 2.5
+  },
+  "body": {
+    "font": "PingFang SC",
+    "font_en": "Gotham",
+    "size_pt": 11,
+    "line_spacing_pt": 17,
+    "space_before_pt": 0,
+    "space_after_pt": 7,
+    "first_line_indent_chars": 0
+  },
+  "headings": {
+    "h1": {
+      "font": "PingFang SC",
+      "font_en": "Gotham",
+      "size_pt": 28,
+      "bold": true,
+      "color": "CC0000",
+      "align": "left",
+      "space_before_pt": 0,
+      "space_after_pt": 8
+    },
+    "h2": {
+      "font": "PingFang SC",
+      "font_en": "Gotham",
+      "size_pt": 18,
+      "bold": true,
+      "color": "CC0000",
+      "align": "left",
+      "space_before_pt": 24,
+      "space_after_pt": 8
+    },
+    "h3": {
+      "font": "PingFang SC",
+      "font_en": "Gotham",
+      "size_pt": 14,
+      "bold": true,
+      "color": "1A1A1A",
+      "space_before_pt": 16,
+      "space_after_pt": 5
+    },
+    "h4": {
+      "font": "PingFang SC",
+      "font_en": "Gotham",
+      "size_pt": 11,
+      "bold": true,
+      "color": "666666",
+      "space_before_pt": 12,
+      "space_after_pt": 4
+    }
+  },
+  "code_block": {
+    "font": "Courier New",
+    "size_pt": 10,
+    "bg_color": null
+  },
+  "blockquote": {
+    "font": "PingFang SC",
+    "font_en": "Gotham",
+    "size_pt": 12,
+    "color": "2D2D2D",
+    "left_indent_cm": 1.0
+  },
+  "table": {
+    "font": "PingFang SC",
+    "font_en": "Gotham",
+    "size_pt": 11,
+    "header_bold": true,
+    "header_bg_color": null,
+    "border_mode": "bain",
+    "rule_color": "CC0000",
+    "border_color": "DDDDDD",
+    "accent_color": "1A1A1A",
+    "row_sep_color": "DDDDDD",
+    "cell_padding_pt": 4,
+    "space_before_pt": 8,
+    "space_after_pt": 8
+  }
+}

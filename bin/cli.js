@@ -2,6 +2,7 @@
 import { select, input } from '@inquirer/prompts'
 import chalk from 'chalk'
 import { execSync, spawnSync } from 'child_process'
+import { existsSync } from 'fs'
 import { createRequire } from 'module'
 import os from 'os'
 import path from 'path'
@@ -26,7 +27,7 @@ const jsonFlag = args.includes('--json')
 // ── Help ─────────────────────────────────────────────────────────────────────
 function printHelp() {
   console.log(`
-  ${chalk.bold('hskill')} — skill manager for Claude Code, Cursor, Codex, OpenClaw, and Hermes  v${version}
+  ${chalk.bold('hskill')} — skill manager for Claude Code, Cursor, Codex, OpenClaw, Hermes, and OpenCode  v${version}
 
   ${chalk.cyan('Usage:')}
     hskill                         interactive install (requires TTY + fzf)
@@ -34,7 +35,7 @@ function printHelp() {
     hskill install --bundle <b>    install a skill bundle
     hskill install --skill <s>     install specific skill(s)
     hskill install --tool <t>      install shell tool(s)
-    hskill install --target <t>    set target (claude/cursor/codex/openclaw/hermes/all)
+    hskill install --target <t>    set target (claude/cursor/codex/openclaw/hermes/opencode/all)
     hskill install --scope <s>     set scope: user (default) or project
     hskill install --force         overwrite existing installs
     hskill list [--json]           list available skills and bundles
@@ -86,7 +87,7 @@ if (args[0] === '--help' || args[0] === '-h') {
             { name: '--bundle', arg: '<name>',   description: 'Install a skill bundle (comma-separated)' },
             { name: '--skill',  arg: '<name>',   description: 'Install specific skill(s) (comma-separated)' },
             { name: '--tool',   arg: '<name>',   description: 'Install shell tool(s) (comma-separated)' },
-            { name: '--target', arg: '<target>', description: 'Install target', enum: ['claude','cursor','codex','openclaw','hermes','all'] },
+            { name: '--target', arg: '<target>', description: 'Install target', enum: ['claude','cursor','codex','openclaw','hermes','opencode','all'] },
             { name: '--scope',  arg: '<scope>',  description: 'Install scope', enum: ['user','project'], default: 'user' },
             { name: '--force',  description: 'Overwrite existing installs' },
           ],
@@ -152,6 +153,15 @@ if (subcommand === 'update') {
   } catch {
     console.error(chalk.red('  ✗ Update failed. Try: npm update -g harveyz-skill'))
     process.exit(1)
+  }
+  const legacyDir = path.join(os.homedir(), '.local', 'share', 'hskill')
+  if (existsSync(legacyDir)) {
+    console.log('')
+    console.log(chalk.yellow('  ⚠ Legacy data detected at ~/.local/share/hskill/'))
+    console.log(chalk.dim('  Run the migration script to move data to the new location:'))
+    console.log('')
+    console.log('     ' + chalk.bold.cyan('bash "$(npm root -g)/harveyz-skill/scripts/migrate-data-dir.sh"'))
+    console.log('')
   }
   process.exit(0)
 }
@@ -221,7 +231,7 @@ if (subcommand === 'status' || subcommand === 'outdated') {
   })
 
   if (jsonFlag) {
-    const targets = ['claude', 'cursor', 'codex', 'openclaw', 'hermes']
+    const targets = ['claude', 'cursor', 'codex', 'openclaw', 'hermes', 'opencode']
     const jsonSkills = skillRows.map(r => ({
       name: r.name,
       version: r.version,
@@ -253,7 +263,7 @@ if (subcommand === 'status' || subcommand === 'outdated') {
       process.exit(0)
     }
 
-    const targets = ['claude', 'cursor', 'codex', 'openclaw', 'hermes']
+    const targets = ['claude', 'cursor', 'codex', 'openclaw', 'hermes', 'opencode']
 
     if (outdatedSkills.length) {
       console.log('\n  ' + chalk.bold('SKILLS WITH UPDATES'))
@@ -438,7 +448,7 @@ if (subcommand === 'uninstall') {
   const scope = scopeArg2
   const selectedTargets = targetArg2
     ? [targetArg2]
-    : ['claude', 'cursor', 'codex', 'openclaw', 'hermes']
+    : ['claude', 'cursor', 'codex', 'openclaw', 'hermes', 'opencode']
   const targets = resolveTargets(selectedTargets, scope)
 
   let anyRemoved = false
@@ -598,7 +608,7 @@ const scopeArg  = scopeIdx  !== -1 ? installArgs[scopeIdx  + 1] : undefined
 const TOOL_BUNDLE_VALUES = new Set(TOOL_BUNDLE_CHOICES.map(c => c.value))
 
 // ── Two-step target→scope selector ───────────────────────────────────────────
-const ALL_SKILL_TARGETS = ['claude', 'cursor', 'codex', 'openclaw', 'hermes']
+const ALL_SKILL_TARGETS = ['claude', 'cursor', 'codex', 'openclaw', 'hermes', 'opencode']
 
 function selectTargetThenScope() {
   // Step 1: platform (target)
@@ -608,7 +618,8 @@ function selectTargetThenScope() {
     'codex     ~/.codex/skills/',
     'openclaw  ~/.openclaw/skills/',
     'hermes    ~/.hermes/skills/',
-    'all       all 5 targets',
+    'opencode  ~/.config/opencode/skills/',
+    'all       all 6 targets',
   ].join('\n')
 
   const targetResult = spawnSync('fzf', [
@@ -1107,7 +1118,7 @@ try {
     // When only --skill is given and no --target, use the combined selector.
     if (targetArg) {
       const scope = scopeArg ?? 'user'
-      const selectedTargets = targetArg === 'all' ? ['claude', 'cursor', 'codex', 'openclaw', 'hermes'] : [targetArg]
+      const selectedTargets = targetArg === 'all' ? ['claude', 'cursor', 'codex', 'openclaw', 'hermes', 'opencode'] : [targetArg]
       const targets = resolveTargets(selectedTargets, scope)
       console.log('')
       skillSummary = await installSkills(skillItems, targets, forceFlag)
