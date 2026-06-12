@@ -101,6 +101,21 @@ process.stdout.write(JSON.stringify(r))
   [[ "$output" == *'"status":"up-to-date"'* ]]
 }
 
+# ── legacy path migration ──────────────────────────────────────────────────────
+
+@test "migration: old tools dir moved to new location on first checkToolInstalled" {
+  touch "${MOCK_HOME}/.local/bin/fake-tool"
+  rm -rf "${MOCK_HOME}/.hskill/tools"   # simulate fresh install without new dir
+  mkdir -p "${MOCK_HOME}/.local/share/hskill/tools"
+  printf '{ "name": "fake-tool", "version": "1.0.0" }\n' \
+    > "${MOCK_HOME}/.local/share/hskill/tools/fake-tool.json"
+  run _check
+  [ "$status" -eq 0 ]
+  [ -f "${MOCK_HOME}/.hskill/tools/fake-tool.json" ]
+  [ ! -d "${MOCK_HOME}/.local/share/hskill/tools" ]
+  [[ "$output" == *'"status":"up-to-date"'* ]]
+}
+
 # ── installer: tool.json copied to data dir ────────────────────────────────────
 
 @test "installer: copies tool.json to data dir on install" {
