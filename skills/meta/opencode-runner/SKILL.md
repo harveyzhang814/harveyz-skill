@@ -32,25 +32,22 @@ which jq         # 用于解析 JSON 输出
 
 ---
 
-## Step 1：安装 skill 到 opencode
+## Step 1：确认 opencode 已挂载 Claude skill 目录
 
-opencode 的 skill 格式与 Claude Code 完全兼容（相同的 YAML frontmatter），存放路径为 `~/.config/opencode/skills/<name>/`。
+opencode 支持通过 `~/.config/opencode/opencode.json` 的 `skills.paths` 字段指定额外 skill 搜索路径。格式与 Claude Code 完全兼容（相同的 YAML frontmatter）。
 
+确认配置存在：
 ```bash
-SKILL_NAME=$(grep '^name:' "<skill-path>/SKILL.md" | head -1 | sed 's/name: *//' | tr -d '"')
-OPENCODE_SKILL_DIR="$HOME/.config/opencode/skills/${SKILL_NAME}"
+cat ~/.config/opencode/opencode.json | grep -A4 '"skills"'
+```
 
-mkdir -p "${OPENCODE_SKILL_DIR}"
-
-# 软链接：Claude skill 更新时 opencode 侧自动同步
-ln -sf "<skill-path>/SKILL.md" "${OPENCODE_SKILL_DIR}/SKILL.md"
-
-# 若 skill 有 references/ 或 scripts/ 子目录，一并链接
-for subdir in references scripts assets; do
-  [ -d "<skill-path>/${subdir}" ] && ln -sf "<skill-path>/${subdir}" "${OPENCODE_SKILL_DIR}/${subdir}"
-done
-
-echo "Installed: ${OPENCODE_SKILL_DIR}"
+若没有，添加一次即可（之后所有 Claude skill 自动对 opencode 可用，无需逐个安装）：
+```json
+{
+  "skills": {
+    "paths": ["~/.claude/skills"]
+  }
+}
 ```
 
 ---
@@ -108,15 +105,6 @@ opencode run --format json \
 | 仅 Claude 正确 | Skill description 对 opencode 触发不足，或指令有 Claude 特有假设 |
 | 仅 opencode 正确 | Claude 侧可能存在 skill 加载问题，或测试 prompt 有误 |
 | 两者都偏差 | Skill 核心意图表述需要重写 |
-
----
-
-## 卸载
-
-测试完成后若不需要保留：
-```bash
-rm -rf "$HOME/.config/opencode/skills/${SKILL_NAME}"
-```
 
 ---
 
