@@ -2,7 +2,7 @@
 name: add-todo
 version: "2.0.0"
 user_invocable: true
-description: "Add a new requirement, task, or feature request to the project TODO list and SQLite task database. Triggers whenever the user wants to capture a new need — even phrased casually like 'we should do X later', 'add this to the backlog', 'note this down', 'remember to build X', or 'we need to do Y at some point'. Also triggers for 'change todo file', 'set todo path', or 'configure the todo location'."
+description: "Add a new requirement, task, or feature request to the project TODO list and SQLite task database. Triggers whenever the user wants to capture a new need — even phrased casually like 'we should do X later', 'add this to the backlog', 'note this down', 'remember to build X', or 'we need to do Y at some point'."
 ---
 
 # 写入 TODO
@@ -54,12 +54,8 @@ command -v todo >/dev/null 2>&1 \
 
 ### 确定文件路径
 
-1. 读取 `.claude/todo-config.json` 中的 `todo_path`（若存在且文件有效，直接使用）
-2. 否则扫描项目根目录：`TODO.md`、`BACKLOG.md`、`docs/TODO.md`、`docs/BACKLOG.md`
-3. 找到则询问确认；未找到则询问创建位置（默认 `TODO.md`）
-4. 保存路径到 `.claude/todo-config.json`
+项目根目录下的 `TODO.md`。不存在则直接创建，初始结构：
 
-初始文件结构（新建时使用）：
 ```markdown
 # TODO / Backlog
 
@@ -88,13 +84,4 @@ command -v todo >/dev/null 2>&1 \
 ---
 ```
 
-写入后确认："✅ 已将 **[任务标题]** 写入 `[文件路径]`（SQLite ID: [id]）。"
-
----
-
-## 重新配置 TODO 路径
-
-当用户说"换 TODO 文件"、"修改 todo 路径"、"配置 todo 位置"时：
-1. 显示当前路径（若有）："当前指向 `<路径>`。"
-2. 询问新路径，或确认是否新建
-3. 更新 `.claude/todo-config.json` 并确认："✅ TODO 文件已更新为 `<新路径>`。"
+写入后确认："✅ 已将 **[任务标题]** 写入 `TODO.md`（SQLite ID: [id]）。"
