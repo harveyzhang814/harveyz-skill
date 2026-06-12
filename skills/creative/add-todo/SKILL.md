@@ -1,6 +1,6 @@
 ---
 name: add-todo
-version: "3.0.0"
+version: "4.0.0"
 user_invocable: true
 description: "Add a new requirement, task, or feature request to any project's TODO list and SQLite task database — from any working directory. Triggers whenever the user wants to capture a new need — even phrased casually like 'we should do X later', 'add this to the backlog', 'note this down', 'remember to build X', or 'we need to do Y at some point'."
 ---
@@ -79,25 +79,11 @@ command -v todo >/dev/null 2>&1 \
 
 ---
 
-## 阶段三 — 写入 SQLite
-
-用户确认后立即执行：
-
-```bash
-command -v todo >/dev/null 2>&1 \
-  && todo add "[任务标题]" --project "[项目名]" --priority "[P0/P1/P2/P3]" \
-  || python3 -m todo.cli add "[任务标题]" --project "[项目名]" --priority "[P0/P1/P2/P3]"
-```
-
-写入成功后记录返回的任务 ID。
-
----
-
-## 阶段四 — 写入本地 TODO.md
+## 阶段三 — 写入 TODO.md
 
 ### 确定文件路径
 
-从阶段零的 `project list` 输出中取出该项目的 `local_path`，TODO.md 路径为 `{local_path}/TODO.md`。
+从阶段二确认的项目的 `local_path` 取出路径，TODO.md 位于 `{local_path}/TODO.md`。
 
 若该项目无 `local_path`，询问用户本地目录，写入后提示注册：
 ```bash
@@ -113,11 +99,11 @@ todo project set-path [项目名] [本地路径]
 
 ### 写入格式
 
-追加到 `## 🚧 待开发` 末尾：
+格式规范见 `tools/todo-tool/todo/todo_format.yaml`。追加到 `## 🚧 待开发` 末尾：
 
 ```markdown
 ### [任务标题（≤20 字）]
-**优先级**: P? | **项目**: [项目名] | **日期**: YYYY-MM-DD
+**优先级**: P? | **日期**: YYYY-MM-DD
 
 [描述：做什么、为什么。不写怎么做。篇幅以说清楚为准，不限长短。]
 
@@ -134,4 +120,18 @@ todo project set-path [项目名] [本地路径]
 ## ✅ 已完成
 ```
 
-写入后确认："✅ 已将 **[任务标题]** 写入 `{local_path}/TODO.md`（SQLite ID: [id]）。"
+---
+
+## 阶段四 — 同步到 SQLite
+
+写入 TODO.md 后立即执行 sync，SQLite 分配 ID 并写回文件：
+
+```bash
+command -v todo >/dev/null 2>&1 \
+  && todo sync "[项目名]" \
+  || python3 -m todo.cli sync "[项目名]"
+```
+
+sync 成功后确认：
+
+> "✅ 已将 **[任务标题]** 写入 `{local_path}/TODO.md` 并同步到 SQLite。"
