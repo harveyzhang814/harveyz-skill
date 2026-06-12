@@ -87,3 +87,30 @@ def test_projects(db):
     db.create(TaskCreate(title="T2", project="proj-b"))
     db.create(TaskCreate(title="T3", project="proj-a"))
     assert db.projects() == ["proj-a", "proj-b"]
+
+
+def test_get_db_path_env_var(monkeypatch, tmp_path):
+    from todo.db import get_db_path
+    monkeypatch.setenv("TODO_DB_PATH", str(tmp_path / "custom.db"))
+    assert get_db_path() == tmp_path / "custom.db"
+
+
+def test_get_db_path_config_file(monkeypatch, tmp_path):
+    import json
+    from todo.db import get_db_path
+    monkeypatch.delenv("TODO_DB_PATH", raising=False)
+    # Write a config.json in a fake home dir
+    config_dir = tmp_path / ".local" / "share" / "todo"
+    config_dir.mkdir(parents=True)
+    config_path = config_dir / "config.json"
+    config_path.write_text(json.dumps({"db_path": str(tmp_path / "from_config.db")}))
+    monkeypatch.setattr("todo.db.Path.home", lambda: tmp_path)
+    assert get_db_path() == tmp_path / "from_config.db"
+
+
+def test_get_db_path_default(monkeypatch, tmp_path):
+    from todo.db import get_db_path
+    monkeypatch.delenv("TODO_DB_PATH", raising=False)
+    monkeypatch.setattr("todo.db.Path.home", lambda: tmp_path)
+    expected = tmp_path / ".local" / "share" / "todo" / "tasks.db"
+    assert get_db_path() == expected

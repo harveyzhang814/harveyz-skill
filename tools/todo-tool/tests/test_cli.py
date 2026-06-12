@@ -68,3 +68,45 @@ def test_show_command():
     assert result.exit_code == 0
     assert "My task" in result.output
     assert "myapp" in result.output
+
+
+def test_show_missing_task():
+    result = runner.invoke(app, ["show", "999"])
+    assert result.exit_code == 1
+
+
+def test_list_done_flag():
+    runner.invoke(app, ["add", "Task A", "--project", "myapp"])
+    runner.invoke(app, ["done", "1"])
+    # default list hides done tasks
+    result_default = runner.invoke(app, ["list"])
+    assert "Task A" not in result_default.output
+    # --done reveals them
+    result_done = runner.invoke(app, ["list", "--done"])
+    assert "Task A" in result_done.output
+
+
+def test_list_priority_filter():
+    runner.invoke(app, ["add", "High task", "--project", "myapp", "--priority", "P1"])
+    runner.invoke(app, ["add", "Low task", "--project", "myapp", "--priority", "P3"])
+    result = runner.invoke(app, ["list", "--priority", "P1"])
+    assert result.exit_code == 0
+    assert "High task" in result.output
+    assert "Low task" not in result.output
+
+
+def test_config_set_and_show(tmp_path, monkeypatch):
+    import pathlib
+
+    # Replace Path.home at the module level so config_set/config_show resolve
+    # their paths under tmp_path instead of the real home directory.
+    monkeypatch.setattr("todo.cli.Path", type(
+        "FakePath", (pathlib.Path,), {"home": staticmethod(lambda: tmp_path)}
+    ))
+    new_db = str(tmp_path / "mydb.db")
+    result = runner.invoke(app, ["config", "set", "db-path", new_db])
+    assert result.exit_code == 0
+    assert "db-path set to" in result.output
+    result2 = runner.invoke(app, ["config", "show"])
+    assert result2.exit_code == 0
+    assert "mydb.db" in result2.output

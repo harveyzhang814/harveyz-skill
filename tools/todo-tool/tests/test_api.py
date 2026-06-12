@@ -72,3 +72,12 @@ def test_list_projects(client):
     r = client.get("/api/projects")
     assert r.status_code == 200
     assert set(r.json()) == {"proj-a", "proj-b"}
+
+
+def test_list_tasks_filter_priority(client):
+    client.post("/api/tasks", json={"title": "High", "project": "p", "priority": "P1"})
+    client.post("/api/tasks", json={"title": "Low", "project": "p", "priority": "P3"})
+    r = client.get("/api/tasks?priority=P1")
+    assert r.status_code == 200
+    assert len(r.json()) == 1
+    assert r.json()[0]["title"] == "High"
