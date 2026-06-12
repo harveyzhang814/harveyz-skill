@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Optional
 
 from .models import Project, ProjectCreate, ProjectUpdate, Task, TaskCreate, TaskUpdate
+from .parser import parse_todo_file
 
 ALLOWED_TASK_UPDATE_COLUMNS = {"title", "priority", "status"}
 ALLOWED_PROJECT_UPDATE_COLUMNS = {"repo_name", "local_path"}
@@ -209,13 +210,12 @@ class TodoDB:
         return self.list_projects()
 
     def sync_from_file(self, path: Path, project_id: int) -> tuple[int, int]:
-        from .parser import parse_todo_file
         tasks = parse_todo_file(path)
         lines = path.read_text(encoding="utf-8").splitlines()
         inserted = 0
         updated = 0
-        needs_writeback = False
 
+        # Process updates (tasks with existing IDs)
         for task in tasks:
             if task.id is not None:
                 result = self.update(
@@ -224,20 +224,36 @@ class TodoDB:
                 )
                 if result:
                     updated += 1
-            else:
-                now = datetime.now(timezone.utc).isoformat()
-                with self._conn() as conn:
+                else:
+                    import sys
+                    print(
+                        f"Warning: task ID {task.id} not found in DB — stale ID in TODO.md",
+                        file=sys.stderr,
+                    )
+
+        # Batch-insert new tasks: write file first, then commit so a file-write failure rolls back
+        new_tasks = [t for t in tasks if t.id is None]
+        if new_tasks:
+            now = datetime.now(timezone.utc).isoformat()
+            conn = sqlite3.connect(self.db_path, isolation_level=None)
+            conn.row_factory = sqlite3.Row
+            conn.execute("PRAGMA foreign_keys = ON")
+            try:
+                conn.execute("BEGIN")
+                for task in new_tasks:
                     cur = conn.execute(
                         "INSERT INTO tasks (title, project_id, priority, status, created_at) "
                         "VALUES (?, ?, ?, ?, ?)",
                         (task.title, project_id, task.priority, task.status, now),
                     )
-                    new_id = cur.lastrowid
-                lines[task.metadata_line_num] += f" | **ID**: {new_id}"
-                inserted += 1
-                needs_writeback = True
-
-        if needs_writeback:
-            path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+                    lines[task.metadata_line_num] += f" | **ID**: {cur.lastrowid}"
+                    inserted += 1
+                path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+                conn.execute("COMMIT")
+            except Exception:
+                conn.execute("ROLLBACK")
+                raise
+            finally:
+                conn.close()
 
         return inserted, updated
