@@ -129,6 +129,35 @@ def show(task_id: int = typer.Argument(..., help="Task ID")):
 
 
 @app.command()
+def sync(
+    project: str = typer.Argument(..., help="Project repo name"),
+    path: str = typer.Option(None, "--path", help="Override local_path for this sync"),
+):
+    """Sync TODO.md into SQLite. Writes IDs back to TODO.md."""
+    db = get_db()
+    proj = db.get_project_by_name(project)
+    if not proj:
+        typer.echo(f"Project '{project}' not found", err=True)
+        raise typer.Exit(1)
+
+    project_path = Path(path) if path else (Path(proj.local_path) if proj.local_path else None)
+    if not project_path:
+        typer.echo(
+            f"No path for '{project}'. Use --path or: todo project set-path {project} <path>",
+            err=True,
+        )
+        raise typer.Exit(1)
+
+    todo_md = project_path / "TODO.md"
+    if not todo_md.exists():
+        typer.echo(f"TODO.md not found at {todo_md}", err=True)
+        raise typer.Exit(1)
+
+    inserted, updated = db.sync_from_file(todo_md, proj.id)
+    typer.echo(f"✓ 同步完成：{inserted} 条新增，{updated} 条更新")
+
+
+@app.command()
 def serve(port: int = typer.Option(8080, "--port", help="Port to listen on")):
     """Start the web UI server."""
     import uvicorn
