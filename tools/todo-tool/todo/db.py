@@ -1,6 +1,7 @@
 import json
 import os
 import sqlite3
+import sys
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
@@ -225,7 +226,6 @@ class TodoDB:
                 if result:
                     updated += 1
                 else:
-                    import sys
                     print(
                         f"Warning: task ID {task.id} not found in DB — stale ID in TODO.md",
                         file=sys.stderr,
