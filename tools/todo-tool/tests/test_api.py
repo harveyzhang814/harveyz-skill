@@ -174,6 +174,8 @@ def test_list_tasks_lazy_sync(client, tmp_path):
     assert tasks[0]["title"] == "自动同步任务"
     assert tasks[0]["priority"] == "P2"
     assert "**ID**:" in todo_md.read_text(encoding="utf-8")
+    proj = next(p for p in client.get("/api/projects").json() if p["repo_name"] == "lazy-proj")
+    assert proj["last_synced_at"] is not None
 
 
 def test_list_tasks_lazy_sync_idempotent(client, tmp_path):
@@ -195,3 +197,27 @@ def test_list_tasks_lazy_sync_skips_missing_todo(client, tmp_path):
     r = client.get("/api/tasks")
     assert r.status_code == 200
     assert r.json() == []
+
+
+def test_list_tasks_lazy_sync_skips_unchanged_file(client, tmp_path):
+    import os
+    todo_md = tmp_path / "TODO.md"
+    todo_md.write_text(
+        "# TODO\n\n## 🚧 待开发\n\n### 初始任务\n**优先级**: P2 | **日期**: 2026-01-01\n\n---\n\n## ✅ 已完成\n",
+        encoding="utf-8",
+    )
+    _add_project(client, "skip-proj", path=str(tmp_path))
+    client.get("/api/tasks")  # first sync — inserts task, records mtime
+
+    # Write a new task but backdate the mtime to before last_synced_at
+    proj = next(p for p in client.get("/api/projects").json() if p["repo_name"] == "skip-proj")
+    synced_at = proj["last_synced_at"]
+    content = todo_md.read_text(encoding="utf-8")
+    todo_md.write_text(
+        content.replace("## ✅ 已完成", "### 不应出现的任务\n**优先级**: P3 | **日期**: 2026-01-02\n\n---\n\n## ✅ 已完成"),
+        encoding="utf-8",
+    )
+    os.utime(todo_md, (synced_at - 1, synced_at - 1))  # backdate to before last sync
+
+    r = client.get("/api/tasks")
+    assert len(r.json()) == 1  # second task skipped because mtime < last_synced_at

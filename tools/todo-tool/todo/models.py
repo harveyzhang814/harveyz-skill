@@ -17,6 +17,7 @@ class Project(BaseModel):
     repo_name: str
     local_path: Optional[str] = None
     created_at: str
+    last_synced_at: Optional[float] = None
 
 
 class TaskCreate(BaseModel):

@@ -54,7 +54,8 @@ def create_app(db: TodoDB = None) -> FastAPI:
                 todo_md = Path(proj.local_path) / "TODO.md"
                 if todo_md.exists():
                     try:
-                        db.sync_from_file(todo_md, proj.id)
+                        if proj.last_synced_at is None or todo_md.stat().st_mtime > proj.last_synced_at:
+                            db.sync_from_file(todo_md, proj.id)
                     except Exception as e:
                         print(f"Warning: sync failed for {proj.repo_name}: {e}", file=sys.stderr)
         return db.list_tasks(project=project, status=status, priority=priority)

@@ -56,6 +56,11 @@ class TodoDB:
                     created_at TEXT NOT NULL
                 )
             """)
+            # Migration: add last_synced_at if upgrading from earlier schema
+            try:
+                conn.execute("ALTER TABLE projects ADD COLUMN last_synced_at REAL")
+            except sqlite3.OperationalError:
+                pass  # column already exists
             conn.execute("CREATE INDEX IF NOT EXISTS idx_project ON tasks(project_id)")
             conn.execute("CREATE INDEX IF NOT EXISTS idx_status  ON tasks(status)")
 
@@ -255,5 +260,12 @@ class TodoDB:
                 raise
             finally:
                 conn.close()
+
+        # Record file mtime so subsequent syncs can skip unchanged files
+        with self._conn() as conn:
+            conn.execute(
+                "UPDATE projects SET last_synced_at = ? WHERE id = ?",
+                (path.stat().st_mtime, project_id),
+            )
 
         return inserted, updated
