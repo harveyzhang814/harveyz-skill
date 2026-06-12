@@ -32,20 +32,13 @@ description: "Add a new requirement, task, or feature request to any project's T
 
 ## 阶段二 — 确认项目归属
 
-需求收集完毕后，立即查询项目列表：
-
-```bash
-command -v todo >/dev/null 2>&1 \
-  && todo project list \
-  || python3 -m todo.cli project list
-```
-
-输出格式（每个项目两行，第二行为可选描述）：
+需求收集完毕后，直接读取项目注册表：
 
 ```
-  repo_name  /local/path
-    项目描述（如有）
+~/.hskill/todo-tool/PROJECTS.md
 ```
+
+格式为每个项目一行名称+路径，可选第二行描述，阅读全文即可获取所有项目信息。
 
 ### 匹配逻辑
 
