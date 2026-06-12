@@ -19,7 +19,7 @@ if (!skillName) process.exit(0)
 if (kind !== 'skill') {
   const home = os.homedir()
   const installedBin  = path.join(home, '.local', 'bin', skillName)
-  const installedMeta = path.join(home, '.local', 'share', 'hskill', 'tools', `${skillName}.json`)
+  const installedMeta = path.join(home, '.hskill', 'tools', `${skillName}.json`)
 
   function readToolMeta(jsonPath) {
     try {

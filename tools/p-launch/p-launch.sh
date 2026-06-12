@@ -8,7 +8,7 @@ command -v python3 &>/dev/null \
   || _die "python3 not found — install Python 3.11+ first"
 
 # ── Isolated venv ─────────────────────────────────────────────────────────
-VENV="$HOME/.local/share/hskill/p-launch-venv"
+VENV="$HOME/.hskill/p-launch/venv"
 
 if [[ ! -d "$VENV" ]]; then
   printf "\033[2mSetting up p-launch environment (first run)...\033[0m\n" >&2
@@ -21,7 +21,7 @@ fi
 
 # ── Locate the Python entry point ─────────────────────────────────────────
 # Installed path (via hskill installer)
-PYFILE="$HOME/.local/share/hskill/tools/p-launch.py"
+PYFILE="$HOME/.hskill/tools/p-launch.py"
 
 # Dev fallback: run from source tree alongside this script
 if [[ ! -f "$PYFILE" ]]; then
@@ -29,6 +29,6 @@ if [[ ! -f "$PYFILE" ]]; then
 fi
 
 [[ -f "$PYFILE" ]] \
-  || _die "p-launch.py not found (tried $HOME/.local/share/hskill/tools/p-launch.py) — reinstall p-launch"
+  || _die "p-launch.py not found (tried $HOME/.hskill/tools/p-launch.py) — reinstall p-launch"
 
 exec "$VENV/bin/python" "$PYFILE" "$@"

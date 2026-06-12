@@ -2,6 +2,7 @@
 import { select, input } from '@inquirer/prompts'
 import chalk from 'chalk'
 import { execSync, spawnSync } from 'child_process'
+import { existsSync } from 'fs'
 import { createRequire } from 'module'
 import os from 'os'
 import path from 'path'
@@ -152,6 +153,15 @@ if (subcommand === 'update') {
   } catch {
     console.error(chalk.red('  ✗ Update failed. Try: npm update -g harveyz-skill'))
     process.exit(1)
+  }
+  const legacyDir = path.join(os.homedir(), '.local', 'share', 'hskill')
+  if (existsSync(legacyDir)) {
+    console.log('')
+    console.log(chalk.yellow('  ⚠ Legacy data detected at ~/.local/share/hskill/'))
+    console.log(chalk.dim('  Run the migration script to move data to the new location:'))
+    console.log('')
+    console.log('     ' + chalk.bold.cyan('bash "$(npm root -g)/harveyz-skill/scripts/migrate-data-dir.sh"'))
+    console.log('')
   }
   process.exit(0)
 }

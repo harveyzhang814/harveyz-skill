@@ -29,7 +29,7 @@ setup() {
   mkdir -p "${MOCK_HOME}/.cursor/skills"
   mkdir -p "${MOCK_HOME}/.config/opencode/skills"
   mkdir -p "${MOCK_HOME}/.local/bin"
-  mkdir -p "${MOCK_HOME}/.local/share/hskill/tools"
+  mkdir -p "${MOCK_HOME}/.hskill/tools"
 }
 
 teardown() {
@@ -181,7 +181,7 @@ _skill_version() {
 
 @test "install --tool: tool.json written to data dir" {
   _install --tool "${TOOL_NAME}" --force
-  [ -f "${MOCK_HOME}/.local/share/hskill/tools/${TOOL_NAME}.json" ]
+  [ -f "${MOCK_HOME}/.hskill/tools/${TOOL_NAME}.json" ]
 }
 
 @test "install --tool (no --force): already-installed tool is skipped" {
@@ -257,20 +257,20 @@ _uninstall() {
 @test "uninstall: removes tool.json from share dir" {
   _install --tool "${TOOL_NAME}" --force
   _uninstall "${TOOL_NAME}" --yes
-  [ ! -f "${MOCK_HOME}/.local/share/hskill/tools/${TOOL_NAME}.json" ]
+  [ ! -f "${MOCK_HOME}/.hskill/tools/${TOOL_NAME}.json" ]
 }
 
 @test "uninstall: removes companion .py from share dir" {
   _install --tool "${TOOL_NAME}" --force
   _uninstall "${TOOL_NAME}" --yes
-  [ ! -f "${MOCK_HOME}/.local/share/hskill/tools/${TOOL_NAME}.py" ]
+  [ ! -f "${MOCK_HOME}/.hskill/tools/${TOOL_NAME}.py" ]
 }
 
 @test "uninstall: removes uninstallPaths declared in tool.json" {
   _install --tool "${TOOL_NAME}" --force
-  mkdir -p "${MOCK_HOME}/.local/share/hskill/p-launch-venv"
+  mkdir -p "${MOCK_HOME}/.hskill/p-launch/venv"
   _uninstall "${TOOL_NAME}" --yes
-  [ ! -d "${MOCK_HOME}/.local/share/hskill/p-launch-venv" ]
+  [ ! -d "${MOCK_HOME}/.hskill/p-launch/venv" ]
 }
 
 @test "uninstall: keeps configPaths without --yes in non-TTY" {
@@ -327,7 +327,7 @@ _uninstall() {
 
 @test "install --tool: skips with outdated message in non-TTY when version differs" {
   _install --tool "${TOOL_NAME}" --force
-  local meta="${MOCK_HOME}/.local/share/hskill/tools/${TOOL_NAME}.json"
+  local meta="${MOCK_HOME}/.hskill/tools/${TOOL_NAME}.json"
   node -e "const f='${meta}'; const fs=require('fs'); const d=JSON.parse(fs.readFileSync(f,'utf8')); d.version='0.0.1'; fs.writeFileSync(f,JSON.stringify(d))"
   run env HOME="${MOCK_HOME}" node "${CLI}" install --tool "${TOOL_NAME}" 2>&1
   [[ "$output" == *"outdated"* ]]
@@ -336,7 +336,7 @@ _uninstall() {
 
 @test "install --tool --force: removes uninstallPaths before reinstalling" {
   _install --tool "${TOOL_NAME}" --force
-  local venv="${MOCK_HOME}/.local/share/hskill/p-launch-venv"
+  local venv="${MOCK_HOME}/.hskill/p-launch/venv"
   mkdir -p "$venv"
   _install --tool "${TOOL_NAME}" --force
   [ ! -d "$venv" ]
