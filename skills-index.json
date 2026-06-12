@@ -39,7 +39,8 @@
     { "path": "meta/git-cleanup",               "bundle": "meta" },
     { "path": "meta/contribute-skill",          "bundle": "meta" },
     { "path": "meta/skill-publish",             "bundle": "meta" },
-    { "path": "meta/npm-release",               "bundle": "meta" }
+    { "path": "meta/npm-release",               "bundle": "meta" },
+    { "path": "meta/opencode-runner",           "bundle": "meta" }
   ],
   "hooks": [
     {
