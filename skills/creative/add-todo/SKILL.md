@@ -2,12 +2,12 @@
 name: add-todo
 version: "4.0.0"
 user_invocable: true
-description: "Add a new requirement, task, or feature request to any project's TODO list and SQLite task database — from any working directory. Triggers whenever the user wants to capture a new need — even phrased casually like 'we should do X later', 'add this to the backlog', 'note this down', 'remember to build X', or 'we need to do Y at some point'."
+description: "Add a new requirement, task, or feature request to any project's TODO.md — from any working directory. Triggers whenever the user wants to capture a new need — even phrased casually like 'we should do X later', 'add this to the backlog', 'note this down', 'remember to build X', 'we need to do Y at some point', or 'record this for later'."
 ---
 
 # 写入 TODO
 
-快速捕获需求：先用 2-3 个问题把需求说清楚，再根据完整的需求信息匹配项目、生成标题，最后写入 SQLite 和 TODO.md。
+快速捕获需求：先用 2-3 个问题把需求说清楚，再根据完整的需求信息匹配项目、生成标题，最后写入 TODO.md。
 
 ## 核心原则
 
@@ -32,19 +32,19 @@ description: "Add a new requirement, task, or feature request to any project's T
 
 ## 阶段二 — 确认项目归属
 
-需求收集完毕后，直接读取项目注册表：
+需求收集完毕后，用 Read 工具读取项目注册表：
 
 ```
 ~/.hskill/todo-tool/PROJECTS.md
 ```
 
-格式为每个项目一行名称+路径，可选第二行描述，阅读全文即可获取所有项目信息。
+同时用 Bash 运行 `pwd` 获取当前目录。
 
 ### 匹配逻辑
 
 综合以下信号推断候选项目：
 
-1. **当前目录**：`pwd` 是否在某个项目的 `local_path` 内（前缀匹配）→ 强信号
+1. **当前目录**：`pwd` 输出是否是某个项目 `local_path` 的子路径 → 强信号
 2. **需求关键词 + 项目描述**：需求描述中的词汇是否与项目名或描述匹配 → 中信号
 3. **语义推断**：需求内容在哪个项目的业务范围内 → 弱信号
 
@@ -97,7 +97,7 @@ todo project set-path [项目名] [本地路径]
 
 ### 写入格式
 
-格式规范见 `tools/todo-tool/todo/todo_format.yaml`。追加到 `## 🚧 待开发` 末尾：
+追加到 `## 🚧 待开发` 末尾：
 
 ```markdown
 ### [任务标题（≤20 字）]
