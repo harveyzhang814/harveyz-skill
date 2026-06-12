@@ -30,7 +30,7 @@ export function FilterBar({
     <div className="flex gap-2 mb-4 flex-wrap">
       <Select
         value={project || "all"}
-        onValueChange={(v) => onProjectChange(v === "all" ? "" : v)}
+        onValueChange={(v) => onProjectChange(v === "all" || v === null ? "" : v)}
       >
         <SelectTrigger className="w-44">
           <SelectValue placeholder="All Projects" />
@@ -47,7 +47,7 @@ export function FilterBar({
 
       <Select
         value={priority || "all"}
-        onValueChange={(v) => onPriorityChange(v === "all" ? "" : v)}
+        onValueChange={(v) => onPriorityChange(v === "all" || v === null ? "" : v)}
       >
         <SelectTrigger className="w-40">
           <SelectValue placeholder="All Priorities" />

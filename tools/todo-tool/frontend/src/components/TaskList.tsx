@@ -1,4 +1,4 @@
-import { Task } from "../lib/api"
+import type { Task } from "../lib/api"
 import { TaskRow } from "./TaskRow"
 
 interface Props {

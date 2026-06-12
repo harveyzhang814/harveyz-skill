@@ -42,11 +42,9 @@ export function AddTaskDialog({ projects, onCreated }: Props) {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button size="sm">
-          <Plus className="h-4 w-4 mr-1" />
-          Add
-        </Button>
+      <DialogTrigger render={<Button size="sm" />}>
+        <Plus className="h-4 w-4 mr-1" />
+        Add
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
@@ -72,7 +70,7 @@ export function AddTaskDialog({ projects, onCreated }: Props) {
               <option key={p} value={p} />
             ))}
           </datalist>
-          <Select value={priority} onValueChange={setPriority}>
+          <Select value={priority} onValueChange={(v) => { if (v !== null) setPriority(v) }}>
             <SelectTrigger>
               <SelectValue />
             </SelectTrigger>

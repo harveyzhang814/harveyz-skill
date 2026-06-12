@@ -1,4 +1,4 @@
-import { Task } from "../lib/api"
+import type { Task } from "../lib/api"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Check } from "lucide-react"
