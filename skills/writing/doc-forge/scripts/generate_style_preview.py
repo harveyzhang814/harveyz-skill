@@ -16,11 +16,11 @@ ASSETS_DIR = Path(__file__).parent.parent / "assets"
 DEFAULT_OUTPUT = Path(__file__).parent.parent / "preview" / "style-preview.html"
 
 DISPLAY_NAMES: dict[str, str] = {
-    "bain":    "Bain & Company",
-    "bcg":     "BCG",
-    "thesis":  "中文学术论文",
-    "default": "Default",
-    "rb":      "Roland Berger",
+    "bain":          "Bain & Company",
+    "bcg":           "BCG",
+    "thesis":        "中文学术论文",
+    "default":       "Default",
+    "rolandberger":  "Roland Berger",
 }
 
 RowContent = Union[str, Callable[[str, str], str]]  # (slug, css) -> html
