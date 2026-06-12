@@ -1,5 +1,5 @@
 ---
-name: capture-insight
+name: insight
 version: "1.1.0"
 user_invocable: true
 description: "Capture and record a fleeting insight or observation. Triggers immediately when the user expresses an observation, judgment, or idea — phrases like 'I noticed', 'just an observation', 'record this', 'insight', 'I have a judgment', or tossing out an opinionated thought. Distinct from 'I have an idea to execute' (that's a task). Clarifies the core with 2-3 quick Q&As, then saves to the insights/ folder. Trigger early — insights are fragile."

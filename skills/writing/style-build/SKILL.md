@@ -1,5 +1,5 @@
 ---
-name: design-derive
+name: style-build
 description: "Derive format-specific configs from a brand design knowledge doc. Trigger when the user wants to generate doc-forge JSON/CSS, HTML CSS variables, Mermaid color scheme, or PPT theme from a design system. E.g. 'derive configs for BCG', 'generate doc-forge style for rb', 'create HTML theme from custom-style'."
 user_invocable: true
 version: "1.4.0"
@@ -9,9 +9,9 @@ version: "1.4.0"
 
 读取 `knowledge/design/<brand>-style.md`，推导各输出格式的具体配置。
 
-**只做推导，不调查官网。** 官网调查由 `/style-scout` 负责。
+**只做推导，不调查官网。** 官网调查由 `/brand-scout` 负责。
 
-**映射标准：** 格式字段 ↔ Token 的完整映射规则定义在 `skills/writing/design-derive/references/FORMAT-MAPPING.md`，推导时以该文件为权威依据。品牌文件提供 Token 值，FORMAT-MAPPING.md 提供映射规则，两者分离。
+**映射标准：** 格式字段 ↔ Token 的完整映射规则定义在 `skills/writing/style-build/references/FORMAT-MAPPING.md`，推导时以该文件为权威依据。品牌文件提供 Token 值，FORMAT-MAPPING.md 提供映射规则，两者分离。
 
 支持输出格式：
 - **DOCX** — `doc-forge/<brand>-style.json`
@@ -49,7 +49,7 @@ BRAND="<brand>"
 KNOWLEDGE_FILE="knowledge/design/${BRAND}-style.md"
 ```
 
-用 Read 工具读取 `$KNOWLEDGE_FILE` 和 `skills/writing/design-derive/references/FORMAT-MAPPING.md`。
+用 Read 工具读取 `$KNOWLEDGE_FILE` 和 `skills/writing/style-build/references/FORMAT-MAPPING.md`。
 
 **Token 解析方式（三层引用链）：**
 
@@ -150,7 +150,7 @@ H1_doc = 24
 
 生成 `skills/writing/doc-forge/assets/<brand>-style.json`。
 
-**映射规则参考 `skills/writing/design-derive/references/FORMAT-MAPPING.md`：**
+**映射规则参考 `skills/writing/style-build/references/FORMAT-MAPPING.md`：**
 - 颜色字段 → 第二节 2.1（DOCX JSON 路径列）
 - 字体 → 第三节（CJK 始终为 `PingFang SC`，英文取降级栈第一项）
 - 尺度 → 第四节 4.1/4.2（JSON 路径列）
@@ -200,7 +200,7 @@ H1_doc = 24
 
 生成 `skills/writing/doc-forge/assets/<brand>.css`。
 
-**映射规则参考 `skills/writing/design-derive/references/FORMAT-MAPPING.md`：**
+**映射规则参考 `skills/writing/style-build/references/FORMAT-MAPPING.md`：**
 - 颜色属性 → 第二节 2.1（PDF CSS 属性列）
 - 字体栈 → 第三节（格式：`"官方字体", FONT_STACK`）
 - 尺度 → 第四节 4.1/4.2（CSS 属性列）
@@ -228,7 +228,7 @@ H1_doc = 24
 
 ### Step 5 — 推导 HTML CSS 变量（按需）
 
-**变量名查阅 `skills/writing/design-derive/references/FORMAT-MAPPING.md` 第六节（HTML CSS 变量完整列表）。**
+**变量名查阅 `skills/writing/style-build/references/FORMAT-MAPPING.md` 第六节（HTML CSS 变量完整列表）。**
 
 按 Step 2 提取的 Semantic Token 值填入，打印完整 `:root { }` 块输出到对话，供用户粘贴使用。
 
@@ -236,9 +236,9 @@ H1_doc = 24
 
 ### Step 6 — 推导 Mermaid 主题并写入配置文件（按需）
 
-**themeVariables 键名查阅 `skills/writing/design-derive/references/FORMAT-MAPPING.md` 第七节。**
+**themeVariables 键名查阅 `skills/writing/style-build/references/FORMAT-MAPPING.md` 第七节。**
 
-写入 `skills/writing/mermaid-diagram/themes/<brand>.json`，同时在对话中打印可直接嵌入的 `%%{init}%%` 块。
+写入 `skills/writing/diagram/themes/<brand>.json`，同时在对话中打印可直接嵌入的 `%%{init}%%` 块。
 
 主题文件按图类型分区存储，不同图类型使用不同样式机制。
 
@@ -419,7 +419,7 @@ semantic 的 `text` 字段：fill 深于 `rules.dark_text_threshold` → `#FFFFF
 
 ### Step 7 — 推导 PPT 主题（按需）
 
-**色槽对应查阅 `skills/writing/design-derive/references/FORMAT-MAPPING.md` 第八节（PPT 色槽完整映射）。**
+**色槽对应查阅 `skills/writing/style-build/references/FORMAT-MAPPING.md` 第八节（PPT 色槽完整映射）。**
 
 以文字形式输出 PPT 主题配置（标题幻灯片 + 内容幻灯片 + 主题色板槽位）。
 
@@ -439,7 +439,7 @@ semantic 的 `text` 字段：fill 深于 `rules.dark_text_threshold` → `#FFFFF
 > 3. **表格模式** — `border_mode` 是否与设计文档一致？
 > 4. **Mermaid 深色节点** — subgraph/node 所有 fill 深于 `#4A4A4A` 的是否都有 `color:#fff`？
 >
-> 确认后可运行 `/doc-forge` 生成测试文档，或用 `/mermaid-diagram` 测试配色效果。
+> 确认后可运行 `/doc-forge` 生成测试文档，或用 `/diagram` 测试配色效果。
 
 ---
 
