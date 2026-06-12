@@ -7,7 +7,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent / "scripts"))
 from md_to_pdf import _extract_mermaid, build_html
 
 ASSETS_DIR = Path(__file__).parent.parent / "assets"
-CSS_PATH = ASSETS_DIR / "default.css"
+CSS_PATH = next(ASSETS_DIR.glob("*.css"))
 
 
 class TestExtractMermaid(unittest.TestCase):
