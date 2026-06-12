@@ -6,7 +6,7 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 from .db import TodoDB
-from .models import Task, TaskCreate, TaskUpdate
+from .models import Project, ProjectCreate, ProjectUpdate, Task, TaskCreate, TaskUpdate
 
 
 def create_app(db: TodoDB = None) -> FastAPI:
@@ -14,6 +14,33 @@ def create_app(db: TodoDB = None) -> FastAPI:
         db = TodoDB()
 
     app = FastAPI(title="Todo Tool")
+
+    # ── Project endpoints ─────────────────────────────────────────────────────
+
+    @app.get("/api/projects", response_model=list[Project])
+    def list_projects():
+        return db.list_projects()
+
+    @app.post("/api/projects", response_model=Project, status_code=201)
+    def create_project(data: ProjectCreate):
+        return db.create_project(data)
+
+    @app.patch("/api/projects/{project_id}", response_model=Project)
+    def update_project(project_id: int, data: ProjectUpdate):
+        project = db.update_project(project_id, data)
+        if not project:
+            raise HTTPException(status_code=404, detail="Project not found")
+        return project
+
+    @app.delete("/api/projects/{project_id}", status_code=204)
+    def delete_project(project_id: int):
+        try:
+            if not db.delete_project(project_id):
+                raise HTTPException(status_code=404, detail="Project not found")
+        except ValueError as e:
+            raise HTTPException(status_code=409, detail=str(e))
+
+    # ── Task endpoints ────────────────────────────────────────────────────────
 
     @app.get("/api/tasks", response_model=list[Task])
     def list_tasks(
@@ -25,7 +52,10 @@ def create_app(db: TodoDB = None) -> FastAPI:
 
     @app.post("/api/tasks", response_model=Task, status_code=201)
     def create_task(data: TaskCreate):
-        return db.create(data)
+        try:
+            return db.create(data)
+        except ValueError as e:
+            raise HTTPException(status_code=422, detail=str(e))
 
     @app.patch("/api/tasks/{task_id}", response_model=Task)
     def update_task(task_id: int, data: TaskUpdate):
@@ -39,11 +69,8 @@ def create_app(db: TodoDB = None) -> FastAPI:
         if not db.delete(task_id):
             raise HTTPException(status_code=404, detail="Task not found")
 
-    @app.get("/api/projects", response_model=list[str])
-    def list_projects():
-        return db.projects()
+    # ── Frontend ──────────────────────────────────────────────────────────────
 
-    # Serve React frontend (populated after Task 6)
     frontend_dist = Path(__file__).parent.parent / "frontend" / "dist"
     if frontend_dist.exists():
         app.mount(

@@ -10,7 +10,80 @@ def client(tmp_path):
     return TestClient(create_app(db=db))
 
 
+def _add_project(client, name: str, path: str = None):
+    body = {"repo_name": name}
+    if path:
+        body["local_path"] = path
+    r = client.post("/api/projects", json=body)
+    assert r.status_code == 201, r.text
+    return r.json()
+
+
+# ── Project endpoint tests ────────────────────────────────────────────────────
+
+def test_create_project(client):
+    r = client.post("/api/projects", json={"repo_name": "myapp"})
+    assert r.status_code == 201
+    data = r.json()
+    assert data["repo_name"] == "myapp"
+    assert data["local_path"] is None
+    assert "id" in data
+    assert "created_at" in data
+
+
+def test_create_project_with_path(client):
+    r = client.post("/api/projects", json={"repo_name": "myapp", "local_path": "/home/user/myapp"})
+    assert r.status_code == 201
+    assert r.json()["local_path"] == "/home/user/myapp"
+
+
+def test_list_projects_returns_objects(client):
+    _add_project(client, "alpha")
+    _add_project(client, "beta")
+    r = client.get("/api/projects")
+    assert r.status_code == 200
+    data = r.json()
+    assert len(data) == 2
+    assert all("repo_name" in p for p in data)
+    assert sorted(p["repo_name"] for p in data) == ["alpha", "beta"]
+
+
+def test_update_project(client):
+    p = _add_project(client, "myapp")
+    r = client.patch(f"/api/projects/{p['id']}", json={"local_path": "/new/path"})
+    assert r.status_code == 200
+    assert r.json()["local_path"] == "/new/path"
+
+
+def test_update_project_missing(client):
+    r = client.patch("/api/projects/999", json={"local_path": "/x"})
+    assert r.status_code == 404
+
+
+def test_delete_project(client):
+    p = _add_project(client, "myapp")
+    r = client.delete(f"/api/projects/{p['id']}")
+    assert r.status_code == 204
+    assert client.get("/api/projects").json() == []
+
+
+def test_delete_project_missing(client):
+    r = client.delete("/api/projects/999")
+    assert r.status_code == 404
+
+
+def test_delete_project_with_tasks_returns_409(client):
+    _add_project(client, "myapp")
+    client.post("/api/tasks", json={"title": "T", "project": "myapp"})
+    p = client.get("/api/projects").json()[0]
+    r = client.delete(f"/api/projects/{p['id']}")
+    assert r.status_code == 409
+
+
+# ── Task endpoint tests ───────────────────────────────────────────────────────
+
 def test_create_task(client):
+    _add_project(client, "myapp")
     r = client.post("/api/tasks", json={"title": "Test", "project": "myapp"})
     assert r.status_code == 201
     data = r.json()
@@ -20,7 +93,13 @@ def test_create_task(client):
     assert data["status"] == "todo"
 
 
+def test_create_task_unknown_project_returns_422(client):
+    r = client.post("/api/tasks", json={"title": "T", "project": "nope"})
+    assert r.status_code == 422
+
+
 def test_list_tasks(client):
+    _add_project(client, "myapp")
     client.post("/api/tasks", json={"title": "T1", "project": "myapp"})
     client.post("/api/tasks", json={"title": "T2", "project": "myapp"})
     r = client.get("/api/tasks")
@@ -29,6 +108,8 @@ def test_list_tasks(client):
 
 
 def test_list_tasks_filter_project(client):
+    _add_project(client, "proj-a")
+    _add_project(client, "proj-b")
     client.post("/api/tasks", json={"title": "T1", "project": "proj-a"})
     client.post("/api/tasks", json={"title": "T2", "project": "proj-b"})
     r = client.get("/api/tasks?project=proj-a")
@@ -36,6 +117,7 @@ def test_list_tasks_filter_project(client):
 
 
 def test_list_tasks_filter_status(client):
+    _add_project(client, "p")
     task = client.post("/api/tasks", json={"title": "T", "project": "p"}).json()
     client.patch(f"/api/tasks/{task['id']}", json={"status": "done"})
     assert len(client.get("/api/tasks?status=todo").json()) == 0
@@ -43,6 +125,7 @@ def test_list_tasks_filter_status(client):
 
 
 def test_update_task(client):
+    _add_project(client, "p")
     task = client.post("/api/tasks", json={"title": "T", "project": "p"}).json()
     r = client.patch(f"/api/tasks/{task['id']}", json={"status": "done"})
     assert r.status_code == 200
@@ -55,6 +138,7 @@ def test_update_missing_task(client):
 
 
 def test_delete_task(client):
+    _add_project(client, "p")
     task = client.post("/api/tasks", json={"title": "T", "project": "p"}).json()
     r = client.delete(f"/api/tasks/{task['id']}")
     assert r.status_code == 204
@@ -65,16 +149,8 @@ def test_delete_missing_task(client):
     assert r.status_code == 404
 
 
-def test_list_projects(client):
-    client.post("/api/tasks", json={"title": "T1", "project": "proj-a"})
-    client.post("/api/tasks", json={"title": "T2", "project": "proj-b"})
-    client.post("/api/tasks", json={"title": "T3", "project": "proj-a"})
-    r = client.get("/api/projects")
-    assert r.status_code == 200
-    assert set(r.json()) == {"proj-a", "proj-b"}
-
-
 def test_list_tasks_filter_priority(client):
+    _add_project(client, "p")
     client.post("/api/tasks", json={"title": "High", "project": "p", "priority": "P1"})
     client.post("/api/tasks", json={"title": "Low", "project": "p", "priority": "P3"})
     r = client.get("/api/tasks?priority=P1")
