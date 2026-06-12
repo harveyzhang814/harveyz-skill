@@ -207,3 +207,37 @@ class TodoDB:
 
     def projects(self) -> list[Project]:
         return self.list_projects()
+
+    def sync_from_file(self, path: Path, project_id: int) -> tuple[int, int]:
+        from .parser import parse_todo_file
+        tasks = parse_todo_file(path)
+        lines = path.read_text(encoding="utf-8").splitlines()
+        inserted = 0
+        updated = 0
+        needs_writeback = False
+
+        for task in tasks:
+            if task.id is not None:
+                result = self.update(
+                    task.id,
+                    TaskUpdate(title=task.title, priority=task.priority, status=task.status),
+                )
+                if result:
+                    updated += 1
+            else:
+                now = datetime.now(timezone.utc).isoformat()
+                with self._conn() as conn:
+                    cur = conn.execute(
+                        "INSERT INTO tasks (title, project_id, priority, status, created_at) "
+                        "VALUES (?, ?, ?, ?, ?)",
+                        (task.title, project_id, task.priority, task.status, now),
+                    )
+                    new_id = cur.lastrowid
+                lines[task.metadata_line_num] += f" | **ID**: {new_id}"
+                inserted += 1
+                needs_writeback = True
+
+        if needs_writeback:
+            path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+        return inserted, updated
