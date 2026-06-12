@@ -7,6 +7,8 @@ from typing import Optional
 
 from .models import Task, TaskCreate, TaskUpdate
 
+ALLOWED_UPDATE_COLUMNS = {"title", "priority", "status"}
+
 
 def get_db_path() -> Path:
     if env_path := os.environ.get("TODO_DB_PATH"):
@@ -57,7 +59,8 @@ class TodoDB:
             row = conn.execute(
                 "SELECT * FROM tasks WHERE id = ?", (task_id,)
             ).fetchone()
-            return Task(**dict(row)) if row else None
+            assert row is not None, f"INSERT succeeded but row {cur.lastrowid} not found"
+            return Task(**dict(row))
 
     def get(self, task_id: int) -> Optional[Task]:
         with self._conn() as conn:
@@ -89,16 +92,23 @@ class TodoDB:
             return [Task(**dict(r)) for r in rows]
 
     def update(self, task_id: int, data: TaskUpdate) -> Optional[Task]:
-        fields = {k: v for k, v in data.model_dump(exclude_none=True).items()}
+        fields = {
+            k: v
+            for k, v in data.model_dump(exclude_none=True).items()
+            if k in ALLOWED_UPDATE_COLUMNS
+        }
         if not fields:
             return self.get(task_id)
         set_clause = ", ".join(f"{k} = ?" for k in fields)
         with self._conn() as conn:
-            conn.execute(
+            cur = conn.execute(
                 f"UPDATE tasks SET {set_clause} WHERE id = ?",
                 [*fields.values(), task_id],
             )
-        return self.get(task_id)
+            if cur.rowcount == 0:
+                return None
+            row = conn.execute("SELECT * FROM tasks WHERE id = ?", (task_id,)).fetchone()
+            return Task(**dict(row)) if row else None
 
     def delete(self, task_id: int) -> bool:
         with self._conn() as conn:
