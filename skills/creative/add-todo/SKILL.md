@@ -1,6 +1,6 @@
 ---
 name: add-todo
-version: "4.1.0"
+version: "4.2.0"
 user_invocable: true
 description: "Add a new requirement, task, or feature request to any project's TODO.md — from any working directory. Triggers whenever the user wants to capture a new need — even phrased casually like 'we should do X later', 'add this to the backlog', 'note this down', 'remember to build X', 'we need to do Y at some point', or 'record this for later'."
 ---
@@ -143,16 +143,22 @@ fi
 ## ✅ 已完成
 ```
 
-### 提交到 chore/todo 分支
+### 提交并合并回原分支
 
 写入后在项目目录执行：
 
 ```bash
 cd {local_path}
+
+# 1. 提交到 chore/todo
 git add TODO.md
 git commit -m "todo: add [任务标题]"
+
+# 2. 切回原分支，将 chore/todo 合并进来
+git checkout "$ORIGINAL_BRANCH"
+git merge --no-ff chore/todo -m "Merge chore/todo: add [任务标题]"
 ```
 
-提交完成后确认，并告知用户当前处于 `chore/todo` 分支：
+完成后确认：
 
-> "✅ 已将 **[任务标题]** 写入 `{local_path}/TODO.md` 并提交到 `chore/todo` 分支（原分支：`$ORIGINAL_BRANCH`）。"
+> "✅ 已将 **[任务标题]** 写入 `{local_path}/TODO.md`，提交到 `chore/todo` 并合并回 `$ORIGINAL_BRANCH`。"
