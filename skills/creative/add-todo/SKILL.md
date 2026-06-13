@@ -1,6 +1,6 @@
 ---
 name: add-todo
-version: "4.2.0"
+version: "4.3.0"
 user_invocable: true
 description: "Add a new requirement, task, or feature request to any project's TODO.md — from any working directory. Triggers whenever the user wants to capture a new need — even phrased casually like 'we should do X later', 'add this to the backlog', 'note this down', 'remember to build X', 'we need to do Y at some point', or 'record this for later'."
 ---
@@ -88,28 +88,29 @@ description: "Add a new requirement, task, or feature request to any project's T
 todo project set-path [项目名] [本地路径]
 ```
 
-### 切换到 Todo 专用分支
+### 准备 chore/todo 追踪分支
 
-在写入前，在项目目录（`local_path`）内操作 git，切换到专用的 todo 提交分支 `chore/todo`：
+在写入前，记录当前分支，并确保 `chore/todo` 分支存在（用于事后追踪所有 TODO 提交）：
 
 ```bash
 cd {local_path}
 
-# 1. 记录当前分支，便于操作完成后告知用户
+# 记录当前分支
 ORIGINAL_BRANCH=$(git rev-parse --abbrev-ref HEAD)
 
-# 2. 如果 chore/todo 分支已存在，直接切换
-if git show-ref --verify --quiet refs/heads/chore/todo; then
-  git checkout chore/todo
-
-# 3. 否则，从 staging 切出（优先）；若无 staging，从主分支切出
-elif git show-ref --verify --quiet refs/heads/staging; then
-  git checkout -b chore/todo staging
-else
-  MAIN=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's@^refs/remotes/origin/@@' || echo "main")
-  git checkout -b chore/todo "$MAIN"
+# 若 chore/todo 不存在，从 staging（优先）或主分支创建
+if ! git show-ref --verify --quiet refs/heads/chore/todo; then
+  if git show-ref --verify --quiet refs/heads/staging; then
+    git branch chore/todo staging
+  else
+    MAIN=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null \
+           | sed 's@^refs/remotes/origin/@@' || echo "main")
+    git branch chore/todo "$MAIN"
+  fi
 fi
 ```
+
+> **注意**：此处只创建分支，不切换 — 写入和提交都在原分支上完成。
 
 **非 git 仓库**：若 `local_path` 不在 git 仓库中，跳过此步骤，直接写入文件。
 
@@ -143,22 +144,23 @@ fi
 ## ✅ 已完成
 ```
 
-### 提交并合并回原分支
+### 提交并同步到 chore/todo
 
 写入后在项目目录执行：
 
 ```bash
 cd {local_path}
 
-# 1. 提交到 chore/todo
+# 1. 在原分支上提交
 git add TODO.md
-git commit -m "todo: add [任务标题]"
+TODO_COMMIT=$(git commit -m "todo: add [任务标题]" && git rev-parse HEAD)
 
-# 2. 切回原分支，将 chore/todo 合并进来
+# 2. cherry-pick 到 chore/todo，仅同步这一条 TODO 提交
+git checkout chore/todo
+git cherry-pick "$TODO_COMMIT"
 git checkout "$ORIGINAL_BRANCH"
-git merge --no-ff chore/todo -m "Merge chore/todo: add [任务标题]"
 ```
 
 完成后确认：
 
-> "✅ 已将 **[任务标题]** 写入 `{local_path}/TODO.md`，提交到 `chore/todo` 并合并回 `$ORIGINAL_BRANCH`。"
+> "✅ 已将 **[任务标题]** 写入 `{local_path}/TODO.md`，提交到 `$ORIGINAL_BRANCH` 并同步到 `chore/todo`。"
