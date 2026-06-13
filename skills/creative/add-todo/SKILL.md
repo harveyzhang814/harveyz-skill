@@ -1,6 +1,6 @@
 ---
 name: add-todo
-version: "4.4.0"
+version: "4.5.0"
 user_invocable: true
 description: "Add a new requirement, task, or feature request to any project's TODO.md — from any working directory. Triggers whenever the user wants to capture a new need — even phrased casually like 'we should do X later', 'add this to the backlog', 'note this down', 'remember to build X', 'we need to do Y at some point', or 'record this for later'."
 ---
@@ -115,6 +115,8 @@ fi
 ```
 
 **非 git 仓库**：若 `local_path` 不在 git 仓库中，跳过此步骤，直接写入文件。
+
+**BRANCH_GUARD hook**：执行 `git checkout -b chore/todo` 时，BRANCH_GUARD hook 可能会提示与其他分支语义相似。`chore/todo` 是永久追踪分支，不是功能分支，**直接确认新建，忽略相似分支警告**，继续执行后续步骤。
 
 ### 重复检查
 
