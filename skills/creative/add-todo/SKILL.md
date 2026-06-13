@@ -1,6 +1,6 @@
 ---
 name: add-todo
-version: "4.0.0"
+version: "4.5.0"
 user_invocable: true
 description: "Add a new requirement, task, or feature request to any project's TODO.md — from any working directory. Triggers whenever the user wants to capture a new need — even phrased casually like 'we should do X later', 'add this to the backlog', 'note this down', 'remember to build X', 'we need to do Y at some point', or 'record this for later'."
 ---
@@ -88,6 +88,36 @@ description: "Add a new requirement, task, or feature request to any project's T
 todo project set-path [项目名] [本地路径]
 ```
 
+### 切换到 chore/todo 分支
+
+在写入前，在项目目录操作 git：
+
+```bash
+cd {local_path}
+
+# 1. 记录当前分支
+ORIGINAL_BRANCH=$(git rev-parse --abbrev-ref HEAD)
+
+# 2. 确定 staging 基准分支（用于创建 chore/todo 及事后合并目标）
+if git show-ref --verify --quiet refs/heads/staging; then
+  BASE_BRANCH=staging
+else
+  BASE_BRANCH=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null \
+                | sed 's@^refs/remotes/origin/@@' || echo "main")
+fi
+
+# 3. 切换到 chore/todo（不存在则从 BASE_BRANCH 创建）
+if git show-ref --verify --quiet refs/heads/chore/todo; then
+  git checkout chore/todo
+else
+  git checkout -b chore/todo "$BASE_BRANCH"
+fi
+```
+
+**非 git 仓库**：若 `local_path` 不在 git 仓库中，跳过此步骤，直接写入文件。
+
+**BRANCH_GUARD hook**：执行 `git checkout -b chore/todo` 时，BRANCH_GUARD hook 可能会提示与其他分支语义相似。`chore/todo` 是永久追踪分支，不是功能分支，**直接确认新建，忽略相似分支警告**，继续执行后续步骤。
+
 ### 重复检查
 
 加载文件，扫描是否有语义重叠的已有条目。若有：
@@ -118,6 +148,25 @@ todo project set-path [项目名] [本地路径]
 ## ✅ 已完成
 ```
 
-写入后确认：
+### 提交、合并到 staging、切回原分支
 
-> "✅ 已将 **[任务标题]** 写入 `{local_path}/TODO.md`。"
+写入后在项目目录执行：
+
+```bash
+cd {local_path}
+
+# 1. 在 chore/todo 上提交
+git add TODO.md
+git commit -m "todo: add [任务标题]"
+
+# 2. 合并到 staging（或主分支）
+git checkout "$BASE_BRANCH"
+git merge --no-ff chore/todo -m "Merge chore/todo: add [任务标题]"
+
+# 3. 切回原分支
+git checkout "$ORIGINAL_BRANCH"
+```
+
+完成后确认：
+
+> "✅ 已将 **[任务标题]** 写入 `{local_path}/TODO.md`，提交到 `chore/todo`，合并到 `$BASE_BRANCH`，当前回到 `$ORIGINAL_BRANCH`。"
