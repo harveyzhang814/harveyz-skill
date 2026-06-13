@@ -1,6 +1,6 @@
 ---
 name: add-todo
-version: "4.0.0"
+version: "4.1.0"
 user_invocable: true
 description: "Add a new requirement, task, or feature request to any project's TODO.md — from any working directory. Triggers whenever the user wants to capture a new need — even phrased casually like 'we should do X later', 'add this to the backlog', 'note this down', 'remember to build X', 'we need to do Y at some point', or 'record this for later'."
 ---
@@ -88,6 +88,31 @@ description: "Add a new requirement, task, or feature request to any project's T
 todo project set-path [项目名] [本地路径]
 ```
 
+### 切换到 Todo 专用分支
+
+在写入前，在项目目录（`local_path`）内操作 git，切换到专用的 todo 提交分支 `chore/todo`：
+
+```bash
+cd {local_path}
+
+# 1. 记录当前分支，便于操作完成后告知用户
+ORIGINAL_BRANCH=$(git rev-parse --abbrev-ref HEAD)
+
+# 2. 如果 chore/todo 分支已存在，直接切换
+if git show-ref --verify --quiet refs/heads/chore/todo; then
+  git checkout chore/todo
+
+# 3. 否则，从 staging 切出（优先）；若无 staging，从主分支切出
+elif git show-ref --verify --quiet refs/heads/staging; then
+  git checkout -b chore/todo staging
+else
+  MAIN=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's@^refs/remotes/origin/@@' || echo "main")
+  git checkout -b chore/todo "$MAIN"
+fi
+```
+
+**非 git 仓库**：若 `local_path` 不在 git 仓库中，跳过此步骤，直接写入文件。
+
 ### 重复检查
 
 加载文件，扫描是否有语义重叠的已有条目。若有：
@@ -118,6 +143,16 @@ todo project set-path [项目名] [本地路径]
 ## ✅ 已完成
 ```
 
-写入后确认：
+### 提交到 chore/todo 分支
 
-> "✅ 已将 **[任务标题]** 写入 `{local_path}/TODO.md`。"
+写入后在项目目录执行：
+
+```bash
+cd {local_path}
+git add TODO.md
+git commit -m "todo: add [任务标题]"
+```
+
+提交完成后确认，并告知用户当前处于 `chore/todo` 分支：
+
+> "✅ 已将 **[任务标题]** 写入 `{local_path}/TODO.md` 并提交到 `chore/todo` 分支（原分支：`$ORIGINAL_BRANCH`）。"
