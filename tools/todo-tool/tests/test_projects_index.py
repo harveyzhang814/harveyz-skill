@@ -169,3 +169,17 @@ def test_migration_preserves_existing_description(tmp_path, monkeypatch):
 
     projects = load_projects()
     assert projects[0]["description"] == "new desc"
+
+
+def test_migration_old_file_empty_marks_done(tmp_path, monkeypatch):
+    """Old file exists but has no entries → still mark migrated, no crash."""
+    monkeypatch.setattr("todo.projects_index._OLD_INDEX", tmp_path / "old_PROJECTS.md")
+    monkeypatch.setattr("todo.projects_index._PUBLIC_DIR", tmp_path / "public")
+    monkeypatch.setattr("todo.projects_index._MIGRATED_FLAG", tmp_path / "public" / ".migrated")
+    monkeypatch.setenv("TODO_INDEX_PATH", str(tmp_path / "public" / "PROJECTS.md"))
+
+    # Old file exists but contains no project entries (e.g. just a header).
+    (tmp_path / "old_PROJECTS.md").write_text("# Project Index\n", encoding="utf-8")
+
+    assert load_projects() == []
+    assert (tmp_path / "public" / ".migrated").exists()

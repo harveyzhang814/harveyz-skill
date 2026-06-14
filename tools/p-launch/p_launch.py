@@ -89,6 +89,10 @@ def sync_to_index(repos: list[Path], index_path: Path = _INDEX_PATH) -> None:
                         existing[name] = {"name": name, "path": str(repo), "description": ""}
                     live_names.add(name)
 
+                # Nothing scanned → leave index untouched.
+                if not live_names:
+                    return
+
                 # Remove entries whose path no longer maps to any scanned repo.
                 live_paths = {str(r) for r in repos}
                 merged = [p for p in existing.values()

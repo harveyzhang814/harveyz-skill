@@ -349,3 +349,30 @@ def test_open_project_calls_launch(tmp_path, monkeypatch):
     monkeypatch.setattr("p_launch.launch_project", lambda p: launched.append(p) or (True, True, ""))
     open_project("myapp", index_path=index)
     assert launched == [tmp_path]
+
+
+def test_extract_github_name_https_no_git_suffix(tmp_path):
+    repo = _make_github_repo(tmp_path, "https://github.com/user/my-repo")
+    assert extract_github_name(repo) == "my-repo"
+
+
+def test_sync_empty_repos_does_not_wipe_index(tmp_path):
+    """sync_to_index([]) must not clear existing entries."""
+    index = tmp_path / "PROJECTS.md"
+    _write_index([{"name": "kept", "path": "/p", "description": "stays"}], index)
+    sync_to_index([], index_path=index)
+    projects = _load_index(index)
+    assert len(projects) == 1
+    assert projects[0]["name"] == "kept"
+
+
+def test_open_project_partial_launch_failure(tmp_path, monkeypatch, capsys):
+    """open_project prints correct status when Cursor fails but Ghostty succeeds."""
+    index = tmp_path / "PROJECTS.md"
+    _write_index([{"name": "myapp", "path": str(tmp_path), "description": ""}], index)
+    monkeypatch.setattr("p_launch.launch_project",
+                        lambda p: (False, True, ""))
+    open_project("myapp", index_path=index)
+    out = capsys.readouterr().out
+    assert "Cursor ⚠" in out
+    assert "Ghostty ✓" in out
