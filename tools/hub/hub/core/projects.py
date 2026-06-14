@@ -1,4 +1,6 @@
 import fcntl
+import re
+import subprocess
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -63,3 +65,59 @@ def get_project_path(db, name: str) -> str | None:
             "SELECT path FROM projects WHERE name = ?", (name,)
         ).fetchone()
     return row["path"] if row else None
+
+
+def _resolve_name(repo_path: Path) -> str:
+    """Resolve project name from git remote origin URL, fall back to dir name."""
+    try:
+        result = subprocess.run(
+            ["git", "remote", "get-url", "origin"],
+            cwd=repo_path,
+            capture_output=True,
+            text=True,
+            timeout=5,
+        )
+        if result.returncode == 0:
+            url = result.stdout.strip().rstrip("/")
+            if url.endswith(".git"):
+                url = url[:-4]
+            return re.split(r"[/:]", url)[-1]
+    except Exception:
+        pass
+    return repo_path.name
+
+
+def scan_projects(
+    dirs: list[str],
+    db,
+    md_path: Path = _DEFAULT_MD,
+) -> dict:
+    """Scan directories (direct subdirectories (one level deep)) for git repos and register them as projects.
+
+    Returns {"added": [...], "skipped": [...], "failed": [...]}.
+    Existing projects (by name) are skipped without modification.
+    """
+    added: list[dict] = []
+    skipped: list[str] = []
+    failed: list[dict] = []
+    existing = {p["name"] for p in list_projects(db)}
+
+    for d in dirs:
+        p = Path(d).expanduser()
+        if not p.exists():
+            failed.append({"path": str(d), "reason": "directory not found"})
+            continue
+        for git_dir in sorted(p.glob("*/.git")):
+            repo_path = git_dir.parent
+            name = _resolve_name(repo_path)
+            if name in existing:
+                skipped.append(name)
+                continue
+            try:
+                add_project(db, name, path=str(repo_path), md_path=md_path)
+                added.append({"name": name, "path": str(repo_path)})
+                existing.add(name)
+            except Exception as e:
+                failed.append({"path": str(repo_path), "reason": str(e)})
+
+    return {"added": added, "skipped": skipped, "failed": failed}
