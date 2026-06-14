@@ -1,5 +1,4 @@
 """Pure git I/O functions — no Textual dependencies."""
-import fcntl
 import re
 import shutil
 import subprocess
@@ -158,11 +157,18 @@ def get_branch_detail(path: Path, branch: str) -> dict:
 
 
 def get_working_tree(path: Path) -> dict:
-    """Return counts of modified/new/deleted files in the working tree."""
+    """Return counts of modified/new/deleted files in the working tree.
+
+    XY-field classification is simplified: '?' = new (untracked),
+    'D' anywhere in the two-char prefix = deleted, else modified.
+    Staged-only deletes (D in index column) are counted as deleted.
+    """
     r = subprocess.run(
         ["git", "-C", str(path), "status", "--short"],
         capture_output=True, text=True,
     )
+    if r.returncode != 0:
+        return {"modified": 0, "new": 0, "deleted": 0}
     modified = new = deleted = 0
     for line in r.stdout.splitlines():
         if not line:
@@ -178,11 +184,16 @@ def get_working_tree(path: Path) -> dict:
 
 
 def get_recent_commits(path: Path, n: int = 5) -> list[dict]:
-    """Return the last n commits as list of {sha, msg, date}."""
+    """Return the last n commits as list of {sha, msg, date}.
+
+    Returns [] on git failure (detached HEAD, empty repo, etc.).
+    """
     r = subprocess.run(
         ["git", "-C", str(path), "log", f"-{n}", "--format=%h|%s|%cr"],
         capture_output=True, text=True,
     )
+    if r.returncode != 0:
+        return []
     commits = []
     for line in r.stdout.strip().splitlines():
         parts = line.split("|", 2)
