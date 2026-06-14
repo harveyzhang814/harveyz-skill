@@ -52,7 +52,7 @@ class GitPanel(Widget):
         current = next((b for b in branches if b["is_current"]), None)
         wt = get_working_tree(path)
         commits = get_recent_commits(path, n=5)
-        self.call_from_thread(self._render_git, path, current, wt, commits)
+        self.app.call_from_thread(self._render_git, path, current, wt, commits)
 
     def _render_git(
         self,
@@ -114,5 +114,5 @@ class GitPanel(Widget):
     @work(thread=True)
     def _fetch_worker(self, path: Path) -> None:
         fetch_repo(path)
-        self.call_from_thread(self.refresh_project, path)
+        self.app.call_from_thread(self.refresh_project, path)
         self.app.call_from_thread(self.app.notify, f"Fetched {path.name}")
