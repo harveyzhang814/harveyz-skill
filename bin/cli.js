@@ -2,7 +2,7 @@
 import { select, input } from '@inquirer/prompts'
 import chalk from 'chalk'
 import { execSync, spawnSync } from 'child_process'
-import { existsSync } from 'fs'
+import { existsSync, writeFileSync, unlinkSync } from 'fs'
 import { createRequire } from 'module'
 import os from 'os'
 import path from 'path'
@@ -629,6 +629,8 @@ function selectTargetThenScope() {
     '--layout=reverse',
     '--border=rounded',
     '--color=header:italic:dim,prompt:cyan,pointer:cyan,hl:cyan,hl+:cyan:bold',
+    '--preview=t=$(echo {} | awk \'{print $1}\'); if [ "$t" = "all" ]; then echo ""; echo "  安装到所有平台:"; echo ""; for p in claude cursor codex openclaw hermes opencode; do printf "  ~/.%s/skills/\\n" "$p"; done; else p="${HOME}/.${t}/skills/"; echo ""; echo "  安装路径:"; echo ""; printf "  \\033[36m%s\\033[0m\\n" "$p"; echo ""; if [ -d "$p" ]; then echo "  ✓ 目录已存在"; else echo "  · 将自动新建"; fi; fi',
+    '--preview-window=right:45%:wrap',
   ], {
     input: targetInput,
     encoding: 'utf8',
@@ -651,6 +653,8 @@ function selectTargetThenScope() {
       '--layout=reverse',
       '--border=rounded',
       '--color=header:italic:dim,prompt:cyan,pointer:cyan,hl:cyan,hl+:cyan:bold',
+      '--preview=s=$(echo {} | awk \'{print $1}\'); if [ "$s" = "user" ]; then echo ""; echo "  ~/.{target}/skills/"; echo ""; echo "  所有项目共享，适合常用 skill"; echo ""; echo "  ✓ 推荐选项"; else echo ""; echo "  .{target}/skills/"; echo ""; echo "  仅当前项目可见"; echo ""; echo "  适合项目专属 skill"; fi',
+      '--preview-window=right:45%:wrap',
     ], {
       input: 'user     — 所有项目共享  (~/.{target}/skills/)\nproject  — 仅当前项目  (.{target}/skills/)',
       encoding: 'utf8',
@@ -898,17 +902,30 @@ try {
           })
 
         if (anyInstalled) {
+          const actionPreviewFile = `/tmp/hskill-action-preview-${process.pid}.txt`
+          const actionPreviewLines = [
+            '',
+            '  已选中:',
+            '',
+            ...skillItems.map(s => `  skill  ${s.skillName}`),
+            ...toolItems.map(t => `  tool   ${t.toolName}`),
+            ...hookItems.map(h => `  hook   ${h.name}`),
+          ]
+          writeFileSync(actionPreviewFile, actionPreviewLines.join('\n'))
           const actionResult = spawnSync('fzf', [
             '--prompt=  › ',
             '--header=  Action  ·  enter 确认  ·  esc 取消',
             '--layout=reverse',
             '--border=rounded',
             '--color=header:italic:dim,prompt:cyan,pointer:cyan,hl:cyan,hl+:cyan:bold',
+            `--preview=cat ${actionPreviewFile}`,
+            '--preview-window=right:45%:wrap',
           ], {
             input: `install    安装 / 重新安装\nuninstall  卸载并清理文件`,
             encoding: 'utf8',
             stdio: ['pipe', 'pipe', 'inherit'],
           })
+          try { unlinkSync(actionPreviewFile) } catch { /* ignore */ }
           if (!actionResult.stdout.trim()) {
             console.log(chalk.dim('  · Cancelled'))
             break
@@ -964,6 +981,8 @@ try {
             '--layout=reverse',
             '--border=rounded',
             '--color=header:italic:dim,prompt:cyan,pointer:cyan,hl:cyan,hl+:cyan:bold',
+            '--preview=s=$(echo {} | awk \'{print $1}\'); if [ "$s" = "user" ]; then echo ""; echo "  ~/.claude/hooks/"; echo "  ~/.codex/hooks/"; echo ""; echo "  所有项目共享"; else echo ""; echo "  .claude/hooks/"; echo "  .codex/hooks/"; echo ""; echo "  仅当前项目"; fi',
+            '--preview-window=right:45%:wrap',
           ], {
             input: `user     — ~/.{claude,codex}/hooks/  (所有项目共享)\nproject  — .{claude,codex}/hooks/    (仅当前项目)`,
             encoding: 'utf8',
@@ -983,6 +1002,8 @@ try {
             '--layout=reverse',
             '--border=rounded',
             '--color=header:italic:dim,prompt:cyan,pointer:cyan,hl:cyan,hl+:cyan:bold',
+            '--preview=t=$(echo {} | awk \'{print $1}\'); if [ "$t" = "all" ]; then echo ""; echo "  ~/.claude/hooks/"; echo "  ~/.codex/hooks/"; else echo ""; printf "  ~/.%s/hooks/\\n" "$t"; fi',
+            '--preview-window=right:45%:wrap',
           ], {
             input: `claude   — ~/.claude/hooks/\ncodex    — ~/.codex/hooks/\nall      — claude + codex`,
             encoding: 'utf8',
@@ -1033,6 +1054,8 @@ try {
             '--header=  从哪里卸载  ·  tab 多选  ·  enter 确认  ·  esc 取消',
             '--layout=reverse', '--border=rounded',
             '--color=header:italic:dim,prompt:cyan,pointer:cyan,hl:cyan,hl+:cyan:bold',
+            '--preview=t=$(echo {} | awk \'{print $1}\'); if [ "$t" = "all" ]; then echo ""; echo "  从所有平台卸载:"; echo ""; for p in claude cursor codex openclaw hermes opencode; do printf "  ~/.%s/skills/\\n" "$p"; done; else echo ""; printf "  ~/.%s/skills/\\n" "$t"; fi',
+            '--preview-window=right:45%:wrap',
           ], {
             input: targetChoices2.map(c => c.name).join('\n') + '\nall      — all targets',
             encoding: 'utf8', stdio: ['pipe', 'pipe', 'inherit'],
@@ -1046,6 +1069,8 @@ try {
             '--header=  卸载范围  ·  enter 确认  ·  esc 取消',
             '--layout=reverse', '--border=rounded',
             '--color=header:italic:dim,prompt:cyan,pointer:cyan,hl:cyan,hl+:cyan:bold',
+            '--preview=s=$(echo {} | awk \'{print $1}\'); if [ "$s" = "user" ]; then echo ""; echo "  从 user 级卸载:"; echo "  ~/.{target}/skills/"; else echo ""; echo "  从 project 级卸载:"; echo "  .{target}/skills/"; fi',
+            '--preview-window=right:45%:wrap',
           ], {
             input: 'user     — 所有项目  (~/.{target}/skills/)\nproject  — 仅当前项目  (.{target}/skills/)',
             encoding: 'utf8', stdio: ['pipe', 'pipe', 'inherit'],
@@ -1065,6 +1090,8 @@ try {
             '--header=  Hook scope  ·  enter 确认',
             '--layout=reverse', '--border=rounded',
             '--color=header:italic:dim,prompt:cyan,pointer:cyan,hl:cyan,hl+:cyan:bold',
+            '--preview=s=$(echo {} | awk \'{print $1}\'); if [ "$s" = "user" ]; then echo ""; echo "  从 user 级卸载 hook:"; echo "  ~/.claude/hooks/"; else echo ""; echo "  从 project 级卸载 hook:"; echo "  .claude/hooks/"; fi',
+            '--preview-window=right:45%:wrap',
           ], {
             input: `user     — ~/.claude/hooks/\nproject  — .claude/hooks/`,
             encoding: 'utf8', stdio: ['pipe', 'pipe', 'inherit'],
