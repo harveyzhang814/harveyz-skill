@@ -1,0 +1,12 @@
+{
+  "name": "todo-tool",
+  "version": "0.1.0",
+  "description": "task manager CLI + web UI (FastAPI + SQLite + Typer)",
+  "extraPaths": ["todo", "pyproject.toml"],
+  "uninstallPaths": [
+    "~/.hskill/todo-tool/venv"
+  ],
+  "configPaths": [
+    "~/.local/share/todo"
+  ]
+}
