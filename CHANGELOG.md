@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.14.2] - 2026-06-15
+
+### Changed
+- `project-release`：description 字段改为英文，符合 skill-publish F3 格式规范
+- `project-release`：移除 `npm-release` skill，以 `.hskill/release-profile.md` 替代，消除重复
+
 ## [0.14.1] - 2026-06-14
 
 ### Fixed

@@ -1,14 +1,25 @@
+import os
+from pathlib import Path
+
+from textual import work
 from textual.app import ComposeResult
+from textual.binding import Binding
 from textual.message import Message
 from textual.widget import Widget
-from textual.widgets import Label, ListItem, ListView
+from textual.widgets import Input, Label, ListItem, ListView
 
 from hub.core.db import HubDB
-from hub.core.projects import list_projects
+from hub.core.projects import list_projects, scan_projects
 from hub.core.tasks import list_tasks
+
+_DEFAULT_MD = Path.home() / ".hskill" / "public" / "PROJECTS.md"
 
 
 class ProjectsPanel(Widget):
+    BINDINGS = [
+        Binding("ctrl+s", "scan_action", "Scan", show=True),
+    ]
+
     DEFAULT_CSS = """
     ProjectsPanel {
         width: 30;
@@ -17,6 +28,9 @@ class ProjectsPanel(Widget):
     }
     ProjectsPanel:focus-within {
         border: solid $accent;
+    }
+    ProjectsPanel Input {
+        dock: bottom;
     }
     """
 
@@ -56,3 +70,39 @@ class ProjectsPanel(Widget):
             self.selected_name = p["name"]
             self.selected_path = p.get("path", "")
             self.post_message(self.ProjectSelected(p["name"], p.get("path", "")))
+
+    def action_scan_action(self) -> None:
+        if self.query("#scan-dir-input"):
+            return
+        inp = Input(
+            placeholder="Directory to scan… (Enter to scan, Esc to cancel)",
+            id="scan-dir-input",
+        )
+        self.mount(inp)
+        inp.focus()
+
+    def on_input_submitted(self, event: Input.Submitted) -> None:
+        if event.input.id != "scan-dir-input":
+            return
+        directory = event.value.strip()
+        event.input.remove()
+        if directory:
+            self._scan_worker(directory)
+
+    def on_key(self, event) -> None:
+        if event.key == "escape" and self.query("#scan-dir-input"):
+            self.query_one("#scan-dir-input").remove()
+            event.prevent_default()
+
+    @work(thread=True)
+    def _scan_worker(self, directory: str) -> None:
+        md = Path(os.environ["HUB_MD_PATH"]) if "HUB_MD_PATH" in os.environ else _DEFAULT_MD
+        result = scan_projects([directory], self.db, md_path=md)
+        a = len(result["added"])
+        s = len(result["skipped"])
+        f = len(result["failed"])
+        self.app.call_from_thread(self._after_scan, a, s, f)
+
+    def _after_scan(self, added: int, skipped: int, failed: int) -> None:
+        self._reload()
+        self.app.notify(f"Scanned: {added} added, {skipped} skipped, {failed} failed")

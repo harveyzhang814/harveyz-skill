@@ -76,6 +76,32 @@ hub projects path <name> [--json]
 
 ---
 
+### scan
+
+```
+hub projects scan <dir> [<dir2> ...] [--json]
+```
+
+扫描目录（深度 2 层：`<dir>/*/.git`），将找到的 git 仓库批量注册为项目。项目名从 `origin` remote URL 解析，无 remote 时兜底用目录名。已存在的同名项目跳过不覆盖。
+
+**参数：**
+- `<dir>...` — 要扫描的目录（一个或多个），支持 `~` 展开
+- `--json` — JSON 输出
+
+**JSON 输出：**
+```json
+{
+  "ok": true,
+  "data": {
+    "added":   [{"name": "my-repo", "path": "/Users/x/Projects/my-repo"}],
+    "skipped": ["hub"],
+    "failed":  [{"path": "/bad/path", "reason": "directory not found"}]
+  }
+}
+```
+
+---
+
 ### sync
 
 ```

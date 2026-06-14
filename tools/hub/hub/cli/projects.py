@@ -8,6 +8,7 @@ import typer
 
 from hub.core.db import HubDB
 from hub.core import projects as proj
+from hub.core.projects import scan_projects
 
 app = typer.Typer(no_args_is_help=True)
 
@@ -98,3 +99,24 @@ def projects_sync(json_out: bool = typer.Option(False, "--json")):
             typer.echo(f"✓ Scanned {len(repos)} repos")
     except ImportError:
         _err("p-launch not installed; cannot auto-scan", json_out)
+
+
+@app.command("scan")
+def projects_scan(
+    dirs: list[str] = typer.Argument(..., help="Directories to scan for git repos"),
+    json_out: bool = typer.Option(False, "--json"),
+):
+    """Scan directories for git repos and register them as projects."""
+    db = HubDB()
+    result = scan_projects(dirs, db, _md_path())
+    if json_out:
+        _out(result, json_out)
+        return
+    for p in result["added"]:
+        typer.echo(f"✓ added   {p['name']:<24} {p['path']}")
+    for name in result["skipped"]:
+        typer.echo(f"· skipped {name:<24} (already registered)")
+    for f in result["failed"]:
+        typer.echo(f"✗ failed  {f['path']}  ({f['reason']})")
+    a, s, f = len(result["added"]), len(result["skipped"]), len(result["failed"])
+    typer.echo(f"\nScanned: {a} added, {s} skipped, {f} failed")

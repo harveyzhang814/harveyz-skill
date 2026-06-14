@@ -62,7 +62,7 @@ async def test_tasks_panel_new_task_input_appears(tmp_path):
         panel.refresh_project("proj")
         await pilot.pause()
         panel.focus()
-        await pilot.press("n")
+        await pilot.press("ctrl+n")
         await pilot.pause()
         assert len(panel.query(Input)) == 1
 
@@ -77,7 +77,7 @@ async def test_tasks_panel_new_task_saves(tmp_path):
         panel.refresh_project("proj")
         await pilot.pause()
         panel.focus()
-        await pilot.press("n")
+        await pilot.press("ctrl+n")
         await pilot.pause()
         await pilot.press("M", "y", "space", "t", "a", "s", "k")
         await pilot.press("enter")
@@ -126,11 +126,11 @@ async def test_tasks_panel_delete_two_press(tmp_path):
         lst.focus()
         await pilot.press("down")
         # first D — should NOT delete yet
-        await pilot.press("D")
+        await pilot.press("ctrl+d")
         await pilot.pause()
         assert len(list_tasks(db, project="proj")) == 1
-        # second D — should delete
-        await pilot.press("D")
+        # second ctrl+d — should delete
+        await pilot.press("ctrl+d")
         await pilot.pause()
 
     assert len(list_tasks(db, project="proj")) == 0

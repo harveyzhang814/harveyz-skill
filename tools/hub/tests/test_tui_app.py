@@ -16,7 +16,7 @@ async def test_hub_app_mounts(tmp_path, monkeypatch):
 async def test_hub_app_quit(tmp_path, monkeypatch):
     monkeypatch.setenv("HUB_DB_PATH", str(tmp_path / "hub.db"))
     async with HubApp().run_test() as pilot:
-        await pilot.press("q")
+        await pilot.press("ctrl+q")
     # If we got here without hanging, the app quit cleanly.
     assert True
 

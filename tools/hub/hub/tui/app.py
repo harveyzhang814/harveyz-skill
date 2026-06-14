@@ -28,9 +28,9 @@ class HubApp(App):
 
     BINDINGS = [
         Binding("tab", "cycle_focus", "Switch col", show=True),
-        Binding("f", "fetch", "Fetch", show=True),
+        Binding("ctrl+f", "fetch", "Fetch", show=True),
         Binding("enter", "open_project", "Open", show=True),
-        Binding("q", "quit", "Quit", show=True),
+        Binding("ctrl+q", "quit", "Quit", show=True),
     ]
 
     def __init__(self) -> None:
