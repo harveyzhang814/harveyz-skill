@@ -1,10 +1,14 @@
 {
   "toolBundleMeta": {
-    "shell-tools": "终端工具（p-launch 本地仓库管理器）"
+    "shell-tools": "终端工具（p-launch 本地仓库管理器 + todo-tool 任务管理器）"
   },
   "tools": [
     {
       "name": "p-launch",
+      "bundle": "shell-tools"
+    },
+    {
+      "name": "todo-tool",
       "bundle": "shell-tools"
     }
   ],
