@@ -1,3 +1,4 @@
+import os
 import subprocess
 from pathlib import Path
 import pytest
@@ -12,7 +13,7 @@ def _make_repo(path: Path, origin: str | None = None) -> Path:
     subprocess.run(
         ["git", "commit", "--allow-empty", "-m", "init"],
         cwd=path, check=True, capture_output=True,
-        env={**__import__("os").environ, "GIT_AUTHOR_NAME": "t",
+        env={**os.environ, "GIT_AUTHOR_NAME": "t",
              "GIT_AUTHOR_EMAIL": "t@t", "GIT_COMMITTER_NAME": "t",
              "GIT_COMMITTER_EMAIL": "t@t"},
     )
@@ -41,6 +42,8 @@ def test_scan_fallback_to_dir_name_when_no_remote(tmp_path):
     md_path = tmp_path / "PROJECTS.md"
     result = scan_projects([str(tmp_path)], db, md_path=md_path)
     assert result["added"][0]["name"] == "repo-b"
+    assert result["skipped"] == []
+    assert result["failed"] == []
 
 
 def test_scan_skips_existing_project(tmp_path):
@@ -52,6 +55,18 @@ def test_scan_skips_existing_project(tmp_path):
     result = scan_projects([str(tmp_path)], db, md_path=md_path)
     assert "repo-a" in result["skipped"]
     assert result["added"] == []
+    # Verify old path was NOT overwritten
+    from hub.core.projects import get_project_path
+    assert get_project_path(db, "repo-a") == "/old/path"
+
+
+def test_scan_adds_repo_using_ssh_remote_name(tmp_path):
+    _make_repo(tmp_path / "repo-c", origin="git@github.com:user/ssh-repo.git")
+    db = HubDB(db_path=tmp_path / "hub.db")
+    result = scan_projects([str(tmp_path)], db, md_path=tmp_path / "PROJECTS.md")
+    assert result["added"][0]["name"] == "ssh-repo"
+    assert result["skipped"] == []
+    assert result["failed"] == []
 
 
 def test_scan_nonexistent_dir_goes_to_failed(tmp_path):

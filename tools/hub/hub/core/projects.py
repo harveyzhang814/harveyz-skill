@@ -1,4 +1,5 @@
 import fcntl
+import re
 import subprocess
 from datetime import datetime, timezone
 from pathlib import Path
@@ -80,7 +81,7 @@ def _resolve_name(repo_path: Path) -> str:
             url = result.stdout.strip().rstrip("/")
             if url.endswith(".git"):
                 url = url[:-4]
-            return url.split("/")[-1]
+            return re.split(r"[/:]", url)[-1]
     except Exception:
         pass
     return repo_path.name
@@ -91,7 +92,7 @@ def scan_projects(
     db,
     md_path: Path = _DEFAULT_MD,
 ) -> dict:
-    """Scan directories (depth 2) for git repos and register them as projects.
+    """Scan directories (direct subdirectories (one level deep)) for git repos and register them as projects.
 
     Returns {"added": [...], "skipped": [...], "failed": [...]}.
     Existing projects (by name) are skipped without modification.
