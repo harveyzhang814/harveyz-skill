@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.14.0] - 2026-06-14
+
+### Added
+- `hub` tool（`tools` bundle）：个人开发者 OS，整合项目管理、git 状态追踪、任务系统，替代 p-launch + todo-tool
+  - Phase 1：core 库（SQLite DB、projects CRUD、tasks CRUD）+ CLI（`hub project`、`hub task` 子命令，支持 `--json` 输出）
+  - Phase 2：三栏 Textual TUI（ProjectsPanel | GitPanel | TasksPanel），支持键盘导航、git fetch、任务增删改、项目切换联动
+  - 首次启动自动从 todo-tool DB 迁移数据（`migrate.py`）
+  - 62 个测试覆盖 core、CLI、TUI 各层
+
 ## [0.13.0] - 2026-06-12
 
 ### Fixed

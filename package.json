@@ -1,6 +1,6 @@
 {
   "name": "harveyz-skill",
-  "version": "0.13.0",
+  "version": "0.14.0",
   "description": "Skill manager for Claude Code, Cursor, and Codex",
   "type": "module",
   "bin": {
@@ -41,6 +41,8 @@
     "skills/meta/npm-release/",
     "skills/meta/opencode-runner/",
     "tools/p-launch/",
+    "tools/todo-tool/",
+    "tools/hub/",
     "hooks/check-similar-branch/"
   ],
   "engines": {
