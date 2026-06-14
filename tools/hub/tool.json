@@ -3,6 +3,6 @@
   "version": "1.0.0",
   "description": "personal developer OS — projects, git status, tasks",
   "extraPaths": ["hub", "pyproject.toml"],
-  "uninstallPaths": ["~/.hskill/tools/hub/venv"],
+  "uninstallPaths": ["~/.hskill/tools/hub/venv", "~/.hskill/tools/hub"],
   "configPaths": ["~/.hskill/hub"]
 }
