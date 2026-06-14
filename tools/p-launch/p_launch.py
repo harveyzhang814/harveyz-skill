@@ -533,14 +533,15 @@ class PLaunchApp(App):
         dirs = read_project_dirs()
         repos = collect_repos(dirs)
         self.call_from_thread(self._populate_repo_list, repos)
+        sync_to_index(repos)
         with ThreadPoolExecutor(max_workers=8) as ex:
-            futs = {ex.submit(self._fetch_and_refresh, r): r
-                    for r in repos if is_git_with_remote(r)}
+            futs = {ex.submit(self._fetch_and_refresh, r): r for r in repos}
             for fut in as_completed(futs):
                 pass
-        sync_to_index(repos)
 
     def _fetch_and_refresh(self, path: Path) -> None:
+        if not is_git_with_remote(path):
+            return
         fetch_repo(path)
         status = get_repo_status(path)
         self.call_from_thread(self._update_repo_item_status, path, status)

@@ -76,7 +76,8 @@ class TodoDB:
             row = conn.execute(
                 "SELECT * FROM projects WHERE id = ?", (cur.lastrowid,)
             ).fetchone()
-            assert row is not None
+            if row is None:
+                raise RuntimeError(f"DB invariant violated: project INSERT succeeded but row {cur.lastrowid} not found")
             return Project(**dict(row))
 
     def get_project(self, project_id: int) -> Optional[Project]:
@@ -154,7 +155,8 @@ class TodoDB:
             row = conn.execute(
                 self._TASK_SELECT + " WHERE t.id = ?", (cur.lastrowid,)
             ).fetchone()
-            assert row is not None
+            if row is None:
+                raise RuntimeError(f"DB invariant violated: task INSERT succeeded but row {cur.lastrowid} not found")
             return Task(**dict(row))
 
     def get(self, task_id: int) -> Optional[Task]:
