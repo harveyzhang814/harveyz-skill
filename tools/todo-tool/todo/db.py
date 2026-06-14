@@ -271,13 +271,13 @@ class TodoDB:
                     )
                     lines[task.metadata_line_num] += f" | **ID**: {cur.lastrowid}"
                     inserted += 1
-                path.write_text("\n".join(lines) + "\n", encoding="utf-8")
-                conn.execute("COMMIT")
+                        conn.execute("COMMIT")
             except Exception:
                 conn.execute("ROLLBACK")
                 raise
             finally:
                 conn.close()
+            path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
         # Record file mtime so subsequent syncs can skip unchanged files
         with self._conn() as conn:

@@ -93,10 +93,9 @@ def sync_to_index(repos: list[Path], index_path: Path = _INDEX_PATH) -> None:
                 if not live_names:
                     return
 
-                # Remove entries whose path no longer maps to any scanned repo.
-                live_paths = {str(r) for r in repos}
-                merged = [p for p in existing.values()
-                          if p["name"] in live_names or p["path"] in live_paths]
+                # Remove stale entries by name only — path-based pruning would
+                # delete user-curated projects whose paths aren't in scan dirs.
+                merged = [p for p in existing.values() if p["name"] in live_names]
 
                 _write_index(merged, index_path)
             finally:

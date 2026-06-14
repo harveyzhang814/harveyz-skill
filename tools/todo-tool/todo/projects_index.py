@@ -87,27 +87,46 @@ def save_project(name: str, path: str, description: str = "") -> None:
     index_path = get_index_path()
     index_path.parent.mkdir(parents=True, exist_ok=True)
     _migrate_once(index_path)
-    projects = _parse(index_path)
-    for p in projects:
-        if p["name"] == name:
-            p["path"] = path
-            if description:
-                p["description"] = description
-            _write_locked(projects, index_path)
-            return
-    projects.append({"name": name, "path": path, "description": description})
-    _write_locked(projects, index_path)
+    _upsert_locked(index_path, name, path, description)
+
+
+def _upsert_locked(index_path: Path, name: str, path: str, description: str) -> None:
+    """Read-modify-write under exclusive lock to prevent concurrent clobber."""
+    lock = index_path.with_suffix(".lock")
+    lock.parent.mkdir(parents=True, exist_ok=True)
+    with open(lock, "w") as lf:
+        fcntl.flock(lf, fcntl.LOCK_EX)
+        try:
+            projects = _parse(index_path)
+            for p in projects:
+                if p["name"] == name:
+                    p["path"] = path
+                    if description:
+                        p["description"] = description
+                    _write(projects, index_path)
+                    return
+            projects.append({"name": name, "path": path, "description": description})
+            _write(projects, index_path)
+        finally:
+            fcntl.flock(lf, fcntl.LOCK_UN)
 
 
 def set_project_path(name: str, new_path: str) -> bool:
     index_path = get_index_path()
     _migrate_once(index_path)
-    projects = _parse(index_path)
-    for p in projects:
-        if p["name"] == name:
-            p["path"] = new_path
-            _write_locked(projects, index_path)
-            return True
+    lock = index_path.with_suffix(".lock")
+    lock.parent.mkdir(parents=True, exist_ok=True)
+    with open(lock, "w") as lf:
+        fcntl.flock(lf, fcntl.LOCK_EX)
+        try:
+            projects = _parse(index_path)
+            for p in projects:
+                if p["name"] == name:
+                    p["path"] = new_path
+                    _write(projects, index_path)
+                    return True
+        finally:
+            fcntl.flock(lf, fcntl.LOCK_UN)
     return False
 
 
@@ -122,6 +141,7 @@ def _write(projects: list[dict], path: Path) -> None:
 
 
 def _write_locked(projects: list[dict], path: Path) -> None:
+    """Write under exclusive lock (used by migration which pre-reads outside the lock)."""
     lock = path.with_suffix(".lock")
     lock.parent.mkdir(parents=True, exist_ok=True)
     with open(lock, "w") as lf:
