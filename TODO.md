@@ -32,6 +32,15 @@ hub Phase 1（core + CLI）和 Phase 2（三栏 TUI）已完成。Phase 3 是最
 
 ---
 
+## harveyz-skill — skill 质量工具
+
+### 开发 Skill 检测并分析各 Skill 间重复内容
+**优先级**: P2 | **日期**: 2026-06-15
+
+开发一个专用 Skill，扫描 `skills/` 目录下所有 Skill 的内容，检测不同 Skill 之间的语义重复部分。发现重复后，对比分析各自的上下文、触发场景和职责边界，给出哪个 Skill 更适合承载该内容的建议，最终由用户决策如何处置（保留、迁移或删除）。
+
+---
+
 ## hskill — tool lifecycle
 
 ### [x] Tool uninstall mechanism
