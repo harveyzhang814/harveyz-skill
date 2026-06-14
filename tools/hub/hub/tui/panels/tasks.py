@@ -9,9 +9,9 @@ from hub.core.tasks import add_task, delete_task, list_tasks, mark_done, update_
 
 class TasksPanel(Widget):
     BINDINGS = [
-        Binding("n", "new_task", "New", show=True),
+        Binding("ctrl+n", "new_task", "New", show=True),
         Binding("space", "toggle_done", "Done", show=True),
-        Binding("D", "delete_task_action", "Delete", show=True),
+        Binding("ctrl+d", "delete_task_action", "Delete", show=True),
     ]
 
     DEFAULT_CSS = """
