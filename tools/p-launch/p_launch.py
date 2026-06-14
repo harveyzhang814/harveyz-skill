@@ -1,11 +1,123 @@
 #!/usr/bin/env python3
 """p-launch v3 — local repository manager (Python + Textual)"""
+import fcntl
 import re
 import subprocess
 import shutil
+import sys
 from pathlib import Path
 
 CONFIG_FILE = Path.home() / ".config" / "p-launch" / "config.zsh"
+_INDEX_PATH = Path.home() / ".hskill" / "public" / "PROJECTS.md"
+
+# ── Shared index helpers ──────────────────────────────────────────────────────
+
+_IDX_LINE_RE = re.compile(r'^\s*-\s+\*\*(.+?)\*\*\s+`(.+?)`\s*$')
+_IDX_DESC_RE = re.compile(r'^  (.+)$')
+
+
+def _load_index(path: Path) -> list[dict]:
+    if not path.exists():
+        return []
+    projects = []
+    lines = path.read_text(encoding="utf-8").splitlines()
+    i = 0
+    while i < len(lines):
+        m = _IDX_LINE_RE.match(lines[i])
+        if m:
+            entry = {"name": m.group(1), "path": m.group(2), "description": ""}
+            if i + 1 < len(lines):
+                dm = _IDX_DESC_RE.match(lines[i + 1])
+                if dm:
+                    entry["description"] = dm.group(1)
+                    i += 1
+            projects.append(entry)
+        i += 1
+    return projects
+
+
+def _write_index(projects: list[dict], path: Path) -> None:
+    parts = ["# Project Index"]
+    for p in projects:
+        parts.append(f"\n- **{p['name']}** `{p['path']}`")
+        if p.get("description"):
+            parts.append(f"  {p['description']}")
+    parts.append("")
+    path.write_text("\n".join(parts), encoding="utf-8")
+
+
+def extract_github_name(path: Path) -> str | None:
+    """Return the GitHub repo name from git remote origin URL, or None."""
+    r = subprocess.run(
+        ["git", "-C", str(path), "remote", "get-url", "origin"],
+        capture_output=True, text=True,
+    )
+    if r.returncode != 0:
+        return None
+    url = r.stdout.strip()
+    # Accept only github.com remotes.
+    if "github.com" not in url:
+        return None
+    # HTTPS: https://github.com/user/repo.git  or  .../repo
+    # SSH:   git@github.com:user/repo.git      or  .../repo
+    m = re.search(r'github\.com[:/][^/]+/([^/]+?)(?:\.git)?$', url)
+    return m.group(1) if m else None
+
+
+def sync_to_index(repos: list[Path], index_path: Path = _INDEX_PATH) -> None:
+    """Upsert all repos into the shared index; remove stale entries. One read, one write."""
+    index_path.parent.mkdir(parents=True, exist_ok=True)
+    lock = index_path.with_suffix(".lock")
+    try:
+        with open(lock, "w") as lf:
+            fcntl.flock(lf, fcntl.LOCK_EX)
+            try:
+                existing = {p["name"]: p for p in _load_index(index_path)}
+                live_names: set[str] = set()
+
+                for repo in repos:
+                    name = extract_github_name(repo)
+                    if not name:
+                        continue
+                    if name in live_names:
+                        print(f"warning: duplicate GitHub name '{name}' for {repo}, skipping",
+                              file=sys.stderr)
+                        continue
+                    if name in existing:
+                        existing[name]["path"] = str(repo)
+                    else:
+                        existing[name] = {"name": name, "path": str(repo), "description": ""}
+                    live_names.add(name)
+
+                # Remove entries whose path no longer maps to any scanned repo.
+                live_paths = {str(r) for r in repos}
+                merged = [p for p in existing.values()
+                          if p["name"] in live_names or p["path"] in live_paths]
+
+                _write_index(merged, index_path)
+            finally:
+                fcntl.flock(lf, fcntl.LOCK_UN)
+    except Exception as e:
+        print(f"warning: failed to sync project index: {e}", file=sys.stderr)
+
+
+def open_project(name: str, index_path: Path = _INDEX_PATH) -> None:
+    """CLI: open a project by GitHub repo name."""
+    projects = _load_index(index_path)
+    for p in projects:
+        if p["name"] == name:
+            cursor_ok, ghostty_ok, ghostty_err = launch_project(Path(p["path"]))
+            parts = ["Cursor ✓" if cursor_ok else "Cursor ⚠",
+                     "Ghostty ✓" if ghostty_ok else f"Ghostty ⚠ {ghostty_err}"]
+            print(f"{name}: {', '.join(parts)}")
+            return
+    if not projects:
+        print(f"No projects indexed yet. Launch the TUI first to populate the index.",
+              file=sys.stderr)
+    else:
+        names = ", ".join(p["name"] for p in projects)
+        print(f"Project '{name}' not found. Available: {names}", file=sys.stderr)
+    raise SystemExit(1)
 
 
 def read_project_dirs() -> list[Path]:
@@ -422,6 +534,7 @@ class PLaunchApp(App):
                     for r in repos if is_git_with_remote(r)}
             for fut in as_completed(futs):
                 pass
+        sync_to_index(repos)
 
     def _fetch_and_refresh(self, path: Path) -> None:
         fetch_repo(path)
@@ -582,4 +695,10 @@ class PLaunchApp(App):
 
 
 if __name__ == "__main__":
-    PLaunchApp().run()
+    if len(sys.argv) >= 2 and sys.argv[1] == "open":
+        if len(sys.argv) < 3:
+            print("Usage: p-launch open <repo-name>", file=sys.stderr)
+            raise SystemExit(1)
+        open_project(sys.argv[2])
+    else:
+        PLaunchApp().run()
