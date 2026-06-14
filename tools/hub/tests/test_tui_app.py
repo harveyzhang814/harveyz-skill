@@ -44,3 +44,23 @@ def test_main_no_args_launches_tui(tmp_path, monkeypatch):
         main()
 
     assert launched == [True]
+
+
+async def test_hub_app_project_selection_updates_panels(tmp_path, monkeypatch):
+    """Selecting a project in ProjectsPanel updates GitPanel border and TasksPanel border."""
+    from hub.core.projects import add_project as _add_project
+    from hub.core.db import HubDB as _HubDB
+
+    monkeypatch.setenv("HUB_DB_PATH", str(tmp_path / "hub.db"))
+    db = _HubDB(tmp_path / "hub.db")
+    _add_project(db, "myrepo", path="/tmp/myrepo")
+
+    async with HubApp().run_test() as pilot:
+        projects_panel = pilot.app.query_one(ProjectsPanel)
+        tasks_panel = pilot.app.query_one(TasksPanel)
+        # Simulate project selection by posting the message directly
+        projects_panel.post_message(
+            ProjectsPanel.ProjectSelected(name="myrepo", path="/tmp/myrepo")
+        )
+        await pilot.pause()
+        assert tasks_panel.border_title == "TASKS · myrepo"

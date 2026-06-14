@@ -65,3 +65,72 @@ async def test_tasks_panel_new_task_input_appears(tmp_path):
         await pilot.press("n")
         await pilot.pause()
         assert len(panel.query(Input)) == 1
+
+
+async def test_tasks_panel_new_task_saves(tmp_path):
+    """Submitting the new-task input actually creates a task in the DB."""
+    db = HubDB(tmp_path / "hub.db")
+    add_project(db, "proj", path="/tmp/proj")
+
+    async with _make_app(db).run_test() as pilot:
+        panel = pilot.app.query_one(TasksPanel)
+        panel.refresh_project("proj")
+        await pilot.pause()
+        panel.focus()
+        await pilot.press("n")
+        await pilot.pause()
+        await pilot.press("M", "y", "space", "t", "a", "s", "k")
+        await pilot.press("enter")
+        await pilot.pause()
+
+    tasks = list_tasks(db, project="proj")
+    assert any(t["title"] == "My task" for t in tasks)
+
+
+async def test_tasks_panel_toggle_done_to_todo(tmp_path):
+    """Toggling a done task marks it back as todo."""
+    from hub.core.tasks import mark_done
+    db = HubDB(tmp_path / "hub.db")
+    add_project(db, "proj", path="/tmp/proj")
+    t = add_task(db, title="Already done", project="proj")
+    mark_done(db, t["id"])
+
+    async with _make_app(db).run_test() as pilot:
+        panel = pilot.app.query_one(TasksPanel)
+        panel.refresh_project("proj")
+        await pilot.pause()
+        # done tasks appear after the "── DONE ──" separator
+        lst = panel.query_one("ListView")
+        lst.focus()
+        # navigate past separator to the done task
+        await pilot.press("down")  # separator
+        await pilot.press("down")  # done task
+        await pilot.press("space")
+        await pilot.pause()
+
+    tasks = list_tasks(db, project="proj")
+    assert tasks[0]["status"] == "todo"
+
+
+async def test_tasks_panel_delete_two_press(tmp_path):
+    """First D sets confirm, second D actually deletes."""
+    db = HubDB(tmp_path / "hub.db")
+    add_project(db, "proj", path="/tmp/proj")
+    add_task(db, title="Delete me", project="proj")
+
+    async with _make_app(db).run_test() as pilot:
+        panel = pilot.app.query_one(TasksPanel)
+        panel.refresh_project("proj")
+        await pilot.pause()
+        lst = panel.query_one("ListView")
+        lst.focus()
+        await pilot.press("down")
+        # first D — should NOT delete yet
+        await pilot.press("D")
+        await pilot.pause()
+        assert len(list_tasks(db, project="proj")) == 1
+        # second D — should delete
+        await pilot.press("D")
+        await pilot.pause()
+
+    assert len(list_tasks(db, project="proj")) == 0
