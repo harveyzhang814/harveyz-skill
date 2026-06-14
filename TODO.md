@@ -19,6 +19,19 @@
 
 ---
 
+## hub — Phase 3
+
+### 退役 p-launch 和 todo-tool（hub Phase 3）
+**优先级**: P3 | **日期**: 2026-06-14
+
+hub Phase 1（core + CLI）和 Phase 2（三栏 TUI）已完成。Phase 3 是最终收尾：
+- 在 hskill 中将 p-launch 和 todo-tool 标记为 deprecated，安装时显示退役提示
+- `hub` 首次启动的自动迁移已就绪（migrate.py），确认线上验证通过
+- 旧命令保持可用直到下一个 major version，不强制删除
+- 从 README 和文档中更新入口说明，指向 hub
+
+---
+
 ## hskill — tool lifecycle
 
 ### [x] Tool uninstall mechanism
