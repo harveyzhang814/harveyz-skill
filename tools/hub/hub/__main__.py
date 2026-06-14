@@ -13,7 +13,8 @@ def main():
             typer.echo(f"hub: migrated {n} tasks from todo-tool ✓")
 
     if len(sys.argv) == 1:
-        print("hub TUI coming in Phase 2. Use 'hub --help' for CLI commands.")
+        from hub.tui.app import HubApp
+        HubApp().run()
         return
     from hub.cli import app
     app()

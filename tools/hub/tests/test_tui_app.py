@@ -27,3 +27,20 @@ async def test_hub_app_tab_cycles_focus(tmp_path, monkeypatch):
         await pilot.press("tab")
         await pilot.press("tab")
         await pilot.press("tab")
+
+
+from unittest.mock import patch
+
+
+def test_main_no_args_launches_tui(tmp_path, monkeypatch):
+    """hub with no args calls HubApp().run(), not the Phase 1 stub."""
+    import sys
+    monkeypatch.setenv("HUB_DB_PATH", str(tmp_path / "hub.db"))
+    monkeypatch.setattr(sys, "argv", ["hub"])
+    launched = []
+
+    with patch("hub.tui.app.HubApp.run", side_effect=lambda **kw: launched.append(True)):
+        from hub.__main__ import main
+        main()
+
+    assert launched == [True]
