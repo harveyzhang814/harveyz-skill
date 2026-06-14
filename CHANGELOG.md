@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.14.1] - 2026-06-14
+
+### Fixed
+- `hub` 安装失败（`source_not_found`）：新增 `hub.sh` 启动脚本，安装器现在能正确找到 hub 入口
+- `hub` tool.json `extraPaths` 路径错误（`core/cli` 不在工具根目录），修正为 `["hub", "pyproject.toml"]`
+- `hub` 卸载后遗留 `~/.hskill/tools/hub/` Python 源码目录，将其加入 `uninstallPaths`
+- hskill 交互流程次级 fzf 页面（action/target/scope）缺少 preview 面板，视觉风格与主列表页不一致
+
+### Added
+- `docs/how-to/use-hub.md`：hub 人用操作指南（安装、TUI、projects/tasks 常用命令）
+- `docs/reference/hub-reference.md`：hub CLI 完整参考（供 agent 调用，含 JSON 输出格式）
+
 ## [0.14.0] - 2026-06-14
 
 ### Added
