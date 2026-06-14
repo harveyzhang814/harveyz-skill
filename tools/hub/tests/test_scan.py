@@ -74,3 +74,16 @@ def test_scan_nonexistent_dir_goes_to_failed(tmp_path):
     result = scan_projects(["/nonexistent/path/xyz"], db)
     assert result["added"] == []
     assert result["failed"][0]["reason"] == "directory not found"
+
+
+def test_scan_multiple_dirs(tmp_path):
+    dir1 = tmp_path / "group1"
+    dir2 = tmp_path / "group2"
+    _make_repo(dir1 / "repo-x", origin="https://github.com/user/repo-x.git")
+    _make_repo(dir2 / "repo-y", origin="https://github.com/user/repo-y.git")
+    db = HubDB(db_path=tmp_path / "hub.db")
+    result = scan_projects([str(dir1), str(dir2)], db, md_path=tmp_path / "PROJECTS.md")
+    names = {p["name"] for p in result["added"]}
+    assert names == {"repo-x", "repo-y"}
+    assert result["skipped"] == []
+    assert result["failed"] == []
