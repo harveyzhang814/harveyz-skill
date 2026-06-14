@@ -24,7 +24,7 @@
     "coding":    "程序工具（git-workflow-init + full-stack-debug-env + pm-task-dispatch + task-close）",
     "writing":   "写作工具（doc-forge + diagram + diataxis-docs + dir-manage + migrate-specs）",
     "design":    "设计工具（brand-scout + style-build + sync-design-html）",
-    "meta":      "元操作工具（skill-analyzer + git-cleanup + contribute-skill + skill-publish + npm-release + project-release）"
+    "meta":      "元操作工具（skill-analyzer + git-cleanup + contribute-skill + skill-publish + project-release）"
   },
   "skills": [
     { "path": "research/article-fetcher",       "bundle": "research" },
@@ -49,7 +49,6 @@
     { "path": "meta/git-cleanup",               "bundle": "meta" },
     { "path": "meta/contribute-skill",          "bundle": "meta" },
     { "path": "meta/skill-publish",             "bundle": "meta" },
-    { "path": "meta/npm-release",               "bundle": "meta" },
     { "path": "meta/opencode-runner",           "bundle": "meta" },
     { "path": "meta/project-release",          "bundle": "meta" }
   ],
