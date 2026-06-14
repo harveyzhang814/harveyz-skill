@@ -1,6 +1,6 @@
 ---
 name: youtube-learner
-version: "1.3.0"
+version: "1.3.1"
 description: "Process a YouTube video using the vdl CLI: transcribe, generate article and summary. Triggers when the user provides a YouTube URL and wants to learn from, summarize, transcribe, or extract key points from the video — e.g. 'help me understand this talk', 'summarize this YouTube video', 'get the transcript', 'process this video', 'summarize it'."
 user_invocable: true
 ---
@@ -35,7 +35,7 @@ npm link
 | `url` | YouTube 链接 | 从用户消息提取 |
 | `--focus` | 关注点（影响摘要内容） | 若用户未提供，主动询问："你最想从这个视频中了解什么？（例如：核心论点、技术细节、行动项）" |
 | `--mode` | 处理模式 | **必须询问用户**（见下方「模式选择」） |
-| `--lang` | 输出语言 | 默认 `zh-CN`；若用户用英文交流则用 `en` |
+| `--lang` | 输出语言 | 默认 `zh-CN`；若用户用英文交流则用 `en`；必须将解析结果赋给 `<LANG>` 占位符 |
 
 ### 模式选择
 
@@ -64,9 +64,18 @@ npm link
 
 ## 执行命令
 
+将以下占位符全部替换后再执行：
+
+| 占位符 | 替换为 |
+|--------|--------|
+| `<URL>` | YouTube 链接 |
+| `<FOCUS>` | 用户填写的关注点 |
+| `<MODE>` | `transcript` / `audio` / `media` / `full` |
+| `<LANG>` | `zh-CN`（中文对话）或 `en`（英文对话） |
+
 ```bash
 cd /Users/harveyzhang96/Projects/Video-Learner && \
-vdl "<URL>" --focus "<FOCUS>" --mode <MODE> --lang zh-CN
+vdl "<URL>" --focus "<FOCUS>" --mode <MODE> --lang <LANG>
 ```
 
 `vdl` 会自动：

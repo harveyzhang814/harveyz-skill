@@ -184,6 +184,14 @@ _skill_version() {
   [ -f "${MOCK_HOME}/.hskill/tools/${TOOL_NAME}.json" ]
 }
 
+@test "install --tool: extraPaths dirs and files copied to data dir" {
+  # Use todo-tool which declares extraPaths: ["todo", "pyproject.toml"]
+  local tool="todo-tool"
+  HOME="${MOCK_HOME}" node "${CLI}" install --tool "${tool}" 2>/tmp/bats-install-stderr | cat
+  [ -d "${MOCK_HOME}/.hskill/tools/${tool}/todo" ]
+  [ -f "${MOCK_HOME}/.hskill/tools/${tool}/pyproject.toml" ]
+}
+
 @test "install --tool (no --force): already-installed tool is skipped" {
   _install --tool "${TOOL_NAME}" --force
 

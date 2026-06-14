@@ -55,13 +55,15 @@ const toolFiles = []
 for (const tool of rawTools) {
   const toolDir    = path.join(toolsDir, tool.name)
   const toolScript = path.join(toolDir, `${tool.name}.sh`)
+  const pyProject  = path.join(toolDir, 'pyproject.toml')
   if (!existsSync(toolDir)) {
     throw new Error(`skills-index.json references tool "${tool.name}" but directory does not exist: ${toolDir}`)
   }
-  if (!existsSync(toolScript)) {
-    throw new Error(`Tool directory exists but script not found: ${toolScript}`)
+  if (!existsSync(toolScript) && !existsSync(pyProject)) {
+    throw new Error(`Tool directory exists but entry point not found (expected ${tool.name}.sh or pyproject.toml): ${toolDir}`)
   }
-  toolFiles.push(`tools/${tool.name}/`)
+  const subDir = tool.path ? tool.path.replace(/^tools\//, '') : tool.name
+  toolFiles.push(`tools/${subDir}/`)
 }
 
 // ── Hooks ────────────────────────────────────────────────────────────────────
