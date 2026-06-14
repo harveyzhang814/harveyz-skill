@@ -1,13 +1,14 @@
 #!/usr/bin/env bash
 set -e
 
-# DEV mode: HSKILL_HUB_DEV points to the source repo root (tools/hub/).
-# hub runs directly from source via editable install in a dev venv.
-if [ -n "${HSKILL_HUB_DEV}" ] && [ -d "${HSKILL_HUB_DEV}" ]; then
-  DEV_VENV="${HSKILL_HUB_DEV}/.venv"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# Auto-detect dev mode: script is running from the source tree
+if [ -d "${SCRIPT_DIR}/hub" ] && [ -f "${SCRIPT_DIR}/pyproject.toml" ]; then
+  DEV_VENV="${SCRIPT_DIR}/.venv"
   if [ ! -x "${DEV_VENV}/bin/hub" ]; then
     python3 -m venv "${DEV_VENV}"
-    "${DEV_VENV}/bin/pip" install -q -e "${HSKILL_HUB_DEV}"
+    "${DEV_VENV}/bin/pip" install -q -e "${SCRIPT_DIR}"
   fi
   exec "${DEV_VENV}/bin/hub" "$@"
 fi
