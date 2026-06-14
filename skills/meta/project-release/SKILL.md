@@ -1,6 +1,6 @@
 ---
 name: project-release
-description: "跨项目通用版本发布 skill。当用户说「发布」「发版」「release」「bump version」「切版本」「上线新版本」「出新版」「打版本」时使用。分两个阶段：Init（首次使用，扫描项目结构生成 .hskill/release-profile.md）；Execute（日常使用，读取 profile 走完整发布流程）。适用于 npm、Python、Rust、Java 或任何有版本号的项目。"
+description: "Universal project release skill. Triggers on: release, bump version, publish, new version, cut release. Two phases: Init (first run — scans project and generates .hskill/release-profile.md); Execute (daily use — reads profile and runs full release flow). Works with npm, Python, Rust, Java, or any versioned project."
 user_invocable: true
 version: "1.1.0"
 ---
