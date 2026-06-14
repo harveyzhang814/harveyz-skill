@@ -62,12 +62,29 @@ _stderr() {
   [[ "$output" == *'mutually exclusive'* ]]
 }
 
+@test "--help --json --target enum includes opencode" {
+  run _cli --help --json
+  [ "$status" -eq 0 ]
+  [[ "$output" == *'"opencode"'* ]]
+}
+
 @test "status --json emits valid single JSON object to stdout" {
   run _cli status --json
   [ "$status" -eq 0 ]
   echo "$output" | node -e "JSON.parse(require('fs').readFileSync('/dev/stdin','utf8'))"
   [[ "$output" == *'"skills"'* ]]
   [[ "$output" == *'"tools"'* ]]
+}
+
+@test "status --json includes opencode in each skill's user scope" {
+  run _cli status --json
+  [ "$status" -eq 0 ]
+  echo "$output" | node -e "
+    const d = JSON.parse(require('fs').readFileSync('/dev/stdin','utf8'))
+    const skill = Object.values(d.skills)[0]
+    if (!skill) process.exit(0)
+    if (!skill.user || !('opencode' in skill.user)) { console.error('opencode missing from user scope'); process.exit(1) }
+  "
 }
 
 @test "list --json emits valid single JSON object to stdout" {

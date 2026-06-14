@@ -10,7 +10,7 @@ setup() {
   MOCK_SRC="${TEST_DIR}/src/fake-tool"
 
   mkdir -p "${MOCK_HOME}/.local/bin"
-  mkdir -p "${MOCK_HOME}/.local/share/hskill/tools"
+  mkdir -p "${MOCK_HOME}/.hskill/tools"
   mkdir -p "${MOCK_SRC}"
 
   printf '{ "name": "fake-tool", "version": "1.0.0" }\n' > "${MOCK_SRC}/tool.json"
@@ -56,7 +56,7 @@ process.stdout.write(JSON.stringify(r))
 @test "checkToolInstalled: binary present, versions match → up-to-date" {
   touch "${MOCK_HOME}/.local/bin/fake-tool"
   printf '{ "name": "fake-tool", "version": "1.0.0" }\n' \
-    > "${MOCK_HOME}/.local/share/hskill/tools/fake-tool.json"
+    > "${MOCK_HOME}/.hskill/tools/fake-tool.json"
   run _check
   [ "$status" -eq 0 ]
   [[ "$output" == *'"status":"up-to-date"'* ]]
@@ -66,7 +66,7 @@ process.stdout.write(JSON.stringify(r))
 @test "checkToolInstalled: binary present, versions differ → update" {
   touch "${MOCK_HOME}/.local/bin/fake-tool"
   printf '{ "name": "fake-tool", "version": "0.9.0" }\n' \
-    > "${MOCK_HOME}/.local/share/hskill/tools/fake-tool.json"
+    > "${MOCK_HOME}/.hskill/tools/fake-tool.json"
   run _check
   [ "$status" -eq 0 ]
   [[ "$output" == *'"status":"update"'* ]]
@@ -76,7 +76,7 @@ process.stdout.write(JSON.stringify(r))
 @test "checkToolInstalled: malformed data JSON → up-to-date (safe fallback)" {
   touch "${MOCK_HOME}/.local/bin/fake-tool"
   printf 'not valid json\n' \
-    > "${MOCK_HOME}/.local/share/hskill/tools/fake-tool.json"
+    > "${MOCK_HOME}/.hskill/tools/fake-tool.json"
   run _check
   [ "$status" -eq 0 ]
   [[ "$output" == *'"status":"up-to-date"'* ]]
@@ -85,7 +85,7 @@ process.stdout.write(JSON.stringify(r))
 @test "checkToolInstalled: data JSON missing version field → up-to-date" {
   touch "${MOCK_HOME}/.local/bin/fake-tool"
   printf '{ "name": "fake-tool" }\n' \
-    > "${MOCK_HOME}/.local/share/hskill/tools/fake-tool.json"
+    > "${MOCK_HOME}/.hskill/tools/fake-tool.json"
   run _check
   [ "$status" -eq 0 ]
   [[ "$output" == *'"status":"up-to-date"'* ]]
@@ -94,7 +94,7 @@ process.stdout.write(JSON.stringify(r))
 @test "checkToolInstalled: source tool.json missing → up-to-date (safe fallback)" {
   touch "${MOCK_HOME}/.local/bin/fake-tool"
   printf '{ "name": "fake-tool", "version": "1.0.0" }\n' \
-    > "${MOCK_HOME}/.local/share/hskill/tools/fake-tool.json"
+    > "${MOCK_HOME}/.hskill/tools/fake-tool.json"
   rm "${MOCK_SRC}/tool.json"
   run _check
   [ "$status" -eq 0 ]
@@ -104,7 +104,7 @@ process.stdout.write(JSON.stringify(r))
 # ── installer: tool.json copied to data dir ────────────────────────────────────
 
 @test "installer: copies tool.json to data dir on install" {
-  local data_json="${MOCK_HOME}/.local/share/hskill/tools/fake-tool.json"
+  local data_json="${MOCK_HOME}/.hskill/tools/fake-tool.json"
   local js="
 import { installTools } from 'file://${REPO_ROOT}/lib/installer.js'
 await installTools(
@@ -120,7 +120,7 @@ await installTools(
 
 @test "installer: skips data JSON write when source tool.json absent" {
   rm "${MOCK_SRC}/tool.json"
-  local data_json="${MOCK_HOME}/.local/share/hskill/tools/fake-tool.json"
+  local data_json="${MOCK_HOME}/.hskill/tools/fake-tool.json"
   local js="
 import { installTools } from 'file://${REPO_ROOT}/lib/installer.js'
 await installTools(
@@ -145,7 +145,7 @@ await installTools(
 @test "preview: tool installed and up-to-date shows 'ok'" {
   touch "${MOCK_HOME}/.local/bin/fake-tool"
   printf '{ "name": "fake-tool", "version": "1.0.0" }\n' \
-    > "${MOCK_HOME}/.local/share/hskill/tools/fake-tool.json"
+    > "${MOCK_HOME}/.hskill/tools/fake-tool.json"
   run _preview \
     fake-tool 1.0.0 tool "${MOCK_SRC}"
   [ "$status" -eq 0 ]
@@ -155,7 +155,7 @@ await installTools(
 @test "preview: tool installed with older version shows 'update'" {
   touch "${MOCK_HOME}/.local/bin/fake-tool"
   printf '{ "name": "fake-tool", "version": "0.9.0" }\n' \
-    > "${MOCK_HOME}/.local/share/hskill/tools/fake-tool.json"
+    > "${MOCK_HOME}/.hskill/tools/fake-tool.json"
   run _preview \
     fake-tool 1.0.0 tool "${MOCK_SRC}"
   [ "$status" -eq 0 ]

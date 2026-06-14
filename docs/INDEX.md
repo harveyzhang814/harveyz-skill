@@ -29,6 +29,8 @@ methodology: diataxis
 | [reference/testing-guide.md](reference/testing-guide.md) | hskill 测试文件结构、bats 写法规范、hooks.bats 场景、hook 脚本验收测试模式 |
 | [reference/branch-cleanup-config.md](reference/branch-cleanup-config.md) | `.claude/branch-cleanup.md` 格式规范：Always Delete / Keep glob 规则、LLM 上下文段、内置默认值 |
 | [reference/hskill-cache.md](reference/hskill-cache.md) | hskill 本地缓存命令接口（cache clear/status/set-ttl）、缓存文件字段定义、失效规则 |
+| [reference/todo-format-spec.md](reference/todo-format-spec.md) | TODO.md 文件结构、字段规范、todo_format.yaml 完整定义 |
+| [reference/todo-tool-reference.md](reference/todo-tool-reference.md) | todo-tool 数据模型（SQL）、CLI 接口、API 端点完整参考 |
 
 ## explanation/ — 理解类
 
@@ -38,3 +40,5 @@ methodology: diataxis
 | [explanation/pdf-math-translate-architecture.md](explanation/pdf-math-translate-architecture.md) | PDFMathTranslate 的整体架构、核心模块设计原理与已知限制 |
 | [explanation/hskill-architecture.md](explanation/hskill-architecture.md) | hskill 包结构、target 路径映射、scope 模型、版本检测设计、tool.json 格式、bundle 管理设计原理、config 子命令设计原理 |
 | [explanation/hskill-cache-design.md](explanation/hskill-cache-design.md) | hskill 缓存设计原理：为什么引入缓存、为什么 TTL 可配置而非固定、缓存覆盖范围的设计决策 |
+| [explanation/todo-md-source-of-truth.md](explanation/todo-md-source-of-truth.md) | 为什么以 TODO.md 为主数据源、sync 架构、数据流、错误处理与测试策略 |
+| [explanation/todo-tool-architecture.md](explanation/todo-tool-architecture.md) | todo-tool 整体架构、目录结构、前端设计原理与已知风险 |

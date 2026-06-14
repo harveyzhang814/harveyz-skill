@@ -7,6 +7,69 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.14.0] - 2026-06-14
+
+### Added
+- `hub` tool（`tools` bundle）：个人开发者 OS，整合项目管理、git 状态追踪、任务系统，替代 p-launch + todo-tool
+  - Phase 1：core 库（SQLite DB、projects CRUD、tasks CRUD）+ CLI（`hub project`、`hub task` 子命令，支持 `--json` 输出）
+  - Phase 2：三栏 Textual TUI（ProjectsPanel | GitPanel | TasksPanel），支持键盘导航、git fetch、任务增删改、项目切换联动
+  - 首次启动自动从 todo-tool DB 迁移数据（`migrate.py`）
+  - 62 个测试覆盖 core、CLI、TUI 各层
+
+## [0.13.0] - 2026-06-12
+
+### Fixed
+- `opencode-runner`：description 移除中文字符，符合 F3 英文规范
+- `doc-forge`：测试 CSS 路径改为动态选取首个可用文件，不再依赖不存在的 `default.css`
+
+## [0.12.1] - 2026-06-10
+
+## [0.12.0] - 2026-06-09
+
+### Added
+- `url-extract`：新增 `detect_chrome_profile.py` 脚本，扫描本机 Chrome profile 并检测 X.com 登录态
+- `url-extract`：安装时 `CHROME_PROFILE` 变量改为 select 选择列表（自动列出所有 profile + 对应 Google 账号），保留手动输入兜底
+- `hskill`：安装/卸载完成后新增 "按 Enter 返回列表" 提示，避免 summary 被 fzf 立即覆盖
+
+### Changed
+- `url-extract` `vars.json`：`CHROME_PROFILE` 默认值从 `Profile 2` 更新为 `Default`
+
+## [0.11.0] - 2026-06-09
+
+### Added
+- `hskill list`：新增 Bundle 列并按 bundle 名称排序（替换旧的分组标题格式）；`hskill status` skills 列表同步增加 Bundle 列
+
+### Changed
+- `hskill` 内部重构：平台列表从 `SKILL_TARGETS` 单一来源派生，消除 `bundles.js` / `preview.mjs` 中的硬编码数组
+
+### Fixed
+- `url-extract`：移除 `SKILL_DIR` 用户配置变量
+- `preview`：安装状态侧边栏补全 openclaw、hermes 平台（USER LEVEL）
+- `npm-release`：中间步骤跳过 push 操作，最终统一给出推送 + 发布指令清单
+
+## [0.10.0] - 2026-06-08
+
+### Added
+- `url-extract` skill（`data-extraction` bundle）：跨平台 URL 存档工具，支持 Claude Code / Codex / Hermes，含 Playwright 抓取、SQLite 存储、VAULT_PATH / SKILL_DIR / CHROME_PROFILE 配置
+- `vision-extract` skill（`data-extraction` bundle）：从 hermes-skills 贡献的视觉数据提取 skill
+- `skill-publish` skill（`meta` bundle）：检查 skill 格式合规性与 skills-index.json 注册状态
+- `npm-release` skill（`meta` bundle）：完整 npm 发布工作流（版本号 → CHANGELOG → 分支 → tag → publish）
+- `migrate-specs` skill（`harness` bundle）：将旧 spec 文档迁移为 Diataxis 结构
+- `dir-manage` skill（`document` bundle）：从 writing-agent 贡献的目录管理 skill
+- `capture-insight` skill（`writing` bundle）：从 writing-agent 贡献的洞察捕获 skill
+- `add-todo` skill（`workflow` bundle）：从 harveyz-skill workflow 贡献的 TODO 追踪 skill
+- Diataxis 结构文档：cache、config、bundle、info 模块的参考文档与指南
+
+### Changed
+- `hskill` 安装交互优化：改为两步式（先选 target，再选 scope），更符合操作直觉
+- `url-extract`：通用 SKILL.md + 各平台 patch 文件，支持跨平台复用
+
+### Fixed
+- installer：`--force` 时按 `uninstallPaths` 精确清理，支持版本感知 venv 升级
+- `url-extract`：以 `source_url` 为主键，支持存量 DB schema 迁移
+- `url-extract`：命令注入安全加固，usability 改进
+- SKILL.md frontmatter 跨所有 skill 规范化
+
 ## [0.9.0] - 2026-05-29
 
 ### Added

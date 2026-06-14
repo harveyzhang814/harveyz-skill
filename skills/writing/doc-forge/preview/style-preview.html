@@ -1,0 +1,627 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Doc Forge — Style Preview</title>
+<style>
+
+*, *::before, *::after { box-sizing: border-box; }
+html, body {
+  margin: 0; padding: 0;
+  font-family: -apple-system, "Helvetica Neue", Arial, sans-serif;
+  background: #CACACA;
+  color: #111;
+}
+
+/* ── Page chrome ── */
+.page-header {
+  padding: 20px 24px 14px;
+  background: rgba(20, 20, 20, 0.88);
+  backdrop-filter: blur(8px);
+  color: #fff;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+.page-header h1 { font-size: 15px; font-weight: 600; margin: 0 0 3px; }
+.page-header p  { font-size: 11px; color: #999; margin: 0; }
+
+/* ── Grid shell ── */
+.grid-wrap { overflow-x: auto; padding: 20px; }
+
+.grid {
+  display: grid;
+  grid-template-columns: 64px repeat(var(--n-styles), minmax(280px, 1fr));
+  gap: 10px;
+  width: max-content;
+  min-width: 100%;
+}
+
+/* ── Base card ── */
+.cell {
+  background: #ffffff;
+  border-radius: 10px;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  padding: 16px 18px;
+  min-height: 52px;
+  overflow: hidden;
+}
+
+/* ── Row label card ── */
+.cell-label {
+  background: rgba(0, 0, 0, 0.12);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  border: 1px solid rgba(255, 255, 255, 0.20);
+  box-shadow: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-family: monospace;
+  color: rgba(255, 255, 255, 0.75);
+  font-weight: 600;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+  padding: 8px 4px;
+}
+
+/* ── Column header card ── */
+.cell-header {
+  background: rgba(20, 20, 20, 0.80);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.18);
+  color: #fff;
+  font-family: monospace;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 10px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.cell-header .slug { color: #888; font-size: 10px; font-weight: 400; }
+
+/* corner — invisible spacer */
+.cell-corner {
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  backdrop-filter: none;
+}
+
+/* ── bain ── */
+.bain /* ─────────────────────────────────────────────
+   Bain & Company brand style
+   Heading : #CC0000 (Bain Red — H1/H2 text + borders)
+   Body    : #2D2D2D (Body Charcoal)
+   Accent  : #CC0000 (table header top line, .bain blockquote bar, .bain code bar)
+   Fonts   : Gotham — proprietary, .bain fall back to Gill Sans (headlines)
+             Gotham — proprietary, .bain fall back to Helvetica Neue (body)
+   ───────────────────────────────────────────── */
+
+@page {
+  size: A4;
+  margin: 2.0cm 2.5cm 2.0cm 2.5cm;
+}
+.bain {
+  font-family: "Gotham", "PingFang SC", "Helvetica Neue", "Arial", "STHeiti", "Microsoft YaHei", sans-serif;
+  font-size: 11pt;
+  line-height: 1.55;
+  color: #2D2D2D;
+  max-width: 100%;
+}
+.bain h1 {
+  font-family: "Gotham", "Gill Sans", "Trebuchet MS", "Helvetica Neue", "Arial", sans-serif;
+  font-size: 28pt;
+  font-weight: 700;
+  color: #CC0000;
+  margin-top: 0;
+  margin-bottom: 8pt;
+  padding-bottom: 6pt;
+  border-bottom: 2.5px solid #CC0000;
+}
+.bain h2 {
+  font-family: "Gotham", "Gill Sans", "Trebuchet MS", "Helvetica Neue", "Arial", sans-serif;
+  font-size: 18pt;
+  font-weight: 700;
+  color: #CC0000;
+  margin-top: 24pt;
+  margin-bottom: 8pt;
+  padding-left: 8pt;
+  border-left: 3px solid #CC0000;
+}
+.bain h3 {
+  font-family: "Gotham", "PingFang SC", "Helvetica Neue", "Arial", sans-serif;
+  font-size: 14pt;
+  font-weight: 700;
+  color: #1A1A1A;
+  margin-top: 16pt;
+  margin-bottom: 5pt;
+  padding-left: 8pt;
+  border-left: 3px solid #CC0000;
+}
+.bain h4 {
+  font-family: "Gotham", "PingFang SC", "Helvetica Neue", "Arial", sans-serif;
+  font-size: 11pt;
+  font-weight: 700;
+  color: #666666;
+  margin-top: 12pt;
+  margin-bottom: 4pt;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.bain p {
+  text-indent: 0;
+  margin-top: 0;
+  margin-bottom: 7pt;
+}
+.bain /* bain 模式: 表头上方红线 2px / 下方黑线 1px / 行间灰线 0.5px / 末行黑线 1px */
+table { border-collapse: collapse; width: 100%; font-size: 10pt; }
+.bain thead tr { border-top: 2px solid #CC0000; border-bottom: 1px solid #1A1A1A; }
+.bain th { background-color: transparent; font-weight: 700; border: none; padding: 5pt 8pt; color: #1A1A1A; text-align: left; }
+.bain tbody td { border-bottom: 0.5px solid #DDDDDD; }
+.bain tbody tr:last-child td { border-bottom: 1px solid #1A1A1A; }
+.bain td { border: none; padding: 4.5pt 8pt; color: #2D2D2D; }
+.bain pre {
+  background-color: #F5F5F5;
+  border: none;
+  border-left: 3px solid #CC0000;
+  border-radius: 0;
+  padding: 8pt 12pt;
+  font-family: "JetBrains Mono", "Courier New", monospace;
+  font-size: 9pt;
+  line-height: 1.5;
+}
+.bain code {
+  font-family: "JetBrains Mono", "Courier New", monospace;
+  font-size: 9pt;
+  background-color: #F5F5F5;
+  color: #1A1A1A;
+  padding: 1px 4px;
+  border-radius: 0;
+}
+.bain pre code { background-color: transparent; color: inherit; padding: 0; }
+.bain blockquote {
+  font-family: "Gotham", "PingFang SC", "Helvetica Neue", "Arial", sans-serif;
+  font-size: 12pt;
+  font-style: italic;
+  font-weight: 400;
+  color: #2D2D2D;
+  border-left: 4px solid #CC0000;
+  background-color: #FFF5F5;
+  margin: 12pt 0;
+  padding: 6pt 0 6pt 16pt;
+}
+.bain blockquote p { margin: 0; text-indent: 0; }
+.bain ul, .bain ol { margin-top: 3pt; margin-bottom: 3pt; padding-left: 1.6em; }
+.bain li { margin-bottom: 3pt; line-height: 1.55; }
+.bain hr { border: none; border-top: 1px solid #DDDDDD; margin: 14pt 0; }
+.bain a { color: #CC0000; text-decoration: underline; text-underline-offset: 2px; }
+.bain img { max-width: 100%; height: auto; display: block; margin: 10pt auto; }
+.bain pre.mermaid {
+  background-color: transparent;
+  border: none;
+  text-align: center;
+  margin: 14pt auto;
+  padding: 0;
+}
+.bain pre.mermaid svg { max-width: 92%; height: auto; }
+
+/* ── bcg ── */
+.bcg /* ─────────────────────────────────────────────
+   BCG – Boston Consulting Group brand style
+   Source : knowledge/design/bcg-style.md
+   Heading: #0C2B15  midnight-green (green-700)
+   Body   : #212427  near-black
+   Accent : #96F878  lime-green (small area; no heading decorations)
+   Section: #F1EEEA  warm-white (neutral-200)
+   Fonts  : henderson-bcg-serif → Palatino Linotype (H1/H2)
+            henderson-bcg-sans  → Helvetica Neue (H3/body)
+   ───────────────────────────────────────────── */
+
+@page {
+  size: A4;
+  margin: 2.5cm 2.0cm;
+}
+.bcg /* ── Base ───────────────────────────────────── */
+
+body {
+  font-family: "PingFang SC", "Helvetica Neue", "Helvetica", "Arial", "STHeiti", "Microsoft YaHei", sans-serif;
+  font-size: 12pt;
+  line-height: 1.30;
+  color: #212427;
+  max-width: 100%;
+}
+.bcg /* ── Headings ───────────────────────────────── */
+
+h1 {
+  font-family: "PingFang SC", "Palatino Linotype", "Palatino", "Garamond", "Georgia", "STSong", "Songti SC", serif;
+  font-size: 24pt;
+  font-weight: 300;
+  color: #0C2B15;
+  text-align: left;
+  margin-top: 0;
+  margin-bottom: 16pt;
+  border-bottom: none;
+  letter-spacing: -0.01em;
+}
+.bcg h2 {
+  font-family: "PingFang SC", "Palatino Linotype", "Palatino", "Garamond", "Georgia", "STSong", "Songti SC", serif;
+  font-size: 18pt;
+  font-weight: 300;
+  color: #0C2B15;
+  text-align: left;
+  margin-top: 24pt;
+  margin-bottom: 8pt;
+  border-bottom: none;
+}
+.bcg h3 {
+  font-family: "PingFang SC", "Helvetica Neue", "Helvetica", "Arial", "STHeiti", sans-serif;
+  font-size: 14pt;
+  font-weight: 300;
+  color: #212427;
+  text-align: left;
+  margin-top: 14pt;
+  margin-bottom: 5pt;
+  border-left: none;
+}
+.bcg h4 {
+  font-family: "PingFang SC", "Helvetica Neue", "Helvetica", "Arial", "STHeiti", sans-serif;
+  font-size: 11pt;
+  font-weight: 700;
+  color: #696969;
+  text-align: left;
+  margin-top: 12pt;
+  margin-bottom: 4pt;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.bcg /* ── Paragraph ──────────────────────────────── */
+
+p {
+  text-indent: 0;
+  margin-top: 0;
+  margin-bottom: 6pt;
+}
+.bcg /* ── Tables — McKinsey horizontal-rule style ── */
+
+table {
+  border-collapse: collapse;
+  width: 100%;
+  margin-top: 8pt;
+  margin-bottom: 8pt;
+  font-family: "PingFang SC", "Helvetica Neue", "Helvetica", "Arial", sans-serif;
+  font-size: 11pt;
+}
+.bcg thead tr {
+  border-top: 1.5px solid #212427;
+  border-bottom: 0.75px solid #212427;
+}
+.bcg th {
+  background-color: transparent;
+  color: #212427;
+  font-weight: 700;
+  border: none;
+  padding: 5pt 8pt;
+  text-align: left;
+}
+.bcg tbody td {
+  border: none;
+  padding: 4pt 8pt;
+  color: #212427;
+}
+.bcg tbody tr:last-child td {
+  border-bottom: 0.75px solid #212427;
+}
+.bcg /* ── Code ───────────────────────────────────── */
+
+pre {
+  background-color: #F2F2F2;
+  border: none;
+  border-left: 3px solid #0C2B15;
+  border-radius: 0 3px 3px 0;
+  padding: 8pt 12pt;
+  margin: 8pt 0;
+  font-family: "JetBrains Mono", "Cascadia Code", "Courier New", monospace;
+  font-size: 10pt;
+  line-height: 1.5;
+}
+.bcg code {
+  font-family: "JetBrains Mono", "Cascadia Code", "Courier New", monospace;
+  font-size: 10pt;
+  background-color: #F2F2F2;
+  color: #0C2B15;
+  padding: 1px 4px;
+  border-radius: 2px;
+}
+.bcg pre code {
+  background-color: transparent;
+  color: inherit;
+  padding: 0;
+  border-radius: 0;
+}
+.bcg /* ── Blockquote — BCG uses warm-white background block, .bcg no border-left ── */
+
+blockquote {
+  font-family: "PingFang SC", "Helvetica Neue", "Helvetica", "Arial", sans-serif;
+  font-size: 13pt;
+  font-style: normal;
+  font-weight: 400;
+  color: #0C2B15;
+  border-left: none;
+  background-color: #F1EEEA;
+  margin: 12pt 0;
+  padding: 12pt 16pt;
+  border-radius: 2px;
+}
+.bcg blockquote p {
+  margin: 0;
+  text-indent: 0;
+}
+.bcg /* ── Lists ──────────────────────────────────── */
+
+ul, .bcg ol {
+  margin-top: 3pt;
+  margin-bottom: 3pt;
+  padding-left: 1.5em;
+}
+.bcg li {
+  margin-bottom: 3pt;
+  line-height: 1.4;
+}
+.bcg /* ── Horizontal rule ────────────────────────── */
+
+hr {
+  border: none;
+  border-top: 1px solid #D4D4D4;
+  margin: 14pt 0;
+}
+.bcg /* ── Links ──────────────────────────────────── */
+
+a {
+  color: #212427;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.bcg /* ── Images ─────────────────────────────────── */
+
+img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+  margin: 10pt auto;
+}
+.bcg /* ── Mermaid ────────────────────────────────── */
+
+pre.mermaid {
+  background-color: transparent;
+  border: none;
+  text-align: center;
+  margin: 14pt auto;
+  padding: 0;
+}
+.bcg pre.mermaid svg {
+  max-width: 92%;
+  height: auto;
+}
+
+/* ── thesis ── */
+.thesis /* ─────────────────────────────────────────────
+   中文学术论文格式 — 华东师范大学硕士论文规范
+   字号对照：三号=16pt 四号=14pt 小四=12pt 五号=10.5pt 小五=9pt
+   行距：正文及摘要、参考文献均为 25pt
+   ───────────────────────────────────────────── */
+
+@page {
+  size: A4;
+  margin: 3cm 2.5cm 2.5cm 3.2cm;
+}
+.thesis /* ── Base ───────────────────────────────────── */
+
+body {
+  font-family: "SimSun", "STSong", "Songti SC", serif;
+  font-size: 12pt;
+  line-height: 2.08;
+  color: #000000;
+  max-width: 100%;
+}
+.thesis /* ── Headings ───────────────────────────────── */
+
+/* 一级标题：黑体加粗，三号（16pt），居中 */
+h1 {
+  font-family: "SimHei", "STHeiti", "Heiti SC", sans-serif;
+  font-size: 16pt;
+  font-weight: 700;
+  color: #000000;
+  text-align: center;
+  margin-top: 24pt;
+  margin-bottom: 18pt;
+  page-break-before: always;
+}
+.thesis /* 二级标题：黑体加粗，四号（14pt），左对齐 */
+h2 {
+  font-family: "SimHei", "STHeiti", "Heiti SC", sans-serif;
+  font-size: 14pt;
+  font-weight: 700;
+  color: #000000;
+  text-align: left;
+  margin-top: 18pt;
+  margin-bottom: 12pt;
+}
+.thesis /* 三级标题：黑体加粗，小四号（12pt），左对齐 */
+h3 {
+  font-family: "SimHei", "STHeiti", "Heiti SC", sans-serif;
+  font-size: 12pt;
+  font-weight: 700;
+  color: #000000;
+  text-align: left;
+  margin-top: 12pt;
+  margin-bottom: 6pt;
+}
+.thesis h4 {
+  font-family: "SimHei", "STHeiti", "Heiti SC", sans-serif;
+  font-size: 12pt;
+  font-weight: normal;
+  color: #000000;
+  text-align: left;
+  margin-top: 10pt;
+  margin-bottom: 4pt;
+}
+.thesis /* ── Paragraph ──────────────────────────────── */
+
+p {
+  text-indent: 2em;
+  margin-top: 0;
+  margin-bottom: 0;
+  line-height: 2.08;
+}
+.thesis /* ── Tables ─────────────────────────────────── */
+/* 表题在表格上方居中，五号宋体（在 Markdown 中作为紧接在表格前的段落处理）*/
+
+table {
+  border-collapse: collapse;
+  width: 100%;
+  margin-top: 6pt;
+  margin-bottom: 6pt;
+  font-family: "SimSun", "STSong", "Songti SC", serif;
+  font-size: 10.5pt;
+  line-height: 1.5;
+}
+.thesis thead tr {
+  border-top: 1.5px solid #000000;
+  border-bottom: 1px solid #000000;
+}
+.thesis th {
+  background-color: transparent;
+  color: #000000;
+  font-weight: 700;
+  border: none;
+  padding: 4pt 6pt;
+  text-align: left;
+}
+.thesis tbody tr td {
+  border-bottom: none;
+}
+.thesis tbody tr:last-child td {
+  border-bottom: 1.5px solid #000000;
+}
+.thesis td {
+  border-left: none;
+  border-right: none;
+  padding: 3pt 6pt;
+  color: #000000;
+}
+.thesis /* ── Figure / table captions ────────────────── */
+/* 图题在图下方，表题在表上方；均居中，五号宋体 */
+
+figcaption, .thesis caption, .thesis .caption {
+  font-family: "SimSun", "STSong", "Songti SC", serif;
+  font-size: 10.5pt;
+  text-align: center;
+  margin: 4pt 0;
+  text-indent: 0;
+}
+.thesis /* ── Code ───────────────────────────────────── */
+
+pre {
+  background-color: #f5f5f5;
+  border: 1px solid #cccccc;
+  border-radius: 2px;
+  padding: 8pt 10pt;
+  margin: 8pt 0;
+  font-family: "Courier New", "Consolas", monospace;
+  font-size: 9pt;
+  line-height: 1.5;
+}
+.thesis code {
+  font-family: "Courier New", "Consolas", monospace;
+  font-size: 9pt;
+  background-color: #f5f5f5;
+  padding: 1px 3px;
+}
+.thesis pre code {
+  background-color: transparent;
+  padding: 0;
+}
+.thesis /* ── Blockquote ─────────────────────────────── */
+
+blockquote {
+  font-family: "SimSun", "STSong", "Songti SC", serif;
+  font-size: 12pt;
+  color: #333333;
+  margin: 8pt 0;
+  padding: 4pt 0 4pt 2em;
+  border-left: 2px solid #999999;
+}
+.thesis blockquote p {
+  text-indent: 0;
+}
+.thesis /* ── Lists ──────────────────────────────────── */
+
+ul, .thesis ol {
+  margin-top: 3pt;
+  margin-bottom: 3pt;
+  padding-left: 2em;
+  font-family: "SimSun", "STSong", "Songti SC", serif;
+  font-size: 12pt;
+  line-height: 2.08;
+}
+.thesis li {
+  margin-bottom: 0;
+}
+.thesis /* ── Horizontal rule ────────────────────────── */
+
+hr {
+  border: none;
+  border-top: 1px solid #000000;
+  margin: 12pt 0;
+}
+.thesis /* ── Links ──────────────────────────────────── */
+
+a {
+  color: #000000;
+  text-decoration: underline;
+}
+.thesis /* ── Images ─────────────────────────────────── */
+
+img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+  margin: 10pt auto;
+}
+.thesis /* ── Mermaid ────────────────────────────────── */
+
+pre.mermaid {
+  background-color: transparent;
+  border: none;
+  text-align: center;
+  margin: 12pt auto;
+  padding: 0;
+}
+.thesis pre.mermaid svg {
+  max-width: 90%;
+  height: auto;
+}
+</style>
+</head>
+<body>
+<div class="page-header">
+  <h1>Doc Forge — Style Preview</h1>
+  <p>列 = 样式风格　行 = 元素类型　共 3 种样式</p>
+</div>
+<div class="grid-wrap">
+  <div class="grid" style="--n-styles: 3">
+    <div class="cell cell-corner"></div>    <div class="cell cell-header"><span>Bain & Company</span><span class="slug">bain.css</span></div>    <div class="cell cell-header"><span>BCG</span><span class="slug">bcg.css</span></div>    <div class="cell cell-header"><span>中文学术论文</span><span class="slug">thesis.css</span></div>    <div class="cell cell-label">配色</div>    <div class="cell bain"><div style="display:flex;flex-wrap:wrap;gap:8px;padding:2px 0"><div style="display:flex;flex-direction:column;align-items:center;gap:3px"><div title="#1A1A1A" style="width:32px;height:32px;border-radius:7px;background:#1A1A1A;box-shadow:0 1px 4px rgba(0,0,0,.18);border:1px solid rgba(0,0,0,.08)"></div><span style="font-family:monospace;font-size:7.5px;color:#555;letter-spacing:-.01em">#1A1A1A</span></div><div style="display:flex;flex-direction:column;align-items:center;gap:3px"><div title="#2D2D2D" style="width:32px;height:32px;border-radius:7px;background:#2D2D2D;box-shadow:0 1px 4px rgba(0,0,0,.18);border:1px solid rgba(0,0,0,.08)"></div><span style="font-family:monospace;font-size:7.5px;color:#555;letter-spacing:-.01em">#2D2D2D</span></div><div style="display:flex;flex-direction:column;align-items:center;gap:3px"><div title="#CC0000" style="width:32px;height:32px;border-radius:7px;background:#CC0000;box-shadow:0 1px 4px rgba(0,0,0,.18);border:1px solid rgba(0,0,0,.08)"></div><span style="font-family:monospace;font-size:7.5px;color:#555;letter-spacing:-.01em">#CC0000</span></div><div style="display:flex;flex-direction:column;align-items:center;gap:3px"><div title="#666666" style="width:32px;height:32px;border-radius:7px;background:#666666;box-shadow:0 1px 4px rgba(0,0,0,.18);border:1px solid rgba(0,0,0,.08)"></div><span style="font-family:monospace;font-size:7.5px;color:#555;letter-spacing:-.01em">#666666</span></div><div style="display:flex;flex-direction:column;align-items:center;gap:3px"><div title="#DDDDDD" style="width:32px;height:32px;border-radius:7px;background:#DDDDDD;box-shadow:0 1px 4px rgba(0,0,0,.18);border:1px solid rgba(0,0,0,.08)"></div><span style="font-family:monospace;font-size:7.5px;color:#555;letter-spacing:-.01em">#DDDDDD</span></div></div></div>    <div class="cell bcg"><div style="display:flex;flex-wrap:wrap;gap:8px;padding:2px 0"><div style="display:flex;flex-direction:column;align-items:center;gap:3px"><div title="#0C2B15" style="width:32px;height:32px;border-radius:7px;background:#0C2B15;box-shadow:0 1px 4px rgba(0,0,0,.18);border:1px solid rgba(0,0,0,.08)"></div><span style="font-family:monospace;font-size:7.5px;color:#555;letter-spacing:-.01em">#0C2B15</span></div><div style="display:flex;flex-direction:column;align-items:center;gap:3px"><div title="#212427" style="width:32px;height:32px;border-radius:7px;background:#212427;box-shadow:0 1px 4px rgba(0,0,0,.18);border:1px solid rgba(0,0,0,.08)"></div><span style="font-family:monospace;font-size:7.5px;color:#555;letter-spacing:-.01em">#212427</span></div><div style="display:flex;flex-direction:column;align-items:center;gap:3px"><div title="#696969" style="width:32px;height:32px;border-radius:7px;background:#696969;box-shadow:0 1px 4px rgba(0,0,0,.18);border:1px solid rgba(0,0,0,.08)"></div><span style="font-family:monospace;font-size:7.5px;color:#555;letter-spacing:-.01em">#696969</span></div><div style="display:flex;flex-direction:column;align-items:center;gap:3px"><div title="#96F878" style="width:32px;height:32px;border-radius:7px;background:#96F878;box-shadow:0 1px 4px rgba(0,0,0,.18);border:1px solid rgba(0,0,0,.08)"></div><span style="font-family:monospace;font-size:7.5px;color:#555;letter-spacing:-.01em">#96F878</span></div><div style="display:flex;flex-direction:column;align-items:center;gap:3px"><div title="#D4D4D4" style="width:32px;height:32px;border-radius:7px;background:#D4D4D4;box-shadow:0 1px 4px rgba(0,0,0,.18);border:1px solid rgba(0,0,0,.08)"></div><span style="font-family:monospace;font-size:7.5px;color:#555;letter-spacing:-.01em">#D4D4D4</span></div><div style="display:flex;flex-direction:column;align-items:center;gap:3px"><div title="#F1EEEA" style="width:32px;height:32px;border-radius:7px;background:#F1EEEA;box-shadow:0 1px 4px rgba(0,0,0,.18);border:1px solid rgba(0,0,0,.08)"></div><span style="font-family:monospace;font-size:7.5px;color:#555;letter-spacing:-.01em">#F1EEEA</span></div><div style="display:flex;flex-direction:column;align-items:center;gap:3px"><div title="#F2F2F2" style="width:32px;height:32px;border-radius:7px;background:#F2F2F2;box-shadow:0 1px 4px rgba(0,0,0,.18);border:1px solid rgba(0,0,0,.08)"></div><span style="font-family:monospace;font-size:7.5px;color:#555;letter-spacing:-.01em">#F2F2F2</span></div></div></div>    <div class="cell thesis"><div style="display:flex;flex-wrap:wrap;gap:8px;padding:2px 0"><div style="display:flex;flex-direction:column;align-items:center;gap:3px"><div title="#000000" style="width:32px;height:32px;border-radius:7px;background:#000000;box-shadow:0 1px 4px rgba(0,0,0,.18);border:1px solid rgba(0,0,0,.08)"></div><span style="font-family:monospace;font-size:7.5px;color:#555;letter-spacing:-.01em">#000000</span></div><div style="display:flex;flex-direction:column;align-items:center;gap:3px"><div title="#333333" style="width:32px;height:32px;border-radius:7px;background:#333333;box-shadow:0 1px 4px rgba(0,0,0,.18);border:1px solid rgba(0,0,0,.08)"></div><span style="font-family:monospace;font-size:7.5px;color:#555;letter-spacing:-.01em">#333333</span></div><div style="display:flex;flex-direction:column;align-items:center;gap:3px"><div title="#999999" style="width:32px;height:32px;border-radius:7px;background:#999999;box-shadow:0 1px 4px rgba(0,0,0,.18);border:1px solid rgba(0,0,0,.08)"></div><span style="font-family:monospace;font-size:7.5px;color:#555;letter-spacing:-.01em">#999999</span></div><div style="display:flex;flex-direction:column;align-items:center;gap:3px"><div title="#CCCCCC" style="width:32px;height:32px;border-radius:7px;background:#CCCCCC;box-shadow:0 1px 4px rgba(0,0,0,.18);border:1px solid rgba(0,0,0,.08)"></div><span style="font-family:monospace;font-size:7.5px;color:#555;letter-spacing:-.01em">#CCCCCC</span></div></div></div>    <div class="cell cell-label">H1</div>    <div class="cell bain"><h1>战略报告标题</h1></div>    <div class="cell bcg"><h1>战略报告标题</h1></div>    <div class="cell thesis"><h1>战略报告标题</h1></div>    <div class="cell cell-label">H2</div>    <div class="cell bain"><h2>一、执行摘要</h2></div>    <div class="cell bcg"><h2>一、执行摘要</h2></div>    <div class="cell thesis"><h2>一、执行摘要</h2></div>    <div class="cell cell-label">H3</div>    <div class="cell bain"><h3>1.1 背景与目标</h3></div>    <div class="cell bcg"><h3>1.1 背景与目标</h3></div>    <div class="cell thesis"><h3>1.1 背景与目标</h3></div>    <div class="cell cell-label">H4</div>    <div class="cell bain"><h4>战略优先级</h4></div>    <div class="cell bcg"><h4>战略优先级</h4></div>    <div class="cell thesis"><h4>战略优先级</h4></div>    <div class="cell cell-label">正文</div>    <div class="cell bain"><p>这是正文段落。报告分析了当前市场环境下的核心战略选项，结合数据驱动的洞察提出行动建议，助力企业保持领先地位。</p></div>    <div class="cell bcg"><p>这是正文段落。报告分析了当前市场环境下的核心战略选项，结合数据驱动的洞察提出行动建议，助力企业保持领先地位。</p></div>    <div class="cell thesis"><p>这是正文段落。报告分析了当前市场环境下的核心战略选项，结合数据驱动的洞察提出行动建议，助力企业保持领先地位。</p></div>    <div class="cell cell-label">引用块</div>    <div class="cell bain"><blockquote><p>关键发现：在竞争加剧的背景下，企业需要在18个月内完成数字化转型。</p></blockquote></div>    <div class="cell bcg"><blockquote><p>关键发现：在竞争加剧的背景下，企业需要在18个月内完成数字化转型。</p></blockquote></div>    <div class="cell thesis"><blockquote><p>关键发现：在竞争加剧的背景下，企业需要在18个月内完成数字化转型。</p></blockquote></div>    <div class="cell cell-label">表格</div>    <div class="cell bain"><table><thead><tr><th>指标</th><th>当前值</th><th>目标值</th><th>差距</th></tr></thead><tbody><tr><td>市场份额</td><td>23%</td><td>30%</td><td>7pp</td></tr><tr><td>净推荐值</td><td>42</td><td>60</td><td>+18</td></tr></tbody></table></div>    <div class="cell bcg"><table><thead><tr><th>指标</th><th>当前值</th><th>目标值</th><th>差距</th></tr></thead><tbody><tr><td>市场份额</td><td>23%</td><td>30%</td><td>7pp</td></tr><tr><td>净推荐值</td><td>42</td><td>60</td><td>+18</td></tr></tbody></table></div>    <div class="cell thesis"><table><thead><tr><th>指标</th><th>当前值</th><th>目标值</th><th>差距</th></tr></thead><tbody><tr><td>市场份额</td><td>23%</td><td>30%</td><td>7pp</td></tr><tr><td>净推荐值</td><td>42</td><td>60</td><td>+18</td></tr></tbody></table></div>    <div class="cell cell-label">代码块</div>    <div class="cell bain"><pre><code>def calculate_gap(current, target):
+    return target - current</code></pre></div>    <div class="cell bcg"><pre><code>def calculate_gap(current, target):
+    return target - current</code></pre></div>    <div class="cell thesis"><pre><code>def calculate_gap(current, target):
+    return target - current</code></pre></div>    <div class="cell cell-label">分隔线</div>    <div class="cell bain"><hr></div>    <div class="cell bcg"><hr></div>    <div class="cell thesis"><hr></div>
+  </div>
+</div>
+</body>
+</html>

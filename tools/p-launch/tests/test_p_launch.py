@@ -16,6 +16,8 @@ from p_launch import (
     read_project_dirs, collect_repos, get_repo_status,
     get_branches, get_branch_detail, pull_branch, push_branch,
     CONFIG_FILE,
+    extract_github_name, sync_to_index, open_project,
+    _load_index, _write_index,
 )
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
@@ -237,3 +239,140 @@ def test_push_branch_diverged(tmp_path):
     result = push_branch(clone, "main")
     assert "diverged" in result
     assert "✓" not in result
+
+
+# ── extract_github_name ───────────────────────────────────────────────────────
+
+def _make_github_repo(tmp_path: Path, url: str) -> Path:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    subprocess.run(["git", "init", str(repo)], capture_output=True, check=True)
+    subprocess.run(["git", "-C", str(repo), "remote", "add", "origin", url],
+                   capture_output=True, check=True)
+    return repo
+
+
+def test_extract_github_name_https(tmp_path):
+    repo = _make_github_repo(tmp_path, "https://github.com/user/my-repo.git")
+    assert extract_github_name(repo) == "my-repo"
+
+
+def test_extract_github_name_ssh(tmp_path):
+    repo = _make_github_repo(tmp_path, "git@github.com:user/my-repo.git")
+    assert extract_github_name(repo) == "my-repo"
+
+
+def test_extract_github_name_no_remote(tmp_path):
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    subprocess.run(["git", "init", str(repo)], capture_output=True, check=True)
+    assert extract_github_name(repo) is None
+
+
+def test_extract_github_name_non_github(tmp_path):
+    repo = _make_github_repo(tmp_path, "https://gitlab.com/user/my-repo.git")
+    assert extract_github_name(repo) is None
+
+
+# ── sync_to_index ─────────────────────────────────────────────────────────────
+
+def test_sync_appends_new_repo(tmp_path):
+    repo = _make_github_repo(tmp_path, "https://github.com/user/awesome.git")
+    index = tmp_path / "PROJECTS.md"
+    sync_to_index([repo], index_path=index)
+    projects = _load_index(index)
+    assert len(projects) == 1
+    assert projects[0]["name"] == "awesome"
+    assert projects[0]["path"] == str(repo)
+
+
+def test_sync_updates_path_preserves_description(tmp_path):
+    index = tmp_path / "PROJECTS.md"
+    _write_index([{"name": "awesome", "path": "/old/path", "description": "cool app"}], index)
+    repo = _make_github_repo(tmp_path, "https://github.com/user/awesome.git")
+    sync_to_index([repo], index_path=index)
+    projects = _load_index(index)
+    assert projects[0]["path"] == str(repo)
+    assert projects[0]["description"] == "cool app"
+
+
+def test_sync_skips_no_remote(tmp_path):
+    repo = tmp_path / "local-only"
+    repo.mkdir()
+    subprocess.run(["git", "init", str(repo)], capture_output=True, check=True)
+    index = tmp_path / "PROJECTS.md"
+    sync_to_index([repo], index_path=index)
+    assert _load_index(index) == []
+
+
+def test_sync_removes_stale_entry(tmp_path):
+    index = tmp_path / "PROJECTS.md"
+    _write_index([{"name": "gone", "path": "/nonexistent/gone", "description": ""}], index)
+    repo = _make_github_repo(tmp_path, "https://github.com/user/active.git")
+    sync_to_index([repo], index_path=index)
+    names = [p["name"] for p in _load_index(index)]
+    assert "gone" not in names
+    assert "active" in names
+
+
+def test_sync_warns_on_duplicate_name(tmp_path, capsys):
+    (tmp_path / "r1").mkdir()
+    (tmp_path / "r2").mkdir()
+    repo1 = _make_github_repo(tmp_path / "r1", "https://github.com/user/same.git")
+    repo2 = _make_github_repo(tmp_path / "r2", "https://github.com/other/same.git")
+    index = tmp_path / "PROJECTS.md"
+    sync_to_index([repo1, repo2], index_path=index)
+    assert "duplicate" in capsys.readouterr().err
+
+
+# ── open_project ──────────────────────────────────────────────────────────────
+
+def test_open_project_not_found_exits(tmp_path, capsys):
+    index = tmp_path / "PROJECTS.md"
+    _write_index([{"name": "other", "path": "/p", "description": ""}], index)
+    with pytest.raises(SystemExit):
+        open_project("missing", index_path=index)
+    assert "not found" in capsys.readouterr().err
+
+
+def test_open_project_empty_index_exits(tmp_path, capsys):
+    index = tmp_path / "PROJECTS.md"
+    with pytest.raises(SystemExit):
+        open_project("anything", index_path=index)
+    assert "Launch the TUI" in capsys.readouterr().err
+
+
+def test_open_project_calls_launch(tmp_path, monkeypatch):
+    index = tmp_path / "PROJECTS.md"
+    _write_index([{"name": "myapp", "path": str(tmp_path), "description": ""}], index)
+    launched = []
+    monkeypatch.setattr("p_launch.launch_project", lambda p: launched.append(p) or (True, True, ""))
+    open_project("myapp", index_path=index)
+    assert launched == [tmp_path]
+
+
+def test_extract_github_name_https_no_git_suffix(tmp_path):
+    repo = _make_github_repo(tmp_path, "https://github.com/user/my-repo")
+    assert extract_github_name(repo) == "my-repo"
+
+
+def test_sync_empty_repos_does_not_wipe_index(tmp_path):
+    """sync_to_index([]) must not clear existing entries."""
+    index = tmp_path / "PROJECTS.md"
+    _write_index([{"name": "kept", "path": "/p", "description": "stays"}], index)
+    sync_to_index([], index_path=index)
+    projects = _load_index(index)
+    assert len(projects) == 1
+    assert projects[0]["name"] == "kept"
+
+
+def test_open_project_partial_launch_failure(tmp_path, monkeypatch, capsys):
+    """open_project prints correct status when Cursor fails but Ghostty succeeds."""
+    index = tmp_path / "PROJECTS.md"
+    _write_index([{"name": "myapp", "path": str(tmp_path), "description": ""}], index)
+    monkeypatch.setattr("p_launch.launch_project",
+                        lambda p: (False, True, ""))
+    open_project("myapp", index_path=index)
+    out = capsys.readouterr().out
+    assert "Cursor ⚠" in out
+    assert "Ghostty ✓" in out

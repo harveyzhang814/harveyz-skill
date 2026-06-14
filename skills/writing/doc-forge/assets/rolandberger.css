@@ -1,0 +1,149 @@
+/* ─────────────────────────────────────────────
+   Roland Berger brand style
+   Heading : #000000 (black)
+   Body    : #000000 (black)
+   Accent  : #F6F600 (yellow — deco lines) / #FF3532 (red — H3 bar, CTA)
+   Fonts   : RBDesign (custom) → Helvetica Neue (headlines + body)
+             Arnhem Semi Bold (pull quotes) → Georgia
+   Source  : knowledge/design/rolandberger-style.md
+   ───────────────────────────────────────────── */
+
+@page {
+  margin-top: 2.5cm;
+  margin-bottom: 2.5cm;
+  margin-left: 2.5cm;
+  margin-right: 2.5cm;
+}
+
+body {
+  font-family: "Helvetica Neue", "Arial", "PingFang SC", "STHeiti", sans-serif;
+  font-size: 10.5pt;
+  line-height: 1.36;
+  color: #000000;
+}
+
+h1 {
+  font-family: "Helvetica Neue", "Arial", "PingFang SC", "STHeiti", sans-serif;
+  font-size: 24pt;
+  font-weight: 700;
+  color: #000000;
+  margin-top: 24pt;
+  margin-bottom: 8pt;
+  border-bottom: 2px solid #F6F600;
+  padding-bottom: 4pt;
+}
+
+h2 {
+  font-family: "Helvetica Neue", "Arial", "PingFang SC", "STHeiti", sans-serif;
+  font-size: 18pt;
+  font-weight: 700;
+  color: #000000;
+  margin-top: 20pt;
+  margin-bottom: 6pt;
+  border-bottom: 2px solid #F6F600;
+  padding-bottom: 3pt;
+}
+
+h3 {
+  font-family: "Helvetica Neue", "Arial", "PingFang SC", "STHeiti", sans-serif;
+  font-size: 14pt;
+  font-weight: 700;
+  color: #000000;
+  margin-top: 16pt;
+  margin-bottom: 5pt;
+  border-left: 3px solid #FF3532;
+  padding-left: 8pt;
+}
+
+h4 {
+  font-family: "Helvetica Neue", "Arial", "PingFang SC", "STHeiti", sans-serif;
+  font-size: 11pt;
+  font-weight: 700;
+  color: #8D9399;
+  margin-top: 12pt;
+  margin-bottom: 4pt;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+p {
+  font-size: 10.5pt;
+  margin-bottom: 6pt;
+  text-indent: 0;
+}
+
+/* ── Links — yellow box-shadow underline (RB signature) ── */
+a {
+  color: #000000;
+  text-decoration: none;
+  box-shadow: #F6F600 0px -4px 0px 0px inset;
+}
+
+/* ── Pull quote (RB: blue text + serif, no left bar) ── */
+blockquote {
+  font-family: "Georgia", "STSong", "Songti SC", "SimSun", serif;
+  font-size: 13pt;
+  font-style: normal;
+  font-weight: 600;
+  color: #004AC2;
+  background: transparent;
+  border-left: none;
+  margin: 16pt 0 16pt 1cm;
+  padding: 0;
+  line-height: 1.50;
+}
+
+/* ── Tables — mckinsey mode: head/tail lines only ── */
+table {
+  font-family: "Helvetica Neue", "Arial", "PingFang SC", "STHeiti", sans-serif;
+  font-size: 11pt;
+  border-collapse: collapse;
+  width: 100%;
+  margin-top: 8pt;
+  margin-bottom: 8pt;
+}
+
+thead tr {
+  border-top: 1.5px solid #000000;
+  border-bottom: 0.75px solid #000000;
+}
+
+thead th {
+  font-weight: 700;
+  text-align: left;
+  padding: 4pt 6pt;
+  background-color: transparent;
+}
+
+tbody td {
+  padding: 4pt 6pt;
+  border-bottom: none;
+  color: #000000;
+}
+
+tbody tr:last-child td {
+  border-bottom: 0.75px solid #000000;
+}
+
+/* ── Code ── */
+pre, code {
+  font-family: "JetBrains Mono", "Cascadia Code", "Courier New", monospace;
+  font-size: 10pt;
+  background-color: #F0F0F0;
+  border-left: 3px solid #000000;
+  padding: 8pt 10pt;
+  border-radius: 0;
+}
+
+code {
+  padding: 1pt 4pt;
+  border-left: none;
+  border-radius: 2px;
+}
+
+/* ── Horizontal rule ── */
+hr {
+  border: none;
+  border-top: 1px solid #C8C8C8;
+  margin: 16pt 0;
+}
