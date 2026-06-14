@@ -30,6 +30,15 @@ hub projects list
 hub projects sync
 ```
 
+### 在新设备上批量初始化（不依赖 p-launch）
+
+```bash
+hub projects scan ~/Projects
+hub projects scan ~/Projects ~/Work   # 多个目录
+```
+
+扫描每个目录的直接子目录，找到 git 仓库后自动以 origin remote URL 的仓库名注册。已存在的同名项目跳过，不覆盖。
+
 ## 管理任务
 
 ```bash
