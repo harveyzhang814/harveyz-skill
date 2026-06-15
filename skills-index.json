@@ -19,7 +19,7 @@
     }
   ],
   "bundleMeta": {
-    "research":  "研究工具（article-fetcher + url-extract + youtube-learner + vision-extract）",
+    "research":  "研究工具（url-extract + youtube-learner + vision-extract）",
     "creative":  "创意工具（add-todo + insight）",
     "coding":    "程序工具（git-workflow-init + full-stack-debug-env + pm-task-dispatch + task-close）",
     "writing":   "写作工具（doc-forge + diagram + diataxis-docs + dir-manage + migrate-specs）",
@@ -27,7 +27,6 @@
     "meta":      "元操作工具（skill-analyzer + git-cleanup + contribute-skill + skill-publish + project-release）"
   },
   "skills": [
-    { "path": "research/article-fetcher",       "bundle": "research" },
     { "path": "research/url-extract",           "bundle": "research" },
     { "path": "research/vision-extract",        "bundle": "research" },
     { "path": "research/youtube-learner",       "bundle": "research" },

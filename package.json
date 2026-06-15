@@ -16,7 +16,6 @@
     "bundles.json",
     "skills-index.json",
     "CHANGELOG.md",
-    "skills/research/article-fetcher/",
     "skills/research/url-extract/",
     "skills/research/vision-extract/",
     "skills/research/youtube-learner/",
