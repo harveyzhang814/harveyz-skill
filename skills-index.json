@@ -19,38 +19,110 @@
     }
   ],
   "bundleMeta": {
-    "research":  "研究工具（article-fetcher + url-extract + youtube-learner + vision-extract）",
-    "creative":  "创意工具（add-todo + insight）",
-    "coding":    "程序工具（git-workflow-init + full-stack-debug-env + pm-task-dispatch + task-close）",
-    "writing":   "写作工具（doc-forge + diagram + diataxis-docs + dir-manage + migrate-specs）",
-    "design":    "设计工具（brand-scout + style-build + sync-design-html）",
-    "meta":      "元操作工具（skill-analyzer + git-cleanup + contribute-skill + skill-publish + project-release）"
+    "research": "研究工具（article-fetcher + url-extract + youtube-learner + vision-extract）",
+    "creative": "创意工具（add-todo + insight）",
+    "coding": "程序工具（git-workflow-init + full-stack-debug-env + pm-task-dispatch + task-close）",
+    "writing": "写作工具（doc-forge + diagram + diataxis-docs + dir-manage + migrate-specs）",
+    "design": "设计工具（brand-scout + style-build + sync-design-html）",
+    "meta": "元操作工具（skill-analyzer + git-cleanup + contribute-skill + skill-publish + project-release）"
   },
   "skills": [
-    { "path": "research/article-fetcher",       "bundle": "research" },
-    { "path": "research/url-extract",           "bundle": "research" },
-    { "path": "research/vision-extract",        "bundle": "research" },
-    { "path": "research/youtube-learner",       "bundle": "research" },
-    { "path": "creative/add-todo",              "bundle": "creative" },
-    { "path": "creative/insight",               "bundle": "creative" },
-    { "path": "coding/git-workflow-init",       "bundle": "coding" },
-    { "path": "coding/full-stack-debug-env",    "bundle": "coding" },
-    { "path": "coding/pm-task-dispatch",        "bundle": "coding" },
-    { "path": "coding/task-close",              "bundle": "coding" },
-    { "path": "writing/doc-forge",              "bundle": "writing" },
-    { "path": "writing/diagram",               "bundle": "writing" },
-    { "path": "writing/diataxis-docs",          "bundle": "writing" },
-    { "path": "writing/dir-manage",             "bundle": "writing" },
-    { "path": "writing/migrate-specs",          "bundle": "writing" },
-    { "path": "design/brand-scout",             "bundle": "design" },
-    { "path": "design/style-build",             "bundle": "design" },
-    { "path": "design/sync-design-html",        "bundle": "design" },
-    { "path": "meta/skill-analyzer",            "bundle": "meta" },
-    { "path": "meta/git-cleanup",               "bundle": "meta" },
-    { "path": "meta/contribute-skill",          "bundle": "meta" },
-    { "path": "meta/skill-publish",             "bundle": "meta" },
-    { "path": "meta/opencode-runner",           "bundle": "meta" },
-    { "path": "meta/project-release",          "bundle": "meta" }
+    {
+      "path": "research/article-fetcher",
+      "bundle": "research"
+    },
+    {
+      "path": "research/extract-url",
+      "bundle": "research"
+    },
+    {
+      "path": "research/extract-vision",
+      "bundle": "research"
+    },
+    {
+      "path": "research/learn-video",
+      "bundle": "research"
+    },
+    {
+      "path": "creative/capture-todo",
+      "bundle": "creative"
+    },
+    {
+      "path": "creative/capture-insight",
+      "bundle": "creative"
+    },
+    {
+      "path": "coding/init-workflow",
+      "bundle": "coding"
+    },
+    {
+      "path": "coding/setup-debug",
+      "bundle": "coding"
+    },
+    {
+      "path": "coding/dispatch-task",
+      "bundle": "coding"
+    },
+    {
+      "path": "coding/close-task",
+      "bundle": "coding"
+    },
+    {
+      "path": "writing/forge-doc",
+      "bundle": "writing"
+    },
+    {
+      "path": "writing/draw-diagram",
+      "bundle": "writing"
+    },
+    {
+      "path": "writing/manage-docs",
+      "bundle": "writing"
+    },
+    {
+      "path": "writing/manage-dir",
+      "bundle": "writing"
+    },
+    {
+      "path": "writing/migrate-spec",
+      "bundle": "writing"
+    },
+    {
+      "path": "design/scout-brand",
+      "bundle": "design"
+    },
+    {
+      "path": "design/build-style",
+      "bundle": "design"
+    },
+    {
+      "path": "design/sync-design",
+      "bundle": "design"
+    },
+    {
+      "path": "meta/analyze-skill",
+      "bundle": "meta"
+    },
+    {
+      "path": "meta/clean-git",
+      "bundle": "meta"
+    },
+    {
+      "path": "meta/contribute-skill",
+      "bundle": "meta"
+    },
+    {
+      "path": "meta/publish-skill",
+      "bundle": "meta"
+    },
+    {
+      "path": "meta/runby-opencode",
+      "bundle": "meta"
+    },
+    {
+      "path": "meta/release-project",
+      "bundle": "meta"
+    }
   ],
   "hooks": [
     {
@@ -61,6 +133,96 @@
       "matcher": "Bash",
       "timeout": 60,
       "statusMessage": "检查相似分支..."
+    }
+  ],
+  "renames": [
+    {
+      "from": "url-extract",
+      "to": "extract-url"
+    },
+    {
+      "from": "vision-extract",
+      "to": "extract-vision"
+    },
+    {
+      "from": "youtube-learner",
+      "to": "learn-video"
+    },
+    {
+      "from": "add-todo",
+      "to": "capture-todo"
+    },
+    {
+      "from": "insight",
+      "to": "capture-insight"
+    },
+    {
+      "from": "git-workflow-init",
+      "to": "init-workflow"
+    },
+    {
+      "from": "full-stack-debug-env",
+      "to": "setup-debug"
+    },
+    {
+      "from": "pm-task-dispatch",
+      "to": "dispatch-task"
+    },
+    {
+      "from": "task-close",
+      "to": "close-task"
+    },
+    {
+      "from": "doc-forge",
+      "to": "forge-doc"
+    },
+    {
+      "from": "diagram",
+      "to": "draw-diagram"
+    },
+    {
+      "from": "diataxis-docs",
+      "to": "manage-docs"
+    },
+    {
+      "from": "dir-manage",
+      "to": "manage-dir"
+    },
+    {
+      "from": "migrate-specs",
+      "to": "migrate-spec"
+    },
+    {
+      "from": "brand-scout",
+      "to": "scout-brand"
+    },
+    {
+      "from": "style-build",
+      "to": "build-style"
+    },
+    {
+      "from": "sync-design-html",
+      "to": "sync-design"
+    },
+    {
+      "from": "git-cleanup",
+      "to": "clean-git"
+    },
+    {
+      "from": "skill-analyzer",
+      "to": "analyze-skill"
+    },
+    {
+      "from": "skill-publish",
+      "to": "publish-skill"
+    },
+    {
+      "from": "opencode-runner",
+      "to": "runby-opencode"
+    },
+    {
+      "from": "project-release",
+      "to": "release-project"
     }
   ]
 }
