@@ -61,8 +61,7 @@ class GitPanel(Widget):
     can_focus = True
 
     BINDINGS = [
-        Binding("ctrl+p", "pull", "Pull", show=True),
-        Binding("ctrl+u", "push", "Push", show=True),
+        Binding("ctrl+y", "sync", "Sync", show=True),
     ]
 
     DEFAULT_CSS = """
@@ -100,7 +99,8 @@ class GitPanel(Widget):
     def on_focus(self) -> None:
         lv = self.query_one("#branch-list", ListView)
         if lv.display:
-            lv.focus()
+            # lv.focus() inside on_focus is a no-op in Textual 8.x; defer to next tick.
+            self.call_later(self.app.set_focus, lv)
 
     def _selected_branch_data(self) -> dict | None:
         return self._selected_branch
@@ -110,18 +110,54 @@ class GitPanel(Widget):
             self._selected_branch = event.item.branch_data
         else:
             self._selected_branch = None
+        self.refresh_bindings()
+
+    def _sync_direction(self, b: dict | None) -> str | None:
+        """Return 'pull' / 'push' / None depending on branch state."""
+        if b is None or b["is_local_only"]:
+            return None
+        if b["behind"] > 0 and b["ahead"] == 0:
+            return "pull"
+        if b["ahead"] > 0 and b["behind"] == 0:
+            return "push"
+        return None
 
     def check_action(self, action: str, parameters: tuple) -> bool | None:
-        if action not in ("pull", "push"):
-            return None
-        b = self._selected_branch_data()
-        if b is None:
-            return False
-        if action == "pull":
-            return not b["is_local_only"] and b["behind"] > 0 and b["ahead"] == 0
-        if action == "push":
-            return not b["is_local_only"] and b["ahead"] > 0 and b["behind"] == 0
+        if action == "sync":
+            return True
+        if action in ("pull", "push"):
+            direction = self._sync_direction(self._selected_branch_data())
+            return direction == action
         return None
+
+    def action_sync(self) -> None:
+        if not self._path:
+            self.app.notify("No project selected", severity="warning")
+            return
+        b = self._selected_branch_data()
+        if not b:
+            self.app.notify("No branch selected", severity="warning")
+            return
+        if b["is_local_only"]:
+            self.app.notify(
+                f"{b['name']} is local-only — nothing to sync", severity="warning"
+            )
+            return
+        if b["ahead"] > 0 and b["behind"] > 0:
+            self.app.notify(
+                f"{b['name']} is diverged — pull/rebase, then push manually",
+                severity="warning",
+            )
+            return
+        if b["ahead"] == 0 and b["behind"] == 0:
+            self.app.notify(f"{b['name']} is already up to date")
+            return
+        if b["behind"] > 0:
+            self.app.notify(f"Pulling {b['name']}…")
+            self._pull_worker(self._path, b["name"])
+        else:
+            self.app.notify(f"Pushing {b['name']}…")
+            self._push_worker(self._path, b["name"])
 
     def action_pull(self) -> None:
         b = self._selected_branch_data()
@@ -158,53 +194,66 @@ class GitPanel(Widget):
             return
         self._load_git_info(path)
 
-    @work(thread=True)
+    @work(thread=True, group="git-load", exclusive=True)
     def _load_git_info(self, path: Path) -> None:
         branches = get_branches(path)
-        self.app.call_from_thread(self._render_branches, path, branches)
+        self.app.call_from_thread(self._launch_render, path, branches)
 
-    def _render_branches(self, path: Path, branches: list[dict]) -> None:
+    def _launch_render(self, path: Path, branches: list[dict]) -> None:
+        self.run_worker(
+            self._render_branches(path, branches),
+            group="git-render",
+            exclusive=True,
+        )
+
+    async def _render_branches(self, path: Path, branches: list[dict]) -> None:
         placeholder = self.query_one("#git-placeholder", Static)
         lv = self.query_one("#branch-list", ListView)
-        placeholder.display = False
-        lv.display = True
-        lv.clear()
+        had_focus = lv.has_focus or self.has_focus
 
         if not branches:
+            await lv.clear()
             placeholder.update("Not a git repository.")
             placeholder.display = True
             lv.display = False
             self.border_title = "GIT"
             return
 
+        placeholder.display = False
+        lv.display = True
+        await lv.clear()
+
         with_remote = [b for b in branches if not b["is_local_only"]]
         local_only = [b for b in branches if b["is_local_only"]]
 
+        items: list[ListItem] = []
         current_lv_idx = 0
         idx = 0
 
         if with_remote:
-            lv.append(SectionHeader("WITH REMOTE"))
+            items.append(SectionHeader("WITH REMOTE"))
             idx += 1
             for b in with_remote:
-                lv.append(BranchItem(b))
+                items.append(BranchItem(b))
                 if b["is_current"]:
                     current_lv_idx = idx
                 idx += 1
 
         if local_only:
-            lv.append(SectionHeader("LOCAL ONLY"))
+            items.append(SectionHeader("LOCAL ONLY"))
             idx += 1
             for b in local_only:
-                lv.append(BranchItem(b))
+                items.append(BranchItem(b))
                 if b["is_current"]:
                     current_lv_idx = idx
                 idx += 1
 
-        if branches:
-            lv.index = current_lv_idx
-
+        await lv.extend(items)
+        lv.index = current_lv_idx
         self.border_title = f"GIT — {path.name}"
+
+        if had_focus:
+            lv.focus()
 
     def action_fetch(self) -> None:
         if self._path and is_git_with_remote(self._path):
