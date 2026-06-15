@@ -54,8 +54,8 @@ REPO_ROOT="$(cd "${BATS_TEST_DIRNAME}/.." && pwd)"
 CLI="${REPO_ROOT}/bin/cli.js"
 MOCK_FZF="${REPO_ROOT}/tests/helpers/mock-fzf.sh"
 
-SKILL1_NAME="skill-analyzer"
-SKILL1_SRC="${REPO_ROOT}/skills/meta/skill-analyzer"
+SKILL1_NAME="analyze-skill"
+SKILL1_SRC="${REPO_ROOT}/skills/meta/analyze-skill"
 SKILL1_VER="1.0.0"
 SKILL1_BUNDLE="meta"
 
