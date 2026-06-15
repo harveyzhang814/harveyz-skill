@@ -729,34 +729,41 @@ function fzfSelect() {
   const hookItems   = getAllHookItems()
   const previewPath = path.join(__dirname, 'preview.mjs')
 
-  // 构建 fzf 输入：每行 "NAME\tVERSION\tBUNDLE\tKIND\tSRCPATH"
+  // 构建 fzf 输入：每行 "NAME\tVERSION\tBUNDLE\tKIND\tSRCPATH\tINSTALLSCOPE"
   const lines = [
     ...skillItems.map(s => {
       const bundle = s.srcPath.split('/').slice(-2, -1)[0]
-      return `${s.skillName}\t${s.version ?? '—'}\t${bundle}\tskill\t${s.srcPath}`
+      return `${s.skillName}\t${s.version ?? '—'}\t${bundle}\tskill\t${s.srcPath}\t${s.installScope ?? ''}`
     }),
-    ...toolItems.map(t => `${t.toolName}\t${t.version ?? '—'}\tshell-tool\ttool\t${t.srcPath}`),
-    ...hookItems.map(h => `${h.name}\t${h.version ?? '—'}\thook\thook\t${h.srcPath}`),
+    ...toolItems.map(t => `${t.toolName}\t${t.version ?? '—'}\tshell-tool\ttool\t${t.srcPath}\t${t.installScope ?? ''}`),
+    ...hookItems.map(h => `${h.name}\t${h.version ?? '—'}\thook\thook\t${h.srcPath}\t${h.installScope ?? ''}`),
   ]
 
   const nameWidth    = Math.max(...lines.map(l => l.split('\t')[0].length))
   const versionWidth = Math.max(...lines.map(l => l.split('\t')[1].length))
 
-  const G = '\x1b[32m', Y = '\x1b[33m', D = '\x1b[2m', R = '\x1b[0m'
+  const G = '\x1b[32m', Y = '\x1b[33m', C = '\x1b[36m', D = '\x1b[2m', R = '\x1b[0m'
   function colorIcon(status) {
     if (status === 'up-to-date') return G + '✓' + R
     if (status === 'update')     return Y + '↑' + R
     return D + '—' + R
   }
+  function scopeHint(installScope) {
+    if (installScope === 'essential') return Y + '»' + R
+    if (installScope === 'global' || installScope === 'project') return C + '▸' + R
+    return D + '—' + R
+  }
 
   // fzf 展示格式：NAME   VERSION   U:?  P:?  BUNDLE
   const displayLines = lines.map(l => {
-    const [name, ver, bundle, kind, srcPath] = l.split('\t')
-    let uIcon = D + '—' + R, pIcon = D + '—' + R
+    const [name, ver, bundle, kind, srcPath, installScope] = l.split('\t')
+    let uIcon = scopeHint(installScope), pIcon = D + '—' + R
     if (kind === 'skill') {
       const installed = checkInstalled(name, ver)
-      uIcon = colorIcon(scopeSummary(installed.user))
-      pIcon = colorIcon(scopeSummary(installed.project))
+      const uStatus = scopeSummary(installed.user)
+      const pStatus = scopeSummary(installed.project)
+      uIcon = uStatus !== 'none' ? colorIcon(uStatus) : scopeHint(installScope)
+      pIcon = pStatus !== 'none' ? colorIcon(pStatus) : (installScope === 'project' ? C + '▸' + R : D + '—' + R)
     } else if (kind === 'tool') {
       uIcon = colorIcon(checkToolInstalled(name, srcPath).status)
     } else if (kind === 'hook') {
@@ -772,7 +779,7 @@ function fzfSelect() {
   // 把原始数据附在末尾（隐藏列，用于解析和 preview）
   const fzfInput = displayLines.map((d, i) => `${d}\t${lines[i]}`).join('\n')
 
-  const header = `  hskill  ·  U=user P=project  ${G}✓${R}=ok ${Y}↑${R}=update ${D}—${R}=none  ·  tab 多选  ·  enter 确认`
+  const header = `  hskill  ·  U=user P=project  ${G}✓${R}=ok ${Y}↑${R}=update ${Y}»${R}=essential ${C}▸${R}=recommended ${D}—${R}=none  ·  tab 多选  ·  enter 确认`
 
   const result = spawnSync('fzf', [
     '--multi',
