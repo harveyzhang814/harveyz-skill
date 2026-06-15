@@ -15,6 +15,8 @@ from hub.tui.git import (
 
 
 class GitPanel(Widget):
+    can_focus = True
+
     DEFAULT_CSS = """
     GitPanel {
         width: 44;

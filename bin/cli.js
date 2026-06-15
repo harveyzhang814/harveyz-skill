@@ -13,8 +13,8 @@ import {
   resolveSkills, resolveSkillsByName, resolveTools, resolveToolsByName,
   TOOL_BUNDLE_CHOICES,
 } from '../lib/bundles.js'
-import { buildTargetChoices, resolveTargets, TARGETS, USER_ONLY_TARGETS } from '../lib/targets.js'
-import { installSkills, installTools, installHooks, installHooksForTarget, uninstallHook, uninstallTool, uninstallSkill } from '../lib/installer.js'
+import { buildTargetChoices, resolveTargets, TARGETS, USER_ONLY_TARGETS, SKILL_TARGETS, userSkillDir } from '../lib/targets.js'
+import { installSkills, installTools, installHooks, installHooksForTarget, uninstallHook, uninstallTool, uninstallSkill, migrateRenamedSkills } from '../lib/installer.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const require = createRequire(import.meta.url)
@@ -153,6 +153,18 @@ if (subcommand === 'update') {
   } catch {
     console.error(chalk.red('  ✗ Update failed. Try: npm update -g harveyz-skill'))
     process.exit(1)
+  }
+  // Run skill rename migrations
+  const { renames = [], skills: skillDefs = [] } = require('../skills-index.json')
+  if (renames.length > 0) {
+    console.log(chalk.dim('  · Migrating renamed skills…'))
+    const targets = SKILL_TARGETS.map(name => ({ name, dir: userSkillDir(name) }))
+    const skillsRoot = path.join(__dirname, '..', 'skills')
+    const migrationSummary = await migrateRenamedSkills(renames, targets, skillsRoot, skillDefs)
+    const totalMigrated = Object.values(migrationSummary).reduce((n, s) => n + s.migrated.length, 0)
+    const totalFailed   = Object.values(migrationSummary).reduce((n, s) => n + s.failed.length, 0)
+    if (totalMigrated > 0) console.log(chalk.green(`  ✔ Migrated ${totalMigrated} skill(s)`))
+    if (totalFailed   > 0) console.log(chalk.yellow(`  ⚠ ${totalFailed} migration(s) failed — check output above`))
   }
   const legacyDir = path.join(os.homedir(), '.local', 'share', 'hskill')
   if (existsSync(legacyDir)) {

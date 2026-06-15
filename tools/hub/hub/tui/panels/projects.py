@@ -18,6 +18,7 @@ _DEFAULT_MD = Path.home() / ".hskill" / "public" / "PROJECTS.md"
 class ProjectsPanel(Widget):
     BINDINGS = [
         Binding("ctrl+s", "scan_action", "Scan", show=True),
+        Binding("enter", "open_selected", show=False, priority=True),
     ]
 
     DEFAULT_CSS = """
@@ -70,6 +71,11 @@ class ProjectsPanel(Widget):
             self.selected_name = p["name"]
             self.selected_path = p.get("path", "")
             self.post_message(self.ProjectSelected(p["name"], p.get("path", "")))
+
+    def action_open_selected(self) -> None:
+        if self.query("#scan-dir-input"):
+            return
+        self.app.action_open_project()
 
     def action_scan_action(self) -> None:
         if self.query("#scan-dir-input"):
