@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.16.0] - 2026-06-15
+
+### Added
+- `hub git`：新增 CLI 子命令，与 TUI git 面板功能对等
+  - `hub git status [--project <name>]`：显示当前分支、upstream 同步状态、工作区变更、最近提交
+  - `hub git fetch [--project <name>]`：fetch 所有 remote
+  - `hub git branches [--project <name>]`：列出所有分支及 ahead/behind 状态
+
+### Changed
+- `hub`：版本升至 1.1.0
+- `hub`：安装升级机制改为基于源码文件内容哈希（sha256）检测，不再依赖版本号；npm 更新后下次启动自动重装
+
 ## [0.15.0] - 2026-06-15
 
 ### Added
