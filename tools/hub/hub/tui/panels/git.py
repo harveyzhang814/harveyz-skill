@@ -3,15 +3,52 @@ from pathlib import Path
 from textual import work
 from textual.app import ComposeResult
 from textual.widget import Widget
-from textual.widgets import Static
+from textual.widgets import ListView, ListItem, Label, Static
 
-from hub.tui.git import (
-    fetch_repo,
-    get_branches,
-    get_recent_commits,
-    get_working_tree,
-    is_git_with_remote,
-)
+from hub.tui.git import fetch_repo, get_branches, is_git_with_remote
+
+
+class SectionHeader(ListItem):
+    """Non-interactive section divider row."""
+
+    DEFAULT_CSS = """
+    SectionHeader {
+        padding: 0 1;
+    }
+    """
+
+    def __init__(self, title: str) -> None:
+        super().__init__()
+        self._title = title
+        self.disabled = True
+
+    def compose(self) -> ComposeResult:
+        yield Label(f"[dim]▸ {self._title}[/]", markup=True)
+
+
+class BranchItem(ListItem):
+    """One branch row in the branch list."""
+
+    def __init__(self, branch: dict) -> None:
+        super().__init__()
+        self.branch_data = branch
+
+    def compose(self) -> ComposeResult:
+        b = self.branch_data
+        cur = "[cyan]▶[/] " if b["is_current"] else "  "
+        if b["is_local_only"]:
+            sym_m = "[dim]local[/]  "
+        elif b["ahead"] and b["behind"]:
+            sym_m = f"[yellow]↑{b['ahead']}↓{b['behind']}[/]"
+        elif b["ahead"]:
+            sym_m = f"[yellow]↑{b['ahead']}[/]   "
+        elif b["behind"]:
+            sym_m = f"[red]↓{b['behind']}[/]   "
+        else:
+            sym_m = "[green]✓[/]     "
+        name = b["name"]
+        remote = f"  [dim]{b['upstream']}[/]" if b.get("upstream") else ""
+        yield Label(f"{cur}{sym_m} {name}{remote}", markup=True)
 
 
 class GitPanel(Widget):
@@ -23,10 +60,15 @@ class GitPanel(Widget):
         height: 100%;
         border: solid $surface-lighten-2;
         padding: 1 2;
-        overflow-y: auto;
     }
     GitPanel:focus-within {
         border: solid $accent;
+    }
+    #branch-list {
+        height: 1fr;
+        border: none;
+        padding: 0;
+        margin: 0 -2;
     }
     """
 
@@ -35,7 +77,10 @@ class GitPanel(Widget):
         self._path: Path | None = None
 
     def compose(self) -> ComposeResult:
-        yield Static("Select a project to see git status.", id="git-content", markup=True)
+        yield Static("Select a project to see git status.", id="git-placeholder", markup=True)
+        lv = ListView(id="branch-list")
+        lv.display = False
+        yield lv
 
     def on_mount(self) -> None:
         self.border_title = "GIT"
@@ -43,7 +88,9 @@ class GitPanel(Widget):
     def refresh_project(self, path: Path | None) -> None:
         self._path = path
         if path is None or not path.exists():
-            self.query_one("#git-content", Static).update("No valid path.")
+            self.query_one("#git-placeholder", Static).update("No valid path.")
+            self.query_one("#git-placeholder", Static).display = True
+            self.query_one("#branch-list", ListView).display = False
             self.border_title = "GIT"
             return
         self._load_git_info(path)
@@ -51,62 +98,42 @@ class GitPanel(Widget):
     @work(thread=True)
     def _load_git_info(self, path: Path) -> None:
         branches = get_branches(path)
-        current = next((b for b in branches if b["is_current"]), None)
-        wt = get_working_tree(path)
-        commits = get_recent_commits(path, n=5)
-        self.app.call_from_thread(self._render_git, path, current, wt, commits)
+        self.app.call_from_thread(self._render_branches, path, branches)
 
-    def _render_git(
-        self,
-        path: Path,
-        current: dict | None,
-        wt: dict,
-        commits: list[dict],
-    ) -> None:
-        lines: list[str] = [f"[bold]{path.name}[/]\n"]
+    def _render_branches(self, path: Path, branches: list[dict]) -> None:
+        placeholder = self.query_one("#git-placeholder", Static)
+        lv = self.query_one("#branch-list", ListView)
+        placeholder.display = False
+        lv.display = True
+        lv.clear()
 
-        lines.append("[dim]BRANCH[/]")
-        if current:
-            lines.append(f"  local    [cyan]{current['name']}[/]")
-            if current["upstream"]:
-                lines.append(f"  tracking [dim]{current['upstream']}[/]")
-                if current["ahead"] or current["behind"]:
-                    parts = []
-                    if current["ahead"]:
-                        parts.append(f"[yellow]↑{current['ahead']}[/]")
-                    if current["behind"]:
-                        parts.append(f"[red]↓{current['behind']}[/]")
-                    lines.append(f"  sync     {' '.join(parts)}")
-                else:
-                    lines.append("  sync     [green]up to date[/]")
-            else:
-                lines.append("  tracking [dim]none (local only)[/]")
-        else:
-            lines.append("  [dim]not a git repository[/]")
+        with_remote = [b for b in branches if not b["is_local_only"]]
+        local_only = [b for b in branches if b["is_local_only"]]
 
-        lines.append("")
-        lines.append("[dim]WORKING TREE[/]")
-        total = wt["modified"] + wt["new"] + wt["deleted"]
-        if total == 0:
-            lines.append("  [green]clean[/]")
-        else:
-            parts = []
-            if wt["modified"]:
-                parts.append(f"{wt['modified']} mod")
-            if wt["new"]:
-                parts.append(f"{wt['new']} new")
-            if wt["deleted"]:
-                parts.append(f"{wt['deleted']} del")
-            lines.append(f"  [yellow]{', '.join(parts)}[/]")
+        current_lv_idx = 0
+        idx = 0
 
-        if commits:
-            lines.append("")
-            lines.append("[dim]RECENT COMMITS[/]")
-            for c in commits:
-                msg = c["msg"][:30] + "…" if len(c["msg"]) > 30 else c["msg"]
-                lines.append(f"  [dim]{c['sha']}[/] {msg}  [dim]{c['date']}[/]")
+        if with_remote:
+            lv.append(SectionHeader("WITH REMOTE"))
+            idx += 1
+            for b in with_remote:
+                lv.append(BranchItem(b))
+                if b["is_current"]:
+                    current_lv_idx = idx
+                idx += 1
 
-        self.query_one("#git-content", Static).update("\n".join(lines))
+        if local_only:
+            lv.append(SectionHeader("LOCAL ONLY"))
+            idx += 1
+            for b in local_only:
+                lv.append(BranchItem(b))
+                if b["is_current"]:
+                    current_lv_idx = idx
+                idx += 1
+
+        if branches:
+            lv.index = current_lv_idx
+
         self.border_title = f"GIT — {path.name}"
 
     def action_fetch(self) -> None:
