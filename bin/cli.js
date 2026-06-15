@@ -184,7 +184,7 @@ if (subcommand === 'list') {
   const sorted = [...skills].sort((a, b) => a.bundle.localeCompare(b.bundle) || a.path.split('/').pop().localeCompare(b.path.split('/').pop()))
   if (jsonFlag) {
     console.log(JSON.stringify({
-      skills: sorted.map(s => ({ name: s.path.split('/').pop(), path: s.path, bundle: s.bundle })),
+      skills: sorted.map(s => ({ name: s.path.split('/').pop(), path: s.path, bundle: s.bundle, global: s.global ?? false })),
       tools: tools.map(t => t.name),
     }, null, 2))
     process.exit(0)
@@ -225,7 +225,22 @@ if (subcommand === 'status' || subcommand === 'outdated') {
 
   function icon(status) {
     if (status === 'up-to-date') return chalk.green('✓')
-    if (status === 'update')     return chalk.yellow('↑')
+    if (status === 'update')     return chalk.red('↑')
+    return chalk.dim('—')
+  }
+
+  function userIcon(status, installScope) {
+    if (status === 'up-to-date')          return chalk.green('✓')
+    if (status === 'update')              return chalk.red('↑')
+    if (installScope === 'essential')     return chalk.yellow('»')
+    if (installScope === 'global')        return chalk.cyan('▸')
+    return chalk.dim('—')
+  }
+
+  function projectIcon(status, installScope) {
+    if (status === 'up-to-date')          return chalk.green('✓')
+    if (status === 'update')              return chalk.red('↑')
+    if (installScope === 'project')       return chalk.cyan('▸')
     return chalk.dim('—')
   }
 
@@ -233,13 +248,14 @@ if (subcommand === 'status' || subcommand === 'outdated') {
     const inst = checkInstalled(s.skillName, s.version ?? '—')
     return {
       name: s.skillName, bundle: s.bundle ?? '—', version: s.version ?? '—',
+      installScope: s.installScope ?? null,
       userStatus: scopeSummary(inst.user), projectStatus: scopeSummary(inst.project),
       userDetail: inst.user, projectDetail: inst.project,
     }
   }).sort((a, b) => a.bundle.localeCompare(b.bundle) || a.name.localeCompare(b.name))
   const toolRows = toolItems.map(t => {
     const inst = checkToolInstalled(t.toolName, t.srcPath)
-    return { name: t.toolName, version: t.version ?? '—', ...inst }
+    return { name: t.toolName, version: t.version ?? '—', installScope: t.installScope ?? null, ...inst }
   })
 
   if (jsonFlag) {
@@ -317,7 +333,8 @@ if (subcommand === 'status' || subcommand === 'outdated') {
   console.log(sep)
   console.log('  ' + ''.padEnd(nw + vw + bw + 5) + chalk.dim('user    project'))
   for (const r of skillRows) {
-    const u = icon(r.userStatus), p = icon(r.projectStatus)
+    const u = userIcon(r.userStatus, r.installScope)
+    const p = projectIcon(r.projectStatus, r.installScope)
     console.log('  ' + r.name.padEnd(nw) + '  ' + chalk.dim(r.version.padEnd(vw)) + '  ' + chalk.dim(r.bundle.padEnd(bw)) + '  ' + u + '       ' + p)
   }
 
@@ -325,7 +342,7 @@ if (subcommand === 'status' || subcommand === 'outdated') {
   console.log('  ' + chalk.bold('TOOLS') + chalk.dim(`  — ${toolRows.length} available`))
   console.log(sep)
   for (const r of toolRows) {
-    console.log('  ' + r.name.padEnd(nw) + '  ' + chalk.dim(r.version.padEnd(vw)) + '  ' + icon(r.status))
+    console.log('  ' + r.name.padEnd(nw) + '  ' + chalk.dim(r.version.padEnd(vw)) + '  ' + userIcon(r.status, r.installScope))
   }
 
   // ── hooks ──
@@ -333,15 +350,17 @@ if (subcommand === 'status' || subcommand === 'outdated') {
     console.log('')
     console.log('  ' + chalk.bold('HOOKS') + chalk.dim(`  — ${hookItems.length} available`))
     console.log(sep)
-    function hIcon(s) {
-      if (s === 'installed') return chalk.green('✓')
-      if (s === 'partial')   return chalk.yellow('~')
+    function hIcon(s, installScope) {
+      if (s === 'installed')            return chalk.green('✓')
+      if (s === 'partial')              return chalk.yellow('~')
+      if (installScope === 'essential') return chalk.yellow('»')
+      if (installScope === 'global')    return chalk.cyan('›')
       return chalk.dim('—')
     }
     for (const h of hookItems) {
       const inst = checkHookInstalled(h.name)
       const ver = resolveHookDisplayVersion(inst, h.version)
-      console.log('  ' + h.name.padEnd(nw) + '  ' + chalk.dim(ver.padEnd(vw)) + '  ' + hIcon(inst.user.status) + '       ' + hIcon(inst.project.status) + '  ' + chalk.dim(h.description))
+      console.log('  ' + h.name.padEnd(nw) + '  ' + chalk.dim(ver.padEnd(vw)) + '  ' + hIcon(inst.user.status, h.installScope) + '       ' + hIcon(inst.project.status, h.installScope) + '  ' + chalk.dim(h.description))
     }
   }
 
@@ -352,6 +371,7 @@ if (subcommand === 'status' || subcommand === 'outdated') {
   const outdatedNote    = outdatedCount ? '  ·  ' + chalk.yellow(outdatedCount + ' outdated') : ''
   console.log('')
   console.log(chalk.dim(`  ${installedSkills} of ${skillRows.length} skills installed  ·  ${installedTools} of ${toolRows.length} tools installed${outdatedNote}`))
+  console.log(chalk.dim(`  ${chalk.green('✓')} installed  ${chalk.red('↑')} update  ${chalk.yellow('»')} essential  ${chalk.cyan('▸')} global/project  — other`))
   console.log('')
   process.exit(0)
 }

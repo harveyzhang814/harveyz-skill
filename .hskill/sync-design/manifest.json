@@ -1,0 +1,42 @@
+{
+  "version": 3,
+  "baseBranch": "staging",
+  "config": {
+    "outputDir": "tools/hub/docs/design-previews",
+    "designSpec": null,
+    "platforms": {
+      "textual-tui": {
+        "label": "Hub TUI",
+        "stackRef": null,
+        "uiFilePatterns": [
+          "tools/hub/hub/tui/panels/*.py",
+          "tools/hub/hub/tui/app.py"
+        ],
+        "designSystemFile": null,
+        "styleStrategy": "textual-inline-css",
+        "notes": null
+      }
+    }
+  },
+  "entries": [
+    {
+      "id": "git-textual-tui",
+      "platform": "textual-tui",
+      "htmlFile": "tools/hub/docs/design-previews/git-textual-tui-design.html",
+      "sourceFiles": ["tools/hub/hub/tui/panels/git.py"],
+      "uiStates": ["idle", "loading", "with-branches", "empty"],
+      "lastSyncCommit": "71c5693da12befc5f1a34102fc0a4b409bf07cd4",
+      "description": "展示当前项目的 Git 分支列表，支持 fetch 和载入"
+    },
+    {
+      "id": "tasks-textual-tui",
+      "platform": "textual-tui",
+      "htmlFile": "tools/hub/docs/design-previews/tasks-textual-tui-design.html",
+      "sourceFiles": ["tools/hub/hub/tui/panels/tasks.py"],
+      "uiStates": ["idle", "with-tasks", "all-done", "empty"],
+      "lastSyncCommit": "71c5693da12befc5f1a34102fc0a4b409bf07cd4",
+      "description": "展示当前项目的任务列表，支持新建、完成和删除"
+    }
+  ],
+  "ignoredFiles": []
+}

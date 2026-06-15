@@ -4,22 +4,12 @@
     "tools": "开发者 OS 工具（hub — 项目管理 + git 状态 + 任务跟踪）"
   },
   "tools": [
-    {
-      "name": "p-launch",
-      "bundle": "shell-tools"
-    },
-    {
-      "name": "todo-tool",
-      "bundle": "shell-tools"
-    },
-    {
-      "name": "hub",
-      "path": "tools/hub",
-      "bundle": "tools"
-    }
+    { "name": "p-launch",  "bundle": "shell-tools", "installScope": "global"    },
+    { "name": "todo-tool", "bundle": "shell-tools", "installScope": "global"    },
+    { "name": "hub",       "path": "tools/hub", "bundle": "tools", "installScope": "essential" }
   ],
   "bundleMeta": {
-    "research": "研究工具（extract-url + learn-video + extract-vision）",
+    "research": "研究工具（extract-url + learn-video + extract-vision + learn-skill）",
     "creative": "创意工具（capture-todo + capture-insight）",
     "coding": "程序工具（init-workflow + setup-debug + dispatch-task + close-task）",
     "writing": "写作工具（forge-doc + draw-diagram + manage-docs + manage-dir + migrate-spec）",
@@ -27,36 +17,38 @@
     "meta": "元操作工具（analyze-skill + clean-git + archive-skill + dedup-skill + contribute-skill + publish-skill + release-project + runby-opencode）"
   },
   "skills": [
-    { "path": "research/extract-url",           "bundle": "research" },
-    { "path": "research/extract-vision",        "bundle": "research" },
-    { "path": "research/learn-video",           "bundle": "research" },
-    { "path": "creative/capture-todo",          "bundle": "creative" },
-    { "path": "creative/capture-insight",       "bundle": "creative" },
-    { "path": "coding/init-workflow",           "bundle": "coding" },
-    { "path": "coding/setup-debug",             "bundle": "coding" },
-    { "path": "coding/dispatch-task",           "bundle": "coding" },
-    { "path": "coding/close-task",              "bundle": "coding" },
-    { "path": "writing/forge-doc",              "bundle": "writing" },
-    { "path": "writing/draw-diagram",           "bundle": "writing" },
-    { "path": "writing/manage-docs",            "bundle": "writing" },
-    { "path": "writing/manage-dir",             "bundle": "writing" },
-    { "path": "writing/migrate-spec",           "bundle": "writing" },
-    { "path": "design/scout-brand",             "bundle": "design" },
-    { "path": "design/build-style",             "bundle": "design" },
-    { "path": "design/sync-design",             "bundle": "design" },
-    { "path": "meta/analyze-skill",             "bundle": "meta" },
-    { "path": "meta/clean-git",                 "bundle": "meta" },
-    { "path": "meta/archive-skill",             "bundle": "meta" },
-    { "path": "meta/dedup-skill",               "bundle": "meta" },
-    { "path": "meta/contribute-skill",          "bundle": "meta" },
-    { "path": "meta/publish-skill",             "bundle": "meta" },
-    { "path": "meta/runby-opencode",            "bundle": "meta" },
-    { "path": "meta/release-project",           "bundle": "meta" }
+    { "path": "research/learn-skill",      "bundle": "research", "installScope": "global"     },
+    { "path": "research/extract-url",    "bundle": "research", "installScope": "global"     },
+    { "path": "research/extract-vision", "bundle": "research", "installScope": "global"     },
+    { "path": "research/learn-video",    "bundle": "research", "installScope": "global"     },
+    { "path": "creative/capture-todo",   "bundle": "creative", "installScope": "essential"  },
+    { "path": "creative/capture-insight","bundle": "creative", "installScope": "essential"  },
+    { "path": "coding/init-workflow",    "bundle": "coding",   "installScope": "essential"  },
+    { "path": "coding/setup-debug",      "bundle": "coding",   "installScope": "project"    },
+    { "path": "coding/dispatch-task",    "bundle": "coding",   "installScope": "global"     },
+    { "path": "coding/close-task",       "bundle": "coding",   "installScope": "global"     },
+    { "path": "writing/forge-doc",       "bundle": "writing",  "installScope": "global"     },
+    { "path": "writing/draw-diagram",    "bundle": "writing",  "installScope": "global"     },
+    { "path": "writing/manage-docs",     "bundle": "writing",  "installScope": "project"    },
+    { "path": "writing/manage-dir",      "bundle": "writing",  "installScope": "project"    },
+    { "path": "writing/migrate-spec",    "bundle": "writing",  "installScope": "project"    },
+    { "path": "design/scout-brand",      "bundle": "design",   "installScope": "project"    },
+    { "path": "design/build-style",      "bundle": "design",   "installScope": "project"    },
+    { "path": "design/sync-design",      "bundle": "design",   "installScope": "project"    },
+    { "path": "meta/analyze-skill",      "bundle": "meta"                                   },
+    { "path": "meta/clean-git",          "bundle": "meta",     "installScope": "essential"  },
+    { "path": "meta/archive-skill",      "bundle": "meta"                                   },
+    { "path": "meta/dedup-skill",        "bundle": "meta"                                   },
+    { "path": "meta/contribute-skill",   "bundle": "meta"                                   },
+    { "path": "meta/publish-skill",      "bundle": "meta"                                   },
+    { "path": "meta/runby-opencode",     "bundle": "meta"                                   },
+    { "path": "meta/release-project",   "bundle": "meta",     "installScope": "essential"  }
   ],
   "hooks": [
     {
       "name": "check-similar-branch",
       "description": "用 LLM 语义分析检测相似分支",
+      "installScope": "essential",
       "path": "hooks/check-similar-branch",
       "event": "PreToolUse",
       "matcher": "Bash",
