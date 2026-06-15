@@ -123,6 +123,30 @@ class GitPanel(Widget):
             return not b["is_local_only"] and b["ahead"] > 0 and b["behind"] == 0
         return None
 
+    def action_pull(self) -> None:
+        b = self._selected_branch_data()
+        if not b or not self._path:
+            return
+        self._pull_worker(self._path, b["name"])
+
+    def action_push(self) -> None:
+        b = self._selected_branch_data()
+        if not b or not self._path:
+            return
+        self._push_worker(self._path, b["name"])
+
+    @work(thread=True)
+    def _pull_worker(self, path: Path, branch: str) -> None:
+        msg = pull_branch(path, branch)
+        self.app.call_from_thread(self.app.notify, msg)
+        self.app.call_from_thread(self.refresh_project, path)
+
+    @work(thread=True)
+    def _push_worker(self, path: Path, branch: str) -> None:
+        msg = push_branch(path, branch)
+        self.app.call_from_thread(self.app.notify, msg)
+        self.app.call_from_thread(self.refresh_project, path)
+
     def refresh_project(self, path: Path | None) -> None:
         self._path = path
         if path is None or not path.exists():

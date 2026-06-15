@@ -223,3 +223,72 @@ async def test_check_action_none_for_unrelated_action():
     async with _make_app().run_test() as pilot:
         panel = pilot.app.query_one(GitPanel)
         assert panel.check_action("fetch", ()) is None
+
+
+# --- action_pull / action_push ---
+
+async def test_action_pull_does_nothing_when_no_branch():
+    async with _make_app().run_test() as pilot:
+        panel = pilot.app.query_one(GitPanel)
+        # no selected branch and no path → should not raise
+        panel.action_pull()
+        await pilot.pause()
+
+
+async def test_action_push_does_nothing_when_no_branch():
+    async with _make_app().run_test() as pilot:
+        panel = pilot.app.query_one(GitPanel)
+        panel.action_push()
+        await pilot.pause()
+
+
+async def test_action_pull_calls_pull_branch(monkeypatch):
+    calls = []
+
+    def fake_pull(path, branch):
+        calls.append((path, branch))
+        return "✓ pulled main"
+
+    monkeypatch.setattr("hub.tui.panels.git.pull_branch", fake_pull)
+
+    repo_path = Path("/Users/harveyzhang96/Projects/harveyz-skill")
+
+    def _branch(name="main", upstream="origin/main", ahead=0, behind=0,
+                is_current=True, is_local_only=False):
+        return {"name": name, "upstream": upstream, "ahead": ahead, "behind": behind,
+                "is_current": is_current, "is_local_only": is_local_only}
+
+    async with _make_app().run_test() as pilot:
+        panel = pilot.app.query_one(GitPanel)
+        panel._path = repo_path
+        panel._selected_branch = _branch(name="main", behind=1, ahead=0)
+        panel.action_pull()
+        await pilot.pause(delay=0.5)
+        assert len(calls) == 1
+        assert calls[0] == (repo_path, "main")
+
+
+async def test_action_push_calls_push_branch(monkeypatch):
+    calls = []
+
+    def fake_push(path, branch):
+        calls.append((path, branch))
+        return "✓ pushed main"
+
+    monkeypatch.setattr("hub.tui.panels.git.push_branch", fake_push)
+
+    repo_path = Path("/Users/harveyzhang96/Projects/harveyz-skill")
+
+    def _branch(name="main", upstream="origin/main", ahead=0, behind=0,
+                is_current=True, is_local_only=False):
+        return {"name": name, "upstream": upstream, "ahead": ahead, "behind": behind,
+                "is_current": is_current, "is_local_only": is_local_only}
+
+    async with _make_app().run_test() as pilot:
+        panel = pilot.app.query_one(GitPanel)
+        panel._path = repo_path
+        panel._selected_branch = _branch(name="main", ahead=1, behind=0)
+        panel.action_push()
+        await pilot.pause(delay=0.5)
+        assert len(calls) == 1
+        assert calls[0] == (repo_path, "main")
