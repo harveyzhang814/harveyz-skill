@@ -9,7 +9,7 @@
     { "name": "hub",       "path": "tools/hub", "bundle": "tools", "installScope": "essential" }
   ],
   "bundleMeta": {
-    "research": "研究工具（extract-url + learn-video + extract-vision）",
+    "research": "研究工具（extract-url + learn-video + extract-vision + learn-skill）",
     "creative": "创意工具（capture-todo + capture-insight）",
     "coding": "程序工具（init-workflow + setup-debug + dispatch-task + close-task）",
     "writing": "写作工具（forge-doc + draw-diagram + manage-docs + manage-dir + migrate-spec）",
@@ -17,6 +17,7 @@
     "meta": "元操作工具（analyze-skill + clean-git + archive-skill + dedup-skill + contribute-skill + publish-skill + release-project + runby-opencode）"
   },
   "skills": [
+    { "path": "research/learn-skill",      "bundle": "research", "installScope": "global"     },
     { "path": "research/extract-url",    "bundle": "research", "installScope": "global"     },
     { "path": "research/extract-vision", "bundle": "research", "installScope": "global"     },
     { "path": "research/learn-video",    "bundle": "research", "installScope": "global"     },
