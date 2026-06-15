@@ -48,7 +48,7 @@
     "coding":    "程序工具（git-workflow-init + full-stack-debug-env + pm-task-dispatch + task-close）",
     "writing":   "写作工具（doc-forge + diagram + diataxis-docs + dir-manage + migrate-specs）",
     "design":    "设计工具（brand-scout + style-build + sync-design-html）",
-    "meta":      "元操作工具（skill-analyzer + git-cleanup + contribute-skill + skill-publish + archive-skill + project-release）"
+    "meta":      "元操作工具（skill-analyzer + git-cleanup + contribute-skill + skill-publish + archive-skill + dedup-skill + project-release）"
   },
   "skills": [
     { "path": "research/extract-url",           "bundle": "research" },
@@ -73,6 +73,7 @@
     { "path": "meta/contribute-skill",          "bundle": "meta" },
     { "path": "meta/publish-skill",             "bundle": "meta" },
     { "path": "meta/archive-skill",             "bundle": "meta" },
+    { "path": "meta/dedup-skill",              "bundle": "meta" },
     { "path": "meta/runby-opencode",            "bundle": "meta" },
     { "path": "meta/release-project",           "bundle": "meta" }
   ],
