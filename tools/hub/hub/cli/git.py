@@ -12,6 +12,8 @@ from hub.tui.git import (
     get_recent_commits,
     get_working_tree,
     is_git_with_remote,
+    pull_branch,
+    push_branch,
 )
 
 app = typer.Typer(no_args_is_help=True)
@@ -118,3 +120,83 @@ def git_branches(
                 parts.append(f"↓{b['behind']}")
             sync = " ".join(parts) if parts else "up to date"
         typer.echo(f"  {marker} {b['name']:<32} {sync}")
+
+
+@app.command("pull")
+def git_pull(
+    project: Optional[str] = typer.Option(None, "--project", "-p", help="Project name"),
+    branch: Optional[str] = typer.Option(None, "--branch", "-b", help="Branch to pull (default: current branch)"),
+):
+    """Pull a branch from its remote upstream."""
+    path = _resolve_path(project)
+    branches = get_branches(path)
+    if not branches:
+        typer.echo("Error: not a git repository", err=True)
+        raise SystemExit(1)
+
+    if branch is None:
+        b = next((x for x in branches if x["is_current"]), None)
+        if b is None:
+            typer.echo("Error: no current branch found", err=True)
+            raise SystemExit(1)
+    else:
+        b = next((x for x in branches if x["name"] == branch), None)
+        if b is None:
+            typer.echo(f"Error: branch '{branch}' not found", err=True)
+            raise SystemExit(1)
+
+    if b["is_local_only"]:
+        typer.echo(f"Error: branch '{b['name']}' has no upstream", err=True)
+        raise SystemExit(1)
+    if b["ahead"] > 0 and b["behind"] > 0:
+        typer.echo(f"Error: branch '{b['name']}' is diverged — rebase or merge first", err=True)
+        raise SystemExit(1)
+    if b["behind"] == 0:
+        typer.echo(f"branch '{b['name']}' is already up to date")
+        return
+
+    msg = pull_branch(path, b["name"])
+    if msg.startswith("⚠") or "failed" in msg:
+        typer.echo(f"Error: {msg}", err=True)
+        raise SystemExit(1)
+    typer.echo(msg)
+
+
+@app.command("push")
+def git_push(
+    project: Optional[str] = typer.Option(None, "--project", "-p", help="Project name"),
+    branch: Optional[str] = typer.Option(None, "--branch", "-b", help="Branch to push (default: current branch)"),
+):
+    """Push a branch to its remote upstream."""
+    path = _resolve_path(project)
+    branches = get_branches(path)
+    if not branches:
+        typer.echo("Error: not a git repository", err=True)
+        raise SystemExit(1)
+
+    if branch is None:
+        b = next((x for x in branches if x["is_current"]), None)
+        if b is None:
+            typer.echo("Error: no current branch found", err=True)
+            raise SystemExit(1)
+    else:
+        b = next((x for x in branches if x["name"] == branch), None)
+        if b is None:
+            typer.echo(f"Error: branch '{branch}' not found", err=True)
+            raise SystemExit(1)
+
+    if b["is_local_only"]:
+        typer.echo(f"Error: branch '{b['name']}' has no upstream", err=True)
+        raise SystemExit(1)
+    if b["ahead"] > 0 and b["behind"] > 0:
+        typer.echo(f"Error: branch '{b['name']}' is diverged — rebase or merge first", err=True)
+        raise SystemExit(1)
+    if b["ahead"] == 0:
+        typer.echo(f"branch '{b['name']}' is already up to date")
+        return
+
+    msg = push_branch(path, b["name"])
+    if msg.startswith("⚠") or "failed" in msg:
+        typer.echo(f"Error: {msg}", err=True)
+        raise SystemExit(1)
+    typer.echo(msg)
