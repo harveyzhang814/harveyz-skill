@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.17.1] - 2026-06-15
+
+### Fixed
+- `hskill` TUI：未安装的 skill 现在按 `installScope` 显示推荐图标（`»` essential / `▸` global/project），不再统一显示 `—`
+
 ## [0.17.0] - 2026-06-15
 
 ## [0.16.0] - 2026-06-15
