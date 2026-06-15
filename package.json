@@ -37,6 +37,7 @@
     "skills/meta/git-cleanup/",
     "skills/meta/contribute-skill/",
     "skills/meta/skill-publish/",
+    "skills/meta/archive-skill/",
     "skills/meta/opencode-runner/",
     "skills/meta/project-release/",
     "tools/p-launch/",
