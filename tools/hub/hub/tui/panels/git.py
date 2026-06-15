@@ -90,6 +90,11 @@ class GitPanel(Widget):
     def on_mount(self) -> None:
         self.border_title = "GIT"
 
+    def on_focus(self) -> None:
+        lv = self.query_one("#branch-list", ListView)
+        if lv.display:
+            lv.focus()
+
     def refresh_project(self, path: Path | None) -> None:
         self._path = path
         if path is None or not path.exists():
