@@ -1,6 +1,6 @@
 ---
 name: release-project
-description: "Universal project release skill. Triggers on: release, bump version, publish, new version, cut release. Two phases: Init (first run — scans project and generates .hskill/release-profile.md); Execute (daily use — reads profile and runs full release flow). Works with npm, Python, Rust, Java, or any versioned project."
+description: "Universal project release skill. Triggers on: release, bump version, publish, new version, cut release. Two phases: Init (first run — scans project and generates .hskill/release-project/release-profile.md); Execute (daily use — reads profile and runs full release flow). Works with npm, Python, Rust, Java, or any versioned project."
 user_invocable: true
 version: "1.1.0"
 ---
@@ -9,17 +9,17 @@ version: "1.1.0"
 
 通用项目发布 skill，两个阶段：
 
-- **Init** — 扫描项目，和用户确认，生成 `.hskill/release-profile.md`（每个项目做一次）
+- **Init** — 扫描项目，和用户确认，生成 `.hskill/release-project/release-profile.md`（每个项目做一次）
 - **Execute** — 读取 profile，完全按照它走发布流程
 
 ---
 
 ## 入口判断
 
-检查 `.hskill/release-profile.md` 是否存在：
+检查 `.hskill/release-project/release-profile.md` 是否存在：
 
 ```bash
-ls .hskill/release-profile.md 2>/dev/null && echo "EXISTS" || echo "NOT_FOUND"
+ls .hskill/release-project/release-profile.md 2>/dev/null && echo "EXISTS" || echo "NOT_FOUND"
 ```
 
 - **NOT_FOUND** → 执行 Init 阶段
@@ -36,7 +36,7 @@ ls .hskill/release-profile.md 2>/dev/null && echo "EXISTS" || echo "NOT_FOUND"
 
 依次从以下来源收集信息：
 
-1. 项目配置文件：`workflow-config.yml`、`CLAUDE.md`、`AGENTS.md`、`CONTRIBUTING.md`
+1. 项目配置文件：`.hskill/init-workflow/workflow-config.yml`、`CLAUDE.md`、`AGENTS.md`、`CONTRIBUTING.md`
 2. git 历史和现有分支：
 
 ```bash
@@ -101,18 +101,18 @@ ls .github/workflows/ .gitlab-ci.yml .circleci/ 2>/dev/null
 读取 `references/release-profile-template.md` 作为骨架，把 I-1 到 I-4 收集到的信息填进去。
 
 ```bash
-mkdir -p .hskill
+mkdir -p .hskill/release-project
 ```
 
 模板只提供四个顶级节（分支模型、版本文件、发布方式、特殊规则），每节的具体内容完全由项目决定，用最能清楚表达意图的方式写——几行文字、表格、命令示例均可。没有特殊规则就删掉那节。
 
-写完后给用户看，确认无误再保存。告诉用户：**`.hskill/release-profile.md` 可以随时手动编辑**，是下次发版的唯一依据。
+写完后给用户看，确认无误再保存。告诉用户：**`.hskill/release-project/release-profile.md` 可以随时手动编辑**，是下次发版的唯一依据。
 
 ---
 
 ## Execute 阶段
 
-**读取 `.hskill/release-profile.md`，完全按照它执行。** profile 是唯一依据，不在 profile 里的事不要自己发明。
+**读取 `.hskill/release-project/release-profile.md`，完全按照它执行。** profile 是唯一依据，不在 profile 里的事不要自己发明。
 
 ### Step E-0 — 读取 profile + 前置检查
 
@@ -215,7 +215,7 @@ git push origin <tag>
 
 ## 常见问题
 
-**profile 信息有误** — 直接编辑 `.hskill/release-profile.md` 后重新触发 Execute。
+**profile 信息有误** — 直接编辑 `.hskill/release-project/release-profile.md` 后重新触发 Execute。
 
 **发版前检查失败** — 按失败信息修复后，重新从 E-0 开始。
 
