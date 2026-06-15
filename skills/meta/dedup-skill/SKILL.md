@@ -142,6 +142,12 @@ node -e "const idx=require('./skills-index.json'); idx.skills.forEach(s=>console
 | 重叠 1 | 逻辑等价 | skill-A |
 | 重叠 2 | 逻辑交叉 | 待定 |
 
+---
+## 未发现重叠的范围
+<列出已对比但未发现重叠的领域>
+
+---
+
 ## 建议后续操作
 
 - [ ] ...
@@ -167,6 +173,8 @@ node -e "const idx=require('./skills-index.json'); idx.skills.forEach(s=>console
 | 两个 skill 共享同一个 references 文件 | 不算重叠，references 是共享资源 |
 | 重叠块仅为模板/示例内容 | 标记为低优先级，单独列出，不混入主重叠清单 |
 | skill 正文极短（< 3 个语义块） | 正常处理，说明块数量有限 |
+| skill 名在 index 中 0 匹配 | 报错，列出所有可用 skill 名后退出 |
+| 对比同一个 skill 与自身 | 报错："请指定不同的 skill" |
 
 ---
 
