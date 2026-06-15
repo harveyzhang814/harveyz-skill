@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.15.0] - 2026-06-15
+
+### Added
+- `dedup-skill`：新增 meta skill，扫描并分析各 skill 间的重复内容，生成去重报告
+- `archive-skill`：新增 meta skill，将废弃 skill 移至 `skills/archived/` 并更新 skills-index.json
+- `article-fetcher`：归档（superseded by `url-extract`）
+
+### Changed
+- **Skill 命名规范**：22 个 skill 目录统一重命名为 verb-noun 格式（如 `skill-analyzer` → `analyze-skill`、`doc-forge` → `forge-doc`、`diagram` → `draw-diagram` 等）
+- `hskill update`：自动执行 skill 目录迁移，将旧名称映射到新 verb-noun 名称
+
+### Fixed
+- `archive-skill`：修复 eval 测试发现的 3 个 bug（v1.1.0）
+- `hub-tui`：修复 GitPanel 无法获得焦点的问题（`can_focus=True`）
+- `hub-tui`：Enter 键在 projects-list 焦点时正确触发打开项目
+- `hub-tui`：新增 ←/→ 键切换列，Tab 保留为辅助导航
+- `installer`：`migrateRenamedSkills` 新增输入校验和一致性日志
+
 ## [0.14.2] - 2026-06-15
 
 ### Changed
