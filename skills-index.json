@@ -19,12 +19,12 @@
     }
   ],
   "bundleMeta": {
-    "research": "研究工具（article-fetcher + url-extract + youtube-learner + vision-extract）",
-    "creative": "创意工具（add-todo + insight）",
-    "coding": "程序工具（git-workflow-init + full-stack-debug-env + pm-task-dispatch + task-close）",
-    "writing": "写作工具（doc-forge + diagram + diataxis-docs + dir-manage + migrate-specs）",
-    "design": "设计工具（brand-scout + style-build + sync-design-html）",
-    "meta": "元操作工具（skill-analyzer + git-cleanup + contribute-skill + skill-publish + project-release）"
+    "research": "研究工具（article-fetcher + extract-url + learn-video + extract-vision）",
+    "creative": "创意工具（capture-todo + capture-insight）",
+    "coding": "程序工具（init-workflow + setup-debug + dispatch-task + close-task）",
+    "writing": "写作工具（forge-doc + draw-diagram + manage-docs + manage-dir + migrate-spec）",
+    "design": "设计工具（scout-brand + build-style + sync-design）",
+    "meta": "元操作工具（analyze-skill + clean-git + archive-skill + contribute-skill + publish-skill + release-project + runby-opencode）"
   },
   "skills": [
     {
@@ -105,6 +105,10 @@
     },
     {
       "path": "meta/clean-git",
+      "bundle": "meta"
+    },
+    {
+      "path": "meta/archive-skill",
       "bundle": "meta"
     },
     {
