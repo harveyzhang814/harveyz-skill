@@ -91,7 +91,13 @@ status: approved
 
 ### 报告文件
 
-保存到 `docs/skill-analysis/dedup-<YYYYMMDD-HHMMSS>.md`（目录不存在时自动创建）。
+**输出目录按以下优先级确定：**
+
+1. 向上查找 `DIR_METHOD.md`（从 `docs/skill-analysis/` 开始，逐级向上）
+   - 找到 → 按 `DIR_METHOD.md` 声明的方法论放置文件（调用 dir-manage skill 处理）
+2. 无 `DIR_METHOD.md` → 默认保存到 `docs/skill-analysis/dedup-<YYYYMMDD-HHMMSS>.md`，目录不存在时自动创建
+
+文件名格式：`dedup-<YYYYMMDD-HHMMSS>.md`
 
 结构：
 
