@@ -16,8 +16,8 @@ SKILL1_NAME="analyze-skill"
 SKILL1_SRC="${REPO_ROOT}/skills/meta/analyze-skill"
 SKILL1_VER="1.0.0"
 
-SKILL2_NAME="diataxis-docs"
-SKILL2_SRC="${REPO_ROOT}/skills/writing/diataxis-docs"
+SKILL2_NAME="manage-docs"
+SKILL2_SRC="${REPO_ROOT}/skills/writing/manage-docs"
 
 TOOL_NAME="p-launch"
 TOOL_SRC="${REPO_ROOT}/tools/p-launch"

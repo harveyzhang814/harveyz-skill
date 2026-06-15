@@ -59,8 +59,8 @@ SKILL1_SRC="${REPO_ROOT}/skills/meta/analyze-skill"
 SKILL1_VER="1.0.0"
 SKILL1_BUNDLE="meta"
 
-SKILL2_NAME="diataxis-docs"
-SKILL2_SRC="${REPO_ROOT}/skills/writing/diataxis-docs"
+SKILL2_NAME="manage-docs"
+SKILL2_SRC="${REPO_ROOT}/skills/writing/manage-docs"
 SKILL2_VER="1.0.0"
 SKILL2_BUNDLE="writing"
 
