@@ -1,9 +1,9 @@
 import pytest
 from pathlib import Path
 from textual.app import App, ComposeResult
-from textual.widgets import Static
+from textual.widgets import ListView, Static, Label
 
-from hub.tui.panels.git import GitPanel
+from hub.tui.panels.git import GitPanel, BranchItem, SectionHeader
 
 
 def _make_app() -> App:
@@ -15,16 +15,20 @@ def _make_app() -> App:
 
 async def test_git_panel_mounts():
     async with _make_app().run_test() as pilot:
-        panel = pilot.app.query_one(GitPanel)
-        assert panel is not None
+        assert pilot.app.query_one(GitPanel) is not None
 
 
 async def test_git_panel_shows_placeholder_before_project():
     async with _make_app().run_test() as pilot:
-        panel = pilot.app.query_one(GitPanel)
-        content = panel.query_one("#git-content", Static)
-        text = str(content.content)
-        assert "Select a project" in text
+        placeholder = pilot.app.query_one("#git-placeholder", Static)
+        assert placeholder.display
+        assert "Select a project" in str(placeholder.content)
+
+
+async def test_git_panel_listview_hidden_before_project():
+    async with _make_app().run_test() as pilot:
+        lv = pilot.app.query_one("#branch-list", ListView)
+        assert not lv.display
 
 
 async def test_git_panel_refresh_nonexistent_path():
@@ -32,25 +36,93 @@ async def test_git_panel_refresh_nonexistent_path():
         panel = pilot.app.query_one(GitPanel)
         panel.refresh_project(Path("/nonexistent/path/that/does/not/exist"))
         await pilot.pause()
-        content = str(panel.query_one("#git-content", Static).content)
-        assert "No valid path" in content
+        placeholder = pilot.app.query_one("#git-placeholder", Static)
+        assert placeholder.display
+        assert "No valid path" in str(placeholder.content)
 
 
-async def test_git_panel_refresh_valid_path():
-    """_render_git with a real git repo updates border_title and content."""
-    from hub.tui.git import get_branches, get_recent_commits, get_working_tree
+async def test_branch_item_stores_data():
+    b = {
+        "name": "main", "upstream": "origin/main",
+        "ahead": 0, "behind": 0,
+        "is_current": True, "is_local_only": False,
+    }
+    item = BranchItem(b)
+    assert item.branch_data == b
 
-    # Use the harveyz-skill repo itself as a real git repo
+
+async def test_section_header_stores_title():
+    h = SectionHeader("WITH REMOTE")
+    assert h._title == "WITH REMOTE"
+
+
+async def test_git_panel_render_branches_shows_listview():
     repo_path = Path("/Users/harveyzhang96/Projects/harveyz-skill")
-
+    branches = [
+        {"name": "main", "upstream": "origin/main", "ahead": 0, "behind": 0, "is_current": True, "is_local_only": False},
+        {"name": "wip", "upstream": "", "ahead": 0, "behind": 0, "is_current": False, "is_local_only": True},
+    ]
     async with _make_app().run_test() as pilot:
         panel = pilot.app.query_one(GitPanel)
-        # Call _render_git directly (the render step after the background worker)
-        branches = get_branches(repo_path)
-        current = next((b for b in branches if b["is_current"]), None)
-        wt = get_working_tree(repo_path)
-        commits = get_recent_commits(repo_path, n=5)
-        panel._render_git(repo_path, current, wt, commits)
+        panel._render_branches(repo_path, branches)
         await pilot.pause()
-        border = panel.border_title
-        assert "harveyz-skill" in border
+        lv = pilot.app.query_one("#branch-list", ListView)
+        assert lv.display
+        assert not pilot.app.query_one("#git-placeholder", Static).display
+
+
+async def test_git_panel_render_branches_border_title():
+    repo_path = Path("/Users/harveyzhang96/Projects/harveyz-skill")
+    branches = [
+        {"name": "main", "upstream": "origin/main", "ahead": 0, "behind": 0, "is_current": True, "is_local_only": False},
+    ]
+    async with _make_app().run_test() as pilot:
+        panel = pilot.app.query_one(GitPanel)
+        panel._render_branches(repo_path, branches)
+        await pilot.pause()
+        assert "harveyz-skill" in panel.border_title
+
+
+async def test_git_panel_both_sections_present():
+    repo_path = Path("/Users/harveyzhang96/Projects/harveyz-skill")
+    branches = [
+        {"name": "main", "upstream": "origin/main", "ahead": 0, "behind": 0, "is_current": True, "is_local_only": False},
+        {"name": "wip", "upstream": "", "ahead": 0, "behind": 0, "is_current": False, "is_local_only": True},
+    ]
+    async with _make_app().run_test() as pilot:
+        panel = pilot.app.query_one(GitPanel)
+        panel._render_branches(repo_path, branches)
+        await pilot.pause()
+        lv = pilot.app.query_one("#branch-list", ListView)
+        headers = list(lv.query(SectionHeader))
+        assert len(headers) == 2
+        branch_items = list(lv.query(BranchItem))
+        assert len(branch_items) == 2
+
+
+async def test_git_panel_omits_local_section_when_empty():
+    repo_path = Path("/Users/harveyzhang96/Projects/harveyz-skill")
+    branches = [
+        {"name": "main", "upstream": "origin/main", "ahead": 0, "behind": 0, "is_current": True, "is_local_only": False},
+    ]
+    async with _make_app().run_test() as pilot:
+        panel = pilot.app.query_one(GitPanel)
+        panel._render_branches(repo_path, branches)
+        await pilot.pause()
+        lv = pilot.app.query_one("#branch-list", ListView)
+        headers = list(lv.query(SectionHeader))
+        assert len(headers) == 1
+
+
+async def test_git_panel_omits_remote_section_when_empty():
+    repo_path = Path("/Users/harveyzhang96/Projects/harveyz-skill")
+    branches = [
+        {"name": "wip", "upstream": "", "ahead": 0, "behind": 0, "is_current": False, "is_local_only": True},
+    ]
+    async with _make_app().run_test() as pilot:
+        panel = pilot.app.query_one(GitPanel)
+        panel._render_branches(repo_path, branches)
+        await pilot.pause()
+        lv = pilot.app.query_one("#branch-list", ListView)
+        headers = list(lv.query(SectionHeader))
+        assert len(headers) == 1
