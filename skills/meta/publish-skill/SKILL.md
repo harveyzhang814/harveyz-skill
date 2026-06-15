@@ -1,6 +1,6 @@
 ---
 name: publish-skill
-description: "Validate and publish a skill to the harveyz-skill repository. Checks SKILL.md format compliance (frontmatter fields, semver version, name-directory match) and registration in skills-index.json. Triggers: publish skill, register skill, validate skill format, check skill, add skill to index, is skill ready to publish."
+description: "Validate and publish a skill to the harveyz-skill repository. Checks SKILL.md format compliance (frontmatter fields, semver version, name-directory match, verb-noun naming convention) and registration in skills-index.json. Rules defined in docs/reference/skill-spec.md. Triggers: publish skill, register skill, validate skill format, check skill, add skill to index, is skill ready to publish."
 user_invocable: true
 version: "1.0.0"
 ---
@@ -60,10 +60,28 @@ cat /tmp/sv-unregistered.txt
 | F4 | `version` 字段 | 非空，格式为 `X.Y.Z`（semver） |
 | F5 | `user_invocable` 字段 | 显式声明 `true` 或 `false` |
 | F6 | 正文语言 | frontmatter 结束后的正文内容应为中文（含中文字符即视为合规） |
+| F7 | 目录命名规范 | skill 目录名须为 `<动词>-<名词>` 格式（2 词，连字符分隔，全小写），且动词必须在规范词表中；`archived/` 下的 skill 跳过此检查 |
 
 **F3 英文检测方法：** 提取 `description` 字段值，检查是否包含中文字符（`一-鿿` 范围）。有则报错。
 
 **F6 中文检测方法：** 提取 frontmatter 结束后的正文，检查是否包含至少一个中文字符。若正文全为英文或为空则报错。（纯英文 skill 如从其他项目贡献的可跳过此项，需用户确认。）
+
+**F7 命名规范检测方法：**
+
+1. 取目录名（`path` 最后一段）
+2. 按连字符分割，检查是否恰好 2 段
+3. 检查第一段（动词）是否在规范词表中：
+
+```
+extract  learn    forge    draw     manage   migrate  scout
+build    sync     publish  archive  contribute  analyze  clean
+release  validate init     dispatch close    setup    capture
+runby
+```
+
+特殊模式：若目录名以 `runby-` 开头，直接视为合规（无需检查名词部分）。
+
+违规示例：`skill-analyzer`（动词不在词表）、`diagram`（单词，非 2 段）、`youtube-learner`（动词不在词表）
 
 **读取 frontmatter 字段的方法：**
 
@@ -139,6 +157,16 @@ skill-publish 检查结果
   + name: my-skill
 应用此修复？(y/n)
 ```
+
+**格式问题（F7）** — 命名不符合规范时，先建议新名：
+```
+修复 F7（目录命名规范）：
+  当前名称：skill-analyzer
+  建议改为：analyze-skill（动词 analyze 在词表中，名词 skill）
+  需要重命名目录并更新 skills-index.json 的 path 字段。
+  是否继续？(y/n)
+```
+确认后执行 `git mv` 重命名目录，并更新 `skills-index.json` 中对应的 `path` 值，最后运行 `node scripts/generate-npmignore.js`。
 
 **注册问题（R1）** — 交互引导补注册：
 ```
