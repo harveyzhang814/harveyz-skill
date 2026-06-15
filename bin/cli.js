@@ -191,22 +191,19 @@ if (subcommand === 'list') {
   }
   const nw = Math.max(...sorted.map(s => s.path.split('/').pop().length), 4)
   const bw = Math.max(...sorted.map(s => s.bundle.length), 6)
-  const sep = chalk.dim('  ' + '─'.repeat(nw + bw + 6))
+  const sep = chalk.dim('  ' + '─'.repeat(nw + bw + 4))
   console.log('')
-  console.log('  ' + '  ' + chalk.bold('NAME'.padEnd(nw)) + '  ' + chalk.bold('BUNDLE'))
+  console.log('  ' + chalk.bold('NAME'.padEnd(nw)) + '  ' + chalk.bold('BUNDLE'))
   console.log(sep)
   for (const s of sorted) {
-    const mark = s.global ? chalk.yellow('★ ') : '  '
-    console.log('  ' + mark + s.path.split('/').pop().padEnd(nw) + '  ' + chalk.dim(s.bundle))
+    console.log('  ' + s.path.split('/').pop().padEnd(nw) + '  ' + chalk.dim(s.bundle))
   }
   if (tools.length > 0) {
     console.log('')
     console.log('  ' + chalk.bold('SHELL TOOLS'))
     console.log(sep)
-    for (const t of tools) console.log('  ' + chalk.yellow('★ ') + t.name)
+    for (const t of tools) console.log('  ' + t.name)
   }
-  console.log('')
-  console.log(chalk.dim('  ★ = 推荐全局安装'))
   console.log('')
   process.exit(0)
 }
@@ -232,10 +229,18 @@ if (subcommand === 'status' || subcommand === 'outdated') {
     return chalk.dim('—')
   }
 
+  function userIcon(status, isGlobal) {
+    if (status === 'up-to-date') return chalk.green('✓')
+    if (status === 'update')     return chalk.yellow('↑')
+    if (isGlobal)                return chalk.cyan('▸')
+    return chalk.dim('—')
+  }
+
   const skillRows = skillItems.map(s => {
     const inst = checkInstalled(s.skillName, s.version ?? '—')
     return {
       name: s.skillName, bundle: s.bundle ?? '—', version: s.version ?? '—',
+      global: s.global ?? false,
       userStatus: scopeSummary(inst.user), projectStatus: scopeSummary(inst.project),
       userDetail: inst.user, projectDetail: inst.project,
     }
@@ -320,7 +325,7 @@ if (subcommand === 'status' || subcommand === 'outdated') {
   console.log(sep)
   console.log('  ' + ''.padEnd(nw + vw + bw + 5) + chalk.dim('user    project'))
   for (const r of skillRows) {
-    const u = icon(r.userStatus), p = icon(r.projectStatus)
+    const u = userIcon(r.userStatus, r.global), p = icon(r.projectStatus)
     console.log('  ' + r.name.padEnd(nw) + '  ' + chalk.dim(r.version.padEnd(vw)) + '  ' + chalk.dim(r.bundle.padEnd(bw)) + '  ' + u + '       ' + p)
   }
 
@@ -328,7 +333,7 @@ if (subcommand === 'status' || subcommand === 'outdated') {
   console.log('  ' + chalk.bold('TOOLS') + chalk.dim(`  — ${toolRows.length} available`))
   console.log(sep)
   for (const r of toolRows) {
-    console.log('  ' + r.name.padEnd(nw) + '  ' + chalk.dim(r.version.padEnd(vw)) + '  ' + icon(r.status))
+    console.log('  ' + r.name.padEnd(nw) + '  ' + chalk.dim(r.version.padEnd(vw)) + '  ' + userIcon(r.status, true))
   }
 
   // ── hooks ──
@@ -339,7 +344,7 @@ if (subcommand === 'status' || subcommand === 'outdated') {
     function hIcon(s) {
       if (s === 'installed') return chalk.green('✓')
       if (s === 'partial')   return chalk.yellow('~')
-      return chalk.dim('—')
+      return chalk.cyan('▸')
     }
     for (const h of hookItems) {
       const inst = checkHookInstalled(h.name)
@@ -355,6 +360,7 @@ if (subcommand === 'status' || subcommand === 'outdated') {
   const outdatedNote    = outdatedCount ? '  ·  ' + chalk.yellow(outdatedCount + ' outdated') : ''
   console.log('')
   console.log(chalk.dim(`  ${installedSkills} of ${skillRows.length} skills installed  ·  ${installedTools} of ${toolRows.length} tools installed${outdatedNote}`))
+  console.log(chalk.dim(`  ${chalk.green('✓')} installed  ${chalk.yellow('↑')} update available  ${chalk.cyan('▸')} recommended, not installed  — not installed`))
   console.log('')
   process.exit(0)
 }
