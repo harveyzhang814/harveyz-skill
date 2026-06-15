@@ -58,8 +58,9 @@ class TasksPanel(Widget):
 
         for t in todo:
             pri = f"[dim]{t['priority']}[/]"
+            date = f"[dim]{t['created_at'][:10]}[/]"
             item = ListItem(
-                Label(f"☐ {t['title']}  {pri}", markup=True),
+                Label(f"☐ {t['title']}  {pri}  {date}", markup=True),
             )
             item.task_id = t["id"]
             lst.append(item)
@@ -68,8 +69,9 @@ class TasksPanel(Widget):
             sep.task_id = None
             lst.append(sep)
             for t in done:
+                date = f"{t['created_at'][:10]}"
                 item = ListItem(
-                    Label(f"[dim]☑ {t['title']}[/]", markup=True),
+                    Label(f"[dim]☑ {t['title']}  {date}[/]", markup=True),
                 )
                 item.task_id = t["id"]
                 lst.append(item)
