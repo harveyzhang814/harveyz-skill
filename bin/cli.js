@@ -225,21 +225,21 @@ if (subcommand === 'status' || subcommand === 'outdated') {
 
   function icon(status) {
     if (status === 'up-to-date') return chalk.green('✓')
-    if (status === 'update')     return chalk.yellow('↑')
+    if (status === 'update')     return chalk.red('↑')
     return chalk.dim('—')
   }
 
   function userIcon(status, installScope) {
     if (status === 'up-to-date')          return chalk.green('✓')
-    if (status === 'update')              return chalk.yellow('↑')
+    if (status === 'update')              return chalk.red('↑')
     if (installScope === 'essential')     return chalk.yellow('»')
-    if (installScope === 'global')        return chalk.cyan('›')
+    if (installScope === 'global')        return chalk.cyan('▸')
     return chalk.dim('—')
   }
 
   function projectIcon(status, installScope) {
     if (status === 'up-to-date')          return chalk.green('✓')
-    if (status === 'update')              return chalk.yellow('↑')
+    if (status === 'update')              return chalk.red('↑')
     if (installScope === 'project')       return chalk.cyan('▸')
     return chalk.dim('—')
   }
@@ -371,7 +371,7 @@ if (subcommand === 'status' || subcommand === 'outdated') {
   const outdatedNote    = outdatedCount ? '  ·  ' + chalk.yellow(outdatedCount + ' outdated') : ''
   console.log('')
   console.log(chalk.dim(`  ${installedSkills} of ${skillRows.length} skills installed  ·  ${installedTools} of ${toolRows.length} tools installed${outdatedNote}`))
-  console.log(chalk.dim(`  ${chalk.green('✓')} installed  ${chalk.yellow('↑')} update  ${chalk.yellow('»')} essential  ${chalk.cyan('›')} global  ${chalk.cyan('▸')} project  — other`))
+  console.log(chalk.dim(`  ${chalk.green('✓')} installed  ${chalk.red('↑')} update  ${chalk.yellow('»')} essential  ${chalk.cyan('▸')} global/project  — other`))
   console.log('')
   process.exit(0)
 }
