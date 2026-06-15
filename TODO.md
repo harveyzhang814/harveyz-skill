@@ -41,6 +41,15 @@ hub Phase 1（core + CLI）和 Phase 2（三栏 TUI）已完成。Phase 3 是最
 
 ---
 
+## harveyz-skill — 论文分析 Skill
+
+### 设计基于三遍阅读法的论文分析 Skill
+**优先级**: P2 | **日期**: 2026-06-16
+
+以 Keshav《How to Read a Paper》三遍阅读法（`docs/explanation/how-to-read-papers.md`）为方法论基础，提炼成一个供 Agent 使用的论文分析 Skill。核心设计问题是：原方法论为人类阅读设计，需识别哪些部分在 Agent 场景下需要调整——例如"在脑海中重现论文"（第三遍）如何转化为 Agent 可执行的步骤，以及输出格式应如何结构化以便后续引用。
+
+---
+
 ## harveyz-skill — Syncthing 多设备同步
 
 ### 实现 Agent-Syncthing 多设备文档同步工具
