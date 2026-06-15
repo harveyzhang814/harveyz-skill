@@ -1,7 +1,7 @@
 import pytest
 from pathlib import Path
 from textual.app import App, ComposeResult
-from textual.widgets import ListView, Static, Label
+from textual.widgets import ListView, Static
 
 from hub.tui.panels.git import GitPanel, BranchItem, SectionHeader
 
