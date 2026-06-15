@@ -184,26 +184,29 @@ if (subcommand === 'list') {
   const sorted = [...skills].sort((a, b) => a.bundle.localeCompare(b.bundle) || a.path.split('/').pop().localeCompare(b.path.split('/').pop()))
   if (jsonFlag) {
     console.log(JSON.stringify({
-      skills: sorted.map(s => ({ name: s.path.split('/').pop(), path: s.path, bundle: s.bundle })),
+      skills: sorted.map(s => ({ name: s.path.split('/').pop(), path: s.path, bundle: s.bundle, global: s.global ?? false })),
       tools: tools.map(t => t.name),
     }, null, 2))
     process.exit(0)
   }
   const nw = Math.max(...sorted.map(s => s.path.split('/').pop().length), 4)
   const bw = Math.max(...sorted.map(s => s.bundle.length), 6)
-  const sep = chalk.dim('  ' + '─'.repeat(nw + bw + 4))
+  const sep = chalk.dim('  ' + '─'.repeat(nw + bw + 6))
   console.log('')
-  console.log('  ' + chalk.bold('NAME'.padEnd(nw)) + '  ' + chalk.bold('BUNDLE'))
+  console.log('  ' + '  ' + chalk.bold('NAME'.padEnd(nw)) + '  ' + chalk.bold('BUNDLE'))
   console.log(sep)
   for (const s of sorted) {
-    console.log('  ' + s.path.split('/').pop().padEnd(nw) + '  ' + chalk.dim(s.bundle))
+    const mark = s.global ? chalk.yellow('★ ') : '  '
+    console.log('  ' + mark + s.path.split('/').pop().padEnd(nw) + '  ' + chalk.dim(s.bundle))
   }
   if (tools.length > 0) {
     console.log('')
     console.log('  ' + chalk.bold('SHELL TOOLS'))
     console.log(sep)
-    for (const t of tools) console.log('  ' + t.name)
+    for (const t of tools) console.log('  ' + chalk.yellow('★ ') + t.name)
   }
+  console.log('')
+  console.log(chalk.dim('  ★ = 推荐全局安装'))
   console.log('')
   process.exit(0)
 }
