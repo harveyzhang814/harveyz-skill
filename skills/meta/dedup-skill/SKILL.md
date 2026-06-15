@@ -60,7 +60,7 @@ node -e "const idx=require('./skills-index.json'); idx.skills.forEach(s=>console
 | 位置描述 | 在文件中的相对位置（如"第 2 段"、"触发规则部分"） |
 | 原文摘要 | 该块核心内容，50 字以内 |
 
-提取完成后，在内部维护一份块清单，供 Step 2 使用（不向用户展示原始清单）。
+提取完成后，在内部维护一份块清单，供 Step 2 使用（不向用户展示原始清单）。整个分析过程（Step 1-3）均在内部完成，仅在最终输出阶段呈现报告。
 
 ---
 
@@ -98,7 +98,7 @@ node -e "const idx=require('./skills-index.json'); idx.skills.forEach(s=>console
 
 ### 确定输出目录
 
-1. 从 `docs/skill-analysis/` 向上逐级查找 `DIR_METHOD.md`
+1. 从仓库根目录的 `docs/skill-analysis/` 开始，逐级向上查找 `DIR_METHOD.md`，查找上限为仓库根目录（不超出 git rev-parse --show-toplevel 所在目录）
 2. 若找到，调用 `dir-manage` skill 处理目录路径
 3. 若未找到，默认使用 `docs/skill-analysis/`（执行 `mkdir -p`）
 
@@ -161,6 +161,8 @@ node -e "const idx=require('./skills-index.json'); idx.skills.forEach(s=>console
 对比完成：skill-A 与 skill-B 之间未发现语义重叠。
 无需生成报告文件。
 ```
+
+直接回复用户，不生成文件。
 
 ---
 
