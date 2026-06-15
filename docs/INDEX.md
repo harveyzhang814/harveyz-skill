@@ -25,6 +25,7 @@ methodology: diataxis
 
 | 文件 | 用途 |
 |------|------|
+| [reference/skill-spec.md](reference/skill-spec.md) | skill 格式规范（F1–F7）、命名规范与动词词表、skills-index.json 注册规则（R1–R3） |
 | [reference/git-branch-rules.md](reference/git-branch-rules.md) | 分支模型、分支定义、命名规则、违规行为表（v1.0.0） |
 | [reference/agent-cli-guide.md](reference/agent-cli-guide.md) | AI agent / CI 脚本调用 hskill 的完整参考（JSON 输出格式、info 子命令、hooks 子命令、bundle 子命令、uninstall、非 TTY 行为） |
 | [reference/testing-guide.md](reference/testing-guide.md) | hskill 测试文件结构、bats 写法规范、hooks.bats 场景、hook 脚本验收测试模式 |
