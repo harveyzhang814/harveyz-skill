@@ -2,10 +2,11 @@ from pathlib import Path
 
 from textual import work
 from textual.app import ComposeResult
+from textual.binding import Binding
 from textual.widget import Widget
 from textual.widgets import ListView, ListItem, Label, Static
 
-from hub.tui.git import fetch_repo, get_branches, is_git_with_remote
+from hub.tui.git import fetch_repo, get_branches, is_git_with_remote, pull_branch, push_branch
 
 
 class SectionHeader(ListItem):
@@ -59,6 +60,11 @@ class BranchItem(ListItem):
 class GitPanel(Widget):
     can_focus = True
 
+    BINDINGS = [
+        Binding("ctrl+p", "pull", "Pull", show=True),
+        Binding("ctrl+u", "push", "Push", show=True),
+    ]
+
     DEFAULT_CSS = """
     GitPanel {
         width: 44;
@@ -80,6 +86,7 @@ class GitPanel(Widget):
     def __init__(self, **kwargs) -> None:
         super().__init__(**kwargs)
         self._path: Path | None = None
+        self._selected_branch: dict | None = None
 
     def compose(self) -> ComposeResult:
         yield Static("Select a project to see git status.", id="git-placeholder", markup=True)
@@ -94,6 +101,27 @@ class GitPanel(Widget):
         lv = self.query_one("#branch-list", ListView)
         if lv.display:
             lv.focus()
+
+    def _selected_branch_data(self) -> dict | None:
+        return self._selected_branch
+
+    def on_list_view_highlighted(self, event: ListView.Highlighted) -> None:
+        if isinstance(event.item, BranchItem):
+            self._selected_branch = event.item.branch_data
+        else:
+            self._selected_branch = None
+
+    def check_action(self, action: str, parameters: tuple) -> bool | None:
+        if action not in ("pull", "push"):
+            return None
+        b = self._selected_branch_data()
+        if b is None:
+            return False
+        if action == "pull":
+            return not b["is_local_only"] and b["behind"] > 0 and b["ahead"] == 0
+        if action == "push":
+            return not b["is_local_only"] and b["ahead"] > 0 and b["behind"] == 0
+        return None
 
     def refresh_project(self, path: Path | None) -> None:
         self._path = path

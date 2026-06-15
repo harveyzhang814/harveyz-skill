@@ -126,3 +126,100 @@ async def test_git_panel_omits_remote_section_when_empty():
         lv = pilot.app.query_one("#branch-list", ListView)
         headers = list(lv.query(SectionHeader))
         assert len(headers) == 1
+
+
+# --- check_action and branch selection ---
+
+def _branch(name="main", upstream="origin/main", ahead=0, behind=0,
+            is_current=True, is_local_only=False):
+    return {"name": name, "upstream": upstream, "ahead": ahead, "behind": behind,
+            "is_current": is_current, "is_local_only": is_local_only}
+
+
+async def test_selected_branch_initially_none():
+    async with _make_app().run_test() as pilot:
+        panel = pilot.app.query_one(GitPanel)
+        assert panel._selected_branch_data() is None
+
+
+async def test_check_action_pull_available_when_behind_only():
+    async with _make_app().run_test() as pilot:
+        panel = pilot.app.query_one(GitPanel)
+        panel._selected_branch = _branch(behind=2, ahead=0)
+        assert panel.check_action("pull", ()) is True
+
+
+async def test_check_action_pull_not_available_when_ahead_only():
+    async with _make_app().run_test() as pilot:
+        panel = pilot.app.query_one(GitPanel)
+        panel._selected_branch = _branch(ahead=1, behind=0)
+        assert panel.check_action("pull", ()) is False
+
+
+async def test_check_action_pull_not_available_when_diverged():
+    async with _make_app().run_test() as pilot:
+        panel = pilot.app.query_one(GitPanel)
+        panel._selected_branch = _branch(ahead=1, behind=1)
+        assert panel.check_action("pull", ()) is False
+
+
+async def test_check_action_pull_not_available_when_local_only():
+    async with _make_app().run_test() as pilot:
+        panel = pilot.app.query_one(GitPanel)
+        panel._selected_branch = _branch(upstream="", is_local_only=True)
+        assert panel.check_action("pull", ()) is False
+
+
+async def test_check_action_pull_not_available_when_synced():
+    async with _make_app().run_test() as pilot:
+        panel = pilot.app.query_one(GitPanel)
+        panel._selected_branch = _branch(ahead=0, behind=0)
+        assert panel.check_action("pull", ()) is False
+
+
+async def test_check_action_push_available_when_ahead_only():
+    async with _make_app().run_test() as pilot:
+        panel = pilot.app.query_one(GitPanel)
+        panel._selected_branch = _branch(ahead=1, behind=0)
+        assert panel.check_action("push", ()) is True
+
+
+async def test_check_action_push_not_available_when_behind_only():
+    async with _make_app().run_test() as pilot:
+        panel = pilot.app.query_one(GitPanel)
+        panel._selected_branch = _branch(ahead=0, behind=1)
+        assert panel.check_action("push", ()) is False
+
+
+async def test_check_action_push_not_available_when_diverged():
+    async with _make_app().run_test() as pilot:
+        panel = pilot.app.query_one(GitPanel)
+        panel._selected_branch = _branch(ahead=1, behind=1)
+        assert panel.check_action("push", ()) is False
+
+
+async def test_check_action_push_not_available_when_local_only():
+    async with _make_app().run_test() as pilot:
+        panel = pilot.app.query_one(GitPanel)
+        panel._selected_branch = _branch(upstream="", is_local_only=True)
+        assert panel.check_action("push", ()) is False
+
+
+async def test_check_action_push_not_available_when_synced():
+    async with _make_app().run_test() as pilot:
+        panel = pilot.app.query_one(GitPanel)
+        panel._selected_branch = _branch(ahead=0, behind=0)
+        assert panel.check_action("push", ()) is False
+
+
+async def test_check_action_false_when_no_branch_selected():
+    async with _make_app().run_test() as pilot:
+        panel = pilot.app.query_one(GitPanel)
+        assert panel.check_action("pull", ()) is False
+        assert panel.check_action("push", ()) is False
+
+
+async def test_check_action_none_for_unrelated_action():
+    async with _make_app().run_test() as pilot:
+        panel = pilot.app.query_one(GitPanel)
+        assert panel.check_action("fetch", ()) is None
