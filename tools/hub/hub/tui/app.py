@@ -27,7 +27,9 @@ class HubApp(App):
     """
 
     BINDINGS = [
-        Binding("tab", "cycle_focus", "Switch col", show=True),
+        Binding("tab", "cycle_focus", "Tab col", show=False),
+        Binding("left", "prev_col", "← Col", show=True),
+        Binding("right", "next_col", "→ Col", show=True),
         Binding("ctrl+f", "fetch", "Fetch", show=True),
         Binding("enter", "open_project", "Open", show=True),
         Binding("ctrl+q", "quit", "Quit", show=True),
@@ -51,17 +53,31 @@ class HubApp(App):
         self.query_one(GitPanel).refresh_project(path)
         self.query_one(TasksPanel).refresh_project(message.name)
 
-    def action_cycle_focus(self) -> None:
+    def _shift_focus(self, delta: int) -> None:
         panels = [
             self.query_one("#col-projects"),
             self.query_one("#col-git"),
             self.query_one("#col-tasks"),
         ]
+        targets = [
+            self.query_one("#projects-list"),
+            self.query_one("#col-git"),
+            self.query_one("#tasks-list"),
+        ]
         for i, p in enumerate(panels):
             if p.has_focus_within or p == self.focused:
-                panels[(i + 1) % len(panels)].focus()
+                self.set_focus(targets[(i + delta) % len(targets)])
                 return
-        panels[0].focus()
+        self.set_focus(targets[0])
+
+    def action_cycle_focus(self) -> None:
+        self._shift_focus(1)
+
+    def action_next_col(self) -> None:
+        self._shift_focus(1)
+
+    def action_prev_col(self) -> None:
+        self._shift_focus(-1)
 
     def action_fetch(self) -> None:
         self.query_one(GitPanel).action_fetch()
