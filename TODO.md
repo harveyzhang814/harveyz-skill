@@ -41,6 +41,15 @@ hub Phase 1（core + CLI）和 Phase 2（三栏 TUI）已完成。Phase 3 是最
 
 ---
 
+## harveyz-skill — Syncthing 多设备同步
+
+### 实现 Agent-Syncthing 多设备文档同步工具
+**优先级**: P2 | **日期**: 2026-06-16
+
+开发一个小工具，让 Agent 通过 Syncthing 项目在设备间同步文档。初期目标是同步根目录下的 `.hskill` 文件（skill 运行时数据），后续扩展到 Hermes 性格文件等其他 Agent 配置。
+
+---
+
 ## hskill — tool lifecycle
 
 ### [x] Tool uninstall mechanism
