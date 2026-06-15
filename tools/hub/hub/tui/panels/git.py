@@ -37,18 +37,23 @@ class BranchItem(ListItem):
         b = self.branch_data
         cur = "[cyan]▶[/] " if b["is_current"] else "  "
         if b["is_local_only"]:
-            sym_m = "[dim]local[/]  "
+            sym_plain = "local  "
+            sym_m = f"[dim]{sym_plain}[/]"
         elif b["ahead"] and b["behind"]:
-            sym_m = f"[yellow]↑{b['ahead']}↓{b['behind']}[/]"
+            sym_plain = f"↑{b['ahead']}↓{b['behind']}".ljust(7)
+            sym_m = f"[yellow]{sym_plain}[/]"
         elif b["ahead"]:
-            sym_m = f"[yellow]↑{b['ahead']}[/]   "
+            sym_plain = f"↑{b['ahead']}".ljust(7)
+            sym_m = f"[yellow]{sym_plain}[/]"
         elif b["behind"]:
-            sym_m = f"[red]↓{b['behind']}[/]   "
+            sym_plain = f"↓{b['behind']}".ljust(7)
+            sym_m = f"[red]{sym_plain}[/]"
         else:
-            sym_m = "[green]✓[/]     "
+            sym_plain = "✓      "
+            sym_m = f"[green]{sym_plain}[/]"
         name = b["name"]
         remote = f"  [dim]{b['upstream']}[/]" if b.get("upstream") else ""
-        yield Label(f"{cur}{sym_m} {name}{remote}", markup=True)
+        yield Label(f"{cur}{sym_m}{name}{remote}", markup=True)
 
 
 class GitPanel(Widget):
@@ -88,8 +93,9 @@ class GitPanel(Widget):
     def refresh_project(self, path: Path | None) -> None:
         self._path = path
         if path is None or not path.exists():
-            self.query_one("#git-placeholder", Static).update("No valid path.")
-            self.query_one("#git-placeholder", Static).display = True
+            ph = self.query_one("#git-placeholder", Static)
+            ph.update("No valid path.")
+            ph.display = True
             self.query_one("#branch-list", ListView).display = False
             self.border_title = "GIT"
             return
@@ -106,6 +112,13 @@ class GitPanel(Widget):
         placeholder.display = False
         lv.display = True
         lv.clear()
+
+        if not branches:
+            placeholder.update("Not a git repository.")
+            placeholder.display = True
+            lv.display = False
+            self.border_title = "GIT"
+            return
 
         with_remote = [b for b in branches if not b["is_local_only"]]
         local_only = [b for b in branches if b["is_local_only"]]
