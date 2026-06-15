@@ -1,13 +1,13 @@
 ---
 name: init-workflow
-description: "Initialize or update git branch management standards: reads workflow-config.yml, audits config, incrementally generates and deploys git hooks (pre-commit, commit-msg, pre-push, post-checkout), and generates workflow docs. Triggers: initializing a new git repo, first-time git setup, user asks to set/update branch protection or naming rules, reinstalling git hooks, or syncing after skill/template updates."
+description: "Initialize or update git branch management standards: reads .hskill/init-workflow/workflow-config.yml, audits config, incrementally generates and deploys git hooks (pre-commit, commit-msg, pre-push, post-checkout), and generates workflow docs. Triggers: initializing a new git repo, first-time git setup, user asks to set/update branch protection or naming rules, reinstalling git hooks, or syncing after skill/template updates."
 user_invocable: true
 version: "4.1.0"
 ---
 
 # Git 工作流初始化
 
-读取 `workflow-config.yml`，审核配置，差量部署 git hooks。
+读取 `.hskill/init-workflow/workflow-config.yml`，审核配置，差量部署 git hooks。
 重新运行时自动检测配置变更、用户手改冲突、用户代码与新规则的交叉冲突，一次性汇总让用户决策后再写入。
 
 ---
@@ -26,16 +26,17 @@ git rev-parse --show-toplevel
 
 ### Step 2 — 读取配置
 
-按以下顺序查找 `workflow-config.yml`：
+按以下顺序查找配置文件：
 
-1. 项目根目录 `workflow-config.yml`
-2. 项目根目录 `.claude/workflow-config.yml`
+1. `.hskill/init-workflow/workflow-config.yml`
+2. 项目根目录 `workflow-config.yml`（向后兼容）
+3. 项目根目录 `.claude/workflow-config.yml`（向后兼容）
 
-若两处均不存在，询问用户：
-- 使用默认配置（从此 skill 的 `references/workflow-config.yml` 复制到项目根目录）
+若均不存在，询问用户：
+- 使用默认配置（从此 skill 的 `references/workflow-config.yml` 复制到 `.hskill/init-workflow/workflow-config.yml`）
 - 还是中止并自行创建后重新运行
 
-找到后读取并解析 YAML。
+找到后读取并解析 YAML。若文件来自向后兼容路径（2 或 3），询问用户是否将其移动到 `.hskill/init-workflow/workflow-config.yml`；用户同意则执行移动，否则继续使用原位置（不影响本次运行）。
 
 ---
 
@@ -154,13 +155,13 @@ git config merge.ff false
 
 ### Step 7 — 从配置渲染并写入工作流文档（差量）
 
-每次运行都根据当前 `workflow-config.yml` 的最终状态重新渲染文档，确保文档与配置始终一致。
+每次运行都根据当前 `.hskill/init-workflow/workflow-config.yml` 的最终状态重新渲染文档，确保文档与配置始终一致。
 
 #### 7a. 渲染文档
 
 ```bash
 python3 <skill-path>/references/render_docs.py \
-  workflow-config.yml \
+  .hskill/init-workflow/workflow-config.yml \
   <skill-path>/references/git-workflow-template.md \
   docs/reference/git-workflow.md
 # 输出 NEW / UPDATED / UNCHANGED
@@ -205,7 +206,7 @@ python3 <skill-path>/references/render_docs.py \
 ```
 文件                                状态
 ─────────────────────────────────────────────────────
-workflow-config.yml                已读取
+.hskill/init-workflow/workflow-config.yml   已读取
 .githooks/.workflow-config.lock    UPDATED（记录新配置快照）
 .githooks/pre-commit               UPDATED（main 块 hash 更新；develop 块新增）
 .githooks/commit-msg               UNCHANGED

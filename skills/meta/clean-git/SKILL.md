@@ -21,7 +21,7 @@ version: "1.0.0"
 
 ## Step 1：读取配置
 
-检查 `.claude/branch-cleanup.md` 是否存在：
+检查 `.hskill/clean-git/branch-cleanup.md` 是否存在：
 
 **存在** → 解析三段内容：
 - `## Always Delete` 段：每行 `` `pattern` `` 为必删 glob 规则
@@ -182,8 +182,8 @@ git branch -r | grep "origin/<branch>"
 **若本次无配置文件，询问：**
 
 ```
-未检测到 .claude/branch-cleanup.md。
+未检测到 .hskill/clean-git/branch-cleanup.md。
 是否根据本次规则生成配置文件，方便下次复用？[y/n]
 ```
 
-若用户确认，生成 `.claude/branch-cleanup.md`，内容包含本次使用的 Always Delete / Always Keep 规则和 LLM context。
+若用户确认，生成 `.hskill/clean-git/branch-cleanup.md`，内容包含本次使用的 Always Delete / Always Keep 规则和 LLM context。
