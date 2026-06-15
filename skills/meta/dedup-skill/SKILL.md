@@ -1,6 +1,6 @@
 ---
 name: dedup-skill
-description: "Detect semantic overlap between two or more skills at the logical-block level. Use this skill whenever someone wants to compare skills for duplication, find overlapping steps between skills, check if two skills share logic, or audit skill responsibilities. Triggers: 'compare X and Y skills', 'find overlap between X and Y', '对比 skill 重叠', '检查这两个 skill 有没有重复', 'do X and Y duplicate logic', 'audit skill duplication'."
+description: "Detect semantic overlap between two or more skills at the logical-block level. Use this skill whenever someone wants to compare skills for duplication, find overlapping steps between skills, check if two skills share logic, or audit skill responsibilities. Triggers: 'compare X and Y skills', 'find overlap between X and Y', 'do X and Y duplicate logic', 'audit skill duplication'."
 user_invocable: true
 version: "1.0.0"
 ---
