@@ -2,7 +2,7 @@
 name: publish-skill
 description: "Validate and publish a skill to the harveyz-skill repository. Checks SKILL.md format compliance (frontmatter fields, semver version, name-directory match, verb-noun naming convention) and registration in skills-index.json. Rules defined in docs/reference/skill-spec.md. Triggers: publish skill, register skill, validate skill format, check skill, add skill to index, is skill ready to publish."
 user_invocable: true
-version: "1.0.0"
+version: "1.1.0"
 ---
 
 # skill-publish
@@ -61,6 +61,7 @@ cat /tmp/sv-unregistered.txt
 | F5 | `user_invocable` 字段 | 显式声明 `true` 或 `false` |
 | F6 | 正文语言 | frontmatter 结束后的正文内容应为中文（含中文字符即视为合规） |
 | F7 | 目录命名规范 | skill 目录名须为 `<动词>-<名词>` 格式（2 词，连字符分隔，全小写），且动词必须在规范词表中；`archived/` 下的 skill 跳过此检查 |
+| F8 | 内容 hash | 若 `skills-index.json` 中有 `contentHash` 记录：当前 hash 与存储值不同，且 `version` 未变 → 报错；hash 不同且 version 已递增 → 通过，在 Step 7 更新记录 |
 
 **F3 英文检测方法：** 提取 `description` 字段值，检查是否包含中文字符（`一-鿿` 范围）。有则报错。
 
@@ -82,6 +83,39 @@ runby
 特殊模式：若目录名以 `runby-` 开头，直接视为合规（无需检查名词部分）。
 
 违规示例：`skill-analyzer`（动词不在词表）、`diagram`（单词，非 2 段）、`youtube-learner`（动词不在词表）
+
+**F8 hash 计算方法：**
+
+将 `SKILL.md` 中 `version:` 行替换为占位符后，对全文计算 SHA-256，取前 16 位：
+
+```bash
+compute_content_hash() {
+  local skill_md="$1"
+  sed 's/^version:.*$/version: __HASH_PLACEHOLDER__/' "$skill_md" \
+    | sha256sum | cut -c1-16
+}
+```
+
+从 `skills-index.json` 读取已存储的 hash 和版本：
+
+```bash
+stored=$(node -e "
+  const idx = JSON.parse(require('fs').readFileSync('skills-index.json','utf8'));
+  const s = idx.skills.find(s => s.path === '$rel_path');
+  console.log(JSON.stringify({ hash: s?.contentHash || '', ver: s?.contentVersion || '' }));
+")
+stored_hash=$(echo "$stored" | node -e "process.stdin.resume();let d='';process.stdin.on('data',c=>d+=c);process.stdin.on('end',()=>console.log(JSON.parse(d).hash))")
+stored_ver=$(echo  "$stored" | node -e "process.stdin.resume();let d='';process.stdin.on('data',c=>d+=c);process.stdin.on('end',()=>console.log(JSON.parse(d).ver))")
+```
+
+F8 判断逻辑：
+
+| 条件 | 结论 |
+|------|------|
+| `contentHash` 字段不存在（首次） | 跳过检查，Step 7 初始化写入 |
+| `current_hash == stored_hash` | 内容未变，✓ |
+| `current_hash != stored_hash` 且 `current_version == stored_ver` | 内容变更但版本未 bump → **F8 违规** |
+| `current_hash != stored_hash` 且 `current_version != stored_ver` | 内容变更且版本已递增 → ✓，Step 7 更新 |
 
 **读取 frontmatter 字段的方法：**
 
@@ -188,6 +222,44 @@ skill-publish 检查结果
 完成注册后运行：
 ```bash
 cd "${REPO_ROOT}" && node scripts/generate-npmignore.js
+```
+
+**格式问题（F8）** — 展示变更摘要并要求 bump version：
+
+```
+修复 F8（内容 hash 不匹配）：
+  skill 内容自 v1.0.0 起已变更，但 version 仍为 1.0.0。
+  请在 SKILL.md 中递增 version 字段（如 1.0.0 → 1.1.0），然后重新运行 publish-skill。
+```
+
+不自动修改 version —— 版本语义（patch/minor/major）由用户判断。
+
+### Step 7 — 更新 contentHash（所有检查通过后）
+
+当全部 F1–F8 和 R1–R3 均通过时，更新 `skills-index.json` 中该 skill 条目的 hash 记录：
+
+```bash
+node -e "
+  const fs = require('fs');
+  const idx = JSON.parse(fs.readFileSync('skills-index.json','utf8'));
+  const s = idx.skills.find(s => s.path === '$rel_path');
+  if (s) {
+    s.contentHash = '$current_hash';
+    s.contentVersion = '$current_version';
+  }
+  fs.writeFileSync('skills-index.json', JSON.stringify(idx, null, 2) + '\n');
+"
+```
+
+仅在以下情况写入：
+- 首次初始化（index 中无 `contentHash`）
+- F8 通过路径：内容变更 + version 已递增
+
+写入后输出：
+
+```
+✓ contentHash 已更新（v<version>）
+  记得将 skills-index.json 的变更纳入提交。
 ```
 
 ---
