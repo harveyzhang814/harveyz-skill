@@ -3,11 +3,10 @@
 Probe Chrome session cookie injection via Playwright.
 
 Load strategy selection:
-  - Known domains  → built-in KNOWN_STRATEGIES
-  - Learned domains → ~/.hskill/probe-chrome-session/strategies.json
-  - Unknown domains → probe PROBE_ORDER in sequence, record winner
+  - Known/learned domains → SKILL_DIR/strategies.json
+  - Unknown domains       → probe PROBE_ORDER in sequence, record winner
 
-Runs the target URL twice (anonymous vs Chrome cookies) and compares.
+All strategies (seeded + learned) live in one file next to the skill.
 
 Usage: python probe.py <url> <chrome_profile>
 """
@@ -45,7 +44,8 @@ UA = (
 )
 LAUNCH_ARGS = ['--disable-blink-features=AutomationControlled']
 
-STRATEGIES_PATH = Path.home() / '.hskill' / 'probe-chrome-session' / 'strategies.json'
+# strategies.json 与 skill 同目录（scripts/ 的上一级）
+STRATEGIES_PATH = Path(__file__).parent.parent / 'strategies.json'
 
 # 按顺序尝试的策略列表（未知站点时使用）
 PROBE_ORDER = [
@@ -77,13 +77,6 @@ PROBE_ORDER = [
     },
 ]
 
-# 已验证的内置策略（不写入用户文件，随 skill 版本维护）
-KNOWN_STRATEGIES = {
-    "x.com":      PROBE_ORDER[0],   # dce+ni
-    "google.com": PROBE_ORDER[0],   # dce+ni
-}
-
-
 # ── Strategy helpers ──────────────────────────────────────────────────
 
 def get_root_domain(url: str) -> str:
@@ -91,7 +84,7 @@ def get_root_domain(url: str) -> str:
     return '.'.join(parts[-2:])
 
 
-def load_learned() -> dict:
+def load_strategies() -> dict:
     if STRATEGIES_PATH.exists():
         try:
             return json.loads(STRATEGIES_PATH.read_text())
@@ -100,11 +93,10 @@ def load_learned() -> dict:
     return {}
 
 
-def save_learned(domain: str, strategy: dict):
-    learned = load_learned()
-    learned[domain] = {k: v for k, v in strategy.items() if k != 'desc'}
-    STRATEGIES_PATH.parent.mkdir(parents=True, exist_ok=True)
-    STRATEGIES_PATH.write_text(json.dumps(learned, ensure_ascii=False, indent=2))
+def save_strategy(domain: str, strategy: dict):
+    strategies = load_strategies()
+    strategies[domain] = strategy
+    STRATEGIES_PATH.write_text(json.dumps(strategies, ensure_ascii=False, indent=2))
 
 
 def resolve_strategy(domain: str, url: str):
@@ -113,11 +105,9 @@ def resolve_strategy(domain: str, url: str):
     cached_anon_result is (status, title, body) when the probe itself
     produced the anonymous result (avoids a redundant second request).
     """
-    learned = load_learned()
-    if domain in learned:
-        return learned[domain], 'learned', None
-    if domain in KNOWN_STRATEGIES:
-        return KNOWN_STRATEGIES[domain], 'known', None
+    strategies = load_strategies()
+    if domain in strategies:
+        return strategies[domain], 'strategies.json', None
 
     # Unknown domain — probe each strategy
     print(f"  未知站点 [{domain}]，按顺序探测加载策略...", flush=True)
@@ -126,7 +116,7 @@ def resolve_strategy(domain: str, url: str):
         status, title, body, ok = _fetch(url, s)
         if ok and title and '超时' not in title:
             print(f"  ✓ 找到有效策略 [{s['id']}]，已记录到 {STRATEGIES_PATH}", flush=True)
-            save_learned(domain, s)
+            save_strategy(domain, s)
             return s, 'probed', (status, title, body)
 
     print(f"  ⚠ 所有策略均未获得有效 title，使用默认策略（不记录）", flush=True)
