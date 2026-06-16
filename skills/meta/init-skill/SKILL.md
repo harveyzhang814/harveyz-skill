@@ -70,8 +70,7 @@ version: "1.0.0"
 
 读取现有 bundle 列表：
 ```bash
-REPO_ROOT=$(git rev-parse --show-toplevel)
-node -e "const r=process.argv[1]; const i=JSON.parse(require('fs').readFileSync(r+'/skills-index.json','utf8')); Object.entries(i.bundleMeta).forEach(([k,v])=>console.log(k+': '+v))" "$REPO_ROOT"
+node -e "const i=JSON.parse(require('fs').readFileSync('skills-index.json','utf8')); Object.entries(i.bundleMeta).forEach(([k,v])=>console.log(k+': '+v))"
 ```
 
 **适用的最佳实践提示**（从 authoring guide 逐条检查，只列出适用的）：
@@ -111,6 +110,8 @@ version: "1.0.0"
 ## 不在范围内
 （2-4 条明确边界）
 ```
+
+若 skill 有参考材料（查找表、模板、禁忌清单）且超过 20 行，按 authoring guide 提示提取到 `references/` 子目录，而非全部内联在 SKILL.md 中。
 
 将生成内容展示给用户预览。**等用户明确确认后才进入 Step 4。**
 
