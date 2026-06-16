@@ -70,16 +70,30 @@ version: "1.0.0"       # semver，新 skill 从 1.0.0 开始
 
 **`.hskill/<skill-name>/` 配置缓存**
 
-跨会话需要持久化的配置/状态，统一存放在项目本地 `.hskill/<skill-name>/` 目录下。Step 1 优先读此目录；不存在则用默认值或询问用户后写入。
+跨会话需要持久化的配置/状态，统一存放在 `.hskill/<skill-name>/` 目录下。按**适用范围**决定存放位置：
+
+| 配置类型 | 存放位置 | 适用场景 |
+|---------|---------|---------|
+| 全局通用配置 | `~/.hskill/<skill-name>/` | 跨所有项目共用（如 hskill-tool 全局注册表、用户级偏好） |
+| 项目特定配置 | `<project-root>/.hskill/<skill-name>/` | 仅当前项目使用（如 clean-git 分支规则、init-workflow 项目配置） |
+
+**判断方法：** 这份配置如果换个项目还有意义吗？
+- 有意义 → 全局（`~/.hskill/`）
+- 无意义 → 项目本地（`<project-root>/.hskill/`）
 
 参考实现：
 ```
-.hskill/clean-git/branch-cleanup.md
-.hskill/init-workflow/workflow-config.yml
-.hskill/release-project/release-profile.md
+全局：
+  ~/.hskill/todo-tool/PROJECTS.md          # 跨项目的项目注册表
+  ~/.claude/skills/contribute-skill/.config # harveyz-skill 仓库路径缓存
+
+项目本地：
+  <project>/.hskill/clean-git/branch-cleanup.md
+  <project>/.hskill/init-workflow/workflow-config.yml
+  <project>/.hskill/release-project/release-profile.md
 ```
 
-不要把状态散落在 `~/` 任意位置或临时文件中，统一目录便于审计和清理。
+Step 1 优先读对应位置；不存在则用默认值或询问用户后写入。不要把状态散落在 `~/` 任意路径或临时文件中。
 
 **批量操作模式（仅适用于幂等批量 skill）**
 
