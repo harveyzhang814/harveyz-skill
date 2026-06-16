@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
 """
 PaddleOCR v3 文字提取脚本。
-用法：python ocr_extract.py <image_path> [--lang en|ch|ch+en|fr|de|ja|ko]
+用法：python ocr_extract.py <image_path> [--lang ch|en|latin|korean|arabic|cyrillic]
 输出：每行一条识别结果，格式为 `{text} | conf={score:.2f}`
 """
 import argparse
 import sys
+import warnings
 
 MAX_PX = 4000
 RESIZE_TO = 2000
@@ -15,7 +16,7 @@ def check_deps():
     try:
         import paddleocr  # noqa: F401
     except ImportError:
-        print("错误：未安装 paddleocr。请运行：pip install paddleocr", file=sys.stderr)
+        print("错误：未安装 paddleocr。请运行：pip install paddleocr paddlepaddle", file=sys.stderr)
         sys.exit(1)
 
 
@@ -44,8 +45,10 @@ def maybe_resize(image_path: str) -> str:
 def run_ocr(image_path: str, lang: str) -> str:
     from paddleocr import PaddleOCR
 
-    ocr = PaddleOCR(lang=lang)
-    result = ocr.ocr(image_path)
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", DeprecationWarning)
+        ocr = PaddleOCR(lang=lang)
+        result = ocr.predict(image_path)
 
     if not result:
         return ""
@@ -64,9 +67,11 @@ def run_ocr(image_path: str, lang: str) -> str:
 def main():
     parser = argparse.ArgumentParser(description="从图像中提取全部文字（PaddleOCR v3）")
     parser.add_argument("image_path", help="图像文件路径")
-    parser.add_argument("--lang", default="en",
-                        choices=["en", "ch", "ch+en", "fr", "de", "ja", "ko"],
-                        help="识别语言（默认：en）")
+    parser.add_argument(
+        "--lang", default="ch",
+        choices=["ch", "en", "latin", "korean", "arabic", "cyrillic"],
+        help="识别语言（默认：ch，支持中英混排）",
+    )
     args = parser.parse_args()
 
     check_deps()

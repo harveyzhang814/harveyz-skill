@@ -21,18 +21,21 @@ metadata:
 ## 第一步 — OCR 提取
 
 ```bash
-python <skill_dir>/scripts/ocr_extract.py <图像路径> [--lang en|ch|ch+en|fr|de|ja|ko]
+python <skill_dir>/scripts/ocr_extract.py <图像路径> [--lang ch|en|latin|korean|arabic|cyrillic]
 ```
 
-| lang | 语言 | lang | 语言 |
-|------|------|------|------|
-| `en`（默认）| 英文 | `fr` | 法文 |
-| `ch` | 纯中文 | `de` | 德文 |
-| `ch+en` | 中英混合 | `ja` / `ko` | 日文 / 韩文 |
+| lang | 适用语言 |
+|------|----------|
+| `ch`（默认）| 中文 / 中英混排 |
+| `en` | 纯英文（速度更快） |
+| `latin` | 法、德、西、葡等拉丁语系 |
+| `korean` | 韩文 |
+| `arabic` | 阿拉伯文 |
+| `cyrillic` | 俄文等西里尔字母 |
 
 脚本会自动缩放超过 4000px 的图像，并将结果以 `{文字} | conf={置信度}` 格式输出到 stdout。
 
-若 PaddleOCR 未安装，脚本会提示：`pip install paddleocr`。
+若 PaddleOCR 未安装，脚本会提示：`pip install paddleocr paddlepaddle`。
 
 退出码：`0` 成功，`2` 未识别出任何文字（此时降级至第二步直接用视觉子智能体）。
 
