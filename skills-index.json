@@ -40,7 +40,8 @@
     { "path": "meta/contribute-skill",   "bundle": "meta"                                   },
     { "path": "meta/publish-skill",      "bundle": "meta"                                   },
     { "path": "meta/runby-opencode",     "bundle": "meta"                                   },
-    { "path": "meta/release-project",   "bundle": "meta",     "installScope": "essential"  }
+    { "path": "meta/release-project",   "bundle": "meta",     "installScope": "essential"  },
+    { "path": "experiment/probe-chrome-session", "bundle": "experiment" }
   ],
   "hooks": [
     {
