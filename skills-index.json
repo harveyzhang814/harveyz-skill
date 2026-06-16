@@ -14,7 +14,7 @@
     "coding": "程序工具（init-workflow + setup-debug + dispatch-task + close-task）",
     "writing": "写作工具（forge-doc + draw-diagram + manage-docs + manage-dir + migrate-spec）",
     "design": "设计工具（scout-brand + build-style + sync-design）",
-    "meta": "元操作工具（analyze-skill + clean-git + archive-skill + dedup-skill + contribute-skill + publish-skill + release-project + runby-opencode）"
+    "meta": "元操作工具（init-skill + analyze-skill + clean-git + archive-skill + dedup-skill + contribute-skill + publish-skill + release-project + runby-opencode）"
   },
   "skills": [
     { "path": "research/learn-skill",      "bundle": "research", "installScope": "global"     },
@@ -35,6 +35,7 @@
     { "path": "design/scout-brand",      "bundle": "design",   "installScope": "project"    },
     { "path": "design/build-style",      "bundle": "design",   "installScope": "project"    },
     { "path": "design/sync-design",      "bundle": "design",   "installScope": "project"    },
+    { "path": "meta/init-skill",         "bundle": "meta",     "contentHash": "cc7a10c47fa920bc", "contentVersion": "1.0.0" },
     { "path": "meta/analyze-skill",      "bundle": "meta"                                   },
     { "path": "meta/clean-git",          "bundle": "meta",     "installScope": "essential"  },
     { "path": "meta/archive-skill",      "bundle": "meta"                                   },
