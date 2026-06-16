@@ -2,7 +2,7 @@
 name: archive-skill
 description: "Archive, retire, deprecate, or sunset a skill from the active registry. Use this skill whenever someone wants to remove a skill from active use — even if they don't use the word 'archive'. Moves it to skills/archived/, removes it from skills-index.json, regenerates packaging config, and commits on a chore branch merged back to the original branch. Triggers: 'archive X skill', 'retire X', 'deprecate X', 'remove X from bundle', 'sunset X skill'."
 user_invocable: true
-version: "1.1.0"
+version: "1.1.1"
 ---
 
 # archive-skill

@@ -1,6 +1,6 @@
 {
   "name": "harveyz-skill",
-  "version": "0.17.1",
+  "version": "0.18.0",
   "description": "Skill manager for Claude Code, Cursor, and Codex",
   "type": "module",
   "bin": {
@@ -8,7 +8,7 @@
   },
   "scripts": {
     "prepack": "node scripts/generate-npmignore.js",
-    "test": "bats tests/ && cd tools/p-launch && python3 -m pytest tests/test_p_launch.py -v && cd ../.. && bash scripts/run-skill-tests.sh"
+    "test": "bats tests/ && bash scripts/run-skill-tests.sh"
   },
   "files": [
     "bin/",
@@ -34,6 +34,7 @@
     "skills/design/scout-brand/",
     "skills/design/build-style/",
     "skills/design/sync-design/",
+    "skills/meta/init-skill/",
     "skills/meta/analyze-skill/",
     "skills/meta/clean-git/",
     "skills/meta/archive-skill/",
@@ -43,6 +44,7 @@
     "skills/meta/runby-opencode/",
     "skills/meta/release-project/",
     "skills/experiment/probe-session/",
+    "skills/experiment/learn-paper/",
     "tools/hub/",
     "hooks/check-similar-branch/"
   ],

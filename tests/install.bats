@@ -19,9 +19,6 @@ SKILL1_VER="1.0.0"
 SKILL2_NAME="manage-docs"
 SKILL2_SRC="${REPO_ROOT}/skills/writing/manage-docs"
 
-TOOL_NAME="p-launch"
-TOOL_SRC="${REPO_ROOT}/tools/p-launch"
-
 setup() {
   TEST_DIR="$(mktemp -d)"
   MOCK_HOME="${TEST_DIR}/home"
@@ -167,56 +164,6 @@ _skill_version() {
   [[ "$out" == *"${SKILL1_NAME}"* ]]
 }
 
-# ── tool installation ─────────────────────────────────────────────────────────
-
-@test "install --tool: binary created in ~/.local/bin" {
-  _install --tool "${TOOL_NAME}" --force
-  [ -x "${MOCK_HOME}/.local/bin/${TOOL_NAME}" ]
-}
-
-@test "install --tool: installed binary is executable and non-empty" {
-  _install --tool "${TOOL_NAME}" --force
-  [ -s "${MOCK_HOME}/.local/bin/${TOOL_NAME}" ]
-}
-
-@test "install --tool: tool.json written to data dir" {
-  _install --tool "${TOOL_NAME}" --force
-  [ -f "${MOCK_HOME}/.hskill/tools/${TOOL_NAME}.json" ]
-}
-
-@test "install --tool: extraPaths dirs and files copied to data dir" {
-  # Use todo-tool which declares extraPaths: ["todo", "pyproject.toml"]
-  local tool="todo-tool"
-  HOME="${MOCK_HOME}" node "${CLI}" install --tool "${tool}" 2>/tmp/bats-install-stderr | cat
-  [ -d "${MOCK_HOME}/.hskill/tools/${tool}/todo" ]
-  [ -f "${MOCK_HOME}/.hskill/tools/${tool}/pyproject.toml" ]
-}
-
-@test "install --tool (no --force): already-installed tool is skipped" {
-  _install --tool "${TOOL_NAME}" --force
-
-  local err
-  HOME="${MOCK_HOME}" node "${CLI}" install --tool "${TOOL_NAME}" \
-    2>/tmp/bats-install-stderr >/dev/null | cat
-  err="$(_stderr)"
-  [[ "$err" == *"up-to-date"* ]] || [[ "$err" == *"Skipped"* ]]
-}
-
-@test "install --tool --force: re-installs over existing binary" {
-  _install --tool "${TOOL_NAME}" --force
-  local mtime1
-  mtime1=$(stat -f '%m' "${MOCK_HOME}/.local/bin/${TOOL_NAME}" 2>/dev/null || \
-           stat -c '%Y' "${MOCK_HOME}/.local/bin/${TOOL_NAME}" 2>/dev/null)
-
-  sleep 1
-  _install --tool "${TOOL_NAME}" --force
-  local mtime2
-  mtime2=$(stat -f '%m' "${MOCK_HOME}/.local/bin/${TOOL_NAME}" 2>/dev/null || \
-           stat -c '%Y' "${MOCK_HOME}/.local/bin/${TOOL_NAME}" 2>/dev/null)
-
-  [ "${mtime2}" -ge "${mtime1}" ]
-}
-
 # ── multiple skills ───────────────────────────────────────────────────────────
 
 @test "install --skill (comma-separated): installs all listed skills" {
@@ -249,69 +196,12 @@ _skill_version() {
   [[ "$out" == *'"reason"'* ]]
 }
 
-# ── uninstall tool ────────────────────────────────────────────────────────────
+# ── uninstall skill ───────────────────────────────────────────────────────────
 
 _uninstall() {
   HOME="${MOCK_HOME}" node "${CLI}" uninstall "$@" 2>/tmp/bats-uninstall-stderr | cat
 }
 
-@test "uninstall: removes binary from ~/.local/bin" {
-  _install --tool "${TOOL_NAME}" --force
-  [ -x "${MOCK_HOME}/.local/bin/${TOOL_NAME}" ]
-  _uninstall "${TOOL_NAME}" --yes
-  [ ! -f "${MOCK_HOME}/.local/bin/${TOOL_NAME}" ]
-}
-
-@test "uninstall: removes tool.json from share dir" {
-  _install --tool "${TOOL_NAME}" --force
-  _uninstall "${TOOL_NAME}" --yes
-  [ ! -f "${MOCK_HOME}/.hskill/tools/${TOOL_NAME}.json" ]
-}
-
-@test "uninstall: removes companion .py from share dir" {
-  _install --tool "${TOOL_NAME}" --force
-  _uninstall "${TOOL_NAME}" --yes
-  [ ! -f "${MOCK_HOME}/.hskill/tools/${TOOL_NAME}.py" ]
-}
-
-@test "uninstall: removes uninstallPaths declared in tool.json" {
-  _install --tool "${TOOL_NAME}" --force
-  mkdir -p "${MOCK_HOME}/.hskill/p-launch/venv"
-  _uninstall "${TOOL_NAME}" --yes
-  [ ! -d "${MOCK_HOME}/.hskill/p-launch/venv" ]
-}
-
-@test "uninstall: keeps configPaths without --yes in non-TTY" {
-  _install --tool "${TOOL_NAME}" --force
-  mkdir -p "${MOCK_HOME}/.config/p-launch"
-  printf 'PROJECT_DIRS=(%s)\n' "${MOCK_HOME}" > "${MOCK_HOME}/.config/p-launch/config.zsh"
-  _uninstall "${TOOL_NAME}"
-  [ -f "${MOCK_HOME}/.config/p-launch/config.zsh" ]
-}
-
-@test "uninstall: removes configPaths with --yes" {
-  _install --tool "${TOOL_NAME}" --force
-  mkdir -p "${MOCK_HOME}/.config/p-launch"
-  printf 'PROJECT_DIRS=(%s)\n' "${MOCK_HOME}" > "${MOCK_HOME}/.config/p-launch/config.zsh"
-  _uninstall "${TOOL_NAME}" --yes
-  [ ! -d "${MOCK_HOME}/.config/p-launch" ]
-}
-
-@test "uninstall: removes zshrc snippet if present" {
-  _install --tool "${TOOL_NAME}" --force
-  printf '# >>> p-launch\nexport PATH="$HOME/.local/bin:$PATH"\n# <<< p-launch\n' \
-    >> "${MOCK_HOME}/.zshrc"
-  _uninstall "${TOOL_NAME}" --yes
-  run grep "p-launch" "${MOCK_HOME}/.zshrc"
-  [ "$status" -ne 0 ]
-}
-
-@test "uninstall: exits 0 when tool is not installed" {
-  run _uninstall "${TOOL_NAME}" --yes
-  [ "$status" -eq 0 ]
-}
-
-# ── uninstall skill ───────────────────────────────────────────────────────────
 
 @test "uninstall skill: removes skill dir from user claude" {
   _install --skill "${SKILL1_NAME}" --target claude --scope user --force
@@ -323,42 +213,4 @@ _uninstall() {
 @test "uninstall skill: exits 0 when skill not installed" {
   run _uninstall "${SKILL1_NAME}" --scope user --target claude
   [ "$status" -eq 0 ]
-}
-
-# ── tool version-aware upgrade ────────────────────────────────────────────────
-
-@test "install --tool: skips with up-to-date message when version matches" {
-  _install --tool "${TOOL_NAME}" --force
-  run env HOME="${MOCK_HOME}" node "${CLI}" install --tool "${TOOL_NAME}" 2>&1
-  [[ "$output" == *"up-to-date"* ]]
-}
-
-@test "install --tool: skips with outdated message in non-TTY when version differs" {
-  _install --tool "${TOOL_NAME}" --force
-  local meta="${MOCK_HOME}/.hskill/tools/${TOOL_NAME}.json"
-  node -e "const f='${meta}'; const fs=require('fs'); const d=JSON.parse(fs.readFileSync(f,'utf8')); d.version='0.0.1'; fs.writeFileSync(f,JSON.stringify(d))"
-  run env HOME="${MOCK_HOME}" node "${CLI}" install --tool "${TOOL_NAME}" 2>&1
-  [[ "$output" == *"outdated"* ]]
-  [[ "$output" == *"--force"* ]]
-}
-
-@test "install --tool --force: removes uninstallPaths before reinstalling" {
-  _install --tool "${TOOL_NAME}" --force
-  local venv="${MOCK_HOME}/.hskill/p-launch/venv"
-  mkdir -p "$venv"
-  _install --tool "${TOOL_NAME}" --force
-  [ ! -d "$venv" ]
-}
-
-@test "install --tool --force: reinstalls even when up-to-date" {
-  _install --tool "${TOOL_NAME}" --force
-  local mtime1
-  mtime1=$(stat -f '%m' "${MOCK_HOME}/.local/bin/${TOOL_NAME}" 2>/dev/null || \
-           stat -c '%Y' "${MOCK_HOME}/.local/bin/${TOOL_NAME}" 2>/dev/null)
-  sleep 1
-  _install --tool "${TOOL_NAME}" --force
-  local mtime2
-  mtime2=$(stat -f '%m' "${MOCK_HOME}/.local/bin/${TOOL_NAME}" 2>/dev/null || \
-           stat -c '%Y' "${MOCK_HOME}/.local/bin/${TOOL_NAME}" 2>/dev/null)
-  [ "$mtime1" != "$mtime2" ]
 }

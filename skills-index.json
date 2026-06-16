@@ -16,7 +16,7 @@
     "coding": "程序工具（init-workflow + setup-debug + dispatch-task + close-task）",
     "writing": "写作工具（forge-doc + draw-diagram + manage-docs + manage-dir + migrate-spec）",
     "design": "设计工具（scout-brand + build-style + sync-design）",
-    "meta": "元操作工具（analyze-skill + clean-git + archive-skill + dedup-skill + contribute-skill + publish-skill + release-project + runby-opencode）",
+    "meta": "元操作工具（init-skill + analyze-skill + clean-git + archive-skill + dedup-skill + contribute-skill + publish-skill + release-project + runby-opencode）",
     "experiment": "实验性工具（尚未稳定，不纳入正式 bundle）"
   },
   "skills": [
@@ -38,8 +38,8 @@
       "path": "research/extract-vision",
       "bundle": "research",
       "installScope": "global",
-      "contentHash": "df44303edd10d416",
-      "contentVersion": "1.0.0"
+      "contentHash": "0fdc3d37371ef0bc",
+      "contentVersion": "1.2.0"
     },
     {
       "path": "research/learn-video",
@@ -59,8 +59,8 @@
       "path": "creative/capture-insight",
       "bundle": "creative",
       "installScope": "essential",
-      "contentHash": "df434cdf3d62711d",
-      "contentVersion": "1.1.0"
+      "contentHash": "282434dd8df30da8",
+      "contentVersion": "2.0.0"
     },
     {
       "path": "coding/init-workflow",
@@ -147,6 +147,12 @@
       "contentVersion": "3.0.0"
     },
     {
+      "path": "meta/init-skill",
+      "bundle": "meta",
+      "contentHash": "cf644bb465f279f1",
+      "contentVersion": "1.0.1"
+    },
+    {
       "path": "meta/analyze-skill",
       "bundle": "meta",
       "contentHash": "3aefd5a60dd48d94",
@@ -162,8 +168,8 @@
     {
       "path": "meta/archive-skill",
       "bundle": "meta",
-      "contentHash": "af466a5fb3ef6e0f",
-      "contentVersion": "1.1.0"
+      "contentHash": "080305f6ad678326",
+      "contentVersion": "1.1.1"
     },
     {
       "path": "meta/dedup-skill",
@@ -180,8 +186,8 @@
     {
       "path": "meta/publish-skill",
       "bundle": "meta",
-      "contentHash": "ada368de88dea2eb",
-      "contentVersion": "1.1.0"
+      "contentHash": "233fb5bb02d94023",
+      "contentVersion": "1.2.1"
     },
     {
       "path": "meta/runby-opencode",
@@ -202,7 +208,7 @@
       "contentHash": "91391f7b702e0797",
       "contentVersion": "0.3.0"
     },
-    { "path": "experiment/read-paper", "bundle": "experiment" }
+    { "path": "experiment/learn-paper", "bundle": "experiment", "contentHash": "1fe085285d11bb6a", "contentVersion": "0.1.0" }
   ],
   "hooks": [
     {
