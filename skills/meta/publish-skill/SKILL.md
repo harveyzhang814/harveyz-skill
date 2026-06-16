@@ -2,7 +2,7 @@
 name: publish-skill
 description: "Validate and publish a skill to the harveyz-skill repository. Checks SKILL.md format compliance (frontmatter fields, semver version, name-directory match, verb-noun naming convention) and registration in skills-index.json. Rules defined in docs/reference/skill-spec.md. Triggers: publish skill, register skill, validate skill format, check skill, add skill to index, is skill ready to publish."
 user_invocable: true
-version: "1.1.0"
+version: "1.2.0"
 ---
 
 # skill-publish
@@ -186,13 +186,16 @@ skill-publish 检查结果
 ```
 确认后执行 `git mv` 重命名目录，并更新 `skills-index.json` 中对应的 `path` 值，最后运行 `node scripts/generate-npmignore.js`。
 
-**格式问题（F8）** — 不自动修改 version，版本语义由用户判断：
+**格式问题（F8）** — 询问 bump 类型后自动更新版本号，随即执行 Step 7：
 ```
 修复 F8（内容 hash 不匹配）：
   skill 内容自 v1.0.0 起已变更，但 version 仍为 1.0.0。
-  请在 SKILL.md 中递增 version 字段（如 patch → 1.0.1，minor → 1.1.0），
-  然后重新运行 publish-skill。
+  请选择升级类型：
+    [1] patch → 1.0.1（bugfix / 措辞调整）
+    [2] minor → 1.1.0（新增步骤 / 行为变更）
+    [3] major → 2.0.0（Breaking Change）
 ```
+用户选择后，用 Edit 工具将 SKILL.md frontmatter 中的 `version:` 行更新为新版本号，然后直接进入 Step 7（hash 不同 + version 已递增，满足更新条件）。
 
 **注册问题（R1）** — 交互引导补注册：
 ```
