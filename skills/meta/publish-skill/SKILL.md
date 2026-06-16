@@ -29,7 +29,6 @@ REPO_ROOT=$(git rev-parse --show-toplevel)
 # 找出所有 SKILL.md 对应的目录（相对 skills/ 的路径）
 find "${REPO_ROOT}/skills" -name "SKILL.md" | while read f; do
   dir=$(dirname "$f")
-  # 转为相对于 skills/ 的路径（格式：category/name）
   echo "${dir#${REPO_ROOT}/skills/}"
 done | sort > /tmp/sv-on-disk.txt
 
@@ -46,7 +45,7 @@ cat /tmp/sv-unregistered.txt
 
 如果找到未注册 skill，列出后询问用户：
 - 是否一并做格式检查
-- 是否要把它们注册到 `skills-index.json`（若是，按 Step 5 执行）
+- 是否要把它们注册到 `skills-index.json`（若是，按 Step 6 执行）
 
 ### Step 3 — 格式检查
 
@@ -61,7 +60,7 @@ cat /tmp/sv-unregistered.txt
 | F5 | `user_invocable` 字段 | 显式声明 `true` 或 `false` |
 | F6 | 正文语言 | frontmatter 结束后的正文内容应为中文（含中文字符即视为合规） |
 | F7 | 目录命名规范 | skill 目录名须为 `<动词>-<名词>` 格式（2 词，连字符分隔，全小写），且动词必须在规范词表中；`archived/` 下的 skill 跳过此检查 |
-| F8 | 内容 hash | 若 `skills-index.json` 中有 `contentHash` 记录：当前 hash 与存储值不同，且 `version` 未变 → 报错；hash 不同且 version 已递增 → 通过，在 Step 7 更新记录 |
+| F8 | 内容 hash | 若 `skills-index.json` 中有 `contentHash` 记录：hash 不同且 version 未变 → 报错；hash 不同且 version 已递增 → 通过，Step 7 更新；无记录 → 首次初始化，Step 7 写入 |
 
 **F3 英文检测方法：** 提取 `description` 字段值，检查是否包含中文字符（`一-鿿` 范围）。有则报错。
 
@@ -86,36 +85,23 @@ runby
 
 **F8 hash 计算方法：**
 
-将 `SKILL.md` 中 `version:` 行替换为占位符后，对全文计算 SHA-256，取前 16 位：
+读取 `SKILL.md` 全文，将 `version:` 行替换为固定占位符后计算 SHA-256，取前 16 位：
 
 ```bash
 compute_content_hash() {
-  local skill_md="$1"
-  sed 's/^version:.*$/version: __HASH_PLACEHOLDER__/' "$skill_md" \
+  sed 's/^version:.*$/version: __HASH_PLACEHOLDER__/' "$1" \
     | sha256sum | cut -c1-16
 }
 ```
 
-从 `skills-index.json` 读取已存储的 hash 和版本：
+从 `skills-index.json` 中读取 `contentHash`（存储 hash）和 `contentVersion`（存储 hash 时的版本号），与当前值对比：
 
-```bash
-stored=$(node -e "
-  const idx = JSON.parse(require('fs').readFileSync('skills-index.json','utf8'));
-  const s = idx.skills.find(s => s.path === '$rel_path');
-  console.log(JSON.stringify({ hash: s?.contentHash || '', ver: s?.contentVersion || '' }));
-")
-stored_hash=$(echo "$stored" | node -e "process.stdin.resume();let d='';process.stdin.on('data',c=>d+=c);process.stdin.on('end',()=>console.log(JSON.parse(d).hash))")
-stored_ver=$(echo  "$stored" | node -e "process.stdin.resume();let d='';process.stdin.on('data',c=>d+=c);process.stdin.on('end',()=>console.log(JSON.parse(d).ver))")
-```
-
-F8 判断逻辑：
-
-| 条件 | 结论 |
-|------|------|
-| `contentHash` 字段不存在（首次） | 跳过检查，Step 7 初始化写入 |
-| `current_hash == stored_hash` | 内容未变，✓ |
-| `current_hash != stored_hash` 且 `current_version == stored_ver` | 内容变更但版本未 bump → **F8 违规** |
-| `current_hash != stored_hash` 且 `current_version != stored_ver` | 内容变更且版本已递增 → ✓，Step 7 更新 |
+| `current_hash` vs `stored_hash` | `current_version` vs `contentVersion` | 结论 |
+|---------------------------------|---------------------------------------|------|
+| 相同 | 任意 | 内容未变，✓ |
+| 不同 | 相同 | 内容变更但版本未 bump → **F8 违规** |
+| 不同 | 不同 | 内容变更且版本已递增 → ✓，Step 7 更新 |
+| `contentHash` 字段不存在 | — | 首次初始化 → ✓，Step 7 写入 |
 
 **读取 frontmatter 字段的方法：**
 
@@ -153,14 +139,12 @@ skill-publish 检查结果
   skills/meta/my-skill
     F2  name 字段值 'my_skill' != 目录名 'my-skill'
     F5  user_invocable 字段缺失
+    F8  内容自 v1.0.0 起已变更，version 仍为 1.0.0，请 bump 后重新运行
 
 注册问题
 --------
   skills/meta/my-skill
     R1  未在 skills-index.json 中注册
-
-  skills/analysis/another-skill
-    R3  bundle 'analytics' 未在 bundleMeta 中声明
 
 全部通过
 --------
@@ -202,6 +186,14 @@ skill-publish 检查结果
 ```
 确认后执行 `git mv` 重命名目录，并更新 `skills-index.json` 中对应的 `path` 值，最后运行 `node scripts/generate-npmignore.js`。
 
+**格式问题（F8）** — 不自动修改 version，版本语义由用户判断：
+```
+修复 F8（内容 hash 不匹配）：
+  skill 内容自 v1.0.0 起已变更，但 version 仍为 1.0.0。
+  请在 SKILL.md 中递增 version 字段（如 patch → 1.0.1，minor → 1.1.0），
+  然后重新运行 publish-skill。
+```
+
 **注册问题（R1）** — 交互引导补注册：
 ```
 'meta/my-skill' 未注册。
@@ -224,42 +216,30 @@ skill-publish 检查结果
 cd "${REPO_ROOT}" && node scripts/generate-npmignore.js
 ```
 
-**格式问题（F8）** — 展示变更摘要并要求 bump version：
+### Step 7 — 更新 contentHash
 
-```
-修复 F8（内容 hash 不匹配）：
-  skill 内容自 v1.0.0 起已变更，但 version 仍为 1.0.0。
-  请在 SKILL.md 中递增 version 字段（如 1.0.0 → 1.1.0），然后重新运行 publish-skill。
-```
+在以下两种情况下执行，其余情况跳过：
+- **首次初始化**：index 中无 `contentHash` 字段
+- **F8 通过路径**：hash 不同 + version 已递增
 
-不自动修改 version —— 版本语义（patch/minor/major）由用户判断。
+**操作方式：直接读写 `skills-index.json`，不使用 shell 脚本。**
 
-### Step 7 — 更新 contentHash（所有检查通过后）
+用 Read 工具读取 `skills-index.json`，找到目标 skill 条目，将 `contentHash` 和 `contentVersion` 字段更新为当前值，再用 Edit 工具写回。字段格式：
 
-当全部 F1–F8 和 R1–R3 均通过时，更新 `skills-index.json` 中该 skill 条目的 hash 记录：
-
-```bash
-node -e "
-  const fs = require('fs');
-  const idx = JSON.parse(fs.readFileSync('skills-index.json','utf8'));
-  const s = idx.skills.find(s => s.path === '$rel_path');
-  if (s) {
-    s.contentHash = '$current_hash';
-    s.contentVersion = '$current_version';
-  }
-  fs.writeFileSync('skills-index.json', JSON.stringify(idx, null, 2) + '\n');
-"
+```json
+{
+  "path": "meta/publish-skill",
+  "bundle": "meta",
+  "contentHash": "a3f9c2b14d8e1f07",
+  "contentVersion": "1.1.0"
+}
 ```
 
-仅在以下情况写入：
-- 首次初始化（index 中无 `contentHash`）
-- F8 通过路径：内容变更 + version 已递增
-
-写入后输出：
+写回后用 `git add skills-index.json` 将变更纳入暂存区，并输出：
 
 ```
 ✓ contentHash 已更新（v<version>）
-  记得将 skills-index.json 的变更纳入提交。
+  skills-index.json 已暂存，请在本次 commit 中一并提交。
 ```
 
 ---
