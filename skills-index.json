@@ -1,12 +1,9 @@
 {
   "toolBundleMeta": {
-    "shell-tools": "终端工具（p-launch 本地仓库管理器 + todo-tool 任务管理器）",
     "tools": "开发者 OS 工具（hub — 项目管理 + git 状态 + 任务跟踪）"
   },
   "tools": [
-    { "name": "p-launch",  "bundle": "shell-tools", "installScope": "global"    },
-    { "name": "todo-tool", "bundle": "shell-tools", "installScope": "global"    },
-    { "name": "hub",       "path": "tools/hub", "bundle": "tools", "installScope": "essential" }
+    { "name": "hub", "path": "tools/hub", "bundle": "tools", "installScope": "essential" }
   ],
   "bundleMeta": {
     "research": "研究工具（extract-url + learn-video + extract-vision + learn-skill）",
