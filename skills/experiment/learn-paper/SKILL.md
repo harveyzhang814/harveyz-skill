@@ -1,7 +1,7 @@
 ---
-name: read-paper
+name: learn-paper
 version: "0.1.0"
-description: "三遍精读单篇学术论文 PDF。第一遍：5C 结构化定向；第二遍：全文内容提取；第三遍：批判性重构。每遍产出独立 Markdown 文件，存放在以论文命名的文件夹中。触发场景：用户说「读这篇论文」「精读论文」「分析这篇 paper」「帮我看看这篇文章」「给这篇论文做笔记」「论文总结」，或提供了一个 PDF 路径并想理解其内容时，均应触发此技能。"
+description: "Deep-read a single academic PDF in three passes: 5C structural orientation, full content extraction, and critical reconstruction. Each pass produces a standalone Markdown file. Triggers: 'read this paper', 'deep-read paper', 'analyze this paper', 'take notes on this PDF', 'summarize paper', or when user provides a PDF path and wants to understand its content."
 user_invocable: true
 ---
 
