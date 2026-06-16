@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.18.0] - 2026-06-16
+
+### Added
+- `learn-paper` skill：基于三遍阅读法的论文精读 skill（首次以 `read-paper` 命名引入，后改名为 `learn-paper`）
+- `init-skill` skill：从设计文档脚手架生成新 skill
+- `probe-chrome-session` skill（experiment bundle）：Chrome profile cookie/session 探测与注入，支持 per-domain 加载策略
+- `experiment` bundle：用于 staging 实验性 skill
+- `publish-skill` F8：基于内容哈希的版本号检查，hash mismatch 时自动 bump
+
+### Changed
+- `extract-vision`：overhaul 至 v1.2.0（PaddleOCR v3 API、lang options 修复）
+- `capture-insight`：通过 `~/.hskill` 配置保存到 Writing Agent project
+- release-profile.md 迁移到 `.hskill/release-project/`
+
+### Removed
+- 归档 `npm-release` skill（被 `release-project` 取代）
+- 退役 `p-launch` 与 `todo-tool`（被 `hub` 取代），移除对应测试
+
+### Fixed
+- `publish-skill`：audit 违规修复
+- `read-paper`：真实论文测试后发现的 5 个问题修复
+
 ## [0.17.1] - 2026-06-15
 
 ### Fixed
