@@ -34,6 +34,7 @@
     "skills/design/scout-brand/",
     "skills/design/build-style/",
     "skills/design/sync-design/",
+    "skills/meta/init-skill/",
     "skills/meta/analyze-skill/",
     "skills/meta/clean-git/",
     "skills/meta/archive-skill/",
@@ -43,6 +44,7 @@
     "skills/meta/runby-opencode/",
     "skills/meta/release-project/",
     "skills/experiment/probe-session/",
+    "skills/experiment/read-paper/",
     "tools/hub/",
     "hooks/check-similar-branch/"
   ],
