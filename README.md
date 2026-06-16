@@ -71,10 +71,10 @@ Shell 工具，安装到 `~/.local/bin/`。
 
 | 工具 | Bundle | 说明 |
 |------|--------|------|
-| **p-launch** | shell-tools | 交互式项目启动器 — 从多个目录中快速选择并跳转到项目 |
+| **hub** | tools | 开发者 OS — 项目管理 + git 状态 + 任务跟踪 |
 
 ```bash
-hskill install --tool p-launch
+hskill install --tool hub
 ```
 
 ---
@@ -94,7 +94,7 @@ hskill                          # 交互式选择安装
 hskill                                          # 交互式选择
 hskill install --bundle dev                     # 安装整个 bundle
 hskill install --skill git-workflow-init        # 安装单个 skill
-hskill install --tool p-launch                  # 安装 shell 工具
+hskill install --tool hub                       # 安装 shell 工具
 hskill list                                     # 查看可用 skill
 hskill update                                   # 更新到最新版
 hskill --help                                   # 查看帮助
