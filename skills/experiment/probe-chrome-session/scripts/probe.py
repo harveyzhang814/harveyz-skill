@@ -46,7 +46,18 @@ def fetch_page(url, cookies=None):
         browser = p.chromium.launch(headless=True, args=LAUNCH_ARGS)
         ctx = browser.new_context(user_agent=UA)
         if cookies:
-            ctx.add_cookies(cookies)
+            # 批量注入失败时逐条注入，跳过值含非法字符的 cookie
+            try:
+                ctx.add_cookies(cookies)
+            except Exception:
+                ok = 0
+                for c in cookies:
+                    try:
+                        ctx.add_cookies([c])
+                        ok += 1
+                    except Exception:
+                        pass
+                print(f"  [注意] 批量注入失败，逐条注入：{ok}/{len(cookies)} 条成功", flush=True)
         page = ctx.new_page()
         try:
             resp = page.goto(url, timeout=30000, wait_until='load')
