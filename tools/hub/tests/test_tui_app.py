@@ -16,7 +16,7 @@ async def test_hub_app_mounts(tmp_path, monkeypatch):
 async def test_hub_app_quit(tmp_path, monkeypatch):
     monkeypatch.setenv("HUB_DB_PATH", str(tmp_path / "hub.db"))
     async with HubApp().run_test() as pilot:
-        await pilot.press("q")
+        await pilot.press("ctrl+q")
     # If we got here without hanging, the app quit cleanly.
     assert True
 
@@ -44,6 +44,65 @@ def test_main_no_args_launches_tui(tmp_path, monkeypatch):
         main()
 
     assert launched == [True]
+
+
+def test_hub_app_routes_sync_with_hidden_binding():
+    """HubApp must define ctrl+y with show=False so Sync fires from any focus,
+    while the visible footer entry stays owned by GitPanel's own binding."""
+    from textual.binding import Binding
+    by_key = {b.key: b for b in HubApp.BINDINGS if isinstance(b, Binding)}
+    assert "ctrl+y" in by_key and by_key["ctrl+y"].show is False
+    assert "ctrl+p" not in by_key
+    assert "ctrl+u" not in by_key
+
+
+async def test_branch_list_keeps_focus_when_project_switches(tmp_path, monkeypatch):
+    """lv.clear() during project switch must not lose focus if git column was active."""
+    from pathlib import Path
+    from textual.widgets import ListView
+
+    monkeypatch.setenv("HUB_DB_PATH", str(tmp_path / "hub.db"))
+    branches_a = [{"name": "main", "upstream": "origin/main", "ahead": 0, "behind": 0,
+                   "is_current": True, "is_local_only": False}]
+    branches_b = [{"name": "dev", "upstream": "origin/dev", "ahead": 1, "behind": 0,
+                   "is_current": True, "is_local_only": False}]
+    async with HubApp().run_test() as pilot:
+        panel = pilot.app.query_one(GitPanel)
+        lv = pilot.app.query_one("#branch-list", ListView)
+
+        # Load project A and focus lv
+        await panel._render_branches(Path("/repo-a"), branches_a)
+        await pilot.pause()
+        pilot.app.set_focus(lv)
+        await pilot.pause()
+        assert pilot.app.focused is lv
+
+        # Switch to project B while lv still has focus
+        await panel._render_branches(Path("/repo-b"), branches_b)
+        await pilot.pause()
+        assert pilot.app.focused is lv, "lv.clear() must not lose focus on project switch"
+
+
+async def test_right_arrow_focuses_branch_list_when_visible(tmp_path, monkeypatch):
+    """Pressing right from projects column focuses the branch list when it's visible."""
+    from pathlib import Path
+    from textual.widgets import ListView
+
+    monkeypatch.setenv("HUB_DB_PATH", str(tmp_path / "hub.db"))
+    async with HubApp().run_test() as pilot:
+        panel = pilot.app.query_one(GitPanel)
+        lv = pilot.app.query_one("#branch-list", ListView)
+
+        await panel._render_branches(Path("/repo"), [
+            {"name": "main", "upstream": "origin/main", "ahead": 0, "behind": 2,
+             "is_current": True, "is_local_only": False},
+        ])
+        await pilot.pause()
+        assert lv.display
+
+        await pilot.press("right")
+        await pilot.pause()
+        assert pilot.app.focused is lv
 
 
 async def test_hub_app_project_selection_updates_panels(tmp_path, monkeypatch):

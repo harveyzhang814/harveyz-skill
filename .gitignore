@@ -73,6 +73,12 @@ node_modules/
 __pycache__/
 *.log
 
+# 保留 .hskill 项目本地数据目录
+!.hskill/
+!.hskill/**/
+!.hskill/**/*
+.hskill/**/.DS_Store
+
 # .claude 配置文件
 !.claude/
 !.claude/**

@@ -2,7 +2,7 @@
 import { select, input } from '@inquirer/prompts'
 import chalk from 'chalk'
 import { execSync, spawnSync } from 'child_process'
-import { existsSync } from 'fs'
+import { existsSync, writeFileSync, unlinkSync } from 'fs'
 import { createRequire } from 'module'
 import os from 'os'
 import path from 'path'
@@ -13,8 +13,8 @@ import {
   resolveSkills, resolveSkillsByName, resolveTools, resolveToolsByName,
   TOOL_BUNDLE_CHOICES,
 } from '../lib/bundles.js'
-import { buildTargetChoices, resolveTargets, TARGETS, USER_ONLY_TARGETS } from '../lib/targets.js'
-import { installSkills, installTools, installHooks, installHooksForTarget, uninstallHook, uninstallTool, uninstallSkill } from '../lib/installer.js'
+import { buildTargetChoices, resolveTargets, TARGETS, USER_ONLY_TARGETS, SKILL_TARGETS, userSkillDir } from '../lib/targets.js'
+import { installSkills, installTools, installHooks, installHooksForTarget, uninstallHook, uninstallTool, uninstallSkill, migrateRenamedSkills } from '../lib/installer.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const require = createRequire(import.meta.url)
@@ -154,6 +154,18 @@ if (subcommand === 'update') {
     console.error(chalk.red('  ✗ Update failed. Try: npm update -g harveyz-skill'))
     process.exit(1)
   }
+  // Run skill rename migrations
+  const { renames = [], skills: skillDefs = [] } = require('../skills-index.json')
+  if (renames.length > 0) {
+    console.log(chalk.dim('  · Migrating renamed skills…'))
+    const targets = SKILL_TARGETS.map(name => ({ name, dir: userSkillDir(name) }))
+    const skillsRoot = path.join(__dirname, '..', 'skills')
+    const migrationSummary = await migrateRenamedSkills(renames, targets, skillsRoot, skillDefs)
+    const totalMigrated = Object.values(migrationSummary).reduce((n, s) => n + s.migrated.length, 0)
+    const totalFailed   = Object.values(migrationSummary).reduce((n, s) => n + s.failed.length, 0)
+    if (totalMigrated > 0) console.log(chalk.green(`  ✔ Migrated ${totalMigrated} skill(s)`))
+    if (totalFailed   > 0) console.log(chalk.yellow(`  ⚠ ${totalFailed} migration(s) failed — check output above`))
+  }
   const legacyDir = path.join(os.homedir(), '.local', 'share', 'hskill')
   if (existsSync(legacyDir)) {
     console.log('')
@@ -172,7 +184,7 @@ if (subcommand === 'list') {
   const sorted = [...skills].sort((a, b) => a.bundle.localeCompare(b.bundle) || a.path.split('/').pop().localeCompare(b.path.split('/').pop()))
   if (jsonFlag) {
     console.log(JSON.stringify({
-      skills: sorted.map(s => ({ name: s.path.split('/').pop(), path: s.path, bundle: s.bundle })),
+      skills: sorted.map(s => ({ name: s.path.split('/').pop(), path: s.path, bundle: s.bundle, global: s.global ?? false })),
       tools: tools.map(t => t.name),
     }, null, 2))
     process.exit(0)
@@ -213,7 +225,22 @@ if (subcommand === 'status' || subcommand === 'outdated') {
 
   function icon(status) {
     if (status === 'up-to-date') return chalk.green('✓')
-    if (status === 'update')     return chalk.yellow('↑')
+    if (status === 'update')     return chalk.red('↑')
+    return chalk.dim('—')
+  }
+
+  function userIcon(status, installScope) {
+    if (status === 'up-to-date')          return chalk.green('✓')
+    if (status === 'update')              return chalk.red('↑')
+    if (installScope === 'essential')     return chalk.yellow('»')
+    if (installScope === 'global')        return chalk.cyan('▸')
+    return chalk.dim('—')
+  }
+
+  function projectIcon(status, installScope) {
+    if (status === 'up-to-date')          return chalk.green('✓')
+    if (status === 'update')              return chalk.red('↑')
+    if (installScope === 'project')       return chalk.cyan('▸')
     return chalk.dim('—')
   }
 
@@ -221,13 +248,14 @@ if (subcommand === 'status' || subcommand === 'outdated') {
     const inst = checkInstalled(s.skillName, s.version ?? '—')
     return {
       name: s.skillName, bundle: s.bundle ?? '—', version: s.version ?? '—',
+      installScope: s.installScope ?? null,
       userStatus: scopeSummary(inst.user), projectStatus: scopeSummary(inst.project),
       userDetail: inst.user, projectDetail: inst.project,
     }
   }).sort((a, b) => a.bundle.localeCompare(b.bundle) || a.name.localeCompare(b.name))
   const toolRows = toolItems.map(t => {
     const inst = checkToolInstalled(t.toolName, t.srcPath)
-    return { name: t.toolName, version: t.version ?? '—', ...inst }
+    return { name: t.toolName, version: t.version ?? '—', installScope: t.installScope ?? null, ...inst }
   })
 
   if (jsonFlag) {
@@ -305,7 +333,8 @@ if (subcommand === 'status' || subcommand === 'outdated') {
   console.log(sep)
   console.log('  ' + ''.padEnd(nw + vw + bw + 5) + chalk.dim('user    project'))
   for (const r of skillRows) {
-    const u = icon(r.userStatus), p = icon(r.projectStatus)
+    const u = userIcon(r.userStatus, r.installScope)
+    const p = projectIcon(r.projectStatus, r.installScope)
     console.log('  ' + r.name.padEnd(nw) + '  ' + chalk.dim(r.version.padEnd(vw)) + '  ' + chalk.dim(r.bundle.padEnd(bw)) + '  ' + u + '       ' + p)
   }
 
@@ -313,7 +342,7 @@ if (subcommand === 'status' || subcommand === 'outdated') {
   console.log('  ' + chalk.bold('TOOLS') + chalk.dim(`  — ${toolRows.length} available`))
   console.log(sep)
   for (const r of toolRows) {
-    console.log('  ' + r.name.padEnd(nw) + '  ' + chalk.dim(r.version.padEnd(vw)) + '  ' + icon(r.status))
+    console.log('  ' + r.name.padEnd(nw) + '  ' + chalk.dim(r.version.padEnd(vw)) + '  ' + userIcon(r.status, r.installScope))
   }
 
   // ── hooks ──
@@ -321,15 +350,17 @@ if (subcommand === 'status' || subcommand === 'outdated') {
     console.log('')
     console.log('  ' + chalk.bold('HOOKS') + chalk.dim(`  — ${hookItems.length} available`))
     console.log(sep)
-    function hIcon(s) {
-      if (s === 'installed') return chalk.green('✓')
-      if (s === 'partial')   return chalk.yellow('~')
+    function hIcon(s, installScope) {
+      if (s === 'installed')            return chalk.green('✓')
+      if (s === 'partial')              return chalk.yellow('~')
+      if (installScope === 'essential') return chalk.yellow('»')
+      if (installScope === 'global')    return chalk.cyan('›')
       return chalk.dim('—')
     }
     for (const h of hookItems) {
       const inst = checkHookInstalled(h.name)
       const ver = resolveHookDisplayVersion(inst, h.version)
-      console.log('  ' + h.name.padEnd(nw) + '  ' + chalk.dim(ver.padEnd(vw)) + '  ' + hIcon(inst.user.status) + '       ' + hIcon(inst.project.status) + '  ' + chalk.dim(h.description))
+      console.log('  ' + h.name.padEnd(nw) + '  ' + chalk.dim(ver.padEnd(vw)) + '  ' + hIcon(inst.user.status, h.installScope) + '       ' + hIcon(inst.project.status, h.installScope) + '  ' + chalk.dim(h.description))
     }
   }
 
@@ -340,6 +371,7 @@ if (subcommand === 'status' || subcommand === 'outdated') {
   const outdatedNote    = outdatedCount ? '  ·  ' + chalk.yellow(outdatedCount + ' outdated') : ''
   console.log('')
   console.log(chalk.dim(`  ${installedSkills} of ${skillRows.length} skills installed  ·  ${installedTools} of ${toolRows.length} tools installed${outdatedNote}`))
+  console.log(chalk.dim(`  ${chalk.green('✓')} installed  ${chalk.red('↑')} update  ${chalk.yellow('»')} essential  ${chalk.cyan('▸')} global/project  — other`))
   console.log('')
   process.exit(0)
 }
@@ -629,6 +661,8 @@ function selectTargetThenScope() {
     '--layout=reverse',
     '--border=rounded',
     '--color=header:italic:dim,prompt:cyan,pointer:cyan,hl:cyan,hl+:cyan:bold',
+    '--preview=t=$(echo {} | awk \'{print $1}\'); if [ "$t" = "all" ]; then echo ""; echo "  安装到所有平台:"; echo ""; for p in claude cursor codex openclaw hermes opencode; do printf "  ~/.%s/skills/\\n" "$p"; done; else p="${HOME}/.${t}/skills/"; echo ""; echo "  安装路径:"; echo ""; printf "  \\033[36m%s\\033[0m\\n" "$p"; echo ""; if [ -d "$p" ]; then echo "  ✓ 目录已存在"; else echo "  · 将自动新建"; fi; fi',
+    '--preview-window=right:45%:wrap',
   ], {
     input: targetInput,
     encoding: 'utf8',
@@ -651,6 +685,8 @@ function selectTargetThenScope() {
       '--layout=reverse',
       '--border=rounded',
       '--color=header:italic:dim,prompt:cyan,pointer:cyan,hl:cyan,hl+:cyan:bold',
+      '--preview=s=$(echo {} | awk \'{print $1}\'); if [ "$s" = "user" ]; then echo ""; echo "  ~/.{target}/skills/"; echo ""; echo "  所有项目共享，适合常用 skill"; echo ""; echo "  ✓ 推荐选项"; else echo ""; echo "  .{target}/skills/"; echo ""; echo "  仅当前项目可见"; echo ""; echo "  适合项目专属 skill"; fi',
+      '--preview-window=right:45%:wrap',
     ], {
       input: 'user     — 所有项目共享  (~/.{target}/skills/)\nproject  — 仅当前项目  (.{target}/skills/)',
       encoding: 'utf8',
@@ -693,34 +729,41 @@ function fzfSelect() {
   const hookItems   = getAllHookItems()
   const previewPath = path.join(__dirname, 'preview.mjs')
 
-  // 构建 fzf 输入：每行 "NAME\tVERSION\tBUNDLE\tKIND\tSRCPATH"
+  // 构建 fzf 输入：每行 "NAME\tVERSION\tBUNDLE\tKIND\tSRCPATH\tINSTALLSCOPE"
   const lines = [
     ...skillItems.map(s => {
       const bundle = s.srcPath.split('/').slice(-2, -1)[0]
-      return `${s.skillName}\t${s.version ?? '—'}\t${bundle}\tskill\t${s.srcPath}`
+      return `${s.skillName}\t${s.version ?? '—'}\t${bundle}\tskill\t${s.srcPath}\t${s.installScope ?? ''}`
     }),
-    ...toolItems.map(t => `${t.toolName}\t${t.version ?? '—'}\tshell-tool\ttool\t${t.srcPath}`),
-    ...hookItems.map(h => `${h.name}\t${h.version ?? '—'}\thook\thook\t${h.srcPath}`),
+    ...toolItems.map(t => `${t.toolName}\t${t.version ?? '—'}\tshell-tool\ttool\t${t.srcPath}\t${t.installScope ?? ''}`),
+    ...hookItems.map(h => `${h.name}\t${h.version ?? '—'}\thook\thook\t${h.srcPath}\t${h.installScope ?? ''}`),
   ]
 
   const nameWidth    = Math.max(...lines.map(l => l.split('\t')[0].length))
   const versionWidth = Math.max(...lines.map(l => l.split('\t')[1].length))
 
-  const G = '\x1b[32m', Y = '\x1b[33m', D = '\x1b[2m', R = '\x1b[0m'
+  const G = '\x1b[32m', Y = '\x1b[33m', C = '\x1b[36m', D = '\x1b[2m', R = '\x1b[0m'
   function colorIcon(status) {
     if (status === 'up-to-date') return G + '✓' + R
     if (status === 'update')     return Y + '↑' + R
     return D + '—' + R
   }
+  function scopeHint(installScope) {
+    if (installScope === 'essential') return Y + '»' + R
+    if (installScope === 'global' || installScope === 'project') return C + '▸' + R
+    return D + '—' + R
+  }
 
   // fzf 展示格式：NAME   VERSION   U:?  P:?  BUNDLE
   const displayLines = lines.map(l => {
-    const [name, ver, bundle, kind, srcPath] = l.split('\t')
-    let uIcon = D + '—' + R, pIcon = D + '—' + R
+    const [name, ver, bundle, kind, srcPath, installScope] = l.split('\t')
+    let uIcon = scopeHint(installScope), pIcon = D + '—' + R
     if (kind === 'skill') {
       const installed = checkInstalled(name, ver)
-      uIcon = colorIcon(scopeSummary(installed.user))
-      pIcon = colorIcon(scopeSummary(installed.project))
+      const uStatus = scopeSummary(installed.user)
+      const pStatus = scopeSummary(installed.project)
+      uIcon = uStatus !== 'none' ? colorIcon(uStatus) : scopeHint(installScope)
+      pIcon = pStatus !== 'none' ? colorIcon(pStatus) : (installScope === 'project' ? C + '▸' + R : D + '—' + R)
     } else if (kind === 'tool') {
       uIcon = colorIcon(checkToolInstalled(name, srcPath).status)
     } else if (kind === 'hook') {
@@ -736,7 +779,7 @@ function fzfSelect() {
   // 把原始数据附在末尾（隐藏列，用于解析和 preview）
   const fzfInput = displayLines.map((d, i) => `${d}\t${lines[i]}`).join('\n')
 
-  const header = `  hskill  ·  U=user P=project  ${G}✓${R}=ok ${Y}↑${R}=update ${D}—${R}=none  ·  tab 多选  ·  enter 确认`
+  const header = `  hskill  ·  U=user P=project  ${G}✓${R}=ok ${Y}↑${R}=update ${Y}»${R}=essential ${C}▸${R}=recommended ${D}—${R}=none  ·  tab 多选  ·  enter 确认`
 
   const result = spawnSync('fzf', [
     '--multi',
@@ -898,17 +941,30 @@ try {
           })
 
         if (anyInstalled) {
+          const actionPreviewFile = `/tmp/hskill-action-preview-${process.pid}.txt`
+          const actionPreviewLines = [
+            '',
+            '  已选中:',
+            '',
+            ...skillItems.map(s => `  skill  ${s.skillName}`),
+            ...toolItems.map(t => `  tool   ${t.toolName}`),
+            ...hookItems.map(h => `  hook   ${h.name}`),
+          ]
+          writeFileSync(actionPreviewFile, actionPreviewLines.join('\n'))
           const actionResult = spawnSync('fzf', [
             '--prompt=  › ',
             '--header=  Action  ·  enter 确认  ·  esc 取消',
             '--layout=reverse',
             '--border=rounded',
             '--color=header:italic:dim,prompt:cyan,pointer:cyan,hl:cyan,hl+:cyan:bold',
+            `--preview=cat ${actionPreviewFile}`,
+            '--preview-window=right:45%:wrap',
           ], {
             input: `install    安装 / 重新安装\nuninstall  卸载并清理文件`,
             encoding: 'utf8',
             stdio: ['pipe', 'pipe', 'inherit'],
           })
+          try { unlinkSync(actionPreviewFile) } catch { /* ignore */ }
           if (!actionResult.stdout.trim()) {
             console.log(chalk.dim('  · Cancelled'))
             break
@@ -964,6 +1020,8 @@ try {
             '--layout=reverse',
             '--border=rounded',
             '--color=header:italic:dim,prompt:cyan,pointer:cyan,hl:cyan,hl+:cyan:bold',
+            '--preview=s=$(echo {} | awk \'{print $1}\'); if [ "$s" = "user" ]; then echo ""; echo "  ~/.claude/hooks/"; echo "  ~/.codex/hooks/"; echo ""; echo "  所有项目共享"; else echo ""; echo "  .claude/hooks/"; echo "  .codex/hooks/"; echo ""; echo "  仅当前项目"; fi',
+            '--preview-window=right:45%:wrap',
           ], {
             input: `user     — ~/.{claude,codex}/hooks/  (所有项目共享)\nproject  — .{claude,codex}/hooks/    (仅当前项目)`,
             encoding: 'utf8',
@@ -983,6 +1041,8 @@ try {
             '--layout=reverse',
             '--border=rounded',
             '--color=header:italic:dim,prompt:cyan,pointer:cyan,hl:cyan,hl+:cyan:bold',
+            '--preview=t=$(echo {} | awk \'{print $1}\'); if [ "$t" = "all" ]; then echo ""; echo "  ~/.claude/hooks/"; echo "  ~/.codex/hooks/"; else echo ""; printf "  ~/.%s/hooks/\\n" "$t"; fi',
+            '--preview-window=right:45%:wrap',
           ], {
             input: `claude   — ~/.claude/hooks/\ncodex    — ~/.codex/hooks/\nall      — claude + codex`,
             encoding: 'utf8',
@@ -1033,6 +1093,8 @@ try {
             '--header=  从哪里卸载  ·  tab 多选  ·  enter 确认  ·  esc 取消',
             '--layout=reverse', '--border=rounded',
             '--color=header:italic:dim,prompt:cyan,pointer:cyan,hl:cyan,hl+:cyan:bold',
+            '--preview=t=$(echo {} | awk \'{print $1}\'); if [ "$t" = "all" ]; then echo ""; echo "  从所有平台卸载:"; echo ""; for p in claude cursor codex openclaw hermes opencode; do printf "  ~/.%s/skills/\\n" "$p"; done; else echo ""; printf "  ~/.%s/skills/\\n" "$t"; fi',
+            '--preview-window=right:45%:wrap',
           ], {
             input: targetChoices2.map(c => c.name).join('\n') + '\nall      — all targets',
             encoding: 'utf8', stdio: ['pipe', 'pipe', 'inherit'],
@@ -1046,6 +1108,8 @@ try {
             '--header=  卸载范围  ·  enter 确认  ·  esc 取消',
             '--layout=reverse', '--border=rounded',
             '--color=header:italic:dim,prompt:cyan,pointer:cyan,hl:cyan,hl+:cyan:bold',
+            '--preview=s=$(echo {} | awk \'{print $1}\'); if [ "$s" = "user" ]; then echo ""; echo "  从 user 级卸载:"; echo "  ~/.{target}/skills/"; else echo ""; echo "  从 project 级卸载:"; echo "  .{target}/skills/"; fi',
+            '--preview-window=right:45%:wrap',
           ], {
             input: 'user     — 所有项目  (~/.{target}/skills/)\nproject  — 仅当前项目  (.{target}/skills/)',
             encoding: 'utf8', stdio: ['pipe', 'pipe', 'inherit'],
@@ -1065,6 +1129,8 @@ try {
             '--header=  Hook scope  ·  enter 确认',
             '--layout=reverse', '--border=rounded',
             '--color=header:italic:dim,prompt:cyan,pointer:cyan,hl:cyan,hl+:cyan:bold',
+            '--preview=s=$(echo {} | awk \'{print $1}\'); if [ "$s" = "user" ]; then echo ""; echo "  从 user 级卸载 hook:"; echo "  ~/.claude/hooks/"; else echo ""; echo "  从 project 级卸载 hook:"; echo "  .claude/hooks/"; fi',
+            '--preview-window=right:45%:wrap',
           ], {
             input: `user     — ~/.claude/hooks/\nproject  — .claude/hooks/`,
             encoding: 'utf8', stdio: ['pipe', 'pipe', 'inherit'],

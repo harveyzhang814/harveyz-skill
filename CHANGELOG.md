@@ -7,6 +7,70 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.17.1] - 2026-06-15
+
+### Fixed
+- `hskill` TUI：未安装的 skill 现在按 `installScope` 显示推荐图标（`»` essential / `▸` global/project），不再统一显示 `—`
+
+## [0.17.0] - 2026-06-15
+
+## [0.16.0] - 2026-06-15
+
+### Added
+- `hub git`：新增 CLI 子命令，与 TUI git 面板功能对等
+  - `hub git status [--project <name>]`：显示当前分支、upstream 同步状态、工作区变更、最近提交
+  - `hub git fetch [--project <name>]`：fetch 所有 remote
+  - `hub git branches [--project <name>]`：列出所有分支及 ahead/behind 状态
+
+### Changed
+- `hub`：版本升至 1.1.0
+- `hub`：安装升级机制改为基于源码文件内容哈希（sha256）检测，不再依赖版本号；npm 更新后下次启动自动重装
+
+## [0.15.0] - 2026-06-15
+
+### Added
+- `dedup-skill`：新增 meta skill，扫描并分析各 skill 间的重复内容，生成去重报告
+- `archive-skill`：新增 meta skill，将废弃 skill 移至 `skills/archived/` 并更新 skills-index.json
+- `article-fetcher`：归档（superseded by `url-extract`）
+
+### Changed
+- **Skill 命名规范**：22 个 skill 目录统一重命名为 verb-noun 格式（如 `skill-analyzer` → `analyze-skill`、`doc-forge` → `forge-doc`、`diagram` → `draw-diagram` 等）
+- `hskill update`：自动执行 skill 目录迁移，将旧名称映射到新 verb-noun 名称
+
+### Fixed
+- `archive-skill`：修复 eval 测试发现的 3 个 bug（v1.1.0）
+- `hub-tui`：修复 GitPanel 无法获得焦点的问题（`can_focus=True`）
+- `hub-tui`：Enter 键在 projects-list 焦点时正确触发打开项目
+- `hub-tui`：新增 ←/→ 键切换列，Tab 保留为辅助导航
+- `installer`：`migrateRenamedSkills` 新增输入校验和一致性日志
+
+## [0.14.2] - 2026-06-15
+
+### Changed
+- `project-release`：description 字段改为英文，符合 skill-publish F3 格式规范
+- `project-release`：移除 `npm-release` skill，以 `.hskill/release-profile.md` 替代，消除重复
+
+## [0.14.1] - 2026-06-14
+
+### Fixed
+- `hub` 安装失败（`source_not_found`）：新增 `hub.sh` 启动脚本，安装器现在能正确找到 hub 入口
+- `hub` tool.json `extraPaths` 路径错误（`core/cli` 不在工具根目录），修正为 `["hub", "pyproject.toml"]`
+- `hub` 卸载后遗留 `~/.hskill/tools/hub/` Python 源码目录，将其加入 `uninstallPaths`
+- hskill 交互流程次级 fzf 页面（action/target/scope）缺少 preview 面板，视觉风格与主列表页不一致
+
+### Added
+- `docs/how-to/use-hub.md`：hub 人用操作指南（安装、TUI、projects/tasks 常用命令）
+- `docs/reference/hub-reference.md`：hub CLI 完整参考（供 agent 调用，含 JSON 输出格式）
+
+## [0.14.0] - 2026-06-14
+
+### Added
+- `hub` tool（`tools` bundle）：个人开发者 OS，整合项目管理、git 状态追踪、任务系统，替代 p-launch + todo-tool
+  - Phase 1：core 库（SQLite DB、projects CRUD、tasks CRUD）+ CLI（`hub project`、`hub task` 子命令，支持 `--json` 输出）
+  - Phase 2：三栏 Textual TUI（ProjectsPanel | GitPanel | TasksPanel），支持键盘导航、git fetch、任务增删改、项目切换联动
+  - 首次启动自动从 todo-tool DB 迁移数据（`migrate.py`）
+  - 62 个测试覆盖 core、CLI、TUI 各层
+
 ## [0.13.0] - 2026-06-12
 
 ### Fixed

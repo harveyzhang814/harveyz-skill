@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hub TUI — Git Panel Design</title>
+<style>
+  /* ── Textual dark theme token approximation ── */
+  :root {
+    --bg:               #1e1e2e;
+    --surface:          #252535;
+    --surface-lighten:  #45475a;
+    --accent:           #89b4fa;
+    --fg:               #cdd6f4;
+    --dim:              #6c7086;
+    --green:            #a6e3a1;
+    --yellow:           #f9e2af;
+    --red:              #f38ba8;
+    --cyan:             #89dceb;
+    --font:             "Cascadia Code", "JetBrains Mono", "Fira Code", "Menlo", monospace;
+    --fs:               13px;
+    --lh:               1.5;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--fg);
+    font-family: var(--font);
+    font-size: var(--fs);
+    line-height: var(--lh);
+    padding: 32px;
+  }
+
+  h1 {
+    color: var(--dim);
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    margin-bottom: 24px;
+  }
+
+  /* ── TUI shell ── */
+  .tui {
+    display: flex;
+    flex-direction: column;
+    background: var(--bg);
+    width: 860px;
+    border: 1px solid var(--surface-lighten);
+    border-radius: 6px;
+    overflow: hidden;
+    margin-bottom: 48px;
+  }
+
+  .tui-main {
+    display: flex;
+    flex: 1;
+    min-height: 320px;
+  }
+
+  /* ── Panel ── */
+  .panel {
+    border: 1px solid var(--surface-lighten);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    position: relative;
+  }
+
+  .panel.focused { border-color: var(--accent); }
+
+  .panel-projects { width: 180px; flex-shrink: 0; }
+  .panel-git      { width: 304px; flex-shrink: 0; padding: 8px 16px; }
+  .panel-tasks    { flex: 1; }
+
+  .panel-title {
+    position: absolute;
+    top: -1px;
+    left: 8px;
+    background: var(--bg);
+    padding: 0 4px;
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    color: var(--dim);
+  }
+
+  .panel.focused .panel-title { color: var(--accent); }
+
+  .panel-body {
+    padding: 12px 8px 8px;
+    flex: 1;
+    overflow: hidden;
+  }
+
+  /* ── List items ── */
+  .list-item {
+    padding: 1px 4px;
+    white-space: nowrap;
+    overflow: hidden;
+    cursor: default;
+    border-radius: 2px;
+  }
+
+  .list-item.highlighted { background: var(--surface); }
+
+  /* ── Branch items ── */
+  .section-header {
+    padding: 2px 4px;
+    color: var(--dim);
+    font-size: 12px;
+    margin-top: 4px;
+  }
+
+  .branch-current  { color: var(--cyan); }
+  .branch-ahead    { color: var(--yellow); }
+  .branch-behind   { color: var(--red); }
+  .branch-synced   { color: var(--green); }
+  .branch-local    { color: var(--dim); }
+  .branch-upstream { color: var(--dim); }
+
+  /* ── Placeholder ── */
+  .placeholder {
+    color: var(--dim);
+    padding: 4px 0;
+  }
+
+  /* ── Loading ── */
+  .loading-bar {
+    display: inline-block;
+    width: 120px;
+    height: 4px;
+    background: var(--surface-lighten);
+    border-radius: 2px;
+    overflow: hidden;
+    margin-top: 8px;
+    position: relative;
+  }
+
+  .loading-fill {
+    position: absolute;
+    width: 40px;
+    height: 100%;
+    background: var(--accent);
+    border-radius: 2px;
+    left: 30%;
+    opacity: 0.7;
+  }
+
+  /* ── Footer ── */
+  .footer {
+    background: var(--surface);
+    height: 22px;
+    display: flex;
+    align-items: center;
+    padding: 0 8px;
+    gap: 16px;
+    font-size: 11px;
+  }
+
+  .footer-key {
+    color: var(--bg);
+    background: var(--accent);
+    padding: 0 4px;
+    border-radius: 2px;
+  }
+
+  .footer-label { color: var(--dim); }
+
+  /* ── State sections ── */
+  .state-section {
+    margin-bottom: 40px;
+  }
+
+  .state-label {
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--dim);
+    margin-bottom: 10px;
+    padding-left: 2px;
+  }
+
+  /* ── dim/muted text ── */
+  .dim { color: var(--dim); }
+</style>
+</head>
+<body>
+
+<h1>Hub TUI · Git Panel · Design Reference</h1>
+
+<!-- ── State: idle ── -->
+<div class="state-section">
+  <div class="state-label">/* ── idle — 未选中项目 ── */</div>
+  <div class="tui">
+    <div class="tui-main">
+      <div class="panel panel-projects">
+        <span class="panel-title">PROJECTS</span>
+        <div class="panel-body">
+          <div class="list-item highlighted">video-learner <span class="dim">3</span></div>
+          <div class="list-item">harveyz-skill</div>
+          <div class="list-item">dotfiles</div>
+        </div>
+      </div>
+      <div class="panel panel-git focused">
+        <span class="panel-title">GIT</span>
+        <div class="panel-body">
+          <div class="placeholder">Select a project to see git status.</div>
+        </div>
+      </div>
+      <div class="panel panel-tasks">
+        <span class="panel-title">TASKS</span>
+        <div class="panel-body"></div>
+      </div>
+    </div>
+    <div class="footer">
+      <span><span class="footer-key">Ctrl+S</span> <span class="footer-label">Scan</span></span>
+      <span><span class="footer-key">←</span> <span class="footer-label">← Col</span></span>
+      <span><span class="footer-key">→</span> <span class="footer-label">→ Col</span></span>
+      <span><span class="footer-key">Ctrl+F</span> <span class="footer-label">Fetch</span></span>
+      <span><span class="footer-key">Enter</span> <span class="footer-label">Open</span></span>
+      <span><span class="footer-key">Ctrl+Q</span> <span class="footer-label">Quit</span></span>
+    </div>
+  </div>
+</div>
+
+<!-- ── State: loading ── -->
+<div class="state-section">
+  <div class="state-label">/* ── loading — 正在读取分支 ── */</div>
+  <div class="tui">
+    <div class="tui-main">
+      <div class="panel panel-projects">
+        <span class="panel-title">PROJECTS</span>
+        <div class="panel-body">
+          <div class="list-item highlighted">harveyz-skill</div>
+          <div class="list-item">video-learner <span class="dim">3</span></div>
+          <div class="list-item">dotfiles</div>
+        </div>
+      </div>
+      <div class="panel panel-git focused">
+        <span class="panel-title">GIT — harveyz-skill</span>
+        <div class="panel-body">
+          <div class="placeholder">Loading…</div>
+          <div class="loading-bar"><div class="loading-fill"></div></div>
+        </div>
+      </div>
+      <div class="panel panel-tasks">
+        <span class="panel-title">TASKS · harveyz-skill</span>
+        <div class="panel-body"></div>
+      </div>
+    </div>
+    <div class="footer">
+      <span><span class="footer-key">Ctrl+S</span> <span class="footer-label">Scan</span></span>
+      <span><span class="footer-key">←</span> <span class="footer-label">← Col</span></span>
+      <span><span class="footer-key">→</span> <span class="footer-label">→ Col</span></span>
+      <span><span class="footer-key">Ctrl+F</span> <span class="footer-label">Fetch</span></span>
+      <span><span class="footer-key">Enter</span> <span class="footer-label">Open</span></span>
+      <span><span class="footer-key">Ctrl+Q</span> <span class="footer-label">Quit</span></span>
+    </div>
+  </div>
+</div>
+
+<!-- ── State: with-branches ── -->
+<div class="state-section">
+  <div class="state-label">/* ── with-branches — 分支列表（当前 + WITH REMOTE + LOCAL ONLY 分组） ── */</div>
+  <div class="tui">
+    <div class="tui-main">
+      <div class="panel panel-projects">
+        <span class="panel-title">PROJECTS</span>
+        <div class="panel-body">
+          <div class="list-item highlighted">harveyz-skill</div>
+          <div class="list-item">video-learner <span class="dim">3</span></div>
+          <div class="list-item">dotfiles</div>
+        </div>
+      </div>
+      <div class="panel panel-git focused">
+        <span class="panel-title">GIT — harveyz-skill</span>
+        <div class="panel-body" style="padding: 12px 0 0;">
+          <div class="section-header"><span class="dim">▸ WITH REMOTE</span></div>
+          <div class="list-item highlighted">
+            <span class="branch-current">▶ </span><span class="branch-ahead">↑2&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>feature/hub-git-branch-list-redesign<span class="branch-upstream dim">&nbsp;&nbsp;origin/feature/hub-git-branch-list-redesign</span>
+          </div>
+          <div class="list-item">
+            &nbsp;&nbsp;<span class="branch-synced">✓&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>staging<span class="branch-upstream dim">&nbsp;&nbsp;origin/staging</span>
+          </div>
+          <div class="list-item">
+            &nbsp;&nbsp;<span class="branch-synced">✓&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>main<span class="branch-upstream dim">&nbsp;&nbsp;origin/main</span>
+          </div>
+          <div class="list-item">
+            &nbsp;&nbsp;<span class="branch-behind">↓3&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>fix/hub-auto-reinstall<span class="branch-upstream dim">&nbsp;&nbsp;origin/fix/hub-auto-reinstall</span>
+          </div>
+          <div class="list-item">
+            &nbsp;&nbsp;<span class="branch-ahead">↑1↓2&nbsp;&nbsp;</span>chore/status-symbol-polish<span class="branch-upstream dim">&nbsp;&nbsp;origin/chore/status-symbol-polish</span>
+          </div>
+          <div class="section-header" style="margin-top: 8px;"><span class="dim">▸ LOCAL ONLY</span></div>
+          <div class="list-item">
+            &nbsp;&nbsp;<span class="branch-local">local&nbsp;&nbsp;</span>chore/hskill-local-paths
+          </div>
+          <div class="list-item">
+            &nbsp;&nbsp;<span class="branch-local">local&nbsp;&nbsp;</span>doc/skill-spec
+          </div>
+        </div>
+      </div>
+      <div class="panel panel-tasks">
+        <span class="panel-title">TASKS · harveyz-skill</span>
+        <div class="panel-body">
+          <div class="list-item">☐ sync-design skill support&nbsp;&nbsp;<span class="dim">P1</span>&nbsp;&nbsp;<span class="dim">2026-06-15</span></div>
+          <div class="list-item">☐ hub TUI branch delete&nbsp;&nbsp;<span class="dim">P2</span>&nbsp;&nbsp;<span class="dim">2026-06-10</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="footer">
+      <span><span class="footer-key">Ctrl+S</span> <span class="footer-label">Scan</span></span>
+      <span><span class="footer-key">←</span> <span class="footer-label">← Col</span></span>
+      <span><span class="footer-key">→</span> <span class="footer-label">→ Col</span></span>
+      <span><span class="footer-key">Ctrl+F</span> <span class="footer-label">Fetch</span></span>
+      <span><span class="footer-key">Enter</span> <span class="footer-label">Open</span></span>
+      <span><span class="footer-key">Ctrl+Q</span> <span class="footer-label">Quit</span></span>
+    </div>
+  </div>
+</div>
+
+<!-- ── State: empty ── -->
+<div class="state-section">
+  <div class="state-label">/* ── empty — 非 git 仓库 ── */</div>
+  <div class="tui">
+    <div class="tui-main">
+      <div class="panel panel-projects">
+        <span class="panel-title">PROJECTS</span>
+        <div class="panel-body">
+          <div class="list-item highlighted">dotfiles</div>
+          <div class="list-item">harveyz-skill</div>
+          <div class="list-item">video-learner <span class="dim">3</span></div>
+        </div>
+      </div>
+      <div class="panel panel-git focused">
+        <span class="panel-title">GIT</span>
+        <div class="panel-body">
+          <div class="placeholder">Not a git repository.</div>
+        </div>
+      </div>
+      <div class="panel panel-tasks">
+        <span class="panel-title">TASKS · dotfiles</span>
+        <div class="panel-body"></div>
+      </div>
+    </div>
+    <div class="footer">
+      <span><span class="footer-key">Ctrl+S</span> <span class="footer-label">Scan</span></span>
+      <span><span class="footer-key">←</span> <span class="footer-label">← Col</span></span>
+      <span><span class="footer-key">→</span> <span class="footer-label">→ Col</span></span>
+      <span><span class="footer-key">Ctrl+F</span> <span class="footer-label">Fetch</span></span>
+      <span><span class="footer-key">Enter</span> <span class="footer-label">Open</span></span>
+      <span><span class="footer-key">Ctrl+Q</span> <span class="footer-label">Quit</span></span>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

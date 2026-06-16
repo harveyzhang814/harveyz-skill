@@ -1,0 +1,44 @@
+{
+  "skill_name": "inspect-skill",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "帮我分析一下 contribute-skill 这个 skill，它有什么问题，有没有什么需要改进的地方？目录在 /Users/harveyzhang96/Projects/harveyz-skill/skills/meta/contribute-skill/",
+      "expected_output": "中文解读报告，以设计哲学为第一个维度，涵盖四维，不含额外评估段落，结尾以收尾问句收口。",
+      "files": ["/Users/harveyzhang96/Projects/harveyz-skill/skills/meta/contribute-skill/SKILL.md"],
+      "assertions": [
+        "报告包含四个维度，且设计哲学（Design Philosophy）是第一个出现的维度标题",
+        "报告不包含评分标签（Excellent / Good / Needs Work / Poor 或数字评分）",
+        "报告不包含额外评估段落（如 '## 问题与改进建议'、'## 发布评估'、'## 改进建议'、'## 总体结论' 等评审性标题）",
+        "报告主体叙述使用中文",
+        "报告结尾包含收尾问句（询问用户是否想深入了解某部分），而不是以改进建议或评审内容结束"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "can you inspect the analyze-skill skill and give me a quality report? path is /Users/harveyzhang96/Projects/harveyz-skill/skills/meta/analyze-skill/SKILL.md",
+      "expected_output": "中文解读报告，以设计哲学为第一个维度，涵盖四维，不含额外评估段落，结尾以收尾问句收口。",
+      "files": ["/Users/harveyzhang96/Projects/harveyz-skill/skills/meta/analyze-skill/SKILL.md"],
+      "assertions": [
+        "报告包含四个维度，且设计哲学（Design Philosophy）是第一个出现的维度标题",
+        "报告不包含评分标签（Excellent / Good / Needs Work / Poor 或数字评分）",
+        "报告不包含额外评估段落（如 '## 问题与改进建议'、'## 发布评估'、'## 改进建议'、'## 总体结论' 等评审性标题）",
+        "报告主体叙述使用中文",
+        "报告结尾包含收尾问句（询问用户是否想深入了解某部分），而不是以改进建议或评审内容结束"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "这个 clean-git skill 可以发布了吗？帮我做个全面的 skill 质量审查。路径：/Users/harveyzhang96/Projects/harveyz-skill/skills/meta/clean-git/SKILL.md",
+      "expected_output": "中文解读报告，以设计哲学为第一个维度，涵盖四维，不含额外评估段落，结尾以收尾问句收口。",
+      "files": ["/Users/harveyzhang96/Projects/harveyz-skill/skills/meta/clean-git/SKILL.md"],
+      "assertions": [
+        "报告包含四个维度，且设计哲学（Design Philosophy）是第一个出现的维度标题",
+        "报告不包含评分标签（Excellent / Good / Needs Work / Poor 或数字评分）",
+        "报告不包含额外评估段落（如 '## 问题与改进建议'、'## 发布评估'、'## 改进建议'、'## 总体结论' 等评审性标题）",
+        "报告主体叙述使用中文",
+        "报告结尾包含收尾问句（询问用户是否想深入了解某部分），而不是以改进建议或评审内容结束"
+      ]
+    }
+  ]
+}

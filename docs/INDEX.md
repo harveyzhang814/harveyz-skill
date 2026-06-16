@@ -19,16 +19,19 @@ methodology: diataxis
 | [how-to/contribute-skill.md](how-to/contribute-skill.md) | 如何将其他项目的 skill 通过 contribute-skill 元技能贡献进 harveyz-skill |
 | [how-to/git-cleanup.md](how-to/git-cleanup.md) | 如何用 git-cleanup skill 梳理本地废弃分支（含配置文件说明） |
 | [how-to/use-hskill-config.md](how-to/use-hskill-config.md) | 如何用 hskill config 设置默认 target 和 scope，避免每次传相同 flag |
+| [how-to/use-hub.md](how-to/use-hub.md) | 如何安装和使用 hub：TUI 启动、项目注册、任务管理常用操作 |
 
 ## reference/ — 参考文档
 
 | 文件 | 用途 |
 |------|------|
+| [reference/skill-spec.md](reference/skill-spec.md) | skill 格式规范（F1–F7）、命名规范与动词词表、skills-index.json 注册规则（R1–R3） |
 | [reference/git-branch-rules.md](reference/git-branch-rules.md) | 分支模型、分支定义、命名规则、违规行为表（v1.0.0） |
 | [reference/agent-cli-guide.md](reference/agent-cli-guide.md) | AI agent / CI 脚本调用 hskill 的完整参考（JSON 输出格式、info 子命令、hooks 子命令、bundle 子命令、uninstall、非 TTY 行为） |
 | [reference/testing-guide.md](reference/testing-guide.md) | hskill 测试文件结构、bats 写法规范、hooks.bats 场景、hook 脚本验收测试模式 |
 | [reference/branch-cleanup-config.md](reference/branch-cleanup-config.md) | `.claude/branch-cleanup.md` 格式规范：Always Delete / Keep glob 规则、LLM 上下文段、内置默认值 |
 | [reference/hskill-cache.md](reference/hskill-cache.md) | hskill 本地缓存命令接口（cache clear/status/set-ttl）、缓存文件字段定义、失效规则 |
+| [reference/hub-reference.md](reference/hub-reference.md) | hub CLI 完整参考：projects/tasks 子命令、所有参数、JSON 输出格式、错误格式 |
 | [reference/todo-format-spec.md](reference/todo-format-spec.md) | TODO.md 文件结构、字段规范、todo_format.yaml 完整定义 |
 | [reference/todo-tool-reference.md](reference/todo-tool-reference.md) | todo-tool 数据模型（SQL）、CLI 接口、API 端点完整参考 |
 
@@ -42,3 +45,4 @@ methodology: diataxis
 | [explanation/hskill-cache-design.md](explanation/hskill-cache-design.md) | hskill 缓存设计原理：为什么引入缓存、为什么 TTL 可配置而非固定、缓存覆盖范围的设计决策 |
 | [explanation/todo-md-source-of-truth.md](explanation/todo-md-source-of-truth.md) | 为什么以 TODO.md 为主数据源、sync 架构、数据流、错误处理与测试策略 |
 | [explanation/todo-tool-architecture.md](explanation/todo-tool-architecture.md) | todo-tool 整体架构、目录结构、前端设计原理与已知风险 |
+| [explanation/how-to-read-papers.md](explanation/how-to-read-papers.md) | Keshav 三遍阅读法原文（中文），论文分析 Skill 方法论的来源 |

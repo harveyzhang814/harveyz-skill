@@ -1,9 +1,9 @@
 import pytest
 from pathlib import Path
 from textual.app import App, ComposeResult
-from textual.widgets import Static
+from textual.widgets import ListView, Static
 
-from hub.tui.panels.git import GitPanel
+from hub.tui.panels.git import GitPanel, BranchItem, SectionHeader
 
 
 def _make_app() -> App:
@@ -15,16 +15,20 @@ def _make_app() -> App:
 
 async def test_git_panel_mounts():
     async with _make_app().run_test() as pilot:
-        panel = pilot.app.query_one(GitPanel)
-        assert panel is not None
+        assert pilot.app.query_one(GitPanel) is not None
 
 
 async def test_git_panel_shows_placeholder_before_project():
     async with _make_app().run_test() as pilot:
-        panel = pilot.app.query_one(GitPanel)
-        content = panel.query_one("#git-content", Static)
-        text = str(content.content)
-        assert "Select a project" in text
+        placeholder = pilot.app.query_one("#git-placeholder", Static)
+        assert placeholder.display
+        assert "Select a project" in str(placeholder.content)
+
+
+async def test_git_panel_listview_hidden_before_project():
+    async with _make_app().run_test() as pilot:
+        lv = pilot.app.query_one("#branch-list", ListView)
+        assert not lv.display
 
 
 async def test_git_panel_refresh_nonexistent_path():
@@ -32,25 +36,355 @@ async def test_git_panel_refresh_nonexistent_path():
         panel = pilot.app.query_one(GitPanel)
         panel.refresh_project(Path("/nonexistent/path/that/does/not/exist"))
         await pilot.pause()
-        content = str(panel.query_one("#git-content", Static).content)
-        assert "No valid path" in content
+        placeholder = pilot.app.query_one("#git-placeholder", Static)
+        assert placeholder.display
+        assert "No valid path" in str(placeholder.content)
 
 
-async def test_git_panel_refresh_valid_path():
-    """_render_git with a real git repo updates border_title and content."""
-    from hub.tui.git import get_branches, get_recent_commits, get_working_tree
+async def test_branch_item_stores_data():
+    b = {
+        "name": "main", "upstream": "origin/main",
+        "ahead": 0, "behind": 0,
+        "is_current": True, "is_local_only": False,
+    }
+    item = BranchItem(b)
+    assert item.branch_data == b
 
-    # Use the harveyz-skill repo itself as a real git repo
+
+async def test_section_header_stores_title():
+    h = SectionHeader("WITH REMOTE")
+    assert h._title == "WITH REMOTE"
+
+
+async def test_git_panel_render_branches_shows_listview():
     repo_path = Path("/Users/harveyzhang96/Projects/harveyz-skill")
+    branches = [
+        {"name": "main", "upstream": "origin/main", "ahead": 0, "behind": 0, "is_current": True, "is_local_only": False},
+        {"name": "wip", "upstream": "", "ahead": 0, "behind": 0, "is_current": False, "is_local_only": True},
+    ]
+    async with _make_app().run_test() as pilot:
+        panel = pilot.app.query_one(GitPanel)
+        await panel._render_branches(repo_path, branches)
+        await pilot.pause()
+        lv = pilot.app.query_one("#branch-list", ListView)
+        assert lv.display
+        assert not pilot.app.query_one("#git-placeholder", Static).display
+
+
+async def test_git_panel_render_branches_border_title():
+    repo_path = Path("/Users/harveyzhang96/Projects/harveyz-skill")
+    branches = [
+        {"name": "main", "upstream": "origin/main", "ahead": 0, "behind": 0, "is_current": True, "is_local_only": False},
+    ]
+    async with _make_app().run_test() as pilot:
+        panel = pilot.app.query_one(GitPanel)
+        await panel._render_branches(repo_path, branches)
+        await pilot.pause()
+        assert "harveyz-skill" in panel.border_title
+
+
+async def test_git_panel_both_sections_present():
+    repo_path = Path("/Users/harveyzhang96/Projects/harveyz-skill")
+    branches = [
+        {"name": "main", "upstream": "origin/main", "ahead": 0, "behind": 0, "is_current": True, "is_local_only": False},
+        {"name": "wip", "upstream": "", "ahead": 0, "behind": 0, "is_current": False, "is_local_only": True},
+    ]
+    async with _make_app().run_test() as pilot:
+        panel = pilot.app.query_one(GitPanel)
+        await panel._render_branches(repo_path, branches)
+        await pilot.pause()
+        lv = pilot.app.query_one("#branch-list", ListView)
+        headers = list(lv.query(SectionHeader))
+        assert len(headers) == 2
+        branch_items = list(lv.query(BranchItem))
+        assert len(branch_items) == 2
+
+
+async def test_git_panel_omits_local_section_when_empty():
+    repo_path = Path("/Users/harveyzhang96/Projects/harveyz-skill")
+    branches = [
+        {"name": "main", "upstream": "origin/main", "ahead": 0, "behind": 0, "is_current": True, "is_local_only": False},
+    ]
+    async with _make_app().run_test() as pilot:
+        panel = pilot.app.query_one(GitPanel)
+        await panel._render_branches(repo_path, branches)
+        await pilot.pause()
+        lv = pilot.app.query_one("#branch-list", ListView)
+        headers = list(lv.query(SectionHeader))
+        assert len(headers) == 1
+
+
+async def test_git_panel_omits_remote_section_when_empty():
+    repo_path = Path("/Users/harveyzhang96/Projects/harveyz-skill")
+    branches = [
+        {"name": "wip", "upstream": "", "ahead": 0, "behind": 0, "is_current": False, "is_local_only": True},
+    ]
+    async with _make_app().run_test() as pilot:
+        panel = pilot.app.query_one(GitPanel)
+        await panel._render_branches(repo_path, branches)
+        await pilot.pause()
+        lv = pilot.app.query_one("#branch-list", ListView)
+        headers = list(lv.query(SectionHeader))
+        assert len(headers) == 1
+
+
+# --- check_action and branch selection ---
+
+def _branch(name="main", upstream="origin/main", ahead=0, behind=0,
+            is_current=True, is_local_only=False):
+    return {"name": name, "upstream": upstream, "ahead": ahead, "behind": behind,
+            "is_current": is_current, "is_local_only": is_local_only}
+
+
+async def test_selected_branch_initially_none():
+    async with _make_app().run_test() as pilot:
+        panel = pilot.app.query_one(GitPanel)
+        assert panel._selected_branch_data() is None
+
+
+async def test_check_action_pull_available_when_behind_only():
+    async with _make_app().run_test() as pilot:
+        panel = pilot.app.query_one(GitPanel)
+        panel._selected_branch = _branch(behind=2, ahead=0)
+        assert panel.check_action("pull", ()) is True
+
+
+async def test_check_action_pull_not_available_when_ahead_only():
+    async with _make_app().run_test() as pilot:
+        panel = pilot.app.query_one(GitPanel)
+        panel._selected_branch = _branch(ahead=1, behind=0)
+        assert panel.check_action("pull", ()) is False
+
+
+async def test_check_action_pull_not_available_when_diverged():
+    async with _make_app().run_test() as pilot:
+        panel = pilot.app.query_one(GitPanel)
+        panel._selected_branch = _branch(ahead=1, behind=1)
+        assert panel.check_action("pull", ()) is False
+
+
+async def test_check_action_pull_not_available_when_local_only():
+    async with _make_app().run_test() as pilot:
+        panel = pilot.app.query_one(GitPanel)
+        panel._selected_branch = _branch(upstream="", is_local_only=True)
+        assert panel.check_action("pull", ()) is False
+
+
+async def test_check_action_pull_not_available_when_synced():
+    async with _make_app().run_test() as pilot:
+        panel = pilot.app.query_one(GitPanel)
+        panel._selected_branch = _branch(ahead=0, behind=0)
+        assert panel.check_action("pull", ()) is False
+
+
+async def test_check_action_push_available_when_ahead_only():
+    async with _make_app().run_test() as pilot:
+        panel = pilot.app.query_one(GitPanel)
+        panel._selected_branch = _branch(ahead=1, behind=0)
+        assert panel.check_action("push", ()) is True
+
+
+async def test_check_action_push_not_available_when_behind_only():
+    async with _make_app().run_test() as pilot:
+        panel = pilot.app.query_one(GitPanel)
+        panel._selected_branch = _branch(ahead=0, behind=1)
+        assert panel.check_action("push", ()) is False
+
+
+async def test_check_action_push_not_available_when_diverged():
+    async with _make_app().run_test() as pilot:
+        panel = pilot.app.query_one(GitPanel)
+        panel._selected_branch = _branch(ahead=1, behind=1)
+        assert panel.check_action("push", ()) is False
+
+
+async def test_check_action_push_not_available_when_local_only():
+    async with _make_app().run_test() as pilot:
+        panel = pilot.app.query_one(GitPanel)
+        panel._selected_branch = _branch(upstream="", is_local_only=True)
+        assert panel.check_action("push", ()) is False
+
+
+async def test_check_action_push_not_available_when_synced():
+    async with _make_app().run_test() as pilot:
+        panel = pilot.app.query_one(GitPanel)
+        panel._selected_branch = _branch(ahead=0, behind=0)
+        assert panel.check_action("push", ()) is False
+
+
+async def test_check_action_false_when_no_branch_selected():
+    async with _make_app().run_test() as pilot:
+        panel = pilot.app.query_one(GitPanel)
+        assert panel.check_action("pull", ()) is False
+        assert panel.check_action("push", ()) is False
+
+
+async def test_check_action_none_for_unrelated_action():
+    async with _make_app().run_test() as pilot:
+        panel = pilot.app.query_one(GitPanel)
+        assert panel.check_action("fetch", ()) is None
+
+
+# --- UI: footer binding visibility ---
+
+def test_git_panel_sync_binding_has_show_true():
+    """ctrl+y on GitPanel must be show=True so it appears in the footer when applicable."""
+    from textual.binding import Binding
+    sync = next(
+        (b for b in GitPanel.BINDINGS if isinstance(b, Binding) and b.key == "ctrl+y"), None
+    )
+    assert sync is not None, "GitPanel missing ctrl+y binding"
+    assert sync.show is True
+
+
+def test_git_panel_drops_old_pull_push_bindings():
+    """ctrl+p / ctrl+u were merged into ctrl+y Sync."""
+    from textual.binding import Binding
+    keys = {b.key for b in GitPanel.BINDINGS if isinstance(b, Binding)}
+    assert "ctrl+p" not in keys
+    assert "ctrl+u" not in keys
+
+
+async def test_check_action_sync_pull_state():
+    async with _make_app().run_test() as pilot:
+        panel = pilot.app.query_one(GitPanel)
+        panel._selected_branch = _branch(behind=2, ahead=0)
+        assert panel.check_action("sync", ()) is True
+
+
+async def test_check_action_sync_push_state():
+    async with _make_app().run_test() as pilot:
+        panel = pilot.app.query_one(GitPanel)
+        panel._selected_branch = _branch(ahead=2, behind=0)
+        assert panel.check_action("sync", ()) is True
+
+
+async def test_check_action_sync_always_true():
+    """Sync binding is always shown so pressing Ctrl+Y always gives feedback,
+    even when the branch state makes the action a no-op."""
+    async with _make_app().run_test() as pilot:
+        panel = pilot.app.query_one(GitPanel)
+        panel._selected_branch = _branch(ahead=1, behind=1)
+        assert panel.check_action("sync", ()) is True
+        panel._selected_branch = _branch(ahead=0, behind=0)
+        assert panel.check_action("sync", ()) is True
+        panel._selected_branch = _branch(upstream="", is_local_only=True)
+        assert panel.check_action("sync", ()) is True
+        panel._selected_branch = None
+        assert panel.check_action("sync", ()) is True
+
+
+async def test_action_sync_dispatches_pull(monkeypatch):
+    calls = []
+    monkeypatch.setattr("hub.tui.panels.git.pull_branch",
+                        lambda p, b: calls.append(("pull", p, b)) or "✓ pulled")
+    monkeypatch.setattr("hub.tui.panels.git.push_branch",
+                        lambda p, b: calls.append(("push", p, b)) or "✓ pushed")
+    repo_path = Path("/Users/harveyzhang96/Projects/harveyz-skill")
+    async with _make_app().run_test() as pilot:
+        panel = pilot.app.query_one(GitPanel)
+        panel._path = repo_path
+        panel._selected_branch = _branch(name="main", behind=2, ahead=0)
+        panel.action_sync()
+        await pilot.pause(delay=0.5)
+        assert calls == [("pull", repo_path, "main")]
+
+
+async def test_action_sync_dispatches_push(monkeypatch):
+    calls = []
+    monkeypatch.setattr("hub.tui.panels.git.pull_branch",
+                        lambda p, b: calls.append(("pull", p, b)) or "✓ pulled")
+    monkeypatch.setattr("hub.tui.panels.git.push_branch",
+                        lambda p, b: calls.append(("push", p, b)) or "✓ pushed")
+    repo_path = Path("/Users/harveyzhang96/Projects/harveyz-skill")
+    async with _make_app().run_test() as pilot:
+        panel = pilot.app.query_one(GitPanel)
+        panel._path = repo_path
+        panel._selected_branch = _branch(name="main", ahead=3, behind=0)
+        panel.action_sync()
+        await pilot.pause(delay=0.5)
+        assert calls == [("push", repo_path, "main")]
+
+
+async def test_action_sync_does_nothing_when_diverged(monkeypatch):
+    calls = []
+    monkeypatch.setattr("hub.tui.panels.git.pull_branch",
+                        lambda p, b: calls.append("pull"))
+    monkeypatch.setattr("hub.tui.panels.git.push_branch",
+                        lambda p, b: calls.append("push"))
+    async with _make_app().run_test() as pilot:
+        panel = pilot.app.query_one(GitPanel)
+        panel._path = Path("/Users/harveyzhang96/Projects/harveyz-skill")
+        panel._selected_branch = _branch(ahead=1, behind=1)
+        panel.action_sync()
+        await pilot.pause(delay=0.3)
+        assert calls == []
+
+
+# --- action_pull / action_push ---
+
+async def test_action_pull_does_nothing_when_no_branch():
+    async with _make_app().run_test() as pilot:
+        panel = pilot.app.query_one(GitPanel)
+        # no selected branch and no path → should not raise
+        panel.action_pull()
+        await pilot.pause()
+
+
+async def test_action_push_does_nothing_when_no_branch():
+    async with _make_app().run_test() as pilot:
+        panel = pilot.app.query_one(GitPanel)
+        panel.action_push()
+        await pilot.pause()
+
+
+async def test_action_pull_calls_pull_branch(monkeypatch):
+    calls = []
+
+    def fake_pull(path, branch):
+        calls.append((path, branch))
+        return "✓ pulled main"
+
+    monkeypatch.setattr("hub.tui.panels.git.pull_branch", fake_pull)
+
+    repo_path = Path("/Users/harveyzhang96/Projects/harveyz-skill")
+
+    def _branch(name="main", upstream="origin/main", ahead=0, behind=0,
+                is_current=True, is_local_only=False):
+        return {"name": name, "upstream": upstream, "ahead": ahead, "behind": behind,
+                "is_current": is_current, "is_local_only": is_local_only}
 
     async with _make_app().run_test() as pilot:
         panel = pilot.app.query_one(GitPanel)
-        # Call _render_git directly (the render step after the background worker)
-        branches = get_branches(repo_path)
-        current = next((b for b in branches if b["is_current"]), None)
-        wt = get_working_tree(repo_path)
-        commits = get_recent_commits(repo_path, n=5)
-        panel._render_git(repo_path, current, wt, commits)
-        await pilot.pause()
-        border = panel.border_title
-        assert "harveyz-skill" in border
+        panel._path = repo_path
+        panel._selected_branch = _branch(name="main", behind=1, ahead=0)
+        panel.action_pull()
+        await pilot.pause(delay=0.5)
+        assert len(calls) == 1
+        assert calls[0] == (repo_path, "main")
+
+
+async def test_action_push_calls_push_branch(monkeypatch):
+    calls = []
+
+    def fake_push(path, branch):
+        calls.append((path, branch))
+        return "✓ pushed main"
+
+    monkeypatch.setattr("hub.tui.panels.git.push_branch", fake_push)
+
+    repo_path = Path("/Users/harveyzhang96/Projects/harveyz-skill")
+
+    def _branch(name="main", upstream="origin/main", ahead=0, behind=0,
+                is_current=True, is_local_only=False):
+        return {"name": name, "upstream": upstream, "ahead": ahead, "behind": behind,
+                "is_current": is_current, "is_local_only": is_local_only}
+
+    async with _make_app().run_test() as pilot:
+        panel = pilot.app.query_one(GitPanel)
+        panel._path = repo_path
+        panel._selected_branch = _branch(name="main", ahead=1, behind=0)
+        panel.action_push()
+        await pilot.pause(delay=0.5)
+        assert len(calls) == 1
+        assert calls[0] == (repo_path, "main")
