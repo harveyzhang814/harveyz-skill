@@ -201,7 +201,8 @@
       "bundle": "experiment",
       "contentHash": "91391f7b702e0797",
       "contentVersion": "0.3.0"
-    }
+    },
+    { "path": "experiment/read-paper", "bundle": "experiment" }
   ],
   "hooks": [
     {
