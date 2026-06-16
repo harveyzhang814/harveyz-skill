@@ -49,8 +49,13 @@ def fetch_page(url, cookies=None):
             ctx.add_cookies(cookies)
         page = ctx.new_page()
         try:
-            resp = page.goto(url, timeout=30000, wait_until='domcontentloaded')
+            resp = page.goto(url, timeout=30000, wait_until='load')
             status = resp.status if resp else 0
+            # SPA 页面需要等 JS 渲染完；networkidle 超时就退回 2s 静默等待
+            try:
+                page.wait_for_load_state('networkidle', timeout=8000)
+            except Exception:
+                page.wait_for_timeout(2000)
             title  = page.title()
             body   = page.evaluate(
                 "() => document.body"
