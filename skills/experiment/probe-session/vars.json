@@ -1,0 +1,8 @@
+[
+  {
+    "name": "CHROME_PROFILE",
+    "description": "Chrome 用户配置目录（含 Cookies 文件）",
+    "type": "chrome_profile_select",
+    "default": "{{HOME}}/Library/Application Support/Google/Chrome/Default"
+  }
+]

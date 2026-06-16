@@ -45,3 +45,6 @@ methodology: diataxis
 | [explanation/hskill-cache-design.md](explanation/hskill-cache-design.md) | hskill 缓存设计原理：为什么引入缓存、为什么 TTL 可配置而非固定、缓存覆盖范围的设计决策 |
 | [explanation/todo-md-source-of-truth.md](explanation/todo-md-source-of-truth.md) | 为什么以 TODO.md 为主数据源、sync 架构、数据流、错误处理与测试策略 |
 | [explanation/todo-tool-architecture.md](explanation/todo-tool-architecture.md) | todo-tool 整体架构、目录结构、前端设计原理与已知风险 |
+| [explanation/how-to-read-papers.md](explanation/how-to-read-papers.md) | Keshav 三遍阅读法原文（中文），论文分析 Skill 方法论的来源 |
+| [explanation/chrome-profile-cookie-injection.md](explanation/chrome-profile-cookie-injection.md) | 通用机制：从 Chrome Profile 提取加密 cookie、pycookiecheat 解密、注入 Playwright context，含复用模板 |
+| [explanation/xcom-playwright-auth.md](explanation/xcom-playwright-auth.md) | X.com 应用：auth cookie 识别、Profile 扫描、wait_for_selector 隐式鉴权验证、双路径选择 |
