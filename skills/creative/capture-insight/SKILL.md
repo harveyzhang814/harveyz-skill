@@ -1,8 +1,8 @@
 ---
 name: capture-insight
-version: "1.1.0"
+version: "2.0.0"
 user_invocable: true
-description: "Capture and record a fleeting insight or observation. Triggers immediately when the user expresses an observation, judgment, or idea — phrases like 'I noticed', 'just an observation', 'record this', 'insight', 'I have a judgment', or tossing out an opinionated thought. Distinct from 'I have an idea to execute' (that's a task). Clarifies the core with 2-3 quick Q&As, then saves to the insights/ folder. Trigger early — insights are fragile."
+description: "Capture and record a fleeting insight or observation. Triggers immediately when the user expresses an observation, judgment, or idea — phrases like 'I noticed', 'just an observation', 'record this', 'insight', 'I have a judgment', or tossing out an opinionated thought. Distinct from 'I have an idea to execute' (that's a task). Clarifies the core with 2-3 quick Q&As, then saves to the Writing Agent project's insights/ folder. Trigger early — insights are fragile."
 ---
 
 # Capture Insight
@@ -35,6 +35,33 @@ description: "Capture and record a fleeting insight or observation. Triggers imm
 
 ## 流程
 
+### 第〇步：确定写入项目路径
+
+在开始澄清前，先读取配置：
+
+```
+~/.hskill/capture-insight/config.json
+```
+
+**配置格式：**
+```json
+{ "writing_agent_path": "/path/to/writing-agent" }
+```
+
+**若配置文件不存在：**
+
+> "没找到 Writing Agent 项目配置。请确认项目路径（默认：`/Users/harveyzhang96/Projects/writing-agent`）？"
+
+用户确认后，创建目录并写入配置：
+```bash
+mkdir -p ~/.hskill/capture-insight
+echo '{"writing_agent_path": "/Users/harveyzhang96/Projects/writing-agent"}' > ~/.hskill/capture-insight/config.json
+```
+
+配置确认后，将 `writing_agent_path` 记为 `{project_path}`，insight 写入目标为 `{project_path}/insights/`。
+
+---
+
 ### 第一步：捕捉原始 insight
 
 用户说出 insight 后，**先用一句话复述你理解的核心**，让用户确认或纠正方向。这一步不算"问问题"，是对齐认知用的。
@@ -57,7 +84,7 @@ description: "Capture and record a fleeting insight or observation. Triggers imm
 澄清完成后：
 
 1. 给出一段 **insight 摘要**（3-5 句话），让用户确认是否准确捕捉到了核心
-2. 用户确认后，生成文件名并保存到 `insights/` 文件夹
+2. 用户确认后，生成文件名，按以下步骤写入 `{project_path}/insights/`
 
 ---
 
@@ -95,18 +122,73 @@ description: "Capture and record a fleeting insight or observation. Triggers imm
 
 ---
 
+## 写入 & Git 操作
+
+确认写入 `{project_path}/insights/YYYY-MM-DD-<slug>.md` 后：
+
+### 切换到 chore/insight 分支
+
+```bash
+cd {project_path}
+
+# 1. 记录当前分支
+ORIGINAL_BRANCH=$(git rev-parse --abbrev-ref HEAD)
+
+# 2. 确定基准分支
+if git show-ref --verify --quiet refs/heads/staging; then
+  BASE_BRANCH=staging
+else
+  BASE_BRANCH=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null \
+                | sed 's@^refs/remotes/origin/@@' || echo "main")
+fi
+
+# 3. 切换到 chore/insight（不存在则从 BASE_BRANCH 创建）
+if git show-ref --verify --quiet refs/heads/chore/insight; then
+  git checkout chore/insight
+else
+  git checkout -b chore/insight "$BASE_BRANCH"
+fi
+```
+
+**非 git 仓库**：若 `{project_path}` 不在 git 仓库中，跳过 git 步骤，直接写入文件。
+
+### 写入文件
+
+将 insight 内容写入 `{project_path}/insights/YYYY-MM-DD-<slug>.md`。
+
+### 提交、合并、切回
+
+```bash
+cd {project_path}
+
+# 1. 在 chore/insight 上提交
+git add insights/YYYY-MM-DD-<slug>.md
+git commit -m "insight: add YYYY-MM-DD-<slug>"
+
+# 2. 合并到基准分支
+git checkout "$BASE_BRANCH"
+git merge --no-ff chore/insight -m "Merge chore/insight: YYYY-MM-DD-<slug>"
+
+# 3. 切回原分支
+git checkout "$ORIGINAL_BRANCH"
+```
+
+---
+
 ## 注意事项
 
 - **不要代替用户形成判断**。如果用户说"我觉得 XX 可能是个趋势"，摘要里写"你观察到 XX 可能是个趋势"，而不是"XX 是个重要趋势"。
 - **保留用户的语气和颗粒度**。用户用的是模糊语言（"感觉"、"好像"、"也许"），保存时也保留这种不确定性，不要帮他们"升级"成确定性判断。
 - **简洁优先**。insight 文件不是分析报告，核心价值是"快速找回当时的思路"，不是写详尽。
+- **无论从哪个项目触发，始终写入 Writing Agent 项目**。`{project_path}` 来自配置，不受当前工作目录影响。
 
 ---
 
 ## 保存后告诉用户
 
 ```
-✓ 已保存到 insights/YYYY-MM-DD-<slug>.md
+✓ 已保存到 {project_path}/insights/YYYY-MM-DD-<slug>.md
+  提交到 chore/insight，合并到 {BASE_BRANCH}，当前回到 {ORIGINAL_BRANCH}。
 
 [如果发现这个 insight 与现有文章方向相关，可以顺带一提，但不要主动推销"你可以写篇文章"]
 ```
