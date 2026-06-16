@@ -45,7 +45,7 @@ UA = (
 LAUNCH_ARGS = ['--disable-blink-features=AutomationControlled']
 
 # strategies.json 与 skill 同目录（scripts/ 的上一级）
-STRATEGIES_PATH = Path(__file__).parent.parent / 'strategies.json'
+STRATEGIES_PATH = Path(__file__).parent.parent / 'data' / 'strategies.json'
 
 # 按顺序尝试的策略列表（未知站点时使用）
 PROBE_ORDER = [
