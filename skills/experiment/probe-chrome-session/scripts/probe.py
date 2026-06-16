@@ -60,9 +60,10 @@ def fetch_page(url, cookies=None):
                 print(f"  [注意] 批量注入失败，逐条注入：{ok}/{len(cookies)} 条成功", flush=True)
         page = ctx.new_page()
         try:
-            resp = page.goto(url, timeout=30000, wait_until='load')
+            # domcontentloaded 比 load 快，避免 X.com 等持续加载资源的 SPA 超时
+            resp = page.goto(url, timeout=30000, wait_until='domcontentloaded')
             status = resp.status if resp else 0
-            # SPA 页面需要等 JS 渲染完；networkidle 超时就退回 2s 静默等待
+            # 再等 networkidle 让 JS 渲染完；超时则退回 2s 静默等待
             try:
                 page.wait_for_load_state('networkidle', timeout=8000)
             except Exception:
