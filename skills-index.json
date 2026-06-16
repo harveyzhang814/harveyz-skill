@@ -197,10 +197,10 @@
       "contentVersion": "1.1.0"
     },
     {
-      "path": "experiment/probe-chrome-session",
+      "path": "experiment/probe-session",
       "bundle": "experiment",
-      "contentHash": "76a34c4fea0127d5",
-      "contentVersion": "0.2.0"
+      "contentHash": "91391f7b702e0797",
+      "contentVersion": "0.3.0"
     }
   ],
   "hooks": [

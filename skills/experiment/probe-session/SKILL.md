@@ -1,7 +1,7 @@
 ---
-name: probe-chrome-session
-version: "0.2.0"
-description: "验证 Chrome Profile cookie 注入机制是否生效。对同一 URL 跑两次 Playwright：匿名访问 vs 注入 Chrome 登录态，对比 title 和 body 判断注入是否有效。触发场景：用户想测试 Chrome cookie 注入、验证某网站能否用 Chrome 登录态访问、调试 extract-url 的登录态问题。"
+name: probe-session
+version: "0.3.0"
+description: "Validate whether Chrome Profile cookie injection works for a target URL. Runs Playwright twice — anonymous vs injected Chrome session — compares title and body to determine if injection succeeded. Triggers: test Chrome cookie injection, verify login state for a URL, debug extract-url authentication issues."
 user_invocable: true
 ---
 
