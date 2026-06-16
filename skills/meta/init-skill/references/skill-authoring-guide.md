@@ -66,6 +66,45 @@ version: "1.0.0"       # semver，新 skill 从 1.0.0 开始
 - `description` 字段：**必须为英文**，不含中文字符
 - 正文内容：**必须含至少一个中文字符**
 
+### 状态管理
+
+**`.hskill/<skill-name>/` 配置缓存**
+
+跨会话需要持久化的配置/状态，统一存放在项目本地 `.hskill/<skill-name>/` 目录下。Step 1 优先读此目录；不存在则用默认值或询问用户后写入。
+
+参考实现：
+```
+.hskill/clean-git/branch-cleanup.md
+.hskill/init-workflow/workflow-config.yml
+.hskill/release-project/release-profile.md
+```
+
+不要把状态散落在 `~/` 任意位置或临时文件中，统一目录便于审计和清理。
+
+**批量操作模式（仅适用于幂等批量 skill）**
+
+若 skill 是"批量更新 / 同步 / 校验"类（典型如 init-workflow、sync-design、publish-skill），应满足两点：
+
+1. **Lock / snapshot 文件做变更检测**
+   维护 `.lock` 或 manifest 快照记录"上次运行的状态"，实现 delta 操作而非整体重写：
+   ```
+   init-workflow → .githooks/.workflow-config.lock.yml
+   sync-design   → manifest.json 含 lastSyncCommit
+   publish-skill → skills-index.json 中的 contentHash
+   ```
+
+2. **delta 报告：UPDATED / NEW / UNCHANGED**
+   批量操作完成后，每个条目都标注状态，让用户能跳过未变项：
+   ```
+   | 文件 | 状态 |
+   |------|------|
+   | .githooks/pre-commit | UPDATED |
+   | .githooks/commit-msg | UNCHANGED |
+   | .githooks/pre-push   | NEW |
+   ```
+
+非批量 skill 不必引入此模式。
+
 ---
 
 ## 隐性模式（从现有优质 skill 提炼）
@@ -104,20 +143,95 @@ grep -r "^description:" skills/*/*/SKILL.md
   - <误用场景>（应使用 <替代 skill>）
   ```
 
+### 边界情况表格
+
+复杂多分支步骤的末尾，用表格列出所有边界条件和处理方式（路径已存在、配置缺失、检测到多个候选等）。让 skill 自带边界检查清单，一眼看全所有分支：
+
+```
+| 情况 | 处理 |
+|------|------|
+| 目标路径已存在同名 skill | 询问覆盖 / 重命名 / 中止 |
+| 源 SKILL.md 格式损坏     | 停止，报告问题 |
+| 脚本执行失败              | 报告错误，不 commit，保留文件 |
+```
+
+无表格的 skill 容易在对话中漏处理边界情况。
+
 ### references/ 子目录
 
-**使用时机：**
+**基础使用时机：**
 - Skill 需要携带查找表、模板、禁忌清单
 - 参考材料超过 20 行，内联会影响 SKILL.md 可读性
 
 **不使用时机：**
 - 小规模内容（< 20 行）直接内联在 SKILL.md
 
+**进阶用法 — 平台/技术栈特定文档：**
+
+让 SKILL.md 顶层逻辑保持技术中立，平台/格式/技术栈特定内容放进 `references/` 下，运行时按检测结果动态读取。扩展通过加文件而非改 SKILL.md。
+
+参考实现：
+```
+setup-debug  → references/tech-stacks/<stack>.md
+extract-url  → platforms/SKILL.<platform>.md
+sync-design  → references/stack-<name>.md
+```
+
 ### Step 粒度
 
 - 每步对应一个可验证的结果
 - 步骤名用"动词 + 名词"：`Step 1 — 定位设计文档`
 - 有用户交互（等待确认）的步骤，明确写"等用户确认后才进入 Step N+1"
+
+### 交互设计：批量收集，统一决策
+
+出现冲突或多选项状态时，先收集**所有**冲突再分组展示，让用户一次性逐条决策；不要边发现边问。
+
+反模式：
+```
+（边扫描边问）
+找到 main 分支待删除，是否删除？(y/n)
+找到 feature/abc 已合并，是否删除？(y/n)
+...
+```
+
+推荐模式：
+```
+（一次性汇总）
+━━ 组 A：明显可删（已合并 + 远端无引用）━━
+  - feature/abc
+  - fix/xyz
+━━ 组 B：可能可删（远端已删）━━
+  - hotfix/123
+━━ 组 C：保留 ━━
+  - feature/wip
+请逐条标注 [删 / 留]：
+```
+
+参考：init-workflow 冲突汇总、clean-git 分支分组、sync-design ⑤-A 分支处理。
+
+### 输出格式：Emoji 与状态标记规范
+
+确认提示和报告统一使用以下视觉符号：
+
+| 符号 | 含义 |
+|------|------|
+| `✓` / `✅` | 通过 / 完成 |
+| `⚠️` | 注意 / 需关注 |
+| `❌` | 失败 / 拒绝 |
+| `━━━` | 分组分隔（如 `━━ 组 A ━━`） |
+
+状态标签统一用大写英文：`UPDATED` / `UNCHANGED` / `NEW` / `OK` / `FAIL`。
+
+示例：
+```
+✓ contentHash 已更新（v1.0.0）
+⚠️ 检测到未提交修改
+❌ generate-npmignore.js 执行失败
+━━ 组 A：明显可删 ━━
+```
+
+避免使用花哨或语义不明的符号（如 ❀ ✨ 🎉）。
 
 ### 触发条件与其他 skill 的区分
 
@@ -127,6 +241,39 @@ grep -r "^description:" skills/*/*/SKILL.md
 - 从其他项目导入已有 skill → contribute-skill
 - 校验格式或注册 index → publish-skill
 ```
+
+### Skill 间协作："下一步"交棒提示
+
+Skill 完成后不直接结束，而是给出下一步建议：调用下一个相关 skill、或问用户是否深入某部分。这让 skill 生态可组合，而不是孤立运行。
+
+示例：
+```
+init-skill   → "下一步：运行 /publish-skill 完成注册"
+scout-brand  → "确认后可运行 /build-style 生成样式"
+learn-skill  → "还有哪个部分想深入了解？"
+```
+
+最终输出位置：在 skill 的执行总结之后，作为独立的提示行。
+
+### 安全与健壮性：Bash 字符串拼接禁忌
+
+Skill 中嵌入 bash 或 python 时，禁止用 shell 字符串拼接传值，应使用：
+
+- Python：`subprocess.run([...])` 列表参数形式
+- Bash：把变量作为命令参数传递，命令内通过 `$1`、`process.argv[N]` 接收
+- URL / 路径 / 用户输入：先做净化（正则替换、白名单校验），再使用
+
+反模式：
+```bash
+node -e "const r='${USER_INPUT}'; ..."   # ${USER_INPUT} 可注入恶意代码
+```
+
+推荐模式：
+```bash
+node -e "const r=process.argv[1]; ..." "$USER_INPUT"
+```
+
+参考：extract-url URL 净化规则、setup-debug subprocess 列表参数、sync-design 命令注入防护。
 
 ### 活文档原则
 
