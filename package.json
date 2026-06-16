@@ -42,8 +42,7 @@
     "skills/meta/publish-skill/",
     "skills/meta/runby-opencode/",
     "skills/meta/release-project/",
-    "tools/p-launch/",
-    "tools/todo-tool/",
+    "skills/experiment/probe-session/",
     "tools/hub/",
     "hooks/check-similar-branch/"
   ],
