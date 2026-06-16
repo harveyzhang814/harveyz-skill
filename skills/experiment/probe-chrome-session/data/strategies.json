@@ -1,0 +1,26 @@
+{
+  "x.com": {
+    "id": "dce+ni",
+    "wait_until": "domcontentloaded",
+    "post_wait": "networkidle",
+    "post_wait_ms": 8000,
+    "fallback_ms": 2000,
+    "desc": "domcontentloaded + networkidle(8s)"
+  },
+  "google.com": {
+    "id": "dce+ni",
+    "wait_until": "domcontentloaded",
+    "post_wait": "networkidle",
+    "post_wait_ms": 8000,
+    "fallback_ms": 2000,
+    "desc": "domcontentloaded + networkidle(8s)"
+  },
+  "github.com": {
+    "id": "dce+ni",
+    "wait_until": "domcontentloaded",
+    "post_wait": "networkidle",
+    "post_wait_ms": 8000,
+    "fallback_ms": 2000,
+    "desc": "domcontentloaded + networkidle(8s)"
+  }
+}
