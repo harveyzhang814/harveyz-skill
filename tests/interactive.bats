@@ -64,10 +64,6 @@ SKILL2_SRC="${REPO_ROOT}/skills/writing/manage-docs"
 SKILL2_VER="1.0.0"
 SKILL2_BUNDLE="writing"
 
-TOOL_NAME="p-launch"
-TOOL_SRC="${REPO_ROOT}/tools/p-launch"
-TOOL_VER="1.0.0"
-
 HOOK_NAME_INTERACTIVE="check-similar-branch"
 HOOK_SRC_INTERACTIVE="${REPO_ROOT}/hooks/check-similar-branch/check-similar-branch.sh"
 HOOK_VER_INTERACTIVE="1.0.0"
@@ -309,32 +305,6 @@ _skill_version() {
   [[ "$output" == *"${SKILL2_NAME}"* ]]
 }
 
-# ── tool installation ─────────────────────────────────────────────────────────
-
-@test "interactive tool install: tool binary written to ~/.local/bin" {
-  # Tool install: fresh install skips action prompt, no scope/target needed.
-  _write_responses \
-    "$(_tool_line "${TOOL_NAME}" "${TOOL_VER}" "${TOOL_SRC}")" \
-    ""  # Esc on loop-back
-
-  run _run_interactive --force
-
-  [ "$status" -eq 0 ]
-  [ -x "${MOCK_HOME}/.local/bin/${TOOL_NAME}" ]
-  [ "$(_fzf_call_count)" -eq 2 ]   # tool-select + loop-back
-}
-
-@test "interactive tool install: success message shown" {
-  _write_responses \
-    "$(_tool_line "${TOOL_NAME}" "${TOOL_VER}" "${TOOL_SRC}")" \
-    ""
-
-  run _run_interactive --force
-
-  [[ "$output" == *"Shell tools installed"* ]]
-  [[ "$output" == *"${TOOL_NAME}"* ]]
-}
-
 # ── already-installed skill ───────────────────────────────────────────────────
 
 @test "interactive: up-to-date skill is skipped without prompting" {
@@ -500,20 +470,3 @@ _skill_version() {
   [ ! -f "${MOCK_HOME}/.claude/skills/${SKILL1_NAME}/SKILL.md" ]
 }
 
-# ── fzf action selection ──────────────────────────────────────────────────────
-
-@test "interactive: HSKILL_TEST_ACTION=uninstall removes tool" {
-  # Pre-install p-launch
-  HOME="${MOCK_HOME}" node "${CLI}" install --tool p-launch --force 2>/dev/null
-  [ -x "${MOCK_HOME}/.local/bin/p-launch" ]
-
-  # HSKILL_TEST_ACTION=uninstall + HSKILL_TEST_TOOL=p-launch bypasses fzf
-  run env HOME="${MOCK_HOME}" \
-    HSKILL_TEST_INTERACTIVE=1 \
-    HSKILL_TEST_TOOL="p-launch" \
-    HSKILL_TEST_ACTION="uninstall" \
-    HSKILL_TEST_YES="1" \
-    node "${CLI}"
-  [ "$status" -eq 0 ]
-  [ ! -f "${MOCK_HOME}/.local/bin/p-launch" ]
-}

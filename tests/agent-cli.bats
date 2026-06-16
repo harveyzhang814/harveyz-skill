@@ -150,7 +150,7 @@ JSEOF
 # ── mutual exclusion ──────────────────────────────────────────────────────────
 
 @test "--skill and --tool combined: exits 1 with error" {
-  run _cli_exit install --skill analyze-skill --tool p-launch --target claude
+  run _cli_exit install --skill analyze-skill --tool hub --target claude
   [ "$status" -eq 1 ]
   [[ "$(_stderr)" == *"cannot be combined"* ]]
 }
@@ -158,7 +158,7 @@ JSEOF
 @test "--skill and --tool combined with --json: stderr is JSON error" {
   local errfile="${TEST_DIR}/stderr-json.txt"
   HOME="${MOCK_HOME}" node "${CLI}" install \
-    --skill analyze-skill --tool p-launch --target claude --json \
+    --skill analyze-skill --tool hub --target claude --json \
     >/dev/null 2>"${errfile}" || true
   local err
   err="$(cat "${errfile}")"
