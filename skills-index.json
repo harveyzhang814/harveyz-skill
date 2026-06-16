@@ -38,8 +38,8 @@
       "path": "research/extract-vision",
       "bundle": "research",
       "installScope": "global",
-      "contentHash": "df44303edd10d416",
-      "contentVersion": "1.0.0"
+      "contentHash": "89ecd26239fb5f35",
+      "contentVersion": "1.2.0"
     },
     {
       "path": "research/learn-video",
