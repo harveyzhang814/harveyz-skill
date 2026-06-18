@@ -32,6 +32,17 @@ hub Phase 1（core + CLI）和 Phase 2（三栏 TUI）已完成。Phase 3 是最
 
 ---
 
+## extract-url — 图片下载修复
+
+### 修复 playwright_xcom.py 图片下载 SSL 验证失败
+**优先级**: P2 | **日期**: 2026-06-18
+
+`urllib.request.urlopen` 默认 SSL 验证对 X.com 图片 CDN（`pbs.twimg.com`）失败，图片被静默跳过，仅文字保存成功。常见于 macOS 使用代理/VPN 的环境。
+
+**已验证方案**：在下载前构造 `ssl.create_default_context()`，优先加载 `certifi` 证书包；若 `certifi` 不可用则 fallback 到 `CERT_NONE`。将 `context` 传给 `urlopen`。修复已应用于 `scripts/playwright_xcom.py`，重新抓取验证 6/6 图片下载成功。
+
+---
+
 ## harveyz-skill — skill 质量工具
 
 ### 开发 Skill 检测并分析各 Skill 间重复内容
