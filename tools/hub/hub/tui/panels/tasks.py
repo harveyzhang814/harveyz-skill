@@ -4,12 +4,15 @@ from textual.widget import Widget
 from textual.widgets import Input, Label, ListItem, ListView
 
 from hub.core.db import HubDB
+from hub.core.projects import get_project_path
 from hub.core.tasks import add_task, delete_task, list_tasks, mark_done, update_task
+from hub.core.todo_sync import sync_project
 
 
 class TasksPanel(Widget):
     BINDINGS = [
         Binding("ctrl+n", "new_task", "New", show=True),
+        Binding("ctrl+r", "sync_from_file", "Sync", show=True),
         Binding("space", "toggle_done", "Done", show=True),
         Binding("ctrl+d", "delete_task_action", "Delete", show=True),
     ]
@@ -112,6 +115,23 @@ class TasksPanel(Widget):
                 f"Press D again to delete '{task['title']}'",
                 severity="warning",
             )
+
+    def action_sync_from_file(self) -> None:
+        if not self._project:
+            return
+        path = get_project_path(self.db, self._project)
+        if not path:
+            self.app.notify("No local path configured for this project", severity="warning")
+            return
+        try:
+            result = sync_project(self.db, self._project, path)
+        except Exception as exc:
+            self.app.notify(f"Sync failed: {exc}", severity="error")
+            return
+        self._reload()
+        self.app.notify(
+            f"Synced: {result['imported']} imported, {result['updated']} updated"
+        )
 
     def action_new_task(self) -> None:
         if not self._project or self.query("#new-task-input"):
