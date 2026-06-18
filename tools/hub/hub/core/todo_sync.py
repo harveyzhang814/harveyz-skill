@@ -95,7 +95,7 @@ def sync_project(db: HubDB, name: str, path: str) -> dict:
         )
         if result == "imported":
             imported += 1
-        else:
+        elif result == "updated":
             updated += 1
 
     return {"imported": imported, "updated": updated}
@@ -126,15 +126,17 @@ def _upsert_task(
 ) -> str:
     with db._conn() as conn:
         row = conn.execute(
-            "SELECT id FROM tasks WHERE project_id = ? AND title = ?",
+            "SELECT id, status, priority FROM tasks WHERE project_id = ? AND title = ?",
             (project_id, title),
         ).fetchone()
         if row:
-            conn.execute(
-                "UPDATE tasks SET status = ?, priority = ? WHERE id = ?",
-                (status, priority, row["id"]),
-            )
-            return "updated"
+            if row["status"] != status or row["priority"] != priority:
+                conn.execute(
+                    "UPDATE tasks SET status = ?, priority = ? WHERE id = ?",
+                    (status, priority, row["id"]),
+                )
+                return "updated"
+            return "unchanged"
         else:
             conn.execute(
                 "INSERT INTO tasks (title, project_id, priority, status, created_at)"

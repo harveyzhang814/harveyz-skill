@@ -1,6 +1,9 @@
 import pytest
 from pathlib import Path
-from hub.core.todo_sync import parse_todo_md
+from hub.core.db import HubDB
+from hub.core.projects import add_project
+from hub.core.tasks import list_tasks
+from hub.core.todo_sync import parse_todo_md, sync_project, sync_all_projects
 
 
 TODO_FORMAT1 = """\
@@ -122,12 +125,6 @@ def test_parse_missing_file_returns_empty(tmp_path):
     assert tasks == []
 
 
-from hub.core.db import HubDB
-from hub.core.projects import add_project
-from hub.core.tasks import list_tasks
-from hub.core.todo_sync import sync_project, sync_all_projects
-
-
 @pytest.fixture
 def db(tmp_path):
     d = HubDB(db_path=tmp_path / "hub.db")
@@ -225,4 +222,21 @@ def test_sync_all_projects_ignores_per_project_error(tmp_path):
     add_project(d, "ghost", path="/nonexistent/path/xyz",
                 md_path=tmp_path / "PROJECTS.md")
     result = sync_all_projects(d)
+    assert result == {"imported": 0, "updated": 0}
+
+
+def test_sync_project_no_change_reports_zero_updated(db):
+    d, tmp_path = db
+    content = "## 🚧 待开发\n\n### My task\n**优先级**: P2 | **日期**: 2026-01-01\n\n---\n"
+    (tmp_path / "myproject" / "TODO.md").write_text(content)
+    sync_project(d, "myproject", str(tmp_path / "myproject"))
+    # Sync again with no changes
+    result = sync_project(d, "myproject", str(tmp_path / "myproject"))
+    assert result["updated"] == 0
+    assert result["imported"] == 0
+
+
+def test_sync_project_unknown_project_name_returns_zero(tmp_path):
+    d = HubDB(db_path=tmp_path / "hub.db")
+    result = sync_project(d, "does-not-exist", str(tmp_path))
     assert result == {"imported": 0, "updated": 0}
