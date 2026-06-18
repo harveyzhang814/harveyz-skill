@@ -70,6 +70,13 @@ hub Phase 1（core + CLI）和 Phase 2（三栏 TUI）已完成。Phase 3 是最
 
 ## harveyz-skill — Syncthing 多设备同步
 
+### 用 sync-agent 将 `~/.hermes` 同步到多设备
+**优先级**: P2 | **日期**: 2026-06-18
+
+sync-agent 已完成，现在将 Hermes agent 配置目录 `~/.hermes` 纳入同步范围。在 `~/.hskill/sync-agent/config.json` 的 `folders` 中添加该路径，运行 `hskill sync setup` 应用，并在所有目标设备上完成对端配置。
+
+---
+
 ### 实现 Agent-Syncthing 多设备文档同步工具
 **优先级**: P2 | **日期**: 2026-06-16
 
