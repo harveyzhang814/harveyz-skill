@@ -30,23 +30,7 @@
 
 ---
 
-## harveyz-skill — skill 质量工具
-
-### 开发 Skill 检测并分析各 Skill 间重复内容
-**优先级**: P2 | **日期**: 2026-06-15
-
-开发一个专用 Skill，扫描 `skills/` 目录下所有 Skill 的内容，检测不同 Skill 之间的语义重复部分。发现重复后，对比分析各自的上下文、触发场景和职责边界，给出哪个 Skill 更适合承载该内容的建议，最终由用户决策如何处置（保留、迁移或删除）。
-
----
-
 ## harveyz-skill — 论文分析 Skill
-
-### 设计 Agent 单篇精读论文 skill（read-paper）
-**优先级**: P2 | **日期**: 2026-06-16
-
-基于 Keshav 三遍阅读法，针对 Agent 与人类认知差异重新设计阅读方法论，实现为单篇精读 skill。核心设计问题：Agent 无认知负荷限制但有 context 限制，"在脑海中重现论文"如何转化为 Agent 可执行步骤，以及结构化输出如何便于后续引用。
-
----
 
 ### 设计 Agent 批量筛选论文 skill（screen-papers）
 **优先级**: P2 | **日期**: 2026-06-16
@@ -61,13 +45,6 @@
 **优先级**: P2 | **日期**: 2026-06-18
 
 sync-agent 已完成，现在将 Hermes agent 配置目录 `~/.hermes` 纳入同步范围。在 `~/.hskill/sync-agent/config.json` 的 `folders` 中添加该路径，运行 `hskill sync setup` 应用，并在所有目标设备上完成对端配置。
-
----
-
-### 实现 Agent-Syncthing 多设备文档同步工具
-**优先级**: P2 | **日期**: 2026-06-16
-
-开发一个小工具，让 Agent 通过 Syncthing 项目在设备间同步文档。初期目标是同步根目录下的 `.hskill` 文件（skill 运行时数据），后续扩展到 Hermes 性格文件等其他 Agent 配置。
 
 ---
 
