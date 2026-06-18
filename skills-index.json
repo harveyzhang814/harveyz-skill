@@ -203,6 +203,13 @@
       "contentVersion": "1.1.0"
     },
     {
+      "path": "meta/sync-agent",
+      "bundle": "meta",
+      "installScope": "global",
+      "contentHash": "4b65807daf7823e4",
+      "contentVersion": "1.0.0"
+    },
+    {
       "path": "experiment/probe-session",
       "bundle": "experiment",
       "contentHash": "91391f7b702e0797",
