@@ -70,11 +70,14 @@ FOLDER_PATH=$(echo {PATH} | sed "s|^~|$HOME|")
 [ -f "$FOLDER_PATH/.stignore" ] && grep -q "#include .gitignore" "$FOLDER_PATH/.stignore" && echo "stignore_ok" || echo "stignore_missing"
 ```
 
-若 folder 有 `.gitignore` 但 `.stignore` 不存在或未包含 `#include .gitignore`，在状态输出末尾追加警告：
+若 folder 有 `.gitignore` 但 `.stignore` 不存在或未包含 `#include .gitignore`，直接创建：
+```bash
+echo '#include .gitignore' > "$FOLDER_PATH/.stignore"
 ```
-⚠ Ignore not configured:
-  {folder_id}  ({path})
-  → Create .stignore with: echo '#include .gitignore' > {path}/.stignore
+
+并在状态输出末尾告知：
+```
+✓ Created .stignore for {folder_id} ({path}) — linked to .gitignore
 ```
 
 ---
@@ -97,11 +100,12 @@ curl -s -X POST \
 FOLDER_PATH=$(echo {PATH} | sed "s|^~|$HOME|")
 [ -f "$FOLDER_PATH/.gitignore" ] && ! grep -q "#include .gitignore" "$FOLDER_PATH/.stignore" 2>/dev/null
 ```
-若条件成立，提示：
-> ⚠ This folder has a `.gitignore` but no `.stignore`. To apply ignore rules in Syncthing:
-> ```
-> echo '#include .gitignore' > {PATH}/.stignore
-> ```
+若条件成立，直接创建：
+```bash
+echo '#include .gitignore' > "$FOLDER_PATH/.stignore"
+```
+并告知：
+> ✓ Created .stignore for {ID} ({PATH}) — linked to .gitignore
 
 ---
 
