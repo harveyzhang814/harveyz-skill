@@ -19,19 +19,6 @@
 
 ---
 
-## hub — Phase 3
-
-### [x] 退役 p-launch 和 todo-tool（hub Phase 3）
-**优先级**: P3 | **日期**: 2026-06-14
-
-hub Phase 1（core + CLI）和 Phase 2（三栏 TUI）已完成。Phase 3 是最终收尾：
-- 在 hskill 中将 p-launch 和 todo-tool 标记为 deprecated，安装时显示退役提示
-- `hub` 首次启动的自动迁移已就绪（migrate.py），确认线上验证通过
-- 旧命令保持可用直到下一个 major version，不强制删除
-- 从 README 和文档中更新入口说明，指向 hub
-
----
-
 ## extract-url — 图片下载修复
 
 ### 修复 playwright_xcom.py 图片下载 SSL 验证失败
@@ -102,16 +89,3 @@ sync-agent 已完成，现在将 Hermes agent 配置目录 `~/.hermes` 纳入同
 
 ---
 
-## hskill — tool lifecycle
-
-### [x] Tool uninstall mechanism
-**背景**：hskill 目前只能安装和更新 tool，没有卸载命令。  
-部分 tool（如 p-launch）在安装后会在用户目录写入额外数据：
-- `~/.local/bin/p-launch` — 可执行文件
-- `~/.local/share/hskill/tools/p-launch.py` — Python 模块
-- `~/.local/share/hskill/tools/p-launch.json` — 版本元数据
-- `~/.local/share/hskill/p-launch-venv/` — 隔离 venv（pip 依赖）
-- `~/.config/p-launch/config.zsh` — 用户配置
-
-**期望行为**：`hskill uninstall p-launch` 清理上述所有文件，并从 `~/.zshrc` 移除 snippet。  
-**扩展点**：tool 可在 `tool.json` 里声明 `uninstallPaths[]`，installer 统一处理。
