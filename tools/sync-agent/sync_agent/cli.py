@@ -44,14 +44,24 @@ def _wait_for_api(api_url: str, api_key: str, timeout: int = 10) -> bool:
     return False
 
 
+def _syncthing_config_xml() -> Path:
+    # macOS: ~/Library/Application Support/Syncthing/config.xml
+    # Linux: ~/.config/syncthing/config.xml
+    mac_path = Path.home() / "Library" / "Application Support" / "Syncthing" / "config.xml"
+    linux_path = Path.home() / ".config" / "syncthing" / "config.xml"
+    return mac_path if mac_path.exists() else linux_path
+
+
 def _read_bootstrap_key() -> str:
-    config_xml = Path.home() / ".config" / "syncthing" / "config.xml"
+    config_xml = _syncthing_config_xml()
+    if not config_xml.exists():
+        return ""
     tree = ET.parse(config_xml)
     return tree.getroot().findtext(".//gui/apikey") or ""
 
 
 def _extract_state(base_dir: Path) -> State:
-    config_xml = Path.home() / ".config" / "syncthing" / "config.xml"
+    config_xml = _syncthing_config_xml()
     tree = ET.parse(config_xml)
     root = tree.getroot()
     api_key = root.findtext(".//gui/apikey") or ""
