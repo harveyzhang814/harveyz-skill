@@ -100,3 +100,25 @@ def test_stop_calls_shutdown(base):
         result = runner.invoke(app, ["stop"])
     client.shutdown.assert_called_once()
     assert result.exit_code == 0
+
+
+def test_start_when_daemon_not_running(base):
+    """start command starts daemon when not running"""
+    # No state.json → daemon not running path
+    with patch("sync_agent.cli._start_daemon") as mock_start:
+        result = runner.invoke(app, ["start"])
+    assert result.exit_code == 0
+    mock_start.assert_called_once()
+    assert "started" in result.output.lower()
+
+
+def test_start_when_daemon_already_running(base):
+    """start command skips if daemon already running"""
+    save_state(State(api_key="k", device_id="D", api_url="http://127.0.0.1:8384"), base)
+    with patch("sync_agent.cli.SyncthingClient") as MockClient, \
+         patch("sync_agent.cli._start_daemon") as mock_start:
+        MockClient.return_value.ping.return_value = True
+        result = runner.invoke(app, ["start"])
+    assert result.exit_code == 0
+    mock_start.assert_not_called()
+    assert "already running" in result.output.lower()
