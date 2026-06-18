@@ -182,3 +182,30 @@ async def test_ctrl_r_no_path_shows_warning(tmp_path):
         await pilot.pause()
 
     assert any("path" in n.lower() or "no" in n.lower() for n in notifications)
+
+
+async def test_ctrl_r_sync_error_shows_error_notification(tmp_path, monkeypatch):
+    """ctrl+r shows an error notification and does not crash when sync_project raises."""
+    import hub.tui.panels.tasks as tasks_mod
+
+    db = HubDB(tmp_path / "hub.db")
+    add_project(db, "proj", path=str(tmp_path / "proj"))
+    (tmp_path / "proj").mkdir()
+
+    monkeypatch.setattr(tasks_mod, "sync_project", lambda *a, **kw: (_ for _ in ()).throw(RuntimeError("disk full")))
+
+    errors = []
+
+    async with _make_app(db).run_test() as pilot:
+        panel = pilot.app.query_one(TasksPanel)
+        panel.refresh_project("proj")
+        await pilot.pause()
+        panel.focus()
+
+        pilot.app.notify = lambda msg, **kw: errors.append((msg, kw.get("severity")))
+
+        await pilot.press("ctrl+r")
+        await pilot.pause()
+
+    assert any("disk full" in msg for msg, _ in errors)
+    assert any(sev == "error" for _, sev in errors)

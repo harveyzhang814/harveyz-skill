@@ -125,6 +125,38 @@ def test_parse_missing_file_returns_empty(tmp_path):
     assert tasks == []
 
 
+def test_parse_mixed_format_checkbox_overrides_section(tmp_path):
+    """Checkbox in title overrides section-based status."""
+    content = """\
+## 🚧 待开发
+
+### [x] Done via checkbox
+**优先级**: P2 | **日期**: 2026-01-01
+
+---
+
+### [ ] Todo via checkbox under done section
+**优先级**: P2 | **日期**: 2026-01-02
+
+---
+
+## ✅ 已完成
+
+### No checkbox under done section
+**优先级**: P2 | **日期**: 2026-01-03
+
+---
+"""
+    f = tmp_path / "TODO.md"
+    f.write_text(content)
+    tasks = parse_todo_md(f)
+    by_title = {t["title"]: t for t in tasks}
+
+    assert by_title["Done via checkbox"]["status"] == "done"
+    assert by_title["Todo via checkbox under done section"]["status"] == "todo"
+    assert by_title["No checkbox under done section"]["status"] == "done"
+
+
 @pytest.fixture
 def db(tmp_path):
     d = HubDB(db_path=tmp_path / "hub.db")

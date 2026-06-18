@@ -123,7 +123,11 @@ class TasksPanel(Widget):
         if not path:
             self.app.notify("No local path configured for this project", severity="warning")
             return
-        result = sync_project(self.db, self._project, path)
+        try:
+            result = sync_project(self.db, self._project, path)
+        except Exception as exc:
+            self.app.notify(f"Sync failed: {exc}", severity="error")
+            return
         self._reload()
         self.app.notify(
             f"Synced: {result['imported']} imported, {result['updated']} updated"
