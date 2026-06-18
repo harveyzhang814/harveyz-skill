@@ -75,6 +75,15 @@ hub Phase 1（core + CLI）和 Phase 2（三栏 TUI）已完成。Phase 3 是最
 
 ---
 
+## harveyz-skill — 元框架提取 skill
+
+### 开发从文档提取思维元框架的 skill
+**优先级**: P2 | **日期**: 2026-06-18
+
+给定任意输入（文档、Skill、文章、对话等），提取其背后的思维元框架——即决策逻辑、分析结构、推理模式等认知层面的框架，而非内容本身。目标是让用户能复用他人的思维方式，而不只是结论。
+
+---
+
 ## hskill — tool lifecycle
 
 ### [x] Tool uninstall mechanism
