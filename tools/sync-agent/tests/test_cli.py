@@ -53,6 +53,7 @@ def test_setup_applies_config_folders(base):
     (base / "docs").mkdir()
 
     with patch("sync_agent.cli._start_daemon"), \
+         patch("sync_agent.cli._read_bootstrap_key", return_value="bootstrap-key"), \
          patch("sync_agent.cli._wait_for_api", return_value=True), \
          patch("sync_agent.cli._extract_state", return_value=State("key", "DEV-ID", "http://127.0.0.1:8384")), \
          patch("sync_agent.cli.SyncthingClient") as MockClient, \
@@ -77,6 +78,7 @@ def test_setup_skips_existing_folder(base):
     (base / "docs").mkdir()
 
     with patch("sync_agent.cli._start_daemon"), \
+         patch("sync_agent.cli._read_bootstrap_key", return_value="bootstrap-key"), \
          patch("sync_agent.cli._wait_for_api", return_value=True), \
          patch("sync_agent.cli._extract_state", return_value=State("key", "DEV-ID", "http://127.0.0.1:8384")), \
          patch("sync_agent.cli.SyncthingClient") as MockClient, \

@@ -3,6 +3,6 @@
   "version": "1.0.0",
   "description": "Syncthing daemon lifecycle and initial folder/device setup",
   "extraPaths": ["sync_agent", "pyproject.toml"],
-  "uninstallPaths": ["~/.hskill/tools/sync-agent/venv", "~/.hskill/tools/sync-agent"],
+  "uninstallPaths": ["~/.hskill/tools/sync/venv", "~/.hskill/tools/sync"],
   "configPaths": ["~/.hskill/sync-agent"]
 }

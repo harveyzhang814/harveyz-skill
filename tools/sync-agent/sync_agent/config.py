@@ -54,3 +54,4 @@ def save_state(state: State, base_dir: Path) -> None:
     base_dir.mkdir(parents=True, exist_ok=True)
     path = base_dir / "state.json"
     path.write_text(json.dumps(asdict(state), indent=2) + "\n")
+    path.chmod(0o600)

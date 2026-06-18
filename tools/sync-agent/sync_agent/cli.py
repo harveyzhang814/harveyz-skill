@@ -13,7 +13,7 @@ from sync_agent.config import (
     default_base_dir, load_config, save_config, load_state, save_state,
 )
 from sync_agent.launchd import install_launchd
-from sync_agent.syncthing import SyncthingClient, SyncthingError
+from sync_agent.syncthing import SyncthingClient
 
 app = typer.Typer(name="sync-agent", no_args_is_help=True, add_completion=False)
 
@@ -42,6 +42,12 @@ def _wait_for_api(api_url: str, api_key: str, timeout: int = 10) -> bool:
             return True
         time.sleep(1)
     return False
+
+
+def _read_bootstrap_key() -> str:
+    config_xml = Path.home() / ".config" / "syncthing" / "config.xml"
+    tree = ET.parse(config_xml)
+    return tree.getroot().findtext(".//gui/apikey") or ""
 
 
 def _extract_state(base_dir: Path) -> State:
@@ -132,12 +138,13 @@ def setup():
     if not running:
         typer.echo("Starting Syncthing...")
         _start_daemon()
-        # Need API key to wait — extract from config XML first
-        state = _extract_state(base)
-        save_state(state, base)
-        if not _wait_for_api(state.api_url, state.api_key):
+        # Wait for daemon first — need a bootstrap API key from config.xml
+        bootstrap_key = _read_bootstrap_key()
+        if not _wait_for_api("http://127.0.0.1:8384", bootstrap_key):
             typer.echo("Error: Syncthing did not start within 10s.", err=True)
             raise typer.Exit(1)
+        state = _extract_state(base)
+        save_state(state, base)
     else:
         state = _extract_state(base)
         save_state(state, base)

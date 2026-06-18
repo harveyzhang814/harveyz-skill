@@ -204,7 +204,10 @@
     },
     {
       "path": "meta/sync-agent",
-      "bundle": "meta"
+      "bundle": "meta",
+      "installScope": "global",
+      "contentHash": "4b65807daf7823e4",
+      "contentVersion": "1.0.0"
     },
     {
       "path": "experiment/probe-session",

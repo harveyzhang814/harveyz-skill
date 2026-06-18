@@ -93,7 +93,7 @@ curl -s -X DELETE \
 
 ## 操作：添加 Device
 
-验证 device ID 格式：必须是 7 组 7 个大写字母数字，以 `-` 分隔（如 `XXXXXXX-XXXXXXX-XXXXXXX-XXXXXXX-XXXXXXX-XXXXXXX-XXXXXXX-XXXXXXX`），共 63 字符加 7 个分隔符。
+验证 device ID 格式：必须是 8 组 7 个大写字母数字，以 `-` 分隔（如 `XXXXXXX-XXXXXXX-XXXXXXX-XXXXXXX-XXXXXXX-XXXXXXX-XXXXXXX-XXXXXXX`），共 56 字符加 7 个分隔符 = 63 字符总长。
 
 ```bash
 curl -s -X POST \

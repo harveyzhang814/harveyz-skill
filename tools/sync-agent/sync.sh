@@ -12,8 +12,8 @@ if [ -d "${SCRIPT_DIR}/sync_agent" ] && [ -f "${SCRIPT_DIR}/pyproject.toml" ]; t
   exec "${DEV_VENV}/bin/sync-agent" "$@"
 fi
 
-VENV_DIR="${HOME}/.hskill/tools/sync-agent/venv"
-INSTALL_DIR="${HOME}/.hskill/tools/sync-agent"
+VENV_DIR="${HOME}/.hskill/tools/sync/venv"
+INSTALL_DIR="${HOME}/.hskill/tools/sync"
 HASH_FILE="${VENV_DIR}/.installed_hash"
 
 _hash_source() {
