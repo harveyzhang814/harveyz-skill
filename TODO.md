@@ -66,6 +66,15 @@ hub Phase 1（core + CLI）和 Phase 2（三栏 TUI）已完成。Phase 3 是最
 
 ---
 
+## harveyz-skill — release log 追踪
+
+### 添加 hermes release log 自动抓取与追踪分析
+**优先级**: P2 | **日期**: 2026-06-18
+
+针对 openclaw/hermes 仓库，开发自动抓取 release log 并进行追踪分析的能力。目标是定期获取新版本发布记录，提取关键变更、功能新增和 breaking change，形成可供后续查阅的结构化追踪报告。
+
+---
+
 ## hskill — tool lifecycle
 
 ### [x] Tool uninstall mechanism
