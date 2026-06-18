@@ -198,3 +198,41 @@ def test_git_push_success(monkeypatch):
     result = runner.invoke(app, ["git", "push"])
     assert result.exit_code == 0
     assert "✓ pushed main" in result.output
+
+
+def test_main_syncs_todo_md_on_startup(tmp_path, monkeypatch):
+    """Tasks in a project's TODO.md appear in the DB after main() runs a CLI command."""
+    import sys
+    import hub.core.todo_sync as sync_mod
+
+    monkeypatch.setenv("HUB_DB_PATH", str(tmp_path / "hub.db"))
+    monkeypatch.setattr(sys, "argv", ["hub", "projects", "list", "--json"])
+
+    synced = []
+    real_sync = sync_mod.sync_all_projects
+    def tracking_sync(db):
+        synced.append(True)
+        return real_sync(db)
+    monkeypatch.setattr(sync_mod, "sync_all_projects", tracking_sync)
+
+    # Pre-populate DB and TODO.md before main() runs
+    from hub.core.db import HubDB
+    from hub.core.projects import add_project
+    db = HubDB(db_path=tmp_path / "hub.db")
+    proj_path = tmp_path / "myproj"
+    proj_path.mkdir()
+    add_project(db, "myproj", path=str(proj_path), md_path=tmp_path / "PROJECTS.md")
+    (proj_path / "TODO.md").write_text(
+        "## 🚧 待开发\n\n### Startup task\n**优先级**: P2 | **日期**: 2026-01-01\n\n---\n"
+    )
+
+    import hub.__main__ as main_mod
+    try:
+        main_mod.main()
+    except SystemExit:
+        pass
+
+    assert synced, "sync_all_projects was not called by main()"
+    from hub.core.tasks import list_tasks
+    tasks = list_tasks(db, project="myproj")
+    assert any(t["title"] == "Startup task" for t in tasks)
