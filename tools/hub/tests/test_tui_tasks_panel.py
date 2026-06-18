@@ -134,3 +134,51 @@ async def test_tasks_panel_delete_two_press(tmp_path):
         await pilot.pause()
 
     assert len(list_tasks(db, project="proj")) == 0
+
+
+async def test_ctrl_r_syncs_from_todo_md(tmp_path):
+    """ctrl+r reads TODO.md and imports tasks into the panel."""
+    from hub.core.todo_sync import sync_project as _real_sync  # noqa: F401
+
+    db = HubDB(tmp_path / "hub.db")
+    proj_path = tmp_path / "myproj"
+    proj_path.mkdir()
+    add_project(db, "myproj", path=str(proj_path))
+
+    todo_md = proj_path / "TODO.md"
+    todo_md.write_text(
+        "## 🚧 待开发\n\n### Synced task\n**优先级**: P2 | **日期**: 2026-01-01\n\n---\n"
+    )
+
+    async with _make_app(db).run_test() as pilot:
+        panel = pilot.app.query_one(TasksPanel)
+        panel.refresh_project("myproj")
+        await pilot.pause()
+        panel.focus()
+        await pilot.press("ctrl+r")
+        await pilot.pause()
+
+    tasks = list_tasks(db, project="myproj")
+    assert any(t["title"] == "Synced task" for t in tasks)
+
+
+async def test_ctrl_r_no_path_shows_warning(tmp_path):
+    """ctrl+r on a project with no path shows a warning and does not crash."""
+    db = HubDB(tmp_path / "hub.db")
+    add_project(db, "nopath", path="")
+
+    notifications = []
+
+    async with _make_app(db).run_test() as pilot:
+        panel = pilot.app.query_one(TasksPanel)
+        panel.refresh_project("nopath")
+        await pilot.pause()
+        panel.focus()
+
+        original_notify = pilot.app.notify
+        pilot.app.notify = lambda msg, **kw: notifications.append(msg)
+
+        await pilot.press("ctrl+r")
+        await pilot.pause()
+
+    assert any("path" in n.lower() or "no" in n.lower() for n in notifications)
