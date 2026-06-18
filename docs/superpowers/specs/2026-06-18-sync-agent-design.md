@@ -24,7 +24,7 @@
 harveyz-skill/
 ├── tools/sync-agent/
 │   ├── sync_agent.py      # hskill tool：daemon 生命周期 + 初始 setup
-│   └── tool.json          # hskill tool 元数据
+│   └── tool.json          # hskill tool 元数据（格式同 tools/hub/tool.json）
 └── skills/meta/sync-agent/
     └── SKILL.md           # Agent skill：运行时配置管理
 ```
@@ -90,7 +90,7 @@ state.json（自动生成）
 | `hskill sync setup` | 从 config.json 初始化 Syncthing（幂等，可重复运行） |
 | `hskill sync start` | 启动 Syncthing daemon（已运行则跳过） |
 | `hskill sync stop` | 停止 Syncthing daemon |
-| `hskill sync status` | 检查 daemon 是否运行、输出 device ID 和 API key |
+| `hskill sync status` | 检查 daemon 是否运行、输出 device ID（API key 脱敏显示前 4 位）|
 
 ### `setup` 执行逻辑（幂等）
 
