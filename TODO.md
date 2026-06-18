@@ -32,6 +32,17 @@ hub Phase 1（core + CLI）和 Phase 2（三栏 TUI）已完成。Phase 3 是最
 
 ---
 
+## extract-url — 图片下载修复
+
+### 修复 playwright_xcom.py 图片下载 SSL 验证失败
+**优先级**: P2 | **日期**: 2026-06-18
+
+`urllib.request.urlopen` 默认 SSL 验证对 X.com 图片 CDN（`pbs.twimg.com`）失败，图片被静默跳过，仅文字保存成功。常见于 macOS 使用代理/VPN 的环境。
+
+**已验证方案**：在下载前构造 `ssl.create_default_context()`，优先加载 `certifi` 证书包；若 `certifi` 不可用则 fallback 到 `CERT_NONE`。将 `context` 传给 `urlopen`。修复已应用于 `scripts/playwright_xcom.py`，重新抓取验证 6/6 图片下载成功。
+
+---
+
 ## harveyz-skill — skill 质量工具
 
 ### 开发 Skill 检测并分析各 Skill 间重复内容
@@ -63,6 +74,24 @@ hub Phase 1（core + CLI）和 Phase 2（三栏 TUI）已完成。Phase 3 是最
 **优先级**: P2 | **日期**: 2026-06-16
 
 开发一个小工具，让 Agent 通过 Syncthing 项目在设备间同步文档。初期目标是同步根目录下的 `.hskill` 文件（skill 运行时数据），后续扩展到 Hermes 性格文件等其他 Agent 配置。
+
+---
+
+## harveyz-skill — release log 追踪
+
+### 添加 hermes release log 自动抓取与追踪分析
+**优先级**: P2 | **日期**: 2026-06-18
+
+针对 openclaw/hermes 仓库，开发自动抓取 release log 并进行追踪分析的能力。目标是定期获取新版本发布记录，提取关键变更、功能新增和 breaking change，形成可供后续查阅的结构化追踪报告。
+
+---
+
+## harveyz-skill — 元框架提取 skill
+
+### 开发从文档提取思维元框架的 skill
+**优先级**: P2 | **日期**: 2026-06-18
+
+给定任意输入（文档、Skill、文章、对话等），提取其背后的思维元框架——即决策逻辑、分析结构、推理模式等认知层面的框架，而非内容本身。目标是让用户能复用他人的思维方式，而不只是结论。
 
 ---
 
