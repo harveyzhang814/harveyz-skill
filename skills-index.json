@@ -206,8 +206,8 @@
       "path": "meta/sync-agent",
       "bundle": "meta",
       "installScope": "global",
-      "contentHash": "4b65807daf7823e4",
-      "contentVersion": "1.0.0"
+      "contentHash": "428a06a3ae668ae4",
+      "contentVersion": "1.1.0"
     },
     {
       "path": "experiment/probe-session",

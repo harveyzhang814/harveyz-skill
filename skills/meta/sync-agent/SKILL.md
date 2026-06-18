@@ -2,7 +2,7 @@
 name: sync-agent
 description: "Manage Syncthing sync folders and devices at runtime. Query sync status, add/remove sync folders, add/remove devices, pause/resume folders, force scan. Reads Syncthing API credentials from ~/.hskill/sync-agent/state.json. Does NOT start/stop the daemon — use hskill sync start/setup for that. Triggers: sync status, add sync folder, remove device, pause sync, check sync, syncthing, show sync."
 user_invocable: true
-version: "1.0.0"
+version: "1.1.0"
 ---
 
 # sync-agent
@@ -61,6 +61,22 @@ Devices (N):
   {name:<20} {deviceID[:15]}...  {online/offline}
 ```
 
+**`.stignore` 检查（每个 folder）：**
+
+对每个 folder，执行：
+```bash
+FOLDER_PATH=$(echo {PATH} | sed "s|^~|$HOME|")
+[ -f "$FOLDER_PATH/.gitignore" ] && echo "has_gitignore" || echo "no_gitignore"
+[ -f "$FOLDER_PATH/.stignore" ] && grep -q "#include .gitignore" "$FOLDER_PATH/.stignore" && echo "stignore_ok" || echo "stignore_missing"
+```
+
+若 folder 有 `.gitignore` 但 `.stignore` 不存在或未包含 `#include .gitignore`，在状态输出末尾追加警告：
+```
+⚠ Ignore not configured:
+  {folder_id}  ({path})
+  → Create .stignore with: echo '#include .gitignore' > {path}/.stignore
+```
+
 ---
 
 ## 操作：添加 Folder
@@ -76,6 +92,16 @@ curl -s -X POST \
 ```
 3. 若返回 4xx/5xx：输出状态码和响应体，不静默失败
 4. 回写 config.json：将新 folder 追加到 `~/.hskill/sync-agent/config.json` 的 `folders` 数组
+5. **`.stignore` 检查：**
+```bash
+FOLDER_PATH=$(echo {PATH} | sed "s|^~|$HOME|")
+[ -f "$FOLDER_PATH/.gitignore" ] && ! grep -q "#include .gitignore" "$FOLDER_PATH/.stignore" 2>/dev/null
+```
+若条件成立，提示：
+> ⚠ This folder has a `.gitignore` but no `.stignore`. To apply ignore rules in Syncthing:
+> ```
+> echo '#include .gitignore' > {PATH}/.stignore
+> ```
 
 ---
 
