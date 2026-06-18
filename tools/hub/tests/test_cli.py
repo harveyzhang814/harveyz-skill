@@ -200,8 +200,32 @@ def test_git_push_success(monkeypatch):
     assert "✓ pushed main" in result.output
 
 
-def test_main_syncs_todo_md_on_startup(tmp_path, monkeypatch):
-    """Tasks in a project's TODO.md appear in the DB after main() runs a CLI command."""
+def test_main_syncs_todo_md_on_tui_launch(tmp_path, monkeypatch):
+    """sync_all_projects is called when main() launches the TUI (no argv), not on CLI commands."""
+    import sys
+    import hub.core.todo_sync as sync_mod
+
+    monkeypatch.setenv("HUB_DB_PATH", str(tmp_path / "hub.db"))
+
+    synced = []
+    monkeypatch.setattr(sync_mod, "sync_all_projects",
+                        lambda db: synced.append(True) or {"imported": 0, "updated": 0})
+
+    # Mock HubApp so TUI doesn't actually launch
+    import hub.tui.app as app_mod
+    class _FakeApp:
+        def run(self): pass
+    monkeypatch.setattr(app_mod, "HubApp", lambda: _FakeApp())
+
+    import hub.__main__ as main_mod
+    monkeypatch.setattr(sys, "argv", ["hub"])  # TUI path
+    main_mod.main()
+
+    assert synced, "sync_all_projects was not called on TUI launch"
+
+
+def test_main_does_not_sync_on_cli_command(tmp_path, monkeypatch):
+    """sync_all_projects is NOT called when running a CLI subcommand."""
     import sys
     import hub.core.todo_sync as sync_mod
 
@@ -209,22 +233,8 @@ def test_main_syncs_todo_md_on_startup(tmp_path, monkeypatch):
     monkeypatch.setattr(sys, "argv", ["hub", "projects", "list", "--json"])
 
     synced = []
-    real_sync = sync_mod.sync_all_projects
-    def tracking_sync(db):
-        synced.append(True)
-        return real_sync(db)
-    monkeypatch.setattr(sync_mod, "sync_all_projects", tracking_sync)
-
-    # Pre-populate DB and TODO.md before main() runs
-    from hub.core.db import HubDB
-    from hub.core.projects import add_project
-    db = HubDB(db_path=tmp_path / "hub.db")
-    proj_path = tmp_path / "myproj"
-    proj_path.mkdir()
-    add_project(db, "myproj", path=str(proj_path), md_path=tmp_path / "PROJECTS.md")
-    (proj_path / "TODO.md").write_text(
-        "## 🚧 待开发\n\n### Startup task\n**优先级**: P2 | **日期**: 2026-01-01\n\n---\n"
-    )
+    monkeypatch.setattr(sync_mod, "sync_all_projects",
+                        lambda db: synced.append(True) or {"imported": 0, "updated": 0})
 
     import hub.__main__ as main_mod
     try:
@@ -232,7 +242,4 @@ def test_main_syncs_todo_md_on_startup(tmp_path, monkeypatch):
     except SystemExit:
         pass
 
-    assert synced, "sync_all_projects was not called by main()"
-    from hub.core.tasks import list_tasks
-    tasks = list_tasks(db, project="myproj")
-    assert any(t["title"] == "Startup task" for t in tasks)
+    assert not synced, "sync_all_projects should not be called for CLI commands"

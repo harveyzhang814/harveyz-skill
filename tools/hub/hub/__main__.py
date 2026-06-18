@@ -18,13 +18,13 @@ def main():
             import typer
             typer.echo(f"hub: migrated {n} tasks from todo-tool ✓")
 
-    try:
-        sync_all_projects(db)
-    except Exception:
-        pass
-
     if len(sys.argv) == 1:
+        from hub.core.todo_sync import sync_all_projects
         from hub.tui.app import HubApp
+        try:
+            sync_all_projects(db)
+        except Exception:
+            pass
         HubApp().run()
         return
     from hub.cli import app
