@@ -2,7 +2,7 @@
 name: learn-skill
 description: "Deep-reads a single skill's SKILL.md to help you understand its internal logic. Analyzes across four dimensions: Design Philosophy (why it was designed this way), Execution Flow (how it runs), Standards (what conventions it follows), and Editing Conditions (when to modify it). Use when you want to understand a skill's design intent, how a skill works, its workflow, or the reasoning behind its design. Trigger phrases: 'help me understand this skill', 'how does this skill work', 'explain this skill', 'what is this skill doing', 'walk me through this skill', 'what's the design philosophy of this skill'."
 user_invocable: true
-version: "1.4.0"
+version: "1.5.0"
 ---
 
 # inspect-skill
@@ -13,12 +13,26 @@ version: "1.4.0"
 
 ---
 
+## Step 0 — 读取或初始化配置
+
+读取 `$HOME/.hskill/config.json`，检查是否存在 `skillDir` 字段。
+
+**如果不存在**：
+1. 询问用户目标目录路径（建议默认值：`$HOME/Documents/skill-library`）
+2. 将用户输入的路径解析为绝对路径（展开 `~` 和 `$HOME`）
+3. 若目录不存在则创建
+4. 将解析后的绝对路径写入 `$HOME/.hskill/config.json`（文件不存在则新建）
+
+**如果已存在**：直接使用，不打扰用户。
+
+---
+
 ## Step 1 — 定位目标 skill
 
 从上下文判断要分析哪个 skill：
 
 1. **直接路径**：用户提供了路径（如 `skills/meta/analyze-skill/`）→ 直接使用
-2. **名称推断**：用户提到了 skill 名称 → 在 `~/.claude/skills/` 和当前 repo 的 `skills/` 目录中搜索
+2. **名称推断**：用户提到了 skill 名称 → 在当前 repo 及常见 skill 安装目录中搜索
 3. **当前上下文**：对话中刚刚在讨论某个 skill → 直接分析该 skill
 4. **不明确**：列出候选，请用户选择
 
@@ -89,3 +103,29 @@ version: "1.4.0"
 报告覆盖四个维度，顺序和格式灵活，不要加评分、verdict，或建议修改的段落。
 
 报告结尾询问用户：「还有哪个部分想深入了解？」
+
+---
+
+## Step 5 — 保存报告
+
+将报告保存到 `{skillDir}/{repo-name}/{skill-name}.md`，同名文件存在时直接覆盖。
+
+- `skillDir`：config.json 中的绝对路径
+- `repo-name`：执行 `basename $(git rev-parse --show-toplevel)` 取得；若不在 git 仓库中则使用 `unknown`
+- 目录不存在时自动创建
+
+文件结构：
+
+```markdown
+---
+skill: {skill-name}
+repo: {repo-name}
+path: {skill 的完整路径}
+version: {skill 的 version 字段值，若无则省略}
+analyzed_at: {YYYY-MM-DD}
+---
+
+{四维报告正文}
+```
+
+保存完成后，在对话中告知用户文件路径。
