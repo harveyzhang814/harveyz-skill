@@ -24,8 +24,8 @@
       "path": "research/learn-skill",
       "bundle": "research",
       "installScope": "global",
-      "contentHash": "1e5bfd773c26470d",
-      "contentVersion": "1.4.0"
+      "contentHash": "f3e1a9ccbec9af74",
+      "contentVersion": "1.5.0"
     },
     {
       "path": "research/extract-url",
