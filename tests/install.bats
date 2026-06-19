@@ -12,8 +12,8 @@ REPO_ROOT="$(cd "${BATS_TEST_DIRNAME}/.." && pwd)"
 CLI="${REPO_ROOT}/bin/cli.js"
 NODE="$(which node)"
 
-SKILL1_NAME="analyze-skill"
-SKILL1_SRC="${REPO_ROOT}/skills/meta/analyze-skill"
+SKILL1_NAME="survey-skillrepo"
+SKILL1_SRC="${REPO_ROOT}/skills/research/survey-skillrepo"
 SKILL1_VER="2.0.0"
 
 SKILL2_NAME="manage-docs"
@@ -146,8 +146,8 @@ _skill_version() {
 
 @test "install --bundle meta: installs all skills in the bundle" {
   _install --bundle meta --target claude --scope user --force
-  # meta bundle contains analyze-skill.
-  [ -f "${MOCK_HOME}/.claude/skills/${SKILL1_NAME}/SKILL.md" ]
+  # meta bundle contains init-skill.
+  [ -f "${MOCK_HOME}/.claude/skills/init-skill/SKILL.md" ]
 }
 
 @test "install --bundle writing: installs all skills in the bundle" {
@@ -158,7 +158,7 @@ _skill_version() {
 @test "install --bundle: --json reports installed list" {
   local out
   out=$(HOME="${MOCK_HOME}" node "${CLI}" install \
-    --bundle meta --target claude --scope user --force --json 2>/dev/null | cat)
+    --bundle research --target claude --scope user --force --json 2>/dev/null | cat)
   echo "$out" | node -e "JSON.parse(require('fs').readFileSync('/dev/stdin','utf8'))"
   [[ "$out" == *'"installed"'* ]]
   [[ "$out" == *"${SKILL1_NAME}"* ]]

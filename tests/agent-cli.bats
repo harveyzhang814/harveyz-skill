@@ -102,7 +102,7 @@ _stderr() {
 }
 
 @test "info --json emits valid single JSON object to stdout" {
-  run _cli info analyze-skill --json
+  run _cli info survey-skillrepo --json
   [ "$status" -eq 0 ]
   echo "$output" | node -e "JSON.parse(require('fs').readFileSync('/dev/stdin','utf8'))"
   [[ "$output" == *'"type"'* ]]
@@ -112,7 +112,7 @@ _stderr() {
 # ── install --json: unified single object ─────────────────────────────────────
 
 @test "install --skill --json emits single object with 'skills' key" {
-  run _cli install --skill analyze-skill --target claude --scope user --json
+  run _cli install --skill survey-skillrepo --target claude --scope user --json
   # May fail due to no claude dir, but stdout must be valid JSON if anything
   local stdout_content="$output"
   if [ -n "$stdout_content" ]; then
@@ -150,7 +150,7 @@ JSEOF
 # ── mutual exclusion ──────────────────────────────────────────────────────────
 
 @test "--skill and --tool combined: exits 1 with error" {
-  run _cli_exit install --skill analyze-skill --tool hub --target claude
+  run _cli_exit install --skill survey-skillrepo --tool hub --target claude
   [ "$status" -eq 1 ]
   [[ "$(_stderr)" == *"cannot be combined"* ]]
 }
@@ -158,7 +158,7 @@ JSEOF
 @test "--skill and --tool combined with --json: stderr is JSON error" {
   local errfile="${TEST_DIR}/stderr-json.txt"
   HOME="${MOCK_HOME}" node "${CLI}" install \
-    --skill analyze-skill --tool hub --target claude --json \
+    --skill survey-skillrepo --tool hub --target claude --json \
     >/dev/null 2>"${errfile}" || true
   local err
   err="$(cat "${errfile}")"
@@ -196,14 +196,14 @@ JSEOF
 
 @test "non-TTY install of existing skill returns skipped with reason (no hang)" {
   # Pre-install the skill so the conflict path is hit
-  local dest="${MOCK_SKILL_DIR}/analyze-skill"
+  local dest="${MOCK_SKILL_DIR}/survey-skillrepo"
   mkdir -p "${dest}"
-  printf -- '---\nname: analyze-skill\nversion: 0.0.1\n---\n' > "${dest}/SKILL.md"
+  printf -- '---\nname: survey-skillrepo\nversion: 0.0.1\n---\n' > "${dest}/SKILL.md"
 
   # Run non-interactively (pipe forces non-TTY)
   local stdout_out
   stdout_out="$(HOME="${MOCK_HOME}" node "${CLI}" install \
-    --skill analyze-skill --target claude --scope user --json \
+    --skill survey-skillrepo --target claude --scope user --json \
     2>/dev/null | cat)"
 
   echo "$stdout_out" | node -e "JSON.parse(require('fs').readFileSync('/dev/stdin','utf8'))"

@@ -16,7 +16,7 @@
     "coding": "程序工具（init-workflow + setup-debug + dispatch-task + close-task）",
     "writing": "写作工具（forge-doc + draw-diagram + manage-docs + manage-dir + migrate-spec）",
     "design": "设计工具（scout-brand + build-style + sync-design）",
-    "meta": "元操作工具（init-skill + analyze-skill + clean-git + archive-skill + dedup-skill + contribute-skill + publish-skill + release-project + runby-opencode）",
+    "meta": "元操作工具（init-skill + clean-git + archive-skill + dedup-skill + contribute-skill + publish-skill + release-project + runby-opencode）",
     "experiment": "实验性工具（尚未稳定，不纳入正式 bundle）"
   },
   "skills": [
@@ -153,9 +153,9 @@
       "contentVersion": "1.0.1"
     },
     {
-      "path": "meta/analyze-skill",
-      "bundle": "meta",
-      "contentHash": "e58a84a9a0c278b3",
+      "path": "research/survey-skillrepo",
+      "bundle": "research",
+      "contentHash": "393c825b0312c5cc",
       "contentVersion": "2.0.0"
     },
     {
@@ -304,7 +304,11 @@
     },
     {
       "from": "skill-analyzer",
-      "to": "analyze-skill"
+      "to": "survey-skillrepo"
+    },
+    {
+      "from": "analyze-skill",
+      "to": "survey-skillrepo"
     },
     {
       "from": "skill-publish",
