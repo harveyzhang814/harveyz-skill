@@ -14,7 +14,7 @@ NODE="$(which node)"
 
 SKILL1_NAME="analyze-skill"
 SKILL1_SRC="${REPO_ROOT}/skills/meta/analyze-skill"
-SKILL1_VER="1.0.0"
+SKILL1_VER="2.0.0"
 
 SKILL2_NAME="manage-docs"
 SKILL2_SRC="${REPO_ROOT}/skills/writing/manage-docs"
