@@ -21,6 +21,7 @@ _ACTION_CATEGORY = {
     "next_col": "nav",
     "cycle_focus": "nav",
     "open_project": "project",
+    "sync_from_file": "project",
     "fetch": "git",
     "sync": "git",
     "quit": "system",

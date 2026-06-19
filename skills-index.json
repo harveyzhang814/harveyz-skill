@@ -24,8 +24,8 @@
       "path": "research/learn-skill",
       "bundle": "research",
       "installScope": "global",
-      "contentHash": "1e5bfd773c26470d",
-      "contentVersion": "1.4.0"
+      "contentHash": "f3e1a9ccbec9af74",
+      "contentVersion": "1.5.0"
     },
     {
       "path": "research/extract-url",
@@ -155,8 +155,8 @@
     {
       "path": "meta/analyze-skill",
       "bundle": "meta",
-      "contentHash": "3aefd5a60dd48d94",
-      "contentVersion": "1.0.0"
+      "contentHash": "e58a84a9a0c278b3",
+      "contentVersion": "2.0.0"
     },
     {
       "path": "meta/clean-git",
@@ -186,8 +186,8 @@
     {
       "path": "meta/publish-skill",
       "bundle": "meta",
-      "contentHash": "233fb5bb02d94023",
-      "contentVersion": "1.2.1"
+      "contentHash": "55ab8e712c16aed3",
+      "contentVersion": "1.3.0"
     },
     {
       "path": "meta/runby-opencode",
@@ -200,6 +200,13 @@
       "bundle": "meta",
       "installScope": "essential",
       "contentHash": "ca9fdcd9f3eabfe1",
+      "contentVersion": "1.1.0"
+    },
+    {
+      "path": "meta/sync-agent",
+      "bundle": "meta",
+      "installScope": "global",
+      "contentHash": "25094389f6443069",
       "contentVersion": "1.1.0"
     },
     {

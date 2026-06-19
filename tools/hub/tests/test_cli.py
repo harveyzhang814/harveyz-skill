@@ -198,3 +198,48 @@ def test_git_push_success(monkeypatch):
     result = runner.invoke(app, ["git", "push"])
     assert result.exit_code == 0
     assert "✓ pushed main" in result.output
+
+
+def test_main_syncs_todo_md_on_tui_launch(tmp_path, monkeypatch):
+    """sync_all_projects is called when main() launches the TUI (no argv), not on CLI commands."""
+    import sys
+    import hub.core.todo_sync as sync_mod
+
+    monkeypatch.setenv("HUB_DB_PATH", str(tmp_path / "hub.db"))
+
+    synced = []
+    monkeypatch.setattr(sync_mod, "sync_all_projects",
+                        lambda db: synced.append(True) or {"imported": 0, "updated": 0})
+
+    # Mock HubApp so TUI doesn't actually launch
+    import hub.tui.app as app_mod
+    class _FakeApp:
+        def run(self): pass
+    monkeypatch.setattr(app_mod, "HubApp", lambda: _FakeApp())
+
+    import hub.__main__ as main_mod
+    monkeypatch.setattr(sys, "argv", ["hub"])  # TUI path
+    main_mod.main()
+
+    assert synced, "sync_all_projects was not called on TUI launch"
+
+
+def test_main_does_not_sync_on_cli_command(tmp_path, monkeypatch):
+    """sync_all_projects is NOT called when running a CLI subcommand."""
+    import sys
+    import hub.core.todo_sync as sync_mod
+
+    monkeypatch.setenv("HUB_DB_PATH", str(tmp_path / "hub.db"))
+    monkeypatch.setattr(sys, "argv", ["hub", "projects", "list", "--json"])
+
+    synced = []
+    monkeypatch.setattr(sync_mod, "sync_all_projects",
+                        lambda db: synced.append(True) or {"imported": 0, "updated": 0})
+
+    import hub.__main__ as main_mod
+    try:
+        main_mod.main()
+    except SystemExit:
+        pass
+
+    assert not synced, "sync_all_projects should not be called for CLI commands"

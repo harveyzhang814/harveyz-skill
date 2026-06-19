@@ -2,7 +2,7 @@
 name: publish-skill
 description: "Validate and publish a skill to the harveyz-skill repository. Checks SKILL.md format compliance (frontmatter fields, semver version, name-directory match, verb-noun naming convention) and registration in skills-index.json. Rules defined in docs/reference/skill-spec.md. Triggers: publish skill, register skill, validate skill format, check skill, add skill to index, is skill ready to publish."
 user_invocable: true
-version: "1.2.1"
+version: "1.3.0"
 ---
 
 # skill-publish
@@ -123,6 +123,7 @@ _fm() {
 | R1 | `skills[]` 中有对应条目 | `path` 值 == `category/name` |
 | R2 | 对应条目有 `bundle` 字段且非空 | 必须指定归属 bundle |
 | R3 | `bundle` 值存在于 `bundleMeta` | bundle key 必须已声明 |
+| R4 | `installScope` 字段存在且值合法 | 值须为 `essential`/`global`/`project` 之一；缺失或值非法时报**警告**（不阻止通过） |
 
 ### Step 5 — 输出报告
 
@@ -146,6 +147,13 @@ skill-publish 检查结果
   skills/meta/my-skill
     R1  未在 skills-index.json 中注册
 
+注册警告（不阻止通过，建议修复）
+--------
+  skills/coding/setup-debug
+    R4  installScope 未设置（可选：essential / global / project）
+  skills/meta/my-other-skill
+    R4  installScope 值 'always' 非法（须为 essential / global / project）
+
 全部通过
 --------
   skills/meta/contribute-skill  ✓
@@ -153,15 +161,23 @@ skill-publish 检查结果
   ...
 
 ========================
-共发现 3 个问题（2 个格式，1 个注册）
+共发现 3 个问题（2 个格式，1 个注册），2 个警告
 ```
 
-若全部通过：
+若全部通过（含警告）：
 
 ```
 skill-publish 检查结果
 ========================
-所有 N 个 skill 格式与注册均符合规范。✓
+所有 N 个 skill 格式与注册均符合规范。✓（2 个 R4 警告，建议填写 installScope）
+```
+
+若完全无问题无警告：
+
+```
+skill-publish 检查结果
+========================
+所有 N 个 skill 格式、注册与推荐级别均符合规范。✓
 ```
 
 ### Step 6 — 修复引导（按需）
@@ -207,9 +223,18 @@ skill-publish 检查结果
 选择目标 bundle：
 ```
 
-选定后，在 `skills[]` 末尾追加：
+选定 bundle 后，继续询问推荐级别：
+```
+选择推荐级别（installScope）：
+  1. essential — 所有安装场景默认包含
+  2. global    — 推荐安装，跨项目通用
+  3. project   — 按项目需要安装
+  4. （不设置，跳过）
+```
+
+根据选择，在 `skills[]` 末尾追加（选 4 则省略 installScope 字段）：
 ```json
-{ "path": "meta/my-skill", "bundle": "meta" }
+{ "path": "meta/my-skill", "bundle": "meta", "installScope": "global" }
 ```
 
 若新建 bundle，在 `bundleMeta` 中同步添加。
@@ -217,6 +242,21 @@ skill-publish 检查结果
 完成注册后运行：
 ```bash
 cd "${REPO_ROOT}" && node scripts/generate-npmignore.js
+```
+
+**注册警告（R4）** — 为已注册但缺少 installScope 的 skill 补充推荐级别：
+```
+修复 R4（installScope 未设置）— skills/coding/setup-debug：
+  选择推荐级别：
+    1. essential — 所有安装场景默认包含
+    2. global    — 推荐安装，跨项目通用
+    3. project   — 按项目需要安装
+    4. （跳过，保持不设置）
+```
+
+用户选择后，用 Edit 工具在 `skills-index.json` 对应条目中添加 `installScope` 字段，再暂存：
+```bash
+git add skills-index.json
 ```
 
 ### Step 7 — 更新 contentHash
