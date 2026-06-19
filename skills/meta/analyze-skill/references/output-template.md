@@ -1,7 +1,7 @@
 # 分析报告输出模版
 
 > 使用此模版填写最终报告。所有 `{占位符}` 必须替换为实际内容。
-> 保存路径：`{被分析项目根目录}/skill-analysis/analysis/{YYYY-MM-DD}-{仓库名}-report.md`
+> 保存路径：`{skillDir}/{repo-name}/analysis-{YYYY-MM-DD}.md`
 
 ---
 
@@ -10,12 +10,11 @@
 
 ## 元信息
 
-- **分析版本：** skill-analyzer {版本号}
-- **分析时间：** {YYYY-MM-DD}
-- **仓库路径：** `{路径}`
-- **VERSION 文件：** `{版本号}`
-- **package.json version：** `{版本号}`
-- **CHANGELOG 最新版本：** `{版本号}`
+- **repo：** {repo-name}
+- **path：** `{仓库绝对路径}`
+- **version：** {VERSION 或 package.json 中的版本号}
+- **analyzed_at：** {YYYY-MM-DD}
+- **skills_count：** {发现的 skill 总数}
 - **HEAD commit：** `{hash}`
 
 > ⚠️ **版本一致性：** {描述三者是否一致，若不一致说明根因}
