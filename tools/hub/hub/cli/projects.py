@@ -8,7 +8,7 @@ import typer
 
 from hub.core.db import HubDB
 from hub.core import projects as proj
-from hub.core.projects import scan_projects
+from hub.core.projects import scan_projects, remove_project
 
 app = typer.Typer(no_args_is_help=True)
 
@@ -99,6 +99,29 @@ def projects_sync(json_out: bool = typer.Option(False, "--json")):
             typer.echo(f"✓ Scanned {len(repos)} repos")
     except ImportError:
         _err("p-launch not installed; cannot auto-scan", json_out)
+
+
+@app.command("remove")
+def projects_remove(
+    name: str = typer.Argument(..., help="Project name to remove"),
+    force: bool = typer.Option(False, "--force", help="Also delete associated tasks"),
+    json_out: bool = typer.Option(False, "--json"),
+):
+    """Remove a project from the registry."""
+    db = HubDB()
+    try:
+        result = remove_project(db, name, md_path=_md_path(), force=force)
+    except KeyError as e:
+        _err(str(e), json_out)
+    except ValueError as e:
+        _err(str(e), json_out)
+    if json_out:
+        _out(result, json_out)
+    else:
+        msg = f"✓ removed {name}"
+        if result["tasks_deleted"]:
+            msg += f" (and {result['tasks_deleted']} task(s))"
+        typer.echo(msg)
 
 
 @app.command("scan")

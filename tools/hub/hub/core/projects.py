@@ -87,6 +87,31 @@ def _resolve_name(repo_path: Path) -> str:
     return repo_path.name
 
 
+def remove_project(
+    db,
+    name: str,
+    md_path: Path = _DEFAULT_MD,
+    force: bool = False,
+) -> dict:
+    with db._conn() as conn:
+        row = conn.execute("SELECT id FROM projects WHERE name = ?", (name,)).fetchone()
+        if row is None:
+            raise KeyError(f"Project '{name}' not found")
+        project_id = row["id"]
+        task_count = conn.execute(
+            "SELECT COUNT(*) FROM tasks WHERE project_id = ?", (project_id,)
+        ).fetchone()[0]
+        if task_count and not force:
+            raise ValueError(
+                f"Project '{name}' has {task_count} task(s). Use --force to also delete them."
+            )
+        if task_count:
+            conn.execute("DELETE FROM tasks WHERE project_id = ?", (project_id,))
+        conn.execute("DELETE FROM projects WHERE id = ?", (project_id,))
+    _write_md(list_projects(db), md_path)
+    return {"name": name, "tasks_deleted": task_count if force else 0}
+
+
 def scan_projects(
     dirs: list[str],
     db,
