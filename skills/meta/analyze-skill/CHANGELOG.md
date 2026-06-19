@@ -1,5 +1,27 @@
 # CHANGELOG — skill-analyzer
 
+## v2.0.0 — 2026-06-19
+
+### Breaking Changes
+- 去掉全部 gstack 专用硬编码（文件数量、路径、skill 列表），不再向后兼容 v1.0.0 的分析结果
+- 输出路径从 `{项目根}/skill-analysis/analysis/` 变更为 `{skillDir}/{repo-name}/analysis-{date}.md`
+
+### New Features
+- 支持任意遵循 harveyz-skill 格式的 skill 仓库
+- 新增 Step 0：读取/初始化 `$HOME/.hskill/config.json`，与 learn-skill 共享配置
+- 新增 Step 1：三级路径解析（带参 → 检测当前目录 → 询问用户）
+- Layer 1 搜索策略升级为四优先级顺序，覆盖根目录全局扫描
+- Layer 3 通过调用 `learn-skill` 读取每个 skill，确保读取标准一致
+
+### Removed
+- 必检清单中的 gstack 专用文件数量（bin/ = 17 等）
+- prohibitions.md 中的 15 条 gstack 专用规则
+- 含 WebSearch 的 skill 硬编码列表
+- v0.1.0 skill 硬编码列表
+- 工具数参考表（各 skill 正确工具数）
+
+---
+
 ## v1.0.0 (2026-05-12)
 
 **基于：** v0.9 + 结构性重构
