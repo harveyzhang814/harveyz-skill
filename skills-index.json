@@ -155,8 +155,8 @@
     {
       "path": "meta/analyze-skill",
       "bundle": "meta",
-      "contentHash": "3aefd5a60dd48d94",
-      "contentVersion": "1.0.0"
+      "contentHash": "e58a84a9a0c278b3",
+      "contentVersion": "2.0.0"
     },
     {
       "path": "meta/clean-git",

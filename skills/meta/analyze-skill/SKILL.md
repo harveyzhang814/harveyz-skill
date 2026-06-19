@@ -1,6 +1,6 @@
 ---
 name: analyze-skill
-description: "Analyzes any skill repository (skills/ directory + SKILL.md format) using the 4-layer onion model. Produces a repo-level summary at {skillDir}/{repo-name}/analysis-{date}.md, complementing learn-skill which handles per-skill deep analysis. Triggers: 'analyze this skill repo', 'do a systematic study of the skill repo', 'output skill repo analysis report', 'understand the design intent of this skill system'. Accepts optional path argument: /analyze-skill ~/path/to/repo."
+description: "Analyzes any skill repository (skills/ directory + SKILL.md format) using the 4-layer onion model. Produces a repo-level summary at {skillDir}/{repo-name}/analysis-{YYYY-MM-DD}.md, complementing learn-skill which handles per-skill deep analysis. Triggers: 'analyze this skill repo', 'do a systematic study of the skill repo', 'output skill repo analysis report', 'understand the design intent of this skill system'. Accepts optional path argument: /analyze-skill ~/path/to/repo."
 user_invocable: true
 version: "2.0.0"
 ---
@@ -149,6 +149,8 @@ CHANGELOG.md                        （版本演进反推设计决策变化）
 - **建议序列**：推荐的 skill 使用顺序
 - **前置配置**：运行时依赖（如 config 文件、已安装工具等）
 
+**依赖结构图**：skill 之间的调用关系（如 `analyze-skill` → `learn-skill`）
+
 ---
 
 ### Layer 4 — 使用场景（用户视角）
@@ -168,7 +170,7 @@ CHANGELOG.md                        （版本演进反推设计决策变化）
 
 ## Step 4 — 保存报告
 
-将报告保存至 `{skillDir}/{repo-name}/analysis-{date}.md`，同名文件存在时直接覆盖。
+将报告保存至 `{skillDir}/{repo-name}/analysis-{YYYY-MM-DD}.md`，同名文件存在时直接覆盖。
 
 - `skillDir`：config.json 中的绝对路径
 - `repo-name`：`basename $(git rev-parse --show-toplevel)` 取得；非 git 仓库则使用目录名
