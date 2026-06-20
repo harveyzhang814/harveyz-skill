@@ -60,7 +60,7 @@ version: "1.0.0"        # semver
 "<动词短语描述功能>. Triggers: '<场景1>', '<场景2>', '<场景3>'."
 ```
 
-**[SHOULD] R016** 触发短语应同时包含中英文场景词（如 `'create new skill'` 和 `'新建 skill'`）；用具体短语而非泛描述。
+**[SHOULD] R016** description 中的触发短语**仅用英文**（受 F3 约束），用具体短语而非泛描述（用 `'create new skill', 'scaffold skill'` 而非 `"when user wants to create skills"`）。中文触发短语放在正文"触发条件"节（见 R022），由 F6 中文正文规则保护。
 
 **[SHOULD] R017** 创建 skill 时检查 `description` 不与现有 skill 重叠：
 
@@ -81,11 +81,11 @@ grep -r "^description:" skills/*/*/SKILL.md
 - <误用场景>（应使用 <替代 skill>）
 ```
 
-**[SHOULD] R022** 触发条件节分两段：
+**[SHOULD] R022** 触发条件节分两段，可含中英文短语（不受 F3 限制）：
 
 ```
 触发：
-- '<短语1>'、'<短语2>'
+- '<英文短语1>'、'<中文短语2>'、...
 
 不触发（其他 skill 负责）：
 - <场景> → <skill 名>
