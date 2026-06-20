@@ -1,6 +1,6 @@
 ---
 name: init-skill
-description: "Initialize a new skill from scratch in the harveyz-skill repo — scaffolds SKILL.md, directory structure, and a feature branch from a design spec or free-form notes. Supports two reference standards (rule-based guide vs philosophy-based) for A/B experiments. Triggers: 'create new skill', 'scaffold a skill', 'init skill', 'bootstrap skill from notes', 'create skill from spec', 'help me start a new skill', 'initialize a skill', 'switch reference mode', '切换参考模式'."
+description: "Initialize a new skill from scratch in the harveyz-skill repo — scaffolds SKILL.md, directory structure, and a feature branch from a design spec or free-form notes. Supports two reference standards (rule-based guide vs philosophy-based) for A/B experiments. Triggers: 'create new skill', 'scaffold a skill', 'init skill', 'bootstrap skill from notes', 'create skill from spec', 'help me start a new skill', 'initialize a skill', 'switch reference mode'."
 user_invocable: true
 version: "1.1.0"
 ---
