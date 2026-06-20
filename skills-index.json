@@ -149,8 +149,8 @@
     {
       "path": "experiment/init-skill",
       "bundle": "experiment",
-      "contentHash": "2d743893b1f8e64c",
-      "contentVersion": "1.1.0"
+      "contentHash": "4053e6476d1c3f09",
+      "contentVersion": "1.2.0"
     },
     {
       "path": "research/survey-skillrepo",

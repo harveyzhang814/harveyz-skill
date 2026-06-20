@@ -1,8 +1,8 @@
 ---
 name: init-skill
-description: "Initialize a new skill from scratch in the harveyz-skill repo — scaffolds SKILL.md, directory structure, and a feature branch from a design spec or free-form notes. Supports two reference standards (rule-based guide vs philosophy-based) for A/B experiments. Triggers: 'create new skill', 'scaffold a skill', 'init skill', 'bootstrap skill from notes', 'create skill from spec', 'help me start a new skill', 'initialize a skill', 'switch reference mode'."
+description: "Initialize a new skill from scratch in the harveyz-skill repo — scaffolds SKILL.md, directory structure, and a feature branch from a design spec or free-form notes. Applies the condensed skill design standard (16 philosophies + system mechanisms). Triggers: 'create new skill', 'scaffold a skill', 'init skill', 'bootstrap skill from notes', 'create skill from spec', 'help me start a new skill', 'initialize a skill'."
 user_invocable: true
-version: "1.1.0"
+version: "1.2.0"
 ---
 
 # 从设计文档初始化新 Skill
@@ -25,21 +25,9 @@ version: "1.1.0"
 
 ---
 
-## 参考标准（两份竞品，A/B 实验中）
+## 参考标准
 
-本 skill 支持两份等价参考标准，由 `.hskill/init-skill/reference-mode.txt` 配置切换：
-
-| mode | 文件 | 风格 |
-|------|------|------|
-| `guide` | `references/skill-authoring-guide.md` | 规则优先（R001-R120 编号规则） |
-| `philosophy` | `references/skill-design-philosophies.md` | 哲学优先（16 条哲学 + 反例假设） |
-
-两份文档覆盖同一规范领域但组织轴不同。用户可通过显式指令切换：
-
-- "用哲学版" / "philosophy mode" / "切换到哲学" → 写入 `philosophy`
-- "用规则版" / "guide mode" / "切换到规则" → 写入 `guide`
-
-配置文件不存在时，Step 2a 会询问一次并保存。
+本 skill 使用 `references/skill-standard.md` 作为单一标准——精简版（约 200 行），含 16 条设计哲学 + 系统机制 + 张力点。Step 2 加载该文件并对照检查。
 
 ---
 
@@ -72,56 +60,17 @@ version: "1.1.0"
    ```
    列出候选文件供用户选择。
 
-### Step 2 — 选择参考标准 + 提炼要素 + 最佳实践检查
+### Step 2 — 提炼要素 + 标准检查
 
-**2a. 确定参考标准 mode：**
+**2a. 加载标准：** 用 Read 工具读取 `references/skill-standard.md`（精简版，约 200 行）。
 
-```bash
-REPO_ROOT=$(git rev-parse --show-toplevel)
-MODE=$(cat "${REPO_ROOT}/.hskill/init-skill/reference-mode.txt" 2>/dev/null || echo "MODE_NOT_SET")
-echo "Current mode: ${MODE}"
-```
-
-判定逻辑（按优先级）：
-
-1. **用户在本次对话中明确指定** → 立即写入配置：
-   - 消息含 "用哲学版" / "philosophy mode" / "切换到哲学" → `MODE=philosophy`
-   - 消息含 "用规则版" / "guide mode" / "切换到规则" → `MODE=guide`
-2. **配置文件存在且 mode 合法** → 使用该 mode
-3. **配置文件不存在或损坏** → 询问用户一次：
-
-   ```
-   本 skill 支持两种参考标准（A/B 实验中）：
-     [1] guide      — 规则优先（R001-R120 编号规则）
-     [2] philosophy — 哲学优先（16 条哲学 + 反例假设）
-   选择哪种？（输入 1 / 2 或 guide / philosophy）
-   ```
-
-确定 mode 后写入：
-
-```bash
-mkdir -p "${REPO_ROOT}/.hskill/init-skill"
-echo "${MODE}" > "${REPO_ROOT}/.hskill/init-skill/reference-mode.txt"
-```
-
-**2b. 加载参考标准：**
-
-根据 mode 用 Read 工具加载对应文件：
-
-| mode | 文件路径 |
-|------|---------|
-| `guide` | `references/skill-authoring-guide.md` |
-| `philosophy` | `references/skill-design-philosophies.md` |
-
-向用户输出确认：`使用参考标准: ${MODE}（<对应文件>）`。
-
-**2c. 提炼要素：** 从设计文档中提取以下字段，以表格 + 建议形式展示给用户：
+**2b. 提炼要素：** 从设计文档中提取以下字段：
 
 | 字段 | 提取值 | 规范约束 |
 |------|--------|---------|
-| `name` | `<verb>-<noun>` 格式 | 动词必须在规范词表中 |
+| `name` | `<verb>-<noun>` 格式 | 动词必须在标准词表中 |
 | `bundle` | 从现有 bundleMeta 中选 | 可新建 |
-| `description` | 英文，含触发短语 | ≥ 10 字符，不含中文 |
+| `description` | 英文，含触发短语 | ≥ 10 字符，仅英文 |
 | 正文大纲 | 中文，核心步骤列表 | — |
 | `category` 目录 | 对应 bundle 的目录名 | — |
 
@@ -130,20 +79,17 @@ echo "${MODE}" > "${REPO_ROOT}/.hskill/init-skill/reference-mode.txt"
 node -e "const i=JSON.parse(require('fs').readFileSync('skills-index.json','utf8')); Object.entries(i.bundleMeta).forEach(([k,v])=>console.log(k+': '+v))"
 ```
 
-**2d. 适用规范检查**（从 2b 加载的参考标准逐条检查，只列出适用的）：
+**2c. 适用哲学识别：** 对照标准的 16 条哲学，识别本 skill 涉及的（通常 3–10 条）。每条按"触发"条件判断是否成立。
+
+**2d. 标准检查：** 逐条核对相关哲学的"必做"和"检查"项，输出：
 
 ```
-[✓] <规范通过>  — <说明>
-[!] <需要注意>  — <具体建议>
+[✓] Φ1 可回退      — 破坏性 step 前有 y/n 确认
+[✓] Φ5 配置就地    — 路径 .hskill/<name>/ 正确
+[!] Φ12 输入清洁化 — URL 输入缺少控制字符剥离，建议加 re.sub(...)
 ```
 
-提示中明确标注本次使用的 mode，便于实验追溯：
-
-```
-（参考标准：${MODE}）
-[✓] R001 name 与目录名一致     — 已通过
-[!] R015 description 缺少 Triggers — 建议改为...
-```
+涉及多哲学冲突时查标准末尾"张力点"表消歧。
 
 **等用户明确确认后才进入 Step 3。**
 
@@ -176,7 +122,7 @@ version: "1.0.0"
 （2-4 条明确边界）
 ```
 
-若 skill 有参考材料（查找表、模板、禁忌清单）且超过 20 行，按 Step 2 加载的参考标准提取到 `references/` 子目录，而非全部内联在 SKILL.md 中。
+若 skill 有参考材料（查找表、模板、禁忌清单）且超过 20 行，按标准 Φ18 提取到 `references/` 子目录，而非全部内联在 SKILL.md 中。
 
 将生成内容展示给用户预览。**等用户明确确认后才进入 Step 4。**
 
@@ -205,11 +151,10 @@ git add skills/<category>/<name>/
 git commit -m "feat(skill): scaffold <name>"
 ```
 
-输出摘要（含 mode，便于实验追溯）：
+输出摘要：
 ```
 ✓ SKILL.md 已生成：skills/<category>/<name>/SKILL.md
 ✓ 分支：feature/init-<name>
-✓ 参考标准：<mode>（guide / philosophy）
 下一步：运行 /publish-skill 完成格式校验和 skills-index.json 注册
 ```
 
