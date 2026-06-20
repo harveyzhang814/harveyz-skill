@@ -18,7 +18,7 @@ _DEFAULT_MD = Path.home() / ".hskill" / "public" / "PROJECTS.md"
 class ProjectsPanel(Widget):
     BINDINGS = [
         Binding("ctrl+s", "scan_action", "Scan", show=True),
-        Binding("d", "remove_action", "Remove", show=True),
+        Binding("ctrl+d", "remove_action", "Remove", show=True),
         Binding("enter", "open_selected", show=False, priority=True),
     ]
 
