@@ -9,7 +9,7 @@ from textual.widget import Widget
 from textual.widgets import Input, Label, ListItem, ListView
 
 from hub.core.db import HubDB
-from hub.core.projects import list_projects, scan_projects
+from hub.core.projects import list_projects, remove_project, scan_projects
 from hub.core.tasks import list_tasks
 
 _DEFAULT_MD = Path.home() / ".hskill" / "public" / "PROJECTS.md"
@@ -18,6 +18,7 @@ _DEFAULT_MD = Path.home() / ".hskill" / "public" / "PROJECTS.md"
 class ProjectsPanel(Widget):
     BINDINGS = [
         Binding("ctrl+s", "scan_action", "Scan", show=True),
+        Binding("d", "remove_action", "Remove", show=True),
         Binding("enter", "open_selected", show=False, priority=True),
     ]
 
@@ -33,6 +34,12 @@ class ProjectsPanel(Widget):
     ProjectsPanel Input {
         dock: bottom;
     }
+    ProjectsPanel #remove-confirm {
+        dock: bottom;
+        background: $error;
+        color: $text;
+        padding: 0 1;
+    }
     """
 
     class ProjectSelected(Message):
@@ -47,6 +54,7 @@ class ProjectsPanel(Widget):
         self.selected_name: str | None = None
         self.selected_path: str | None = None
         self._projects: list[dict] = []
+        self._pending_remove: str | None = None
 
     def compose(self) -> ComposeResult:
         yield ListView(id="projects-list")
@@ -78,7 +86,7 @@ class ProjectsPanel(Widget):
         self.app.action_open_project()
 
     def action_scan_action(self) -> None:
-        if self.query("#scan-dir-input"):
+        if self.query("#scan-dir-input") or self.query("#remove-confirm"):
             return
         inp = Input(
             placeholder="Directory to scan… (Enter to scan, Esc to cancel)",
@@ -86,6 +94,21 @@ class ProjectsPanel(Widget):
         )
         self.mount(inp)
         inp.focus()
+
+    def action_remove_action(self) -> None:
+        if self.query("#scan-dir-input") or self.query("#remove-confirm"):
+            return
+        if not self.selected_name:
+            return
+        name = self.selected_name
+        task_count = len(list_tasks(self.db, project=name))
+        suffix = f" + {task_count} task(s)" if task_count else ""
+        label = Label(
+            f"Remove '{name}'{suffix}? y / Esc",
+            id="remove-confirm",
+        )
+        self._pending_remove = name
+        self.mount(label)
 
     def on_input_submitted(self, event: Input.Submitted) -> None:
         if event.input.id != "scan-dir-input":
@@ -96,8 +119,20 @@ class ProjectsPanel(Widget):
             self._scan_worker(directory)
 
     def on_key(self, event) -> None:
-        if event.key == "escape" and self.query("#scan-dir-input"):
-            self.query_one("#scan-dir-input").remove()
+        if self.query("#scan-dir-input"):
+            if event.key == "escape":
+                self.query_one("#scan-dir-input").remove()
+                event.prevent_default()
+            return
+
+        if self.query("#remove-confirm"):
+            if event.key == "y" and self._pending_remove:
+                self.query_one("#remove-confirm").remove()
+                self._remove_worker(self._pending_remove)
+                self._pending_remove = None
+            elif event.key == "escape":
+                self.query_one("#remove-confirm").remove()
+                self._pending_remove = None
             event.prevent_default()
 
     @work(thread=True)
@@ -112,3 +147,23 @@ class ProjectsPanel(Widget):
     def _after_scan(self, added: int, skipped: int, failed: int) -> None:
         self._reload()
         self.app.notify(f"Scanned: {added} added, {skipped} skipped, {failed} failed")
+
+    @work(thread=True)
+    def _remove_worker(self, name: str) -> None:
+        md = Path(os.environ["HUB_MD_PATH"]) if "HUB_MD_PATH" in os.environ else _DEFAULT_MD
+        try:
+            result = remove_project(self.db, name, md_path=md, force=True)
+            tasks_deleted = result["tasks_deleted"]
+            self.app.call_from_thread(self._after_remove, name, tasks_deleted, None)
+        except Exception as e:
+            self.app.call_from_thread(self._after_remove, name, 0, str(e))
+
+    def _after_remove(self, name: str, tasks_deleted: int, error: str | None) -> None:
+        if error:
+            self.app.notify(f"Failed to remove '{name}': {error}", severity="error")
+            return
+        self._reload()
+        msg = f"Removed '{name}'"
+        if tasks_deleted:
+            msg += f" (and {tasks_deleted} task(s))"
+        self.app.notify(msg)
