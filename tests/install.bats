@@ -146,8 +146,8 @@ _skill_version() {
 
 @test "install --bundle meta: installs all skills in the bundle" {
   _install --bundle meta --target claude --scope user --force
-  # meta bundle contains init-skill.
-  [ -f "${MOCK_HOME}/.claude/skills/init-skill/SKILL.md" ]
+  # meta bundle contains clean-git.
+  [ -f "${MOCK_HOME}/.claude/skills/clean-git/SKILL.md" ]
 }
 
 @test "install --bundle writing: installs all skills in the bundle" {

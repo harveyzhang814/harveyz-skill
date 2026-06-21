@@ -1,5 +1,8 @@
-import json, pytest
+import json, sys, pytest
+from pathlib import Path
 from unittest.mock import patch
+
+sys.path.insert(0, str(Path(__file__).parent.parent / 'scripts'))
 import config
 
 def test_get_config_raises_when_missing(tmp_path):
