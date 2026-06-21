@@ -1,22 +1,26 @@
 #!/usr/bin/env python3
 """
 Post-translate validation + SQLite index write for Subagent 2.
-Parameters passed via environment variables to avoid shell injection:
+Parameters via environment variables:
   ARTICLE_URL       - source URL
   ARTICLE_ORIGIN    - path to origin .md file
   ARTICLE_PATH      - path to translated article .md file
-  ARTICLE_DB        - path to url-index.db
-  ARTICLE_SKILL_DIR - skill installation directory
   ARTICLE_CATEGORY  - (optional) category tag
+Reads VAULT_PATH from ~/.hskill/url-extract/config.json to locate url-index.db.
 """
 import sys, os
+from pathlib import Path
 
-url        = os.environ['ARTICLE_URL']
+sys.path.insert(0, str(Path(__file__).parent))
+from config import get_vault_path
+
+url          = os.environ['ARTICLE_URL']
 origin_path  = os.environ['ARTICLE_ORIGIN']
 article_path = os.environ['ARTICLE_PATH']
-db_path      = os.environ['ARTICLE_DB']
-skill_dir    = os.environ['ARTICLE_SKILL_DIR']
 category     = os.environ.get('ARTICLE_CATEGORY', '')
+
+skill_dir = str(Path(__file__).parent.parent)
+db_path   = str(Path(get_vault_path()) / 'url-index.db')
 
 sys.path.insert(0, os.path.join(skill_dir, 'references'))
 from article_utils import repair_frontmatter, record_issues, write_url_index
