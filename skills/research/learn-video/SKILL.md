@@ -1,6 +1,6 @@
 ---
 name: learn-video
-version: "1.3.1"
+version: "1.4.0"
 description: "Process a YouTube video using the vdl CLI: transcribe, generate article and summary. Triggers when the user provides a YouTube URL and wants to learn from, summarize, transcribe, or extract key points from the video — e.g. 'help me understand this talk', 'summarize this YouTube video', 'get the transcript', 'process this video', 'summarize it'."
 user_invocable: true
 ---
