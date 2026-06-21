@@ -31,8 +31,8 @@
       "path": "research/extract-url",
       "bundle": "research",
       "installScope": "global",
-      "contentHash": "393c4b6cdf7b269a",
-      "contentVersion": "1.2.0"
+      "contentHash": "2e2df3604e577322",
+      "contentVersion": "2.0.0"
     },
     {
       "path": "research/extract-vision",
@@ -215,7 +215,8 @@
       "contentHash": "91391f7b702e0797",
       "contentVersion": "0.3.0"
     },
-    { "path": "experiment/learn-paper", "bundle": "experiment", "contentHash": "1fe085285d11bb6a", "contentVersion": "0.1.0" }
+    { "path": "experiment/learn-paper", "bundle": "experiment", "contentHash": "1fe085285d11bb6a", "contentVersion": "0.1.0" },
+    { "path": "meta/scout-philosophy", "bundle": "meta", "contentHash": "46b5c57f31d514bf", "contentVersion": "1.0.0" }
   ],
   "hooks": [
     {
@@ -321,6 +322,14 @@
     {
       "from": "project-release",
       "to": "release-project"
+    },
+    {
+      "from": "philosophy-research",
+      "to": "scout-philosophy"
+    },
+    {
+      "from": "research-skill-philosophy",
+      "to": "scout-philosophy"
     }
   ]
 }

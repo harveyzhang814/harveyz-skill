@@ -2,15 +2,19 @@
 """
 Check URL dedup in SQLite. Creates table if not exists (safe for first run).
 Migrates existing DBs (e.g. old article-fetcher schema) by adding missing columns.
-Parameters via env vars to avoid shell injection:
+Parameter via env var to avoid shell injection:
   CHECK_URL - URL to check
-  DB_PATH   - path to url-index.db
+Reads VAULT_PATH from ~/.hskill/url-extract/config.json to locate url-index.db.
 Prints: ALREADY_FETCHED or OK
 """
-import sqlite3, os
+import sqlite3, os, sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).parent))
+from config import get_vault_path
 
 url     = os.environ['CHECK_URL']
-db_path = os.environ['DB_PATH']
+db_path = str(Path(get_vault_path()) / 'url-index.db')
 
 os.makedirs(os.path.dirname(os.path.abspath(db_path)), exist_ok=True)
 

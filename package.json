@@ -46,6 +46,7 @@
     "skills/meta/sync-agent/",
     "skills/experiment/probe-session/",
     "skills/experiment/learn-paper/",
+    "skills/meta/scout-philosophy/",
     "tools/hub/",
     "hooks/check-similar-branch/"
   ],
