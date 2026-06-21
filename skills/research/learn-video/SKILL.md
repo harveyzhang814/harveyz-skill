@@ -94,12 +94,13 @@ vdl "<URL>" --focus "<FOCUS>" --mode <MODE> --lang <LANG>
 | `fetch_info` | `fetch` |
 | `download_subs` | `subs` |
 | `convert_vtt_md` | `vtt2md` |
+| `translate_subs` | `translate` |
+| `convert_md_vtt` | `md2vtt` |
 | `generate_article` | `article` |
 | `generate_summary` | `summary` |
 | `download_video` | `video` |
 | `download_audio` | `audio` |
 | `asr_transcribe` | `asr` |
-| `convert_md_vtt` | `md2vtt` |
 
 ---
 
