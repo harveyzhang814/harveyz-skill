@@ -3,8 +3,12 @@
 Playwright scraper for general websites.
 Usage: python playwright_web.py <url> <html_path>
   html_path: path to pre-fetched HTML file (e.g. /tmp/fetched_page.html)
-Reads VAULT_PATH from ~/.hskill/url-extract/config.json
+Reads VAULT_PATH and CHROME_PROFILE from ~/.hskill/url-extract/config.json
 Stdout: "ORIGIN_PATH: <path>" on success
+
+If the pre-fetched HTML yields thin content (<20 blocks or <3000 chars), the
+script automatically retries by navigating directly with Chrome cookies injected
+(same mechanism as playwright_xcom.py). Useful for paywalled / login-gated sites.
 """
 import sys, os, ipaddress
 from urllib.parse import urlparse
@@ -21,11 +25,11 @@ if _parsed.scheme not in ('http', 'https') or not _parsed.netloc:
 
 # --- Config (after security check) ---
 sys.path.insert(0, str(Path(__file__).parent))
-from config import get_vault_path
+from config import get_vault_path, get_chrome_profile
 vault_path = get_vault_path()
 skill_dir  = str(Path(__file__).parent.parent)
 
-import urllib.request, hashlib
+import urllib.request, hashlib, shutil, tempfile
 from datetime import datetime, timezone, timedelta
 from playwright.sync_api import sync_playwright
 
@@ -47,6 +51,91 @@ def _is_safe_image_url(src):
     return True
 
 
+_EXTRACT_JS = r"""() => {
+    const skipTags = new Set(['SCRIPT','STYLE','NAV','FOOTER','HEADER','ASIDE','BUTTON','FORM']);
+    const contentUnits = [];
+    const imageBlocks  = [];
+
+    const titleEl   = document.querySelector('h1') || document.querySelector('title');
+    const title     = titleEl ? titleEl.innerText.replace(/\s+/g, ' ').trim() : 'Untitled';
+
+    const dateMeta  = document.querySelector('meta[property="article:published_time"]')
+                   || document.querySelector('meta[name="date"]')
+                   || document.querySelector('time');
+    const publishDate = dateMeta
+        ? (dateMeta.getAttribute('content') || dateMeta.getAttribute('datetime') || '')
+        : '';
+
+    const authorMeta = document.querySelector('meta[name="author"]')
+                    || document.querySelector('[rel="author"]');
+    const author = authorMeta
+        ? (authorMeta.getAttribute('content') || authorMeta.innerText || '').trim()
+        : '';
+
+    const main   = document.querySelector('main') || document.querySelector('article') || document.body;
+    const walker = document.createTreeWalker(main, NodeFilter.SHOW_ELEMENT);
+    let node;
+    while (node = walker.nextNode()) {
+        if (skipTags.has(node.tagName.toUpperCase())) continue;
+        const tag = node.tagName.toUpperCase();
+
+        if (tag === 'IMG') {
+            const src = node.src || node.getAttribute('data-src') || '';
+            if (src && !src.startsWith('data:') && src.startsWith('http')) {
+                imageBlocks.push({src, alt: node.alt || '', afterBlock: contentUnits.length - 1});
+            }
+        } else if (['H1','H2','H3','P','LI','BLOCKQUOTE','PRE','CODE'].includes(tag)) {
+            const t = node.innerText.replace(/\s+/g, ' ').trim();
+            if (t && t.length > 10) {
+                contentUnits.push({tag: tag.toLowerCase(), content: t});
+            }
+        }
+    }
+
+    return {title, author, publishDate, blocks: contentUnits, imageBlocks};
+}"""
+
+
+def _is_thin(result):
+    blocks = result.get('blocks', [])
+    total_chars = sum(len(b['content']) for b in blocks)
+    return len(blocks) < 20 or total_chars < 3000
+
+
+def _fetch_with_cookies(url):
+    """Navigate directly to URL with Chrome profile cookies. Returns extracted result or None."""
+    try:
+        import pycookiecheat
+        chrome_profile = get_chrome_profile()
+        cookie_origin  = f"{_parsed.scheme}://{_parsed.netloc}"
+        tmp = tempfile.mktemp(suffix='.db')
+        shutil.copy2(str(Path(chrome_profile) / 'Cookies'), tmp)
+        cookies_dict = pycookiecheat.chrome_cookies(cookie_origin, cookie_file=tmp)
+        Path(tmp).unlink(missing_ok=True)
+        if not cookies_dict:
+            return None
+        pw_cookies = [
+            {'name': k, 'value': v, 'domain': _parsed.netloc, 'path': '/'}
+            for k, v in cookies_dict.items()
+        ]
+        with sync_playwright() as p:
+            browser = p.chromium.launch(headless=True)
+            ctx = browser.new_context(
+                user_agent='Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) '
+                           'AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36'
+            )
+            ctx.add_cookies(pw_cookies)
+            page = ctx.new_page()
+            page.goto(url, wait_until='domcontentloaded', timeout=60000)
+            page.wait_for_timeout(3000)
+            result = page.evaluate(_EXTRACT_JS)
+            browser.close()
+        return result
+    except Exception as e:
+        print(f"Chrome cookie 重试失败（忽略）: {e}", file=sys.stderr)
+        return None
+
+
 url_hash   = hashlib.md5(url.encode()).hexdigest()[:8]
 image_dir  = os.path.join(vault_path, 'Image')
 origin_dir = os.path.join(vault_path, 'Origin')
@@ -63,51 +152,15 @@ with sync_playwright() as p:
     browser = p.chromium.launch(headless=True)
     page    = browser.new_page()
     page.set_content(html, wait_until='domcontentloaded')
-
-    result = page.evaluate(r"""() => {
-        const skipTags = new Set(['SCRIPT','STYLE','NAV','FOOTER','HEADER','ASIDE','BUTTON','FORM']);
-        const contentUnits = [];
-        const imageBlocks  = [];
-
-        const titleEl   = document.querySelector('h1') || document.querySelector('title');
-        const title     = titleEl ? titleEl.innerText.replace(/\s+/g, ' ').trim() : 'Untitled';
-
-        const dateMeta  = document.querySelector('meta[property="article:published_time"]')
-                       || document.querySelector('meta[name="date"]')
-                       || document.querySelector('time');
-        const publishDate = dateMeta
-            ? (dateMeta.getAttribute('content') || dateMeta.getAttribute('datetime') || '')
-            : '';
-
-        const authorMeta = document.querySelector('meta[name="author"]')
-                        || document.querySelector('[rel="author"]');
-        const author = authorMeta
-            ? (authorMeta.getAttribute('content') || authorMeta.innerText || '').trim()
-            : '';
-
-        const main   = document.querySelector('main') || document.querySelector('article') || document.body;
-        const walker = document.createTreeWalker(main, NodeFilter.SHOW_ELEMENT);
-        let node;
-        while (node = walker.nextNode()) {
-            if (skipTags.has(node.tagName.toUpperCase())) continue;
-            const tag = node.tagName.toUpperCase();
-
-            if (tag === 'IMG') {
-                const src = node.src || node.getAttribute('data-src') || '';
-                if (src && !src.startsWith('data:') && src.startsWith('http')) {
-                    imageBlocks.push({src, alt: node.alt || '', afterBlock: contentUnits.length - 1});
-                }
-            } else if (['H1','H2','H3','P','LI','BLOCKQUOTE','PRE','CODE'].includes(tag)) {
-                const t = node.innerText.replace(/\s+/g, ' ').trim();
-                if (t && t.length > 10) {
-                    contentUnits.push({tag: tag.toLowerCase(), content: t});
-                }
-            }
-        }
-
-        return {title, author, publishDate, blocks: contentUnits, imageBlocks};
-    }""")
+    result  = page.evaluate(_EXTRACT_JS)
     browser.close()
+
+if _is_thin(result):
+    print(f"内容偏少（{len(result.get('blocks',[]))} blocks），尝试用 Chrome cookies 重抓…", file=sys.stderr)
+    retried = _fetch_with_cookies(url)
+    if retried and len(retried.get('blocks', [])) > len(result.get('blocks', [])):
+        result = retried
+        print(f"Cookie 重试成功，获得 {len(result['blocks'])} blocks", file=sys.stderr)
 
 # --- Download images ---
 downloaded = []

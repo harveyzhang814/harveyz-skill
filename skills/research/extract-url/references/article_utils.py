@@ -23,6 +23,8 @@ def format_block(block):
         return HEADING_PREFIX[tag] + content
     if tag == 'pre':
         return f'```\n{content}\n```'
+    if tag == 'code':
+        return f'`{content}`'
     if tag == 'li':
         return f'- {content}'
     # 内容以 # 开头且含 / 或 --- = SKILL.md 代码块
