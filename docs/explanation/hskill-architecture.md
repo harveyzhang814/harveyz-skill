@@ -77,9 +77,12 @@ harveyz-skill/
 | `codex` | `~/.codex/skills/` |
 | `openclaw` | `~/.openclaw/skills/` |
 | `hermes` | `~/.hermes/skills/` |
+| `opencode` | `~/.config/opencode/skills/` |
 | `all` | 以上全部 |
 
 目录不存在时跳过并打印警告，不报错退出。
+
+**opencode 路径例外：** opencode 遵循 XDG 约定，user-level 路径为 `~/.config/opencode/skills` 而非常规的 `~/.opencode/skills`。`targets.js` 引入 `USER_DIR_OVERRIDES` 映射表和 `userSkillDir(name)` 函数，集中处理此类路径覆盖，避免在 `skillDir()` 和 `checkInstalled()` 两处分别硬编码。
 
 ---
 

@@ -1,3 +1,10 @@
+---
+migrated: 2026-06-21
+implemented_in:
+  - skills/experiment/init-skill/SKILL.md
+  - skills/experiment/init-skill/references/skill-authoring-guide.md  # skill-authoring-guide 内容设计
+---
+
 # init-skill 设计文档
 
 **日期：** 2026-06-16

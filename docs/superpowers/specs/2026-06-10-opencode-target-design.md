@@ -1,3 +1,9 @@
+---
+migrated: 2026-06-21
+docs:
+  - explanation/hskill-architecture.md  # Target 路径映射表 + USER_DIR_OVERRIDES 设计说明
+---
+
 # hskill opencode target support
 
 **Date:** 2026-06-10

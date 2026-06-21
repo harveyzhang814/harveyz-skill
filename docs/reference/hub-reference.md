@@ -210,6 +210,52 @@ hub tasks rm <id> [--json]
 
 ---
 
+## hub git
+
+### pull
+
+```
+hub git pull [--branch/-b <branch>] [--project/-p <project>] [--json]
+```
+
+拉取指定分支。省略 `--branch` 时使用当前分支。
+
+**前置检查（任一失败则报错退出）：**
+- 项目存在且路径是 git 仓库
+- 分支存在于仓库中
+- 分支有远程跟踪（非 local-only）
+- 分支仅落后远程（`behind > 0, ahead == 0`）；已发散或已同步时报错
+
+| 条件 | 输出 | 退出码 |
+|------|------|--------|
+| 成功 | `✓ pulled main` | 0 |
+| 已同步 | `branch 'x' is already up to date` | 0 |
+| 已发散 | `Error: branch 'x' is diverged — rebase or merge first` | 1 |
+| 无上游 | `Error: branch 'x' has no upstream` | 1 |
+| 项目不存在 | `Error: project 'x' not found` | 1 |
+
+---
+
+### push
+
+```
+hub git push [--branch/-b <branch>] [--project/-p <project>] [--json]
+```
+
+推送指定分支。省略 `--branch` 时使用当前分支。
+
+**前置检查（任一失败则报错退出）：**
+- 同 pull，但要求分支仅领先远程（`ahead > 0, behind == 0`）
+
+| 条件 | 输出 | 退出码 |
+|------|------|--------|
+| 成功 | `✓ pushed main` | 0 |
+| 已同步 | `branch 'x' is already up to date` | 0 |
+| 已发散 | `Error: branch 'x' is diverged — rebase or merge first` | 1 |
+| 无上游 | `Error: branch 'x' has no upstream` | 1 |
+
+---
+
 ## 错误格式
 
 所有命令在 `--json` 模式下，错误统一返回：
