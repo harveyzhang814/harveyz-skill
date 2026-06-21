@@ -1,26 +1,31 @@
 #!/usr/bin/env python3
 """
 Playwright scraper for X.com (Twitter) articles.
-Usage: python playwright_xcom.py <url> <vault_path> <skill_dir> <chrome_profile>
+Usage: python playwright_xcom.py <url>
+Reads VAULT_PATH and CHROME_PROFILE from ~/.hskill/url-extract/config.json
 Stdout: "ORIGIN_PATH: <path>" on success
 """
 import sys, os, ipaddress
 from urllib.parse import urlparse
 
 # --- Security: validate URL scheme FIRST, before any heavy imports ---
-url            = sys.argv[1]
-vault_path     = sys.argv[2]
-skill_dir      = sys.argv[3]
-chrome_profile = sys.argv[4]
+url = sys.argv[1]
 
 _parsed = urlparse(url)
 if _parsed.scheme not in ('http', 'https') or not _parsed.netloc:
     print(f"ERROR: Rejected URL with scheme '{_parsed.scheme}' — only http/https allowed", file=sys.stderr)
     sys.exit(1)
 
+# --- Config (after security check) ---
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).parent))
+from config import get_vault_path, get_chrome_profile
+vault_path     = get_vault_path()
+chrome_profile = get_chrome_profile()
+skill_dir      = str(Path(__file__).parent.parent)
+
 import json, urllib.request, hashlib, shutil, tempfile
 from datetime import datetime, timezone, timedelta
-from pathlib import Path
 from playwright.sync_api import sync_playwright
 import pycookiecheat
 
