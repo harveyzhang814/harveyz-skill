@@ -17,7 +17,7 @@ user_invocable: true
 | Codex | `platforms/SKILL.codex.md` |
 | Hermes | `platforms/SKILL.hermes.md` |
 
-以下流程中凡标注「**补丁①**」「**补丁②**」处，均使用对应平台补丁中定义的工具调用替换。代码示例中的 `VAULT_PATH`、`SKILL_DIR`、`CHROME_PROFILE` 为抽象占位符，实际值由**补丁③**注入。
+以下流程中凡标注「**补丁①**」「**补丁②**」处，均使用对应平台补丁中定义的工具调用替换。代码示例中的 `SKILL_DIR` 为抽象占位符，由**补丁③**注入；`VAULT_PATH` 和 `CHROME_PROFILE` 由 Python 脚本在运行时从 `~/.hskill/url-extract/config.json` 读取，无需注入。
 
 ---
 
