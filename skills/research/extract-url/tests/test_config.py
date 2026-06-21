@@ -48,3 +48,19 @@ def test_set_config_preserves_existing_keys(tmp_path):
         data = json.loads(cfg.read_text())
         assert data['CHROME_PROFILE'] == '/p'
         assert data['VAULT_PATH'] == '/v'
+
+import subprocess, os
+from pathlib import Path as _Path
+_SCRIPTS_DIR = _Path(__file__).parent.parent / 'scripts'
+
+def test_config_path_env_override(tmp_path):
+    cfg = tmp_path / 'custom.json'
+    cfg.write_text(json.dumps({'VAULT_PATH': '/env/vault', 'CHROME_PROFILE': '/p'}))
+    result = subprocess.run(
+        ['python3', '-c', 'import config; print(config.get_vault_path())'],
+        env={**os.environ, 'HSKILL_EXTRACT_URL_CONFIG': str(cfg)},
+        capture_output=True, text=True,
+        cwd=str(_SCRIPTS_DIR)
+    )
+    assert result.returncode == 0, result.stderr
+    assert '/env/vault' in result.stdout.strip()

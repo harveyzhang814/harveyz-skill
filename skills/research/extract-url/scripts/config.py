@@ -3,10 +3,11 @@
 Shared config reader/writer for url-extract skill.
 Config file: ~/.hskill/url-extract/config.json
 """
-import json
+import json, os
 from pathlib import Path
 
-CONFIG_PATH = Path.home() / '.hskill' / 'url-extract' / 'config.json'
+_env_cfg = os.environ.get('HSKILL_EXTRACT_URL_CONFIG')
+CONFIG_PATH = Path(_env_cfg) if _env_cfg else Path.home() / '.hskill' / 'url-extract' / 'config.json'
 
 
 def get_config() -> dict:
