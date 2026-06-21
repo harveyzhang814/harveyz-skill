@@ -1,3 +1,9 @@
+---
+migrated: 2026-06-21
+implemented_in:
+  - skills/research/survey-skillrepo/SKILL.md  # 实现时命名为 survey-skillrepo
+---
+
 # analyze-skill 通用化设计 spec
 
 ## 背景
