@@ -1,6 +1,6 @@
 ---
-name: philosophy-research
-description: Research a skill design philosophy principle. Use when the user proposes a new principle about how skills should behave (e.g. "all confirmations should happen upfront") and wants to ground it in existing practices across skill ecosystems.
+name: research-skill-philosophy
+description: Research a skill design philosophy principle. Use when the user proposes a new principle about how skills should be authored or should behave, and wants to ground it in existing practices from skill ecosystems (G stack, Superpowers, MSkill).
 user_invocable: true
 version: "1.0.0"
 ---
