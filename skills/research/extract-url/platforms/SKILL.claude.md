@@ -18,13 +18,18 @@ sessions_spawn \
 
 使用 `web_fetch` 内置工具获取目标 URL 的 HTML，保存到 `/tmp/fetched_page.html`。
 
-## ③ 变量注入
+## ③ 变量来源（运行时 config.json）
 
-由 `vars.json` 在安装/运行时替换，语法为 `{{变量名}}`：
+`VAULT_PATH` 和 `CHROME_PROFILE` 由 Python 脚本在运行时从以下文件自动读取，**无需 Agent 传参**：
 
-| 抽象变量 | 实际语法 |
-|----------|----------|
-| `VAULT_PATH` | `{{VAULT_PATH}}` |
-| `CHROME_PROFILE` | `{{CHROME_PROFILE}}` |
+```
+~/.hskill/url-extract/config.json
+```
 
-`SKILL_DIR` 由平台自动提供，无需用户配置：值固定为 `$HOME/.claude/skills/url-extract`（Claude Code skill 的标准安装路径）。执行代码时直接将 `SKILL_DIR` 替换为该路径。
+`SKILL_DIR` 为 Claude Code 平台固定值，在 subagent 任务代码中直接使用此路径字符串：
+
+```
+$HOME/.claude/skills/url-extract
+```
+
+配置文件不存在时，执行 SKILL.md「初始化流程」引导用户写入配置。
