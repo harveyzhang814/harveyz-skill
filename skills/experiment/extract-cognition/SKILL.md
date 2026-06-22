@@ -1,18 +1,18 @@
 ---
 name: extract-cognition
-description: "Extract an author's cognitive signature — characteristic thinking patterns, reasoning modes, conceptual framings, and unstated assumptions — from a SINGLE local article, as calibrated, evidence-anchored hypotheses about the implied author. Use when the user wants to analyze HOW an author thinks rather than what they say: reverse-engineering an article's reasoning, surfacing hidden premises, profiling mental models or cognitive style, mapping argumentative habits. Triggers: 'analyze the logic/thinking behind this piece', 'what are the author's hidden assumptions', 'reverse-engineer how this was reasoned', 'what's this author's intellectual style'. Single-article focus; not cross-corpus profiling. 中文触发：'分析这篇文章背后作者的思维方式/推理逻辑'、'这篇的作者有哪些隐藏前提或预设'、'逆向拆解这篇是怎么推理出来的'、'这位作者的认知风格/思维特征是什么'、'帮我看看作者是怎么思考的'。"
+description: "Learn the transferable cognitive moves behind a SINGLE local article — distill HOW an author thinks into a reusable playbook of named moves (with a step-by-step recipe, evidence anchor, and when-it-works/when-it-backfires note) plus the root dispositions that generate them. Signature cards become an evidence/audit layer; the headline output is a cognitive-move manual you can apply to your own thinking and writing. Use when the user wants to LEARN from how a piece was reasoned/written, not just summarize it. Triggers: 'what can I learn from how this is argued', 'extract the thinking moves/techniques', 'teach me to think/write like this', 'reverse-engineer the reasoning so I can reuse it'. Single-article focus; not cross-corpus profiling. 中文触发：'从这篇文章学到作者的思维方式/思考套路/写作手法'、'这篇用了哪些可复用的认知动作/招'、'拆解这篇背后的思路好让我自己也能用'、'教我像这位作者一样思考/写作'、'这篇的论证手法我能学到什么'。"
 user_invocable: true
-version: "0.1.0"
+version: "0.2.0"
 ---
 
-# 认知签名抽取:Agent 可执行行为框架
+# 认知动作学习:Agent 可执行行为框架
 
-把一篇文章当作认知的痕迹,反推出隐含作者的思维方式,输出为**带证据、带置信度、带对立解释**的结构化签名。本框架把方法论编译成可确定性执行的流程:每个阶段有明确的进入条件、动作、二元判据(pass/fail)和产出物。所有"判断"都被替换为可勾选的标准。
+从一篇文章里捞出**可迁移、能复用的认知动作**，讲到用户能把它纳入自己的思考与写作工具箱。签名卡退为证据/审计层；头牌产出是认知动作手册（playbook）。本框架把方法论编译成可确定性执行的流程:每个阶段有明确的进入条件、动作、二元判据(pass/fail)和产出物。所有"判断"都被替换为可勾选的标准。
 
 **操作信条(执行前内化):**
-- 你产出的是**关于隐含作者的假设**,不是对真人心智的确证。永远不要把假设表述为事实。
-- 默认怀疑自己。每条签名的默认状态是"未证实",由证据和闸门把它推向"更可信",而不是反过来。
-- 宁可少声称而站得住,不可多声称而虚高。
+- 产出的是**可迁移的认知动作 + 生成它们的根性**，学的单位是剥离了本文内容的招，不是作者怪癖。
+- 学习层每条招**必须能回指一张签名卡（证据层）**，不许凭空生成——这是防鸡汤的硬锁。
+- generative 为主：重点是"我能怎么用"，批判性判别退为每招一行附注（仍在，非主角）。
 
 ---
 
@@ -70,9 +70,10 @@ mkdir -p "<output_dir>/$slug"
 | 参数 | 行为 | 依赖 |
 |------|------|------|
 | `--pass 1` | 只跑阶段 1–3 → `1-evidence.md` | 无 |
-| `--pass 2` | 只跑阶段 4(+组装/自审) → `2-descriptive.md` | `1-evidence.md` 已存在 |
-| `--pass 3` | 只跑阶段 5–7 → `3-attribution.md` | `2-descriptive.md` 已存在 + 模式 B + **重新提供原文路径与基线路径**（阶段5 的留出验证要读原文留出段、Agenticity 要读基线，光有签名卡不够） |
-| 无参数 | 模式 A 跑到文件 2；模式 B 跑到文件 3 | — |
+| `--pass 2` | 只跑阶段 4 → `2-signature.md` | `1-evidence.md` 已存在 |
+| `--pass 3` | 只跑阶段 5–6 → `3-playbook.md` | `2-signature.md` 已存在 |
+| `--pass 4` | 只跑阶段 7（归因闸门）→ `4-attribution.md` | `2-signature.md` 已存在 + 模式 B + **重新提供原文路径与基线路径** |
+| 无参数 | 跑到 `3-playbook.md`（模式 A/B 都到手册）；模式 B 再加 `4-attribution.md` | — |
 
 依赖检查（单遍模式）：
 
@@ -80,7 +81,9 @@ mkdir -p "<output_dir>/$slug"
 # --pass 2
 test -f "<output_dir>/$slug/1-evidence.md" || { echo "请先运行 --pass 1"; exit 1; }
 # --pass 3
-test -f "<output_dir>/$slug/2-descriptive.md" || { echo "请先运行 --pass 2"; exit 1; }
+test -f "<output_dir>/$slug/2-signature.md" || { echo "请先运行 --pass 2"; exit 1; }
+# --pass 4
+test -f "<output_dir>/$slug/2-signature.md" || { echo "请先运行 --pass 2"; exit 1; }
 ```
 
 **体裁基线（模式 B）：** 先按下文 §1 的**模式判定**确认确实要归因到作者（模式 B）、需要基线，再收集 2–3 个基线文件路径，逐个同样净化并 `test -f` 验证；任一不存在则报错或请用户更正。（模式 A 不需要基线，跳过此步。）
@@ -100,11 +103,11 @@ test -f "<output_dir>/$slug/2-descriptive.md" || { echo "请先运行 --pass 2";
 
 | 条件 | 选择模式 |
 |---|---|
-| 无体裁基线,或用户只想分析本文 | **模式 A:仅描述层** |
-| 有 2–3 篇体裁基线,且用户想归因到作者 | **模式 B:描述层 + 归因层** |
-| 用户想归因到作者但无基线 | 先请求基线;用户拒绝则**降级为模式 A**,并明确告知"无基线时无法归因到作者,只能描述本文" |
+| 无体裁基线,或用户只想学习本文 | **模式 A:学习层（evidence → signature → playbook）** |
+| 有 2–3 篇体裁基线,且用户想归因到作者 | **模式 B:模式 A + 归因层（再加 `4-attribution.md`）** |
+| 用户想归因到作者但无基线 | 学习层照常产出（模式 A）；仅 `4-attribution.md` 不产，明确告知"无基线不归因，但手册照常给" |
 
-**绝对规则:无体裁基线时,禁止输出任何归因层签名。** N=1 时"作者信号"与"体裁信号"不可分离;无基线的归因是已知的失败模式,不是可接受的近似。
+**绝对规则:无体裁基线时,禁止输出 `4-attribution.md` 的归因签名。** 学习层（`3-playbook.md`）对所有用户可用，不受此限。
 
 ---
 
@@ -113,24 +116,27 @@ test -f "<output_dir>/$slug/2-descriptive.md" || { echo "请先运行 --pass 2";
 ```mermaid
 flowchart TD
     IN["输入 单篇全文"] --> P0{"模式选择<br/>有体裁基线吗"}
-    P0 -->|"无基线"| MA["模式 A 仅描述层"]
-    P0 -->|"有 2-3 篇基线"| MB["模式 B 描述加归因"]
+    P0 -->|"无基线"| MA["模式 A 学习层"]
+    P0 -->|"有 2-3 篇基线"| MB["模式 B 学习层 + 归因层"]
 
     MA --> P1["阶段1 表层精读<br/>产出残余日志"]
     MB --> P1
-    P1 --> P2["阶段2 建逻辑图谱<br/>产出补链日志"]
-    P2 --> P3["阶段3 结构判读"]
-    P3 --> P4["阶段4 两源交叉<br/>产出描述层候选"]
+    P1 --> P2["阶段2 建逻辑图谱<br/>产出补链日志 WARRANT_LOG"]
+    P2 --> P3["阶段3 结构判读<br/>形状/承重/缺边/不对称"]
+    P3 --> P4["阶段4 描述层签名卡<br/>证据/审计层 → 2-signature.md"]
 
-    P4 -->|"模式 A 到此交付"| OUTA["输出 描述层卡片"]
-    P4 -->|"模式 B 继续"| GATE["阶段5 归因闸门流水线"]
-    GATE --> P6["阶段6 组装 + 置信度"]
-    P6 --> AUDIT["阶段7 交付前自审"]
-    AUDIT --> OUTB["输出 两层卡片"]
+    P4 --> P5["阶段5 生成式重建<br/>每条签名卡 → 认知动作卡"]
+    P5 --> P6["阶段6 发生器蒸馏<br/>反推根性 1-2 条"]
+    P6 --> OUTA["3-playbook.md 头牌<br/>模式 A/B 默认终点"]
+
+    P4 -->|"模式 B 旁支"| GATE["阶段7 归因闸门<br/>Patternicity/Agenticity/对抗/留出"]
+    GATE --> AUDIT["阶段8 交付前自审"]
+    AUDIT --> OUTB["4-attribution.md<br/>归因层签名"]
 
     style IN fill:#00205B,color:#fff,stroke:#1E4A9A
+    style P4 fill:#003E96,color:#fff,stroke:#1A6AC4
     style GATE fill:#2E0078,color:#fff,stroke:#5A20A0
-    style OUTA fill:#003E96,color:#fff,stroke:#1A6AC4
+    style OUTA fill:#1A5E3A,color:#fff,stroke:#2A7E50
     style OUTB fill:#1A5E3A,color:#fff,stroke:#2A7E50
 ```
 
@@ -162,13 +168,14 @@ flowchart TD
 
 ## 产出文件映射
 
-执行中各阶段产物落入 `<output_dir>/<slug>/` 下三个文件：
+执行中各阶段产物落入 `<output_dir>/<slug>/` 下四个文件：
 
 | 文件 | 阶段 | 内容 | 终止/依赖 |
 |---|---|---|---|
 | `1-evidence.md` | 1–3 | 残余日志 + 逻辑图谱(+补链日志) + 结构信号 | 两源就绪 |
-| `2-descriptive.md` | 4(+6/7) | 描述层签名卡 + 描述画像 + 上限声明 + 自审 | **模式 A 到此交付** |
-| `3-attribution.md` | 5–7 | 归因层签名卡 + 归因画像 + 自审 | 仅模式 B，依赖文件 2 + 基线 |
+| `2-signature.md` | 4 | 描述层签名卡 = 证据/审计层 | 防鸡汤锚 |
+| `3-playbook.md` | 5–6 | 认知动作手册（发生器 + 动作卡 + 迁移练习） | **头牌；模式 A/B 默认终点** |
+| `4-attribution.md` | 7 | 归因层签名卡 | 仅模式 B，依赖文件 2 + 基线 |
 
 每个文件开头写元信息块：
 ```
