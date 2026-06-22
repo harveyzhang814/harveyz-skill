@@ -82,7 +82,7 @@ mkdir -p "<output_dir>/$slug"
 test -f "<output_dir>/$slug/1-evidence.md" || { echo "请先运行 --pass 1"; exit 1; }
 # --pass 3
 test -f "<output_dir>/$slug/2-signature.md" || { echo "请先运行 --pass 2"; exit 1; }
-# --pass 4
+# --pass 4 (仅模式 B；另需重新提供原文路径与基线路径，见上方 --pass 表)
 test -f "<output_dir>/$slug/2-signature.md" || { echo "请先运行 --pass 2"; exit 1; }
 ```
 
@@ -129,7 +129,7 @@ flowchart TD
     P5 --> P6["阶段6 发生器蒸馏<br/>反推根性 1-2 条"]
     P6 --> OUTA["3-playbook.md 头牌<br/>模式 A/B 默认终点"]
 
-    P4 -->|"模式 B 旁支"| GATE["阶段7 归因闸门<br/>Patternicity/Agenticity/对抗/留出"]
+    P4 -->|"模式 B 额外旁支(手册照常产)"| GATE["阶段7 归因闸门<br/>Patternicity/Agenticity/对抗/留出"]
     GATE --> AUDIT["阶段8 交付前自审"]
     AUDIT --> OUTB["4-attribution.md<br/>归因层签名"]
 
