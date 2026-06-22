@@ -7,6 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.19.0] - 2026-06-22
+
+### Added
+- `sync-agent`：Syncthing 多设备同步工具与 skill — REST API 客户端、launchd 安装、CLI（start/stop/status/setup）、运行时管理同步 folder/device、为含 `.gitignore` 的目录自动创建 `.stignore`
+- `hub`：TODO.md → SQLite 同步（启动时同步所有项目，ctrl+r 同步当前项目）；`hub git` CLI 子命令（status/fetch/branches）与 TUI 对等；`hub projects remove` 命令 + TUI ctrl+d 快捷键
+- `scout-philosophy`：skill 设计哲学研究 skill（meta bundle）
+- `extract-url`：代码块支持；付费墙站点 cookie 重试；`HSKILL_EXTRACT_URL_CONFIG` 环境变量覆盖配置路径
+- `learn-video`：新增字幕翻译步骤（translate_subs）
+
+### Changed
+- `learn-skill` → v2.0.0：报告持久化到全局 skill 库、四维度归纳式重构、新增 Step 4 跨 skill 索引摘要
+- `analyze-skill` → `survey-skillrepo`：重命名并移至 research bundle，泛化到任意 skill 仓库并集成 learn-skill
+- `extract-url`：重构为从 `~/.hskill/config.json` 读取配置，各脚本不再依赖位置参数
+- `init-skill`：迁移至 experiment bundle；description 移除中文以符合 F3；支持可切换参考标准用于 A/B 实验
+- `publish-skill`：新增 R4 installScope 检查与修复引导
+- 13 篇设计 spec 迁移为正式文档（hub、sync-agent、opencode、init-skill 等）
+- 修正多个 skill 内容哈希与版本号，并为 10 个 skill 补充 `installScope`
+
+### Fixed
+- `extract-url`：playwright_xcom 图片下载 SSL 验证、脚本路径/setup 顺序/超时/权限等修复
+- `hub`：TUI remove 行为与 CLI 对齐、footer category map、remove 快捷键改为 ctrl+d
+- `sync-agent`：平台感知的 Syncthing 配置路径（macOS/Linux）
+- `learn-skill`：audit findings 修复，移除 reference/script 200 行读取上限
+- 测试：survey-skillrepo fixture 版本同步至 2.0.1，修复 test_config.py 导入与 bats meta-bundle 断言
+
 ## [0.18.0] - 2026-06-16
 
 ### Added
