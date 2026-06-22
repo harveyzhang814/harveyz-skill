@@ -56,7 +56,7 @@ MOCK_FZF="${REPO_ROOT}/tests/helpers/mock-fzf.sh"
 
 SKILL1_NAME="survey-skillrepo"
 SKILL1_SRC="${REPO_ROOT}/skills/research/survey-skillrepo"
-SKILL1_VER="2.0.0"
+SKILL1_VER="2.0.1"
 SKILL1_BUNDLE="research"
 
 SKILL2_NAME="manage-docs"
