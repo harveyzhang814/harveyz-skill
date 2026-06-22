@@ -311,9 +311,14 @@ def _do_scrape(headless: bool) -> dict:
         ctx.add_cookies(_pw_cookies)
         page = ctx.new_page()
         page.goto(url, timeout=60000, wait_until='domcontentloaded')
-        page.wait_for_selector('article[data-testid="tweet"]', timeout=20000)
+        page.wait_for_selector('article[data-testid="tweet"]', timeout=60000)
 
         if not headless:
+            # X Notes articles render content lazily; wait for the rich text view before extracting.
+            try:
+                page.wait_for_selector('[data-testid="twitterArticleRichTextView"]', timeout=70000)
+            except Exception:
+                pass  # not an X Notes article, proceed normally
             # Scroll to trigger Draft.js atomic block rendering (code blocks lazy-render in viewport)
             for _i in range(25):
                 page.evaluate(f"window.scrollTo(0, {_i * 400})")
