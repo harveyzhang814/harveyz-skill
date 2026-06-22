@@ -70,7 +70,7 @@ mkdir -p "<output_dir>/$slug"
 | 参数 | 行为 | 依赖 |
 |------|------|------|
 | `--pass 1` | 只跑阶段 1–3 → `1-evidence.md` | 无 |
-| `--pass 2` | 只跑阶段 4 → `2-descriptive.md` | `1-evidence.md` 已存在 |
+| `--pass 2` | 只跑阶段 4(+组装/自审) → `2-descriptive.md` | `1-evidence.md` 已存在 |
 | `--pass 3` | 只跑阶段 5–7 → `3-attribution.md` | `2-descriptive.md` 已存在 + 模式 B + 基线 |
 | 无参数 | 模式 A 跑到文件 2；模式 B 跑到文件 3 | — |
 
