@@ -50,3 +50,4 @@ methodology: diataxis
 | [explanation/xcom-playwright-auth.md](explanation/xcom-playwright-auth.md) | X.com 应用：auth cookie 识别、Profile 扫描、wait_for_selector 隐式鉴权验证、双路径选择 |
 | [explanation/hub-architecture.md](explanation/hub-architecture.md) | hub 架构设计原理：core/ 解耦、SQLite + PROJECTS.md 双存储、从 p-launch + todo-tool 演进路径 |
 | [explanation/sync-agent-architecture.md](explanation/sync-agent-architecture.md) | sync-agent 架构：tool/skill 分工、config/state 分离原因、setup 幂等性、Syncthing REST 集成 |
+| [explanation/pbpe-methodology.md](explanation/pbpe-methodology.md) | PBPE 方法论：从同质制品归纳设计哲学、反推规则的归纳—演绎闭环方法（Phase 0–4 完整流程、偏差对冲机制） |
