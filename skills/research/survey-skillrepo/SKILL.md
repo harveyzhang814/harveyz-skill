@@ -2,7 +2,7 @@
 name: survey-skillrepo
 description: "Analyzes any skill repository (skills/ directory + SKILL.md format) using the 4-layer onion model. Produces a repo-level summary at {skillDir}/{repo-name}/analysis-{YYYY-MM-DD}.md, complementing learn-skill which handles per-skill deep analysis. Triggers: 'analyze this skill repo', 'do a systematic study of the skill repo', 'output skill repo analysis report', 'understand the design intent of this skill system'. Accepts optional path argument: /survey-skillrepo ~/path/to/repo."
 user_invocable: true
-version: "2.0.0"
+version: "2.0.1"
 ---
 
 # survey-skillrepo
