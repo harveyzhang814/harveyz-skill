@@ -1,0 +1,97 @@
+{
+  "skill_name": "extract-cognition",
+  "evals": [
+    {
+      "id": 0,
+      "name": "mode-A-no-baseline",
+      "prompt": "帮我分析一下这篇文章背后，作者是怎么思考的——他的推理方式、隐藏的预设。文件在 /Users/harveyzhang96/Projects/harveyz-skill/skills/experiment/extract-cognition-workspace/fixtures/ai-work-essay.md",
+      "expected_output": "进入模式 A（无体裁基线）。依次产出 1-evidence.md（残余日志 + 逻辑图谱 + 补链日志 + 结构信号）、2-signature.md（描述层签名卡，作为证据/审计层）、3-playbook.md（认知动作手册，包含：一、发生器节含 ≤2 条根性镜头；二、认知动作 ×N，每张动作卡含 7 栏 schema 且回指证据非空；三、迁移练习汇总）。不产出 4-attribution.md。手册附学习层上限声明。模式 A 到 3-playbook.md 为默认终点，学习层对所有用户可用，不受无基线限制。",
+      "files": [
+        "/Users/harveyzhang96/Projects/harveyz-skill/skills/experiment/extract-cognition-workspace/fixtures/ai-work-essay.md"
+      ],
+      "assertions": [
+        {
+          "id": "playbook_in_mode_a",
+          "text": "产出物树中存在 3-playbook.md 文件，且内容非空——验证模式 A（无基线）也能产出头牌学习层手册，不受无基线限制。"
+        },
+        {
+          "id": "every_move_has_anchor",
+          "text": "3-playbook.md 中每一张认知动作卡的「回指证据」栏均非空，且指向 2-signature.md 中的某条签名卡（F6 鸡汤锁）——不存在任何回指证据为空的动作卡。"
+        },
+        {
+          "id": "moves_are_transferable",
+          "text": "3-playbook.md 中每一张认知动作卡的招名与「怎么自己跑」步骤中，不含本文专有名词或具体话题词（F7 不可迁移锁）——每招应能换题套用，「迁移练习」中有与本文内容无关的通用 prompt。"
+        },
+        {
+          "id": "generator_section_present",
+          "text": "3-playbook.md 包含「一、这套思维的发生器」节，其中根性镜头 ≤2 条，且每张动作卡的「从哪条根性长出」栏均指向该节中某条根性。"
+        },
+        {
+          "id": "no_attribution_without_baseline",
+          "text": "产出物树中不存在 4-attribution.md 文件（无基线不归因红线）；同时 3-playbook.md 已正常产出，证明无基线不影响学习层交付。"
+        }
+      ]
+    },
+    {
+      "id": 1,
+      "name": "mode-B-with-baselines",
+      "prompt": "我想搞清楚 /Users/harveyzhang96/Projects/harveyz-skill/skills/experiment/extract-cognition-workspace/fixtures/ai-work-essay.md 这篇文章的作者本人是怎么思考的，归因到他这个人。同一领域、不同作者的参考文章我准备了三篇：/Users/harveyzhang96/Projects/harveyz-skill/skills/experiment/extract-cognition-workspace/fixtures/baseline-1.md、baseline-2.md、baseline-3.md（同目录）。",
+      "expected_output": "进入模式 B（有体裁基线 + 用户明确要归因到作者）。产出全部四个文件：1-evidence.md、2-signature.md、3-playbook.md（学习层手册，包含发生器节 + 动作卡 + 迁移练习；有基线时动作卡可附「别处也这么使」的泛化注脚，基线在学习层作加法样本）、4-attribution.md（归因层签名卡，每条已过全部闸门：Patternicity ≥2 实例、Agenticity 基线减除后仍突出、对立解释已登记、独立对抗 pass 已跑、留出验证已跑）。归因层置信度明确标注低于描述层。",
+      "files": [
+        "/Users/harveyzhang96/Projects/harveyz-skill/skills/experiment/extract-cognition-workspace/fixtures/ai-work-essay.md",
+        "/Users/harveyzhang96/Projects/harveyz-skill/skills/experiment/extract-cognition-workspace/fixtures/baseline-1.md",
+        "/Users/harveyzhang96/Projects/harveyz-skill/skills/experiment/extract-cognition-workspace/fixtures/baseline-2.md",
+        "/Users/harveyzhang96/Projects/harveyz-skill/skills/experiment/extract-cognition-workspace/fixtures/baseline-3.md"
+      ],
+      "assertions": [
+        {
+          "id": "every_move_has_anchor",
+          "text": "3-playbook.md 中每一张认知动作卡的「回指证据」栏均非空，且指向 2-signature.md 中的某条签名卡（F6 鸡汤锁）——不存在任何回指证据为空的动作卡。"
+        },
+        {
+          "id": "moves_are_transferable",
+          "text": "3-playbook.md 中每一张认知动作卡的招名与「怎么自己跑」步骤中，不含本文专有名词或具体话题词（F7 不可迁移锁）——每招应能换题套用，「迁移练习」中有与本文内容无关的通用 prompt。"
+        },
+        {
+          "id": "generator_section_present",
+          "text": "3-playbook.md 包含「一、这套思维的发生器」节，其中根性镜头 ≤2 条，且每张动作卡的「从哪条根性长出」栏均指向该节中某条根性。"
+        },
+        {
+          "id": "attribution_file_present",
+          "text": "产出物树中存在 4-attribution.md 文件，内容非空——验证模式 B 在有基线且用户明确要归因时产出归因层。"
+        },
+        {
+          "id": "attribution_confidence_below_descriptive",
+          "text": "4-attribution.md 中每条归因层签名卡的归因层置信度均明确标注低于其对应描述层签名卡的置信度（如描述层「高」则归因层至多「暂定」；归因层不得出现「高置信」字样）。"
+        },
+        {
+          "id": "baseline_additive_in_playbook",
+          "text": "3-playbook.md 中至少有一张动作卡含「别处也这么使」或同义泛化注脚，证明基线在学习层作加法样本（而非减法滤镜）。"
+        },
+        {
+          "id": "attribution_gates_complete",
+          "text": "4-attribution.md 中每条存活归因签名均记录了：Patternicity（≥2 逐字实例）、Agenticity（基线减除结论）、仍存活的对立解释列表、独立对抗 pass 结果、留出验证预测与核对结果。"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "name": "fragment-refusal",
+      "prompt": "分析一下这段话的作者是怎么思考的：/Users/harveyzhang96/Projects/harveyz-skill/skills/experiment/extract-cognition-workspace/fixtures/fragment.md",
+      "expected_output": "命中硬停机条件（文本远少于约 300 字、是片段）。拒绝执行并向用户说明样本不足、请求完整文本。不产出任何签名卡或分析文件。",
+      "files": [
+        "/Users/harveyzhang96/Projects/harveyz-skill/skills/experiment/extract-cognition-workspace/fixtures/fragment.md"
+      ],
+      "assertions": [
+        {
+          "id": "hard_stop_triggered",
+          "text": "skill 输出中明确拒绝执行（hard stop），说明文本为片段或字数远低于约 300 字，并请求用户提供完整文本——不得仅发出警告后继续分析。"
+        },
+        {
+          "id": "no_files_produced",
+          "text": "产出物树中不存在任何分析文件（1-evidence.md、2-signature.md、3-playbook.md、4-attribution.md 均不产出）——拒绝执行意味着零产物。"
+        }
+      ]
+    }
+  ]
+}
