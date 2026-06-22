@@ -2,7 +2,7 @@
 name: sync-agent
 description: "Manage Syncthing sync folders and devices at runtime. Query sync status, add/remove sync folders, add/remove devices, pause/resume folders, force scan. Reads Syncthing API credentials from ~/.hskill/sync-agent/state.json. Does NOT start/stop the daemon — use hskill sync start/setup for that. Triggers: sync status, add sync folder, remove device, pause sync, check sync, syncthing, show sync."
 user_invocable: true
-version: "1.1.0"
+version: "1.1.1"
 ---
 
 # sync-agent

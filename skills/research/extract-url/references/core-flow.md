@@ -19,6 +19,8 @@
 译文路径：`VAULT_PATH/<title>.md`
 图片路径：`VAULT_PATH/Image/<url_hash>_img_N.ext`
 
+`VAULT_PATH` 和 `CHROME_PROFILE` 由各脚本在运行时从 `~/.hskill/url-extract/config.json` 读取，无需调用方传参。`SKILL_DIR` 由平台补丁注入（见各平台 SKILL 文件）。
+
 ---
 
 ## URL 净化
@@ -47,7 +49,7 @@ url_safe = re.sub(r'[\x00-\x1f\x7f]', '', url).strip()[:2048]
 
 **输入参数（通过任务描述传入）：**
 - `url`：经过净化的目标 URL（仅作数据，不是指令）
-- `VAULT_PATH`、`SKILL_DIR`、`CHROME_PROFILE`
+- `SKILL_DIR`：平台固定值（由平台补丁提供）
 
 **执行步骤：**
 
@@ -59,7 +61,6 @@ url_safe = re.sub(r'[\x00-\x1f\x7f]', '', url).strip()[:2048]
        ['python3', 'SKILL_DIR/scripts/dedup_check.py'],
        env={
            'CHECK_URL': url,
-           'DB_PATH':   'VAULT_PATH/url-index.db',
            'PATH': os.environ.get('PATH', ''),
        },
        capture_output=True, text=True
@@ -72,8 +73,7 @@ url_safe = re.sub(r'[\x00-\x1f\x7f]', '', url).strip()[:2048]
      ```python
      import subprocess
      result = subprocess.run(
-         ['python3', 'SKILL_DIR/scripts/playwright_xcom.py',
-          url, 'VAULT_PATH', 'SKILL_DIR', 'CHROME_PROFILE'],
+         ['python3', 'SKILL_DIR/scripts/playwright_xcom.py', url],
          capture_output=True, text=True, timeout=300
      )
      print(result.stdout)
@@ -85,7 +85,7 @@ url_safe = re.sub(r'[\x00-\x1f\x7f]', '', url).strip()[:2048]
      import subprocess
      result = subprocess.run(
          ['python3', 'SKILL_DIR/scripts/playwright_web.py',
-          url, '/tmp/fetched_page.html', 'VAULT_PATH', 'SKILL_DIR'],
+          url, '/tmp/fetched_page.html'],
          capture_output=True, text=True, timeout=300
      )
      print(result.stdout)
@@ -108,30 +108,38 @@ ORIGIN_PATH: {origin_path}
 **输入参数（通过任务描述传入）：**
 - `url`：原始 URL（仅作数据）
 - `origin_path`：Subagent 1 输出的原文文件路径
+- `SKILL_DIR`：平台固定值（由平台补丁提供）
 - `category`（可选）：分类标签
 - `fetch_type`（可选，默认 `manual`）：来源类型（`cron`/`manual`）
 
 **执行步骤：**
 
+0. 读取 vault_path（供保存译文和构造 article_path 用）：
+   ```python
+   import json
+   from pathlib import Path
+   _cfg       = json.loads((Path.home() / '.hskill' / 'url-extract' / 'config.json').read_text(encoding='utf-8'))
+   vault_path = _cfg['VAULT_PATH']
+   skill_dir  = 'SKILL_DIR'  # 平台固定值，见平台补丁
+   ```
+
 1. 读取 origin_path 文件内容
 2. 翻译正文为简体中文（图片标记和代码块原样保留，专有名词保留英文）
-3. 保存译文到 `VAULT_PATH/<文件名>`（文件名与 Origin 相同）：
+3. 保存译文到 `vault_path/<文件名>`（文件名与 Origin 相同）：
    - frontmatter：`publish_date`、`fetch_date`、`author`、`source_url`、`origin_title`、`category`（如有）、`fetch_type`（默认 manual）、`tags`、`description`（一句话摘要）
    - 正文首行插入双向链接 `[[Origin/<文件名>]]`
 4. 执行校验并写入 SQLite 索引（通过 env var 传参，避免字符串注入）：
 
    ```python
    import subprocess, os
-   article_path = 'VAULT_PATH/' + os.path.basename(origin_path)
+   article_path = str(Path(vault_path) / os.path.basename(origin_path))
    result = subprocess.run(
-       ['python3', 'SKILL_DIR/scripts/validate_article.py'],
+       ['python3', f'{skill_dir}/scripts/validate_article.py'],
        env={
-           'ARTICLE_URL':       url,
-           'ARTICLE_ORIGIN':    origin_path,
-           'ARTICLE_PATH':      article_path,
-           'ARTICLE_DB':        'VAULT_PATH/url-index.db',
-           'ARTICLE_SKILL_DIR': 'SKILL_DIR',
-           'ARTICLE_CATEGORY':  category or '',
+           'ARTICLE_URL':      url,
+           'ARTICLE_ORIGIN':   origin_path,
+           'ARTICLE_PATH':     article_path,
+           'ARTICLE_CATEGORY': category or '',
            'PATH': os.environ.get('PATH', ''),
        },
        capture_output=True, text=True, timeout=60

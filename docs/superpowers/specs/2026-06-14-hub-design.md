@@ -1,3 +1,10 @@
+---
+migrated: 2026-06-21
+docs:
+  - explanation/hub-architecture.md  # 整体架构、数据层设计、p-launch 演进路径
+  - reference/hub-reference.md       # CLI 接口（projects/tasks 命令已在此文件）
+---
+
 # hub — Design Spec
 
 **Date:** 2026-06-14  

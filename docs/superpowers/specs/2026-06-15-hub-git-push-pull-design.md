@@ -1,3 +1,13 @@
+---
+migrated: 2026-06-21
+docs:
+  - how-to/use-hub.md       # Ctrl+P / Ctrl+U 键绑定、可用条件说明
+  - reference/hub-reference.md  # hub git pull / hub git push CLI 命令
+implemented_in:
+  - tools/hub/hub/tui/panels/git.py
+  - tools/hub/hub/cli/git.py
+---
+
 # Hub Git Panel — Push/Pull Feature Design
 
 **Date:** 2026-06-15  

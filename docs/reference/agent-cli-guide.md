@@ -511,6 +511,44 @@ stdout is empty on error — safe to parse stdout unconditionally.
 
 ---
 
+## `hskill sync` — Syncthing daemon management
+
+Manages the sync-agent Syncthing daemon. Requires `sync-agent` tool installed (`hskill install --tool sync-agent`).
+
+### `hskill sync setup`
+
+```bash
+hskill sync setup
+```
+
+Idempotent initialization: starts Syncthing if not running, reads `~/.hskill/sync-agent/config.json`, registers folders and devices via REST API, installs launchd plist for auto-start. Safe to re-run.
+
+### `hskill sync start`
+
+```bash
+hskill sync start
+```
+
+Starts the Syncthing daemon (skips if already running).
+
+### `hskill sync stop`
+
+```bash
+hskill sync stop
+```
+
+Stops the Syncthing daemon.
+
+### `hskill sync status`
+
+```bash
+hskill sync status
+```
+
+Prints daemon running state and local device ID. API key is redacted (first 4 chars only).
+
+---
+
 ## Non-TTY behavior reference
 
 | Situation | Behavior |

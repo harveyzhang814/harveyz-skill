@@ -2,6 +2,9 @@
 """
 检测哪个 Chrome profile 登录了 X.com (Twitter)。
 用法: python3 detect_chrome_profile.py
+
+⚠️  仅供用户手动诊断。Agent 不得主动调用此脚本——
+    CHROME_PROFILE 必须来自 vars.json 配置，不得自动探测。
 """
 import os
 import shutil

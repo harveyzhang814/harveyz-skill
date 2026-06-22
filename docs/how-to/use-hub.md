@@ -61,6 +61,42 @@ hub tasks update 42 --title "新标题" --priority P2
 hub tasks rm 42
 ```
 
+## 查看和操作 Git 分支（TUI）
+
+在 TUI 中选中项目后，中间的 Git 面板显示该项目的所有分支，按两个分组展示：
+
+```
+▸ WITH REMOTE
+  ▶ ↑2    staging         origin/staging
+    ✓     main            origin/main
+
+▸ LOCAL ONLY
+    local  chore/cleanup
+```
+
+**状态符号含义：**
+
+| 符号 | 含义 |
+|------|------|
+| `✓` | 已同步（绿色） |
+| `↑N` | 领先远程 N 个 commit（黄色） |
+| `↓N` | 落后远程 N 个 commit（红色） |
+| `↑N↓N` | 已发散（黄色） |
+| `local` | 无远程跟踪（灰色） |
+| `▶` | 当前所在分支（青色） |
+
+**分支操作键绑定：**
+
+| 键 | 操作 | 可用条件 |
+|----|------|---------|
+| `Ctrl+P` | Pull（拉取） | 分支落后远程且未领先 |
+| `Ctrl+U` | Push（推送） | 分支领先远程且未落后 |
+| `Ctrl+F` | Fetch | 始终可用 |
+
+Push/Pull 键仅在当前高亮分支满足条件时出现在 Footer 中；已发散或已同步时不显示。
+
+---
+
 ## 优先级值
 
 | 值 | 含义 |

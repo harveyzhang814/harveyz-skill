@@ -60,6 +60,8 @@ Skills that produce org-mode output:
 
 **ASCII art** — allowed: `+ - | / \ > < v ^ * = ~ . : # [ ] ( ) _ , ; ! ' "` — no Unicode box-drawing characters.
 
+Skills that produce Markdown reports (e.g. `learn-skill`) save `.md` files with YAML frontmatter to a user-configured `skillDir`. These are not subject to the org-mode or Denote naming conventions above.
+
 ## Publishing a New Skill
 
 1. Create `skills/<category>/<skill-name>/SKILL.md`

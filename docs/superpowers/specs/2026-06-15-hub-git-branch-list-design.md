@@ -1,3 +1,11 @@
+---
+migrated: 2026-06-21
+docs:
+  - how-to/use-hub.md  # TUI 分支列表状态符号说明
+implemented_in:
+  - tools/hub/hub/tui/panels/git.py
+---
+
 # Hub TUI Git Panel — Branch List Redesign
 
 **Date:** 2026-06-15  

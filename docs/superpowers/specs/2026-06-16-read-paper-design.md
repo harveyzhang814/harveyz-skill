@@ -1,3 +1,11 @@
+---
+migrated: 2026-06-21
+docs:
+  - explanation/how-to-read-papers.md  # Agent 版三遍阅读法适配原理（附录节）
+implemented_in:
+  - skills/experiment/learn-paper/SKILL.md  # 实现时命名为 learn-paper
+---
+
 # read-paper Skill 设计文档
 
 **日期**: 2026-06-16  

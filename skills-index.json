@@ -16,7 +16,7 @@
     "coding": "程序工具（init-workflow + setup-debug + dispatch-task + close-task）",
     "writing": "写作工具（forge-doc + draw-diagram + manage-docs + manage-dir + migrate-spec）",
     "design": "设计工具（scout-brand + build-style + sync-design）",
-    "meta": "元操作工具（init-skill + analyze-skill + clean-git + archive-skill + dedup-skill + contribute-skill + publish-skill + release-project + runby-opencode）",
+    "meta": "元操作工具（clean-git + archive-skill + dedup-skill + contribute-skill + publish-skill + release-project + runby-opencode）",
     "experiment": "实验性工具（尚未稳定，不纳入正式 bundle）"
   },
   "skills": [
@@ -24,15 +24,15 @@
       "path": "research/learn-skill",
       "bundle": "research",
       "installScope": "global",
-      "contentHash": "f3e1a9ccbec9af74",
-      "contentVersion": "1.5.0"
+      "contentHash": "542f333a8a72024c",
+      "contentVersion": "2.0.0"
     },
     {
       "path": "research/extract-url",
       "bundle": "research",
       "installScope": "global",
-      "contentHash": "393c4b6cdf7b269a",
-      "contentVersion": "1.2.0"
+      "contentHash": "2e2df3604e577322",
+      "contentVersion": "2.0.0"
     },
     {
       "path": "research/extract-vision",
@@ -45,8 +45,8 @@
       "path": "research/learn-video",
       "bundle": "research",
       "installScope": "global",
-      "contentHash": "b30b65edc66e6f5f",
-      "contentVersion": "1.3.1"
+      "contentHash": "35804f930210ae44",
+      "contentVersion": "1.4.0"
     },
     {
       "path": "creative/capture-todo",
@@ -147,16 +147,18 @@
       "contentVersion": "3.0.0"
     },
     {
-      "path": "meta/init-skill",
-      "bundle": "meta",
-      "contentHash": "cf644bb465f279f1",
-      "contentVersion": "1.0.1"
+      "path": "experiment/init-skill",
+      "bundle": "experiment",
+      "installScope": "project",
+      "contentHash": "4053e6476d1c3f09",
+      "contentVersion": "1.2.0"
     },
     {
-      "path": "meta/analyze-skill",
-      "bundle": "meta",
-      "contentHash": "e58a84a9a0c278b3",
-      "contentVersion": "2.0.0"
+      "path": "research/survey-skillrepo",
+      "bundle": "research",
+      "installScope": "global",
+      "contentHash": "ea823301b039a8aa",
+      "contentVersion": "2.0.1"
     },
     {
       "path": "meta/clean-git",
@@ -168,30 +170,35 @@
     {
       "path": "meta/archive-skill",
       "bundle": "meta",
+      "installScope": "project",
       "contentHash": "080305f6ad678326",
       "contentVersion": "1.1.1"
     },
     {
       "path": "meta/dedup-skill",
       "bundle": "meta",
+      "installScope": "project",
       "contentHash": "6ebfca98f37241d0",
       "contentVersion": "1.0.0"
     },
     {
       "path": "meta/contribute-skill",
       "bundle": "meta",
+      "installScope": "project",
       "contentHash": "3143a6e8c98d4282",
       "contentVersion": "1.0.0"
     },
     {
       "path": "meta/publish-skill",
       "bundle": "meta",
+      "installScope": "project",
       "contentHash": "55ab8e712c16aed3",
       "contentVersion": "1.3.0"
     },
     {
       "path": "meta/runby-opencode",
       "bundle": "meta",
+      "installScope": "global",
       "contentHash": "49887e63af5eb692",
       "contentVersion": "1.1.0"
     },
@@ -206,16 +213,18 @@
       "path": "meta/sync-agent",
       "bundle": "meta",
       "installScope": "global",
-      "contentHash": "25094389f6443069",
-      "contentVersion": "1.1.0"
+      "contentHash": "3762c7b6488a5f90",
+      "contentVersion": "1.1.1"
     },
     {
       "path": "experiment/probe-session",
       "bundle": "experiment",
+      "installScope": "project",
       "contentHash": "91391f7b702e0797",
       "contentVersion": "0.3.0"
     },
-    { "path": "experiment/learn-paper", "bundle": "experiment", "contentHash": "1fe085285d11bb6a", "contentVersion": "0.1.0" }
+    { "path": "experiment/learn-paper", "bundle": "experiment", "installScope": "project", "contentHash": "1fe085285d11bb6a", "contentVersion": "0.1.0" },
+    { "path": "meta/scout-philosophy", "bundle": "meta", "installScope": "project", "contentHash": "46b5c57f31d514bf", "contentVersion": "1.0.0" }
   ],
   "hooks": [
     {
@@ -304,7 +313,11 @@
     },
     {
       "from": "skill-analyzer",
-      "to": "analyze-skill"
+      "to": "survey-skillrepo"
+    },
+    {
+      "from": "analyze-skill",
+      "to": "survey-skillrepo"
     },
     {
       "from": "skill-publish",
@@ -317,6 +330,14 @@
     {
       "from": "project-release",
       "to": "release-project"
+    },
+    {
+      "from": "philosophy-research",
+      "to": "scout-philosophy"
+    },
+    {
+      "from": "research-skill-philosophy",
+      "to": "scout-philosophy"
     }
   ]
 }

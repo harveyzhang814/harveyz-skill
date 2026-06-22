@@ -1,3 +1,9 @@
+---
+migrated: 2026-06-21
+docs:
+  - reference/hub-reference.md  # hub projects scan 命令接口与 JSON 输出
+---
+
 # hub projects scan — 设计文档
 
 ## 背景

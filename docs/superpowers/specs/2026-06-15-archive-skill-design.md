@@ -2,6 +2,9 @@
 title: archive-skill design
 date: 2026-06-15
 status: approved
+migrated: 2026-06-21
+implemented_in:
+  - skills/meta/archive-skill/SKILL.md
 ---
 
 # archive-skill — 设计文档

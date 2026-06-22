@@ -1,3 +1,13 @@
+---
+migrated: 2026-06-21
+docs:
+  - explanation/sync-agent-architecture.md  # 架构、config/state 分离、setup 幂等性
+  - reference/agent-cli-guide.md            # hskill sync 命令节
+implemented_in:
+  - skills/meta/sync-agent/SKILL.md
+  - tools/sync-agent/sync_agent.py
+---
+
 # sync-agent 设计文档
 
 **日期：** 2026-06-18
