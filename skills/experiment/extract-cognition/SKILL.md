@@ -1,6 +1,6 @@
 ---
 name: extract-cognition
-description: "Extract an author's cognitive signature — characteristic thinking patterns, reasoning modes, conceptual framings, and unstated assumptions — from a SINGLE local article, as calibrated, evidence-anchored hypotheses about the implied author. Use when the user wants to analyze HOW an author thinks rather than what they say: reverse-engineering an article's reasoning, surfacing hidden premises, profiling mental models or cognitive style, mapping argumentative habits. Triggers: 'analyze the logic/thinking behind this piece', 'what are the author's hidden assumptions', 'reverse-engineer how this was reasoned', 'what's this author's intellectual style'. Single-article focus; not cross-corpus profiling."
+description: "Extract an author's cognitive signature — characteristic thinking patterns, reasoning modes, conceptual framings, and unstated assumptions — from a SINGLE local article, as calibrated, evidence-anchored hypotheses about the implied author. Use when the user wants to analyze HOW an author thinks rather than what they say: reverse-engineering an article's reasoning, surfacing hidden premises, profiling mental models or cognitive style, mapping argumentative habits. Triggers: 'analyze the logic/thinking behind this piece', 'what are the author's hidden assumptions', 'reverse-engineer how this was reasoned', 'what's this author's intellectual style'. Single-article focus; not cross-corpus profiling. 中文触发：'分析这篇文章背后作者的思维方式/推理逻辑'、'这篇的作者有哪些隐藏前提或预设'、'逆向拆解这篇是怎么推理出来的'、'这位作者的认知风格/思维特征是什么'、'帮我看看作者是怎么思考的'。"
 user_invocable: true
 version: "0.1.0"
 ---
@@ -71,7 +71,7 @@ mkdir -p "<output_dir>/$slug"
 |------|------|------|
 | `--pass 1` | 只跑阶段 1–3 → `1-evidence.md` | 无 |
 | `--pass 2` | 只跑阶段 4(+组装/自审) → `2-descriptive.md` | `1-evidence.md` 已存在 |
-| `--pass 3` | 只跑阶段 5–7 → `3-attribution.md` | `2-descriptive.md` 已存在 + 模式 B + 基线 |
+| `--pass 3` | 只跑阶段 5–7 → `3-attribution.md` | `2-descriptive.md` 已存在 + 模式 B + **重新提供原文路径与基线路径**（阶段5 的留出验证要读原文留出段、Agenticity 要读基线，光有签名卡不够） |
 | 无参数 | 模式 A 跑到文件 2；模式 B 跑到文件 3 | — |
 
 依赖检查（单遍模式）：
@@ -83,7 +83,7 @@ test -f "<output_dir>/$slug/1-evidence.md" || { echo "请先运行 --pass 1"; ex
 test -f "<output_dir>/$slug/2-descriptive.md" || { echo "请先运行 --pass 2"; exit 1; }
 ```
 
-**体裁基线（模式 B）：** 收集 2–3 个基线文件路径，逐个同样净化并 `test -f` 验证；任一不存在则报错或请用户更正。
+**体裁基线（模式 B）：** 先按下文 §1 的**模式判定**确认确实要归因到作者（模式 B）、需要基线，再收集 2–3 个基线文件路径，逐个同样净化并 `test -f` 验证；任一不存在则报错或请用户更正。（模式 A 不需要基线，跳过此步。）
 
 ## 1. 输入契约与前置条件
 
@@ -195,6 +195,8 @@ flowchart TD
 
 **产出:** RESIDUE_LOG，写入 1-evidence.md 的"残余日志"节。
 
+> 读全文是对的——阶段2-3 建图与结构判读本就需要完整文本。留出验证的隔离**不靠少读**，而靠阶段5 把"预测留出段"交给一个全新子任务来做（见阶段5）。
+
 ### 阶段 2:建逻辑图谱
 
 **进入:** 阶段1 完成。
@@ -271,15 +273,20 @@ flowchart TD
 
 **登记对立解释:** 列出所有仍说得通的*非作者认知*读法——体裁惯例、题目约束、读者适配、编辑/合著之手、引用他人、巧合。记下其中**未被排除**的条数。
 
-**独立对抗 pass(尤其 agent/LLM 执行时必做):**
-- 开一个**结构上独立**的推理(换框架/换上下文/另起子任务),其唯一任务是为这条签名找出**最廉价的非认知解释**并试图推翻它。
-- 签名存活,当且仅当对抗给出的最佳替代解释,**弱于**认知解释。
-- 这一步对冲 agent 系统性的"流畅过度归因"——自我证伪是同一推理给自己出题,不够。
+**独立对抗 pass(由独立子任务执行):**
+- **派一个全新子任务**(干净上下文),只给它:这条签名 + 支撑它的证据实例。它唯一的任务是为该签名找出**最廉价的非认知解释**并尽力推翻它。
+- 为何要独立上下文:自我证伪是同一推理给自己出题,而 agent 的"流畅过度归因"是系统性的,同一上下文兜不住。隔离的红队才有意义。
+- 签名存活,当且仅当子任务给出的最佳替代解释,**弱于**认知解释。
+- **无子任务能力的环境**:退回同上下文换框架重推,并在产出里标注"对抗未隔离,强度打折"。
 
-**留出验证(Hold-out,最强闸门):**
-- 在形成该签名时,**预留**约 20–30% 的文本(如最后一节)未参与。
-- 用该签名**预测**留出段的 ≥1 个具体、可核对的属性:某处会怎么措辞 / 会略去说什么 / 会用什么结构动作。
-- 读留出段核对。PASS = 预测被印证;FAIL = 未印证 → 丢弃为"事后讲故事"。
+**留出验证(Hold-out,最强闸门;由独立子任务执行):**
+- **为什么必须用子任务**:Agent 读文件是一次性读入,同一上下文**物理上无法"假装没看过"留出段**——光说"预留 20-30%"没用,读都读了。真正的盲测只能交给一个从没拿到留出段的全新子任务。
+- 主流程照常读全文、形成签名(隔离**只发生在预测这一步**,不牺牲阶段1-3 的全文分析)。
+- **派一个全新子任务**,prompt 里只给两样:**这条签名(那句假设)** + **删去最后 ~20–30% 的文章正文**(按行范围截断,留出段绝不放进去)。
+- 让子任务据此**预测**留出段的 ≥1 个具体可核对属性:某处会怎么措辞 / 会略去说什么 / 会用什么结构动作。
+- 主 agent 拿回预测,**比对自己手里的留出段**判定。PASS = 命中;FAIL = 未中 → 丢弃为"事后讲故事"。(核对不需盲,只有预测需盲。)
+- **残留局限(如实记入 3-attribution):** 签名毕竟是在读过全文后形成的,可能已被留出段轻微拟合;故喂子任务时只给"签名那句话 + 70% 正文",不附基于全文的完整证据清单,把这层污染压到最低。留出验证**降低而非消除**事后归因风险。
+- **无子任务能力的环境**:退回同上下文"先写下预测、再揭晓核对",并明确标注"留出未隔离,记忆污染未排除,验证强度打折"。
 
 **产出:** 通过全部闸门的归因层签名(暂存,待阶段6组装)。
 
@@ -403,7 +410,8 @@ flowchart TD
    └ 模式A:组装描述层 → 交付(到此为止,零作者断言)
 5. 模式B 对每条候选跑闸门:
    Patternicity(≥2逐字实例) → Agenticity(基线减除) →
-   登记对立解释 → 独立对抗pass → 留出预测验证
+   登记对立解释 → 独立对抗pass(独立子任务) → 留出预测验证(独立子任务:只给签名+70%正文去盲测)
+   无子任务环境则退回同上下文,标注"未隔离,强度打折"
 6. 组装+置信度(描述:实例数;归因:实例减对立解释,叠留出;归因<描述)
 7. 自审8项 → 附上限声明 → 交付
 
