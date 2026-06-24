@@ -32,15 +32,17 @@ user_invocable: false
 
 ## Step 1：备份 + 创建 fix session 文档
 
+通过 `date +%Y%m%dT%H%M%S` 获取当前时间戳，记为 `ts`（后续所有路径均使用此值，不再重新获取）。
+
 从 `skill_dir/SKILL.md` frontmatter 读取调用方 skill 的当前版本号，记为 `skill_version`。
 
-将 `file` 备份到 `~/.hskill/fix-skill/<skill>/backups/<文件名>.<YYYYMMDDTHHMMSS>.bak`，记录为 `backup_path`。
+将 `file` 备份到 `~/.hskill/fix-skill/<skill>/backups/<文件名>.<ts>.bak`，记录为 `backup_path`。
 
 读取 `references/fix-record-template.md`，创建 fix session 文档：
 
-路径：`~/.hskill/fix-skill/<skill>/<YYYYMMDDTHHMMSS>--<文件名>.md`
+路径：`~/.hskill/fix-skill/<skill>/<ts>--<文件名>.md`
 
-写入 header 部分（frontmatter 含 `skill_version` + 原始错误），`status` 初始为 `in_progress`。
+写入 header 部分（frontmatter 含 `skill_version` + 原始错误），`file` 字段写入 `file` 的绝对路径，`status` 初始为 `in_progress`。
 
 ---
 

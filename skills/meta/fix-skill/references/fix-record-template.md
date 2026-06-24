@@ -1,8 +1,8 @@
 ---
-date: {{YYYYMMDDTHHMMSS}}
+date: {{ts}}
 skill: {{skill}}
-skill_version: {{skill_version}}
-file: {{file_relative_path}}
+skill_version: "{{skill_version}}"
+file: {{file_absolute_path}}
 backup: {{backup_path}}
 status: in_progress
 ---
