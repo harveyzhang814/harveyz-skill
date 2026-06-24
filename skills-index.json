@@ -225,7 +225,7 @@
     },
     { "path": "experiment/learn-paper", "bundle": "experiment", "installScope": "project", "contentHash": "1fe085285d11bb6a", "contentVersion": "0.1.0" },
     { "path": "meta/scout-philosophy", "bundle": "meta", "installScope": "project", "contentHash": "46b5c57f31d514bf", "contentVersion": "1.0.0" },
-    { "path": "meta/fix-skill", "bundle": "meta", "installScope": "global", "contentHash": "9a2877e8b6e00c36", "contentVersion": "1.0.0" },
+    { "path": "meta/fix-skill", "bundle": "meta", "installScope": "global", "contentHash": "503a4d37bd18cfa5", "contentVersion": "1.1.0" },
     {
       "path": "experiment/extract-cognition",
       "bundle": "experiment",
