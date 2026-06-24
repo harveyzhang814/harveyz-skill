@@ -167,10 +167,10 @@ ORIGIN_PATH: {origin_path}
 - error: result.stderr + returncode
 - call_args: [url]
 
-解析 fix-skill 输出的 `FIX_RESULT:` 行：
-- `AUTO_RETRY` → 重新执行步骤 1（仅重试一次，再次失败则向用户报告）
-- `NEEDS_MANUAL_RETRY` → 向用户报告："已修复 SKILL.md，请重新触发 skill"
-- `FAILURE` → 向用户报告原始错误 + `FAILURE_REASON`
+解析 fix-skill 输出的 `FIX_RESULT:` 行（同时记录 `SESSION_PATH:` 和 `ATTEMPTS:` 供报告使用）：
+- `AUTO_RETRY` → 重新执行步骤 1（仅重试一次）；通知用户「已自动修复，共 N 轮，记录见 SESSION_PATH」；再次失败则向用户报告原始错误
+- `FAILURE` → 向用户报告原始错误 + 「已尝试 3 轮均失败，已回滚，诊断记录见 SESSION_PATH」
+- `FAILURE+RESTORE_FAILED` → 立即告警用户：「修复失败且还原异常，脚本状态不可知，backup 已保留，请手动处理，记录见 SESSION_PATH」
 
 ### 步骤 2：等待 Subagent 1 完成
 
