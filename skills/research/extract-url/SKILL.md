@@ -156,6 +156,22 @@ ORIGIN_PATH: {origin_path}
 抓取完成：{标题} ({block数} blocks, {图片数} images)
 ```
 
+### 步骤 1.5：Subagent 1 错误恢复（自动）
+
+若 Subagent 1 返回非零 returncode 或 RuntimeError，在报告用户前先调用 fix-skill：
+
+提供以下上下文给 fix-skill：
+- skill: extract-url
+- skill_dir: SKILL_DIR
+- file: 失败脚本的绝对路径（playwright_xcom.py 或 playwright_web.py）
+- error: result.stderr + returncode
+- call_args: [url]
+
+解析 fix-skill 输出的 `FIX_RESULT:` 行：
+- `AUTO_RETRY` → 重新执行步骤 1（仅重试一次，再次失败则向用户报告）
+- `NEEDS_MANUAL_RETRY` → 向用户报告："已修复 SKILL.md，请重新触发 skill"
+- `FAILURE` → 向用户报告原始错误 + `FAILURE_REASON`
+
 ### 步骤 2：等待 Subagent 1 完成
 
 收到完成通知后，从报告中提取 `ORIGIN_PATH:` 开头的那行，取其值作为 origin_path。检查文件是否存在。
