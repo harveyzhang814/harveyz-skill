@@ -1,6 +1,7 @@
 ---
 date: {{YYYYMMDDTHHMMSS}}
 skill: {{skill}}
+skill_version: {{skill_version}}
 file: {{file_relative_path}}
 backup: {{backup_path}}
 status: in_progress

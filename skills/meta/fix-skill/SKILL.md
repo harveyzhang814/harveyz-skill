@@ -23,21 +23,24 @@ user_invocable: false
 
 ```
 ~/.hskill/fix-skill/
-├── backups/    # 暂存，session 结束自动清空
-└── *.md        # fix session 文档（永久保留）
+└── <skill>/
+    ├── backups/    # 暂存，session 结束自动清空
+    └── *.md        # fix session 文档（永久保留）
 ```
 
 ---
 
 ## Step 1：备份 + 创建 fix session 文档
 
-将 `file` 备份到 `~/.hskill/fix-skill/backups/<文件名>.<YYYYMMDDTHHMMSS>.bak`，记录为 `backup_path`。
+从 `skill_dir/SKILL.md` frontmatter 读取调用方 skill 的当前版本号，记为 `skill_version`。
+
+将 `file` 备份到 `~/.hskill/fix-skill/<skill>/backups/<文件名>.<YYYYMMDDTHHMMSS>.bak`，记录为 `backup_path`。
 
 读取 `references/fix-record-template.md`，创建 fix session 文档：
 
-路径：`~/.hskill/fix-skill/<YYYYMMDDTHHMMSS>--<skill>--<文件名>.md`
+路径：`~/.hskill/fix-skill/<skill>/<YYYYMMDDTHHMMSS>--<文件名>.md`
 
-写入 header 部分（frontmatter + 原始错误），`status` 初始为 `in_progress`。
+写入 header 部分（frontmatter 含 `skill_version` + 原始错误），`status` 初始为 `in_progress`。
 
 ---
 
