@@ -1,31 +1,36 @@
 ---
 date: {{YYYYMMDDTHHMMSS}}
 skill: {{skill}}
-fix_target: {{script|skill_logic}}
 file: {{file_relative_path}}
-status: {{AUTO_RETRY|NEEDS_MANUAL_RETRY|FAILURE}}
+backup: {{backup_path}}
+status: in_progress
 ---
 
-## 触发错误
+## 原始错误
 
-```
 {{error_output}}
-```
 
-## 根因
+---
 
-{{root_cause_one_line}}
+## 第 1 轮
 
-## 修复内容
+**假设：** {{hypothesis}}
 
+**改动：**
 ```diff
-{{diff_or_empty_on_failure}}
+{{diff -u backup_path file 输出}}
 ```
 
-## 验证
+**验证结果：** 通过 / 失败 — {{verify_detail}}
 
-{{verify_detail}}
+**失败原因：** {{若失败填写，说明为何假设不成立，为下一轮提供方向}}
 
-## 备份路径
+---
 
-{{backup_path}}
+<!-- 第 2、3 轮格式同上，append 在此处 -->
+
+---
+
+## 最终结果
+
+状态：{{成功（第 N 轮）| 失败（3 轮均未解决）| 失败且还原异常}}
