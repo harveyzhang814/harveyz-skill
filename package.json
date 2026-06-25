@@ -48,8 +48,10 @@
     "skills/experiment/learn-paper/",
     "skills/meta/scout-philosophy/",
     "skills/meta/fix-skill/",
+    "skills/meta/init-goal/",
     "skills/experiment/extract-cognition/",
     "tools/hub/",
+    "tools/sync-agent/",
     "hooks/check-similar-branch/"
   ],
   "engines": {
