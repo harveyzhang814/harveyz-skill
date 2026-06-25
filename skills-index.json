@@ -229,14 +229,32 @@
       "contentHash": "91391f7b702e0797",
       "contentVersion": "0.3.0"
     },
-    { "path": "experiment/learn-paper", "bundle": "experiment", "installScope": "project", "contentHash": "1fe085285d11bb6a", "contentVersion": "0.1.0" },
-    { "path": "meta/scout-philosophy", "bundle": "meta", "installScope": "project", "contentHash": "46b5c57f31d514bf", "contentVersion": "1.0.0" },
-    { "path": "meta/fix-skill", "bundle": "meta", "installScope": "global", "contentHash": "185807f284915b8c", "contentVersion": "2.0.0" },
+    {
+      "path": "experiment/learn-paper",
+      "bundle": "experiment",
+      "installScope": "project",
+      "contentHash": "1fe085285d11bb6a",
+      "contentVersion": "0.1.0"
+    },
+    {
+      "path": "meta/scout-philosophy",
+      "bundle": "meta",
+      "installScope": "project",
+      "contentHash": "46b5c57f31d514bf",
+      "contentVersion": "1.0.0"
+    },
+    {
+      "path": "meta/fix-skill",
+      "bundle": "meta",
+      "installScope": "global",
+      "contentHash": "185807f284915b8c",
+      "contentVersion": "2.0.0"
+    },
     {
       "path": "meta/init-goal",
       "bundle": "coding",
       "installScope": "essential",
-      "contentHash": "261055dd8f3aef9b",
+      "contentHash": "8db51b5ca77dc470",
       "contentVersion": "1.3.0"
     },
     {
