@@ -1,6 +1,6 @@
 {
   "toolBundleMeta": {
-    "tools": "开发者 OS 工具（hub — 项目管理 + git 状态 + 任务跟踪）"
+    "tools": "开发者 OS 工具（hub — 项目管理 + git 状态 + 任务跟踪；sync — Syncthing 守护进程管理）"
   },
   "tools": [
     {
@@ -8,6 +8,12 @@
       "path": "tools/hub",
       "bundle": "tools",
       "installScope": "essential"
+    },
+    {
+      "name": "sync",
+      "path": "tools/sync-agent",
+      "bundle": "tools",
+      "installScope": "global"
     }
   ],
   "bundleMeta": {
@@ -16,7 +22,7 @@
     "coding": "程序工具（init-workflow + setup-debug + dispatch-task + close-task）",
     "writing": "写作工具（forge-doc + draw-diagram + manage-docs + manage-dir + migrate-spec）",
     "design": "设计工具（scout-brand + build-style + sync-design）",
-    "meta": "元操作工具（clean-git + archive-skill + dedup-skill + contribute-skill + publish-skill + release-project + runby-opencode）",
+    "meta": "元操作工具（clean-git + archive-skill + dedup-skill + contribute-skill + publish-skill + release-project + runby-opencode + init-goal）",
     "experiment": "实验性工具（尚未稳定，不纳入正式 bundle）"
   },
   "skills": [
@@ -226,6 +232,13 @@
     { "path": "experiment/learn-paper", "bundle": "experiment", "installScope": "project", "contentHash": "1fe085285d11bb6a", "contentVersion": "0.1.0" },
     { "path": "meta/scout-philosophy", "bundle": "meta", "installScope": "project", "contentHash": "46b5c57f31d514bf", "contentVersion": "1.0.0" },
     { "path": "meta/fix-skill", "bundle": "meta", "installScope": "global", "contentHash": "185807f284915b8c", "contentVersion": "2.0.0" },
+    {
+      "path": "meta/init-goal",
+      "bundle": "meta",
+      "installScope": "essential",
+      "contentHash": "",
+      "contentVersion": "1.0.0"
+    },
     {
       "path": "experiment/extract-cognition",
       "bundle": "experiment",
