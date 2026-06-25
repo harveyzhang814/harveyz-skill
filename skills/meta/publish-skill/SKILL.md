@@ -76,7 +76,7 @@ cat /tmp/sv-unregistered.txt
 extract  learn    forge    draw     manage   migrate  scout
 build    sync     publish  archive  contribute  analyze  clean
 release  validate init     dispatch close    setup    capture
-runby    probe    dedup
+runby    probe    dedup    fix
 ```
 
 特殊模式：若目录名以 `runby-` 开头，直接视为合规（无需检查名词部分）。

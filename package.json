@@ -47,6 +47,8 @@
     "skills/experiment/probe-session/",
     "skills/experiment/learn-paper/",
     "skills/meta/scout-philosophy/",
+    "skills/meta/fix-skill/",
+    "skills/experiment/extract-cognition/",
     "tools/hub/",
     "hooks/check-similar-branch/"
   ],
