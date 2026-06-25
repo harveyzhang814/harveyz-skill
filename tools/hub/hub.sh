@@ -19,7 +19,7 @@ HASH_FILE="${VENV_DIR}/.installed_hash"
 
 _hash_source() {
   find "${INSTALL_DIR}" -type f \( -name "*.py" -o -name "*.toml" -o -name "*.json" \) \
-    ! -path "*/__pycache__/*" \
+    ! -path "*/__pycache__/*" ! -path "*/venv/*" \
     | sort | xargs sha256sum 2>/dev/null | sha256sum | awk '{print $1}'
 }
 
