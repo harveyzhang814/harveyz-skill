@@ -1,6 +1,6 @@
 ---
 name: init-goal
-version: "1.2.0"
+version: "1.2.1"
 description: "Generate a structured /loop Goal Prompt through guided dialogue. Parses user's initial message to auto-fill known fields and match the best template, then clarifies only what's missing (depth-first, one question at a time). Outputs the Goal Prompt as text — the skill writes no files; the loop agent persists prompt.md/log.md/summary.md during execution per the embedded rules. Triggers: user says /init-goal, 'initialize a loop goal', 'set up a GOal', 'help me use /loop to accomplish X', or describes a repetitive autonomous task they want Claude to run in a loop."
 user_invocable: true
 ---
@@ -209,47 +209,11 @@ EXIT_FALLBACK: 连续 2 轮无新节点则汇总已知结构并停止。
 - 明确条件：[EXIT_EXPLICIT]
 - 兜底逻辑：[EXIT_FALLBACK]
 
-## 文档维护（执行期间——由你，即运行本 loop 的 agent，负责落盘）
+## 文档维护（由运行本 loop 的 agent 负责，工作目录 ~/.hskill/init-goal/[goal-slug]/）
 
-工作目录：~/.hskill/init-goal/[goal-slug]/
-
-**首轮开始时：** 若 prompt.md 不存在，`mkdir -p` 创建工作目录，并把本 Goal Prompt 完整存为 `prompt.md`（静态存档，之后不再修改）。
-
-**每轮开始前：** 读取 log.md 最后一个 Round 条目获取上下文（首轮若 log.md 不存在则跳过）。
-
-**每轮末尾：** 将本轮记录追加到 log.md，格式如下：
-
-### Round N — YYYY-MM-DD HH:MM
-
-**执行内容：** <本轮做了什么>
-
-**评估结果：** <指标 / 分数 / 检查项结果>
-
-**下一轮建议：** <继续方向，或已达退出条件>
-
----
-
-**Loop 退出时**（明确条件触发、兜底逻辑触发或用户中断），在同目录生成 summary.md：
-
-# GOal Summary — [goal-slug]
-
-## 目标
-[GOAL]
-
-## 结果
-<最终达成状态，一句话>
-
-## 关键轮次
-<哪几轮发生了重要转折，简要说明>
-
-## 退出原因
-<明确条件触发 / 兜底逻辑触发 / 用户中断>
-
-## 执行统计
-共 N 轮
-
-## 建议（可选）
-<若未完全达成，建议的下一步方向>
+- **首轮：** 若 prompt.md 不存在，`mkdir -p` 工作目录并把本 prompt 完整存为 prompt.md（静态存档，之后不改）。
+- **每轮：** 开始前读 log.md 末条 Round 获取上下文（首轮无则跳过）；结束时向 log.md 追加一条 `### Round N — YYYY-MM-DD HH:MM`，含三行——执行内容 / 评估结果 / 下一轮建议。
+- **退出时**（明确条件 / 兜底 / 用户中断）：在同目录写 summary.md，含——目标、结果（一句话）、关键轮次、退出原因、总轮数、可选下一步。
 ```
 
 **展示完文本后，附上启动说明：**
