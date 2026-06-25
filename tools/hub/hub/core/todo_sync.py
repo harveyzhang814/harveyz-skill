@@ -72,8 +72,6 @@ def parse_todo_md(path: Path) -> list[dict]:
 def sync_project(db: HubDB, name: str, path: str) -> dict:
     todo_path = Path(path) / "TODO.md"
     tasks = parse_todo_md(todo_path)
-    if not tasks:
-        return {"imported": 0, "updated": 0}
 
     with db._conn() as conn:
         row = conn.execute(
@@ -83,9 +81,15 @@ def sync_project(db: HubDB, name: str, path: str) -> dict:
             return {"imported": 0, "updated": 0}
         project_id = row["id"]
 
+    if not tasks:
+        return {"imported": 0, "updated": 0}
+
     imported = 0
     updated = 0
+    seen_titles: set[str] = set()
+
     for t in tasks:
+        seen_titles.add(t["title"])
         result = _upsert_task(
             db, project_id,
             title=t["title"],
@@ -97,6 +101,20 @@ def sync_project(db: HubDB, name: str, path: str) -> dict:
             imported += 1
         elif result == "updated":
             updated += 1
+
+    # Tasks that were todo in DB but no longer appear in TODO.md → mark done
+    with db._conn() as conn:
+        stale = conn.execute(
+            "SELECT id, title FROM tasks WHERE project_id = ? AND status = 'todo'",
+            (project_id,),
+        ).fetchall()
+        for row in stale:
+            if row["title"] not in seen_titles:
+                conn.execute(
+                    "UPDATE tasks SET status = 'done' WHERE id = ?",
+                    (row["id"],),
+                )
+                updated += 1
 
     return {"imported": imported, "updated": updated}
 
