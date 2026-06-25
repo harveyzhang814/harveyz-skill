@@ -1,11 +1,11 @@
 ---
-name: analyze-skill
-description: "Analyzes any skill repository (skills/ directory + SKILL.md format) using the 4-layer onion model. Produces a repo-level summary at {skillDir}/{repo-name}/analysis-{YYYY-MM-DD}.md, complementing learn-skill which handles per-skill deep analysis. Triggers: 'analyze this skill repo', 'do a systematic study of the skill repo', 'output skill repo analysis report', 'understand the design intent of this skill system'. Accepts optional path argument: /analyze-skill ~/path/to/repo."
+name: survey-skillrepo
+description: "Analyzes any skill repository (skills/ directory + SKILL.md format) using the 4-layer onion model. Produces a repo-level summary at {skillDir}/{repo-name}/analysis-{YYYY-MM-DD}.md, complementing learn-skill which handles per-skill deep analysis. Triggers: 'analyze this skill repo', 'do a systematic study of the skill repo', 'output skill repo analysis report', 'understand the design intent of this skill system'. Accepts optional path argument: /survey-skillrepo ~/path/to/repo."
 user_invocable: true
-version: "2.0.0"
+version: "2.0.1"
 ---
 
-# skill-analyzer
+# survey-skillrepo
 
 > **版本：** v2.0.0
 > **定位：** 对任意 skill 仓库进行系统性分析的工具 Skill
@@ -15,7 +15,7 @@ version: "2.0.0"
 
 ## 触发条件
 
-- `/analyze-skill ~/path/to/repo`（带路径参数）
+- `/survey-skillrepo ~/path/to/repo`（带路径参数）
 - "分析这个 skill 仓库"
 - "对这个 skill 仓库做系统性研究"
 - "输出 skill 仓库的分析报告"
@@ -197,4 +197,4 @@ skills_count: {发现的 skill 总数}
 
 ---
 
-*skill-analyzer v2.0.0 | 2026-06-19*
+*survey-skillrepo v2.0.0 | 2026-06-19*

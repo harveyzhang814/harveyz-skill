@@ -1,6 +1,6 @@
 {
   "name": "harveyz-skill",
-  "version": "0.18.0",
+  "version": "0.20.0",
   "description": "Skill manager for Claude Code, Cursor, and Codex",
   "type": "module",
   "bin": {
@@ -34,8 +34,8 @@
     "skills/design/scout-brand/",
     "skills/design/build-style/",
     "skills/design/sync-design/",
-    "skills/meta/init-skill/",
-    "skills/meta/analyze-skill/",
+    "skills/experiment/init-skill/",
+    "skills/research/survey-skillrepo/",
     "skills/meta/clean-git/",
     "skills/meta/archive-skill/",
     "skills/meta/dedup-skill/",
@@ -43,8 +43,12 @@
     "skills/meta/publish-skill/",
     "skills/meta/runby-opencode/",
     "skills/meta/release-project/",
+    "skills/meta/sync-agent/",
     "skills/experiment/probe-session/",
     "skills/experiment/learn-paper/",
+    "skills/meta/scout-philosophy/",
+    "skills/meta/fix-skill/",
+    "skills/experiment/extract-cognition/",
     "tools/hub/",
     "hooks/check-similar-branch/"
   ],

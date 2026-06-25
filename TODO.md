@@ -66,3 +66,39 @@ sync-agent 已完成，现在将 Hermes agent 配置目录 `~/.hermes` 纳入同
 
 ---
 
+## harveyz-skill — 推理模式提取前置 skill
+
+### [x] 开发两阶段引导式推理模式提取 skill（元框架前置层）
+**已落地为** `skills/experiment/extract-cognition`（认知签名抽取方法论，取代原两阶段锚点设计）。设计见 docs/superpowers/specs/2026-06-22-extract-cognition-design.md。
+
+---
+
+## harveyz-skill — GitHub 相似项目探索 skill
+
+### 探索 GitHub 相似项目借鉴设计的 skill
+**优先级**: P2 | **日期**: 2026-06-21
+
+给定一个产品想法或功能方向，在 GitHub 上搜索语义相似的开源项目，分析各项目中可借鉴的模块、特性或设计哲学，而不是整体采用某个项目。目标是帮助用户快速找到参考点，提炼出可引入自己产品的灵感或具体实现思路。
+
+---
+
+## harveyz-skill — sync-design-html 输出路径迁移
+
+### 将 sync-design-html 的 HTML 输出与 manifest 迁移至项目 `.hskill/` 文件夹
+**优先级**: P2 | **日期**: 2026-06-22
+
+当前 `sync-design-html` skill 将 HTML 设计备份写入 `docs/superpowers/`，manifest 存放在 `docs/reference/design-html-manifest.json`。按 skill 设计哲学，skill 产出物应归属 `.hskill/` 目录，与项目文档目录解耦。
+
+需完成：将输出路径（HTML 文件 + manifest）统一迁移到项目的 `.hskill/design-html/`，并更新 skill 中的路径引用。
+
+---
+
+## capture-todo — 合并步骤双校验兼容
+
+### 修复 capture-todo 合并步骤同时通过分支来源与提交格式检查
+**优先级**: P2 | **日期**: 2026-06-21
+
+当目标项目同时启用分支来源校验（pre-commit 读取 MERGE_MSG，要求 `Merge branch 'xxx'` 格式）和提交格式校验（commit-msg 要求 Conventional Commits 格式）时，`git merge --no-ff -m "..."` 的 `-m` 参数会同时写入 MERGE_MSG，导致两个 hook 的格式要求冲突。修复方向：合并前先手动将 MERGE_MSG 写成标准 git 格式，再用 `-m "chore(...): ..."` 满足 Conventional Commits，两路分开处理。
+
+---
+

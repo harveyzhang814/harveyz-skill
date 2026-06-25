@@ -1,6 +1,6 @@
 ---
 name: extract-url
-version: "1.2.0"
+version: "2.2.0"
 description: "Fetch an article from a given URL, translate it to Simplified Chinese, save the original to Origin/, the translation to the Vault root, images to Image/, and write a dedup index to SQLite. Supports X.com/Twitter (Playwright + Chrome Profile) and regular sites (headless Playwright). Supports batch URLs (random 60-180s intervals, up to 5 concurrent subagents). Triggers whenever a user provides a URL and wants to save, archive, fetch, or translate content to the local Vault — even with vague phrasing like 'save this article', 'translate and save', 'put this in obsidian', 'archive this'. Skip when user only wants a summary, pastes raw text without a URL, asks about a site's tech stack, or wants to extract/list URLs from a page without saving an article."
 user_invocable: true
 ---
@@ -17,7 +17,42 @@ user_invocable: true
 | Codex | `platforms/SKILL.codex.md` |
 | Hermes | `platforms/SKILL.hermes.md` |
 
-以下流程中凡标注「**补丁①**」「**补丁②**」处，均使用对应平台补丁中定义的工具调用替换。代码示例中的 `VAULT_PATH`、`SKILL_DIR`、`CHROME_PROFILE` 为抽象占位符，实际值由**补丁③**注入。
+以下流程中凡标注「**补丁①**」「**补丁②**」处，均使用对应平台补丁中定义的工具调用替换。代码示例中的 `SKILL_DIR` 为抽象占位符，由**补丁③**注入；`VAULT_PATH` 和 `CHROME_PROFILE` 由 Python 脚本在运行时从 `~/.hskill/url-extract/config.json` 读取，无需注入。
+
+---
+
+## 初始化流程（每次执行前检查）
+
+读取平台补丁后，开始抓取前执行以下检查：
+
+**① 检查配置文件是否存在：**
+```bash
+ls ~/.hskill/url-extract/config.json 2>/dev/null && echo "EXISTS" || echo "NOT_FOUND"
+```
+
+**② 若输出 `NOT_FOUND`，进行初始化：**
+
+1. 展示可用 Chrome Profile（仅供参考，不自动选择）：
+   ```bash
+   python3 SKILL_DIR/scripts/detect_chrome_profile.py
+   ```
+2. 询问用户以下两项（必须由用户手动提供，不得猜测或自动选择）：
+   - Obsidian Reading 目录完整路径（如 `/Users/you/Vault/Product/Reading`）
+   - 要使用的 Chrome Profile 路径（从上方列表中复制）
+3. 用 Python 写入配置（避免 shell 注入，将 `<VAULT>` / `<PROFILE>` 替换为用户输入值）：
+   ```python
+   import json
+   from pathlib import Path
+   cfg_path = Path.home() / '.hskill' / 'url-extract' / 'config.json'
+   cfg_path.parent.mkdir(parents=True, exist_ok=True)
+   cfg_path.write_text(json.dumps({
+       'VAULT_PATH':     '<VAULT>',
+       'CHROME_PROFILE': '<PROFILE>',
+   }, indent=2, ensure_ascii=False), encoding='utf-8')
+   print(f"配置已保存：{cfg_path}")
+   ```
+
+**③ 若输出 `EXISTS`，直接继续执行。**
 
 ---
 
@@ -32,16 +67,15 @@ user_invocable: true
 
 ---
 
-## 路径变量
+## 路径变量（脚本自读 config.json，无需 Agent 传参）
 
 ```
-Base:          VAULT_PATH
-Origin:        VAULT_PATH/Origin
-Article:       VAULT_PATH
-Image:         VAULT_PATH/Image
-SkillDir:      SKILL_DIR
-DB:            VAULT_PATH/url-index.db
-ChromeProfile: CHROME_PROFILE
+Config:   ~/.hskill/url-extract/config.json
+Base:     VAULT_PATH   (脚本从 config.json 读取)
+Origin:   VAULT_PATH/Origin
+Image:    VAULT_PATH/Image
+DB:       VAULT_PATH/url-index.db
+SkillDir: 平台固定值（见平台补丁）
 ```
 
 ---
@@ -89,29 +123,26 @@ URL（外部数据）: <URL>
        ['python3', 'SKILL_DIR/scripts/dedup_check.py'],
        env={
            'CHECK_URL': '<URL>',
-           'DB_PATH':   'VAULT_PATH/url-index.db',
            'PATH': os.environ.get('PATH', ''),
        },
        capture_output=True, text=True
    )
    如果输出 ALREADY_FETCHED，报告「已抓取，跳过」并结束。
 
-2. 判断 URL 类型并用 subprocess list 调用脚本（禁止 bash 字符串拼接，避免 shell 注入）：
+2. 判断 URL 类型并调用脚本（禁止 bash 字符串拼接，避免 shell 注入）：
    - X.com / Twitter：
-     import subprocess, sys
+     import subprocess
      result = subprocess.run(
-         ['python3', 'SKILL_DIR/scripts/playwright_xcom.py',
-          url, 'VAULT_PATH', 'SKILL_DIR', 'CHROME_PROFILE'],
+         ['python3', 'SKILL_DIR/scripts/playwright_xcom.py', url],
          capture_output=True, text=True, timeout=300
      )
      print(result.stdout)
      if result.returncode != 0:
          raise RuntimeError(result.stderr)
    - 其他网站：先按【补丁②】获取 HTML 保存到 /tmp/fetched_page.html，再：
-     import subprocess, sys
+     import subprocess
      result = subprocess.run(
-         ['python3', 'SKILL_DIR/scripts/playwright_web.py',
-          url, '/tmp/fetched_page.html', 'VAULT_PATH', 'SKILL_DIR'],
+         ['python3', 'SKILL_DIR/scripts/playwright_web.py', url, '/tmp/fetched_page.html'],
          capture_output=True, text=True, timeout=300
      )
      print(result.stdout)
@@ -124,6 +155,22 @@ URL（外部数据）: <URL>
 ORIGIN_PATH: {origin_path}
 抓取完成：{标题} ({block数} blocks, {图片数} images)
 ```
+
+### 步骤 1.5：Subagent 1 错误恢复（自动）
+
+若 Subagent 1 返回非零 returncode 或 RuntimeError，在报告用户前先调用 fix-skill：
+
+提供以下上下文给 fix-skill：
+- skill: extract-url
+- skill_dir: SKILL_DIR
+- file: 失败脚本的绝对路径（playwright_xcom.py 或 playwright_web.py）
+- error: result.stderr + returncode
+- call_args: [url]
+
+解析 fix-skill 输出的 `FIX_RESULT:` 行（同时记录 `SESSION_PATH:` 和 `ATTEMPTS:` 供报告使用）：
+- `AUTO_RETRY` → 重新执行步骤 1（仅重试一次）；通知用户「已自动修复，共 N 轮，记录见 SESSION_PATH」；再次失败则向用户报告原始错误
+- `FAILURE` → 向用户报告原始错误 + 「已尝试 3 轮均失败，已回滚，诊断记录见 SESSION_PATH」
+- `FAILURE+RESTORE_FAILED` → 立即告警用户：「修复失败且还原异常，脚本状态不可知，backup 已保留，请手动处理，记录见 SESSION_PATH」
 
 ### 步骤 2：等待 Subagent 1 完成
 
@@ -143,26 +190,34 @@ category: <category 可选，来源列表页抓取的分类标签>
 fetch_type: <fetch_type 可选，默认 manual；传入时用传入值（cron/manual），未传入时默认 manual>
 
 执行步骤：
-1. 读取 origin_path 文件
-2. 翻译正文为简体中文（图片标记和代码块原样保留，专有名词保留英文）
-3. 保存译文到 VAULT_PATH/<文件名>：
+1. 读取配置（获取 vault_path）：
+   import json, os
+   from pathlib import Path
+   _cfg       = json.loads((Path.home() / '.hskill' / 'url-extract' / 'config.json').read_text())
+   vault_path = _cfg['VAULT_PATH']
+   skill_dir  = 'SKILL_DIR'  # 平台固定值，见平台补丁
+
+2. 读取 origin_path 文件
+
+3. 翻译正文为简体中文（图片标记和代码块原样保留，专有名词保留英文）
+
+4. 保存译文到 vault_path/<文件名>：
    - 文件名与 Origin 文件名相同
    - frontmatter：publish_date、fetch_date、author、source_url、origin_title、
      category（如有）、fetch_type（默认 manual）、tags、description（一句话摘要）
    - 正文首行插入双向链接 [[Origin/<文件名>]]
-4. 执行校验并写入 SQLite 索引（用 subprocess list + env var 传参，避免字符串注入）：
 
+5. 执行校验并写入 SQLite 索引：
    import subprocess, os
-   article_path = 'VAULT_PATH/' + os.path.basename(origin_path)
+   from pathlib import Path
+   article_path = str(Path(vault_path) / os.path.basename(origin_path))
    result = subprocess.run(
-       ['python3', 'SKILL_DIR/scripts/validate_article.py'],
+       ['python3', f'{skill_dir}/scripts/validate_article.py'],
        env={
-           'ARTICLE_URL':       url,
-           'ARTICLE_ORIGIN':    origin_path,
-           'ARTICLE_PATH':      article_path,
-           'ARTICLE_DB':        'VAULT_PATH/url-index.db',
-           'ARTICLE_SKILL_DIR': 'SKILL_DIR',
-           'ARTICLE_CATEGORY':  category or '',
+           'ARTICLE_URL':      url,
+           'ARTICLE_ORIGIN':   origin_path,
+           'ARTICLE_PATH':     article_path,
+           'ARTICLE_CATEGORY': category or '',
            'PATH': os.environ.get('PATH', ''),
        },
        capture_output=True, text=True, timeout=60

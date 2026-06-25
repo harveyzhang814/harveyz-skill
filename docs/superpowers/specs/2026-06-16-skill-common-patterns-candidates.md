@@ -1,3 +1,9 @@
+---
+migrated: 2026-06-21
+implemented_in:
+  - skills/experiment/init-skill/references/skill-authoring-guide.md  # 全部 13 条候选均已纳入
+---
+
 # Skill 共性模式候选清单
 
 **日期：** 2026-06-16

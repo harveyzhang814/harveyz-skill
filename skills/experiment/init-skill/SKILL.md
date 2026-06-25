@@ -1,8 +1,8 @@
 ---
 name: init-skill
-description: "Initialize a new skill from scratch in the harveyz-skill repo — scaffolds SKILL.md, directory structure, and a feature branch from a design spec or free-form notes. Triggers: 'create new skill', 'scaffold a skill', 'init skill', 'bootstrap skill from notes', 'create skill from spec', 'help me start a new skill', 'initialize a skill'."
+description: "Initialize a new skill from scratch in the harveyz-skill repo — scaffolds SKILL.md, directory structure, and a feature branch from a design spec or free-form notes. Applies the condensed skill design standard (16 philosophies + system mechanisms). Triggers: 'create new skill', 'scaffold a skill', 'init skill', 'bootstrap skill from notes', 'create skill from spec', 'help me start a new skill', 'initialize a skill'."
 user_invocable: true
-version: "1.0.1"
+version: "1.2.0"
 ---
 
 # 从设计文档初始化新 Skill
@@ -22,6 +22,12 @@ version: "1.0.1"
 - 从其他项目**导入**已有 skill → 使用 `contribute-skill`
 - **校验格式或注册** index → 使用 `publish-skill`
 - **修改**已有 skill 内容 → 直接编辑对应 SKILL.md
+
+---
+
+## 参考标准
+
+本 skill 使用 `references/skill-standard.md` 作为单一标准——精简版（约 200 行），含 16 条设计哲学 + 系统机制 + 张力点。Step 2 加载该文件并对照检查。
 
 ---
 
@@ -54,17 +60,17 @@ version: "1.0.1"
    ```
    列出候选文件供用户选择。
 
-### Step 2 — 提炼要素 + 最佳实践检查
+### Step 2 — 提炼要素 + 标准检查
 
-用 Read 工具读取 `references/skill-authoring-guide.md`，然后从设计文档中提取以下字段，以表格 + 建议形式展示给用户：
+**2a. 加载标准：** 用 Read 工具读取 `references/skill-standard.md`（精简版，约 200 行）。
 
-**提炼结果：**
+**2b. 提炼要素：** 从设计文档中提取以下字段：
 
 | 字段 | 提取值 | 规范约束 |
 |------|--------|---------|
-| `name` | `<verb>-<noun>` 格式 | 动词必须在规范词表中 |
+| `name` | `<verb>-<noun>` 格式 | 动词必须在标准词表中 |
 | `bundle` | 从现有 bundleMeta 中选 | 可新建 |
-| `description` | 英文，含触发短语 | ≥ 10 字符，不含中文 |
+| `description` | 英文，含触发短语 | ≥ 10 字符，仅英文 |
 | 正文大纲 | 中文，核心步骤列表 | — |
 | `category` 目录 | 对应 bundle 的目录名 | — |
 
@@ -73,12 +79,17 @@ version: "1.0.1"
 node -e "const i=JSON.parse(require('fs').readFileSync('skills-index.json','utf8')); Object.entries(i.bundleMeta).forEach(([k,v])=>console.log(k+': '+v))"
 ```
 
-**适用的最佳实践提示**（从 authoring guide 逐条检查，只列出适用的）：
+**2c. 适用哲学识别：** 对照标准的 16 条哲学，识别本 skill 涉及的（通常 3–10 条）。每条按"触发"条件判断是否成立。
+
+**2d. 标准检查：** 逐条核对相关哲学的"必做"和"检查"项，输出：
 
 ```
-[✓] <规范通过>  — <说明>
-[!] <需要注意>  — <具体建议>
+[✓] Φ1 可回退      — 破坏性 step 前有 y/n 确认
+[✓] Φ5 配置就地    — 路径 .hskill/<name>/ 正确
+[!] Φ12 输入清洁化 — URL 输入缺少控制字符剥离，建议加 re.sub(...)
 ```
+
+涉及多哲学冲突时查标准末尾"张力点"表消歧。
 
 **等用户明确确认后才进入 Step 3。**
 
@@ -111,7 +122,7 @@ version: "1.0.0"
 （2-4 条明确边界）
 ```
 
-若 skill 有参考材料（查找表、模板、禁忌清单）且超过 20 行，按 authoring guide 提示提取到 `references/` 子目录，而非全部内联在 SKILL.md 中。
+若 skill 有参考材料（查找表、模板、禁忌清单）且超过 20 行，按标准 Φ18 提取到 `references/` 子目录，而非全部内联在 SKILL.md 中。
 
 将生成内容展示给用户预览。**等用户明确确认后才进入 Step 4。**
 

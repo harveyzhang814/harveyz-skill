@@ -1,26 +1,31 @@
 #!/usr/bin/env python3
 """
 Playwright scraper for X.com (Twitter) articles.
-Usage: python playwright_xcom.py <url> <vault_path> <skill_dir> <chrome_profile>
+Usage: python playwright_xcom.py <url>
+Reads VAULT_PATH and CHROME_PROFILE from ~/.hskill/url-extract/config.json
 Stdout: "ORIGIN_PATH: <path>" on success
 """
 import sys, os, ipaddress
 from urllib.parse import urlparse
 
 # --- Security: validate URL scheme FIRST, before any heavy imports ---
-url            = sys.argv[1]
-vault_path     = sys.argv[2]
-skill_dir      = sys.argv[3]
-chrome_profile = sys.argv[4]
+url = sys.argv[1]
 
 _parsed = urlparse(url)
 if _parsed.scheme not in ('http', 'https') or not _parsed.netloc:
     print(f"ERROR: Rejected URL with scheme '{_parsed.scheme}' — only http/https allowed", file=sys.stderr)
     sys.exit(1)
 
+# --- Config (after security check) ---
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).parent))
+from config import get_vault_path, get_chrome_profile
+vault_path     = get_vault_path()
+chrome_profile = get_chrome_profile()
+skill_dir      = str(Path(__file__).parent.parent)
+
 import json, urllib.request, hashlib, shutil, tempfile
 from datetime import datetime, timezone, timedelta
-from pathlib import Path
 from playwright.sync_api import sync_playwright
 import pycookiecheat
 
@@ -66,27 +71,23 @@ _pw_cookies = [
 ]
 
 # --- Scrape ---
-with sync_playwright() as p:
-    browser = p.chromium.launch(
-        headless=True,
-        args=['--disable-blink-features=AutomationControlled']
-    )
-    ctx = browser.new_context(
-        user_agent='Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36'
-    )
-    ctx.add_cookies(_pw_cookies)
-    page = ctx.new_page()
-    page.goto(url, timeout=60000, wait_until='domcontentloaded')
-    page.wait_for_selector('article[data-testid="tweet"]', timeout=20000)
-
-    result = page.evaluate(r"""() => {
+# JS used in headed mode: SPAN threshold 3, CODE handler, PRE preserves whitespace,
+# plus querySelectorAll fallback to catch Draft.js atomic code blocks.
+_EXTRACT_JS_HEADED = r"""() => {
         const article = document.querySelector('article[data-testid="tweet"]');
         if (!article) return {error: 'No article found'};
 
-        const titleEl = article.querySelector('[data-testid="twitter-article-title"]');
+        // X Notes: rich text body lives outside the tweet wrapper — use it as content root
+        const richTextView = document.querySelector('[data-testid="twitterArticleRichTextView"]');
+        const contentRoot = richTextView || article;
+
+        // Title: explicit title element first, then H1 inside rich text view
+        const titleEl = article.querySelector('[data-testid="twitter-article-title"]')
+            || (richTextView ? richTextView.querySelector('h1') : null);
         const title = titleEl ? titleEl.innerText.replace(/\s+/g, ' ').trim() : 'Untitled';
 
-        const timeEl = article.querySelector('article time');
+        // Author and date always from the outer tweet wrapper (not the notes body)
+        const timeEl = article.querySelector('time');
         const publishDate = timeEl ? timeEl.getAttribute('datetime') : '';
 
         const authorEl = article.querySelector('[data-testid="User-Name"]');
@@ -96,14 +97,25 @@ with sync_playwright() as p:
             author = authorText.split('@')[0].trim();
         }
 
+        // Skip nodes that are inside a nested embedded tweet article (quoted tweets)
+        function insideNestedTweet(node) {
+            let el = node.parentElement;
+            while (el && el !== contentRoot) {
+                if (el.tagName === 'ARTICLE' && el.getAttribute('data-testid') === 'tweet') return true;
+                el = el.parentElement;
+            }
+            return false;
+        }
+
         const skipTags = new Set(['SCRIPT','STYLE','NAV','FOOTER','HEADER','ASIDE']);
         const contentUnits = [];
         let lastText = '';
 
-        const walker = document.createTreeWalker(article, NodeFilter.SHOW_ELEMENT);
+        const walker = document.createTreeWalker(contentRoot, NodeFilter.SHOW_ELEMENT);
         let node;
         while (node = walker.nextNode()) {
             if (skipTags.has(node.tagName.toUpperCase())) continue;
+            if (insideNestedTweet(node)) continue;
             const tag = node.tagName.toUpperCase();
             const tid = node.getAttribute('data-testid') || '';
 
@@ -111,6 +123,163 @@ with sync_playwright() as p:
                 const img = node.querySelector('img');
                 if (img && img.src && !img.src.includes('data:') && !img.src.includes('/profile_images/')) {
                     contentUnits.push({type: 'image', src: img.src, alt: img.alt || ''});
+                }
+            } else if (tag === 'IMG' && richTextView) {
+                // X Notes inline images may not be wrapped in tweetPhoto divs
+                if (node.src && !node.src.includes('data:') && !node.src.includes('/profile_images/')
+                        && !node.src.includes('/emoji/') && node.width > 50) {
+                    contentUnits.push({type: 'image', src: node.src, alt: node.alt || ''});
+                }
+            } else if (tag === 'SPAN' && tid === '') {
+                let directText = '';
+                for (const cn of node.childNodes) {
+                    if (cn.nodeType === Node.TEXT_NODE) {
+                        directText += (cn.textContent || '').replace(/\s+/g, ' ').trim() + ' ';
+                    }
+                }
+                directText = directText.trim();
+                let hasLiAncestor = false;
+                let ancestor = node.parentElement;
+                while (ancestor && ancestor.tagName) {
+                    if (['LI','OL','UL'].includes(ancestor.tagName.toUpperCase())) {
+                        hasLiAncestor = true;
+                        break;
+                    }
+                    ancestor = ancestor.parentElement;
+                }
+                if (hasLiAncestor) continue;
+                const isNoise = (
+                    directText.length < 3 ||
+                    /^[@#]?[\d.]+[KMB]?$/i.test(directText) ||
+                    directText.startsWith('@')
+                );
+                const isSubset = lastText.length > 10 && (lastText.includes(directText) || directText.includes(lastText));
+                if (!isNoise && !isSubset && directText.length >= 3) {
+                    contentUnits.push({type: 'text', tag: 'span', content: directText});
+                    lastText = directText;
+                }
+            } else if (tag === 'CODE') {
+                // Standalone <code> not inside <pre> → inline code snippet
+                let insidePre = false;
+                let p = node.parentElement;
+                while (p) { if (p.tagName === 'PRE') { insidePre = true; break; } p = p.parentElement; }
+                if (!insidePre) {
+                    const t = node.innerText.trim();
+                    if (t && !lastText.includes(t)) {
+                        contentUnits.push({type: 'text', tag: 'code', content: t});
+                        lastText = t;
+                    }
+                }
+            } else if (tag === 'PRE') {
+                // Preserve whitespace in code blocks — do NOT collapse
+                const t = node.innerText;
+                if (t && t.trim().length > 5) {
+                    contentUnits.push({type: 'text', tag: 'pre', content: t});
+                    lastText = t.trim();
+                }
+            } else if (['H2','H3','P','LI','BLOCKQUOTE'].includes(tag)) {
+                const t = node.innerText.replace(/\s+/g, ' ').trim();
+                if (t && t.length > 5) {
+                    contentUnits.push({type: 'text', tag: tag.toLowerCase(), content: t});
+                    lastText = t;
+                }
+            }
+        }
+
+        // Collect code block keys already captured via tree walker
+        const capturedCodeTexts = new Set(
+            contentUnits.filter(u => u.tag === 'pre' || u.tag === 'code')
+                        .map(u => u.content.trim().substring(0, 50))
+        );
+
+        // Direct fallback: query code.language-text (Draft.js atomic render)
+        // These are NOT visited reliably by the tree walker due to lazy rendering timing
+        contentRoot.querySelectorAll('code.language-text, pre').forEach(el => {
+            const t = el.innerText;
+            if (t && t.trim().length > 5) {
+                const key = t.trim().substring(0, 50);
+                if (!capturedCodeTexts.has(key)) {
+                    capturedCodeTexts.add(key);
+                    const tag = el.tagName === 'PRE' ? 'pre' : 'pre'; // treat both as pre
+                    contentUnits.push({type: 'text', tag, content: t});
+                }
+            }
+        });
+
+        const blocks = [];
+        const imageBlocks = [];
+        for (let i = 0; i < contentUnits.length; i++) {
+            const unit = contentUnits[i];
+            if (unit.type === 'text') {
+                blocks.push({
+                    type: ['H2','H3'].includes(unit.tag.toUpperCase()) ? 'heading' : 'block',
+                    tag: unit.tag,
+                    content: unit.content,
+                    blockIndex: blocks.length
+                });
+            } else if (unit.type === 'image') {
+                imageBlocks.push({src: unit.src, alt: unit.alt, afterBlock: blocks.length - 1});
+            }
+        }
+
+        return {title, author, publishDate, blocks, imageBlocks,
+                totalTextBlocks: blocks.length, totalImages: imageBlocks.length};
+}"""
+
+# JS used in headless fallback: exact HEAD version — SPAN threshold 30, no CODE handler,
+# PRE folds whitespace, no querySelectorAll patch.
+_EXTRACT_JS_HEADLESS = r"""() => {
+        const article = document.querySelector('article[data-testid="tweet"]');
+        if (!article) return {error: 'No article found'};
+
+        // X Notes: rich text body lives outside the tweet wrapper — use it as content root
+        const richTextView = document.querySelector('[data-testid="twitterArticleRichTextView"]');
+        const contentRoot = richTextView || article;
+
+        const titleEl = article.querySelector('[data-testid="twitter-article-title"]')
+            || (richTextView ? richTextView.querySelector('h1') : null);
+        const title = titleEl ? titleEl.innerText.replace(/\s+/g, ' ').trim() : 'Untitled';
+
+        const timeEl = article.querySelector('time');
+        const publishDate = timeEl ? timeEl.getAttribute('datetime') : '';
+
+        const authorEl = article.querySelector('[data-testid="User-Name"]');
+        let author = '';
+        if (authorEl) {
+            const authorText = authorEl.innerText.replace(/\s+/g, ' ').trim();
+            author = authorText.split('@')[0].trim();
+        }
+
+        function insideNestedTweet(node) {
+            let el = node.parentElement;
+            while (el && el !== contentRoot) {
+                if (el.tagName === 'ARTICLE' && el.getAttribute('data-testid') === 'tweet') return true;
+                el = el.parentElement;
+            }
+            return false;
+        }
+
+        const skipTags = new Set(['SCRIPT','STYLE','NAV','FOOTER','HEADER','ASIDE']);
+        const contentUnits = [];
+        let lastText = '';
+
+        const walker = document.createTreeWalker(contentRoot, NodeFilter.SHOW_ELEMENT);
+        let node;
+        while (node = walker.nextNode()) {
+            if (skipTags.has(node.tagName.toUpperCase())) continue;
+            if (insideNestedTweet(node)) continue;
+            const tag = node.tagName.toUpperCase();
+            const tid = node.getAttribute('data-testid') || '';
+
+            if (tag === 'DIV' && tid === 'tweetPhoto') {
+                const img = node.querySelector('img');
+                if (img && img.src && !img.src.includes('data:') && !img.src.includes('/profile_images/')) {
+                    contentUnits.push({type: 'image', src: img.src, alt: img.alt || ''});
+                }
+            } else if (tag === 'IMG' && richTextView) {
+                if (node.src && !node.src.includes('data:') && !node.src.includes('/profile_images/')
+                        && !node.src.includes('/emoji/') && node.width > 50) {
+                    contentUnits.push({type: 'image', src: node.src, alt: node.alt || ''});
                 }
             } else if (tag === 'SPAN' && tid === '') {
                 let directText = '';
@@ -167,10 +336,65 @@ with sync_playwright() as p:
 
         return {title, author, publishDate, blocks, imageBlocks,
                 totalTextBlocks: blocks.length, totalImages: imageBlocks.length};
-    }""")
+}"""
 
-    result['publishDate'] = result.get('publishDate', '')
-    browser.close()
+
+def _do_scrape(headless: bool) -> dict:
+    with sync_playwright() as p:
+        ctx_kwargs = {
+            'user_agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36',
+        }
+        if not headless:
+            ctx_kwargs['viewport'] = {'width': 1280, 'height': 900}
+
+        browser = p.chromium.launch(
+            headless=headless,
+            args=['--disable-blink-features=AutomationControlled']
+        )
+        ctx  = browser.new_context(**ctx_kwargs)
+        ctx.add_cookies(_pw_cookies)
+        page = ctx.new_page()
+        page.goto(url, timeout=60000, wait_until='domcontentloaded')
+        page.wait_for_selector('article[data-testid="tweet"]', timeout=60000)
+
+        if not headless:
+            # X Notes articles render content lazily; wait for the rich text view before extracting.
+            is_x_notes = False
+            try:
+                page.wait_for_selector('[data-testid="twitterArticleRichTextView"]', timeout=70000)
+                is_x_notes = True
+            except Exception:
+                pass  # not an X Notes article, proceed normally
+
+            if is_x_notes:
+                # Do NOT scroll for X Notes: scrolling unmounts richTextView from the virtual DOM
+                # and causes reply articles to appear before the main tweet in DOM order.
+                page.wait_for_timeout(2000)
+            else:
+                # Regular tweet: scroll to trigger Draft.js atomic block rendering
+                for _i in range(25):
+                    page.evaluate(f"window.scrollTo(0, {_i * 400})")
+                    page.wait_for_timeout(200)
+                try:
+                    page.wait_for_selector('code.language-text, pre', timeout=8000)
+                except Exception:
+                    pass
+                page.wait_for_timeout(1000)
+
+        result = page.evaluate(_EXTRACT_JS_HEADLESS if headless else _EXTRACT_JS_HEADED)
+        result['publishDate'] = result.get('publishDate', '')
+        browser.close()
+        return result
+
+
+# Try headed first — renders Draft.js code blocks via real viewport.
+# Fall back to headless if no display or browser fails (servers, cron, CI).
+result = None
+try:
+    result = _do_scrape(headless=False)
+except Exception as _e:
+    print(f"Headed scrape failed ({_e}), falling back to headless", file=sys.stderr)
+    result = _do_scrape(headless=True)
 
 if result.get('error'):
     print(f"ERROR: {result['error']}", file=sys.stderr)

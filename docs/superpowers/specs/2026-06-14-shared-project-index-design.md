@@ -1,3 +1,11 @@
+---
+migrated: 2026-06-21
+docs:
+  - explanation/hub-architecture.md  # 共享索引设计原理、PROJECTS.md 路径与格式、p-launch 迁移策略
+superseded_by:
+  - 2026-06-14-hub-design.md  # p-launch 已归档，hub 完整吸收了共享项目索引的职责
+---
+
 # Shared Project Index Design
 
 ## 概述
