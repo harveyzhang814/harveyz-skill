@@ -40,6 +40,11 @@ _fm() {
   done
 }
 
+@test "body: step 6 has both sub-questions 6a and 6b" {
+  grep -q "子问题 6a" "${SKILL_MD}"
+  grep -q "子问题 6b" "${SKILL_MD}"
+}
+
 @test "body: contains all 5 template names" {
   grep -q "Fix Until Green" "${SKILL_MD}"
   grep -q "Research Loop" "${SKILL_MD}"

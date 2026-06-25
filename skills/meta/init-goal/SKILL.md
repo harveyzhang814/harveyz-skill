@@ -13,6 +13,8 @@ user_invocable: true
 过程记录：`~/.hskill/init-goal/<goal-slug>/log.md`（每轮追加）
 总结文档：`~/.hskill/init-goal/<goal-slug>/summary.md`（loop 退出时生成）
 
+**规则：每个步骤只发一条消息，等待用户回复后再进入下一步。**
+
 ---
 
 ## Step 1 — 模版选择

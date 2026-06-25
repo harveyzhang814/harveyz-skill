@@ -236,7 +236,7 @@
       "path": "meta/init-goal",
       "bundle": "meta",
       "installScope": "essential",
-      "contentHash": "",
+      "contentHash": "6371d6d1b42f40a8",
       "contentVersion": "1.0.0"
     },
     {
