@@ -19,10 +19,10 @@
   "bundleMeta": {
     "research": "研究工具（extract-url + learn-video + extract-vision + learn-skill）",
     "creative": "创意工具（capture-todo + capture-insight）",
-    "coding": "程序工具（init-workflow + setup-debug + dispatch-task + close-task）",
+    "coding": "程序工具（init-workflow + setup-debug + dispatch-task + close-task + init-goal）",
     "writing": "写作工具（forge-doc + draw-diagram + manage-docs + manage-dir + migrate-spec）",
     "design": "设计工具（scout-brand + build-style + sync-design）",
-    "meta": "元操作工具（clean-git + archive-skill + dedup-skill + contribute-skill + publish-skill + release-project + runby-opencode + init-goal）",
+    "meta": "元操作工具（clean-git + archive-skill + dedup-skill + contribute-skill + publish-skill + release-project + runby-opencode）",
     "experiment": "实验性工具（尚未稳定，不纳入正式 bundle）"
   },
   "skills": [
@@ -234,7 +234,7 @@
     { "path": "meta/fix-skill", "bundle": "meta", "installScope": "global", "contentHash": "185807f284915b8c", "contentVersion": "2.0.0" },
     {
       "path": "meta/init-goal",
-      "bundle": "meta",
+      "bundle": "coding",
       "installScope": "essential",
       "contentHash": "f90ce3bb21e0674f",
       "contentVersion": "1.2.1"
