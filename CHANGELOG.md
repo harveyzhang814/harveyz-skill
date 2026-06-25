@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.20.0] - 2026-06-25
+
+### Added
+- `init-goal`：对话式向导 skill，为 `/loop` 命令生成结构化 Goal Prompt 文本；深度优先解析用户输入、自动匹配五类模版（Fix Until Green / Research Loop / Refine Until Satisfied / Monitor & React / Explore & Map）、渐进式披露（模版数据提取至 references/templates.md）
+- `learn-video`：新增 Bilibili 视频支持（YouTube + Bilibili 双平台）
+
+### Changed
+- `init-goal`：迁移至 `coding` bundle（原 `meta`）
+
 ## [0.19.0] - 2026-06-22
 
 ### Added
