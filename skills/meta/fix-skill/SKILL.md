@@ -121,3 +121,5 @@ ATTEMPTS: <N>
 | `AUTO_RETRY` | 重试原失败步骤（仅一次）；通知用户「已自动修复，共 N 轮，记录见 SESSION_PATH」 |
 | `FAILURE` | 报告原始错误 + 「已尝试 3 轮均失败，已回滚，记录见 SESSION_PATH」 |
 | `FAILURE+RESTORE_FAILED` | 立即告警：「修复失败且还原异常，file 状态不可知，backup 保留，请手动处理，记录见 SESSION_PATH」 |
+
+其他 skill 集成 fix-skill 时，参考 `references/caller-integration-template.md`（含标准步骤片段和根因文件判断指引）。
