@@ -51,8 +51,8 @@
       "path": "research/learn-video",
       "bundle": "research",
       "installScope": "global",
-      "contentHash": "35804f930210ae44",
-      "contentVersion": "1.4.0"
+      "contentHash": "34f46d669589b3cb",
+      "contentVersion": "1.5.0"
     },
     {
       "path": "creative/capture-todo",
