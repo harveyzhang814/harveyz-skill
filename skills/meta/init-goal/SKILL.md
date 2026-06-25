@@ -1,17 +1,20 @@
 ---
 name: init-goal
-version: "1.1.0"
-description: "Generate a structured /loop prompt file through guided dialogue. Parses user's initial message to auto-fill known fields and match the best template, then clarifies only what's missing (depth-first, one question at a time). Saves prompt.md to ~/.hskill/init-goal/<goal-slug>/. Triggers: user says /init-goal, 'initialize a loop goal', 'set up a GOal', 'help me use /loop to accomplish X', or describes a repetitive autonomous task they want Claude to run in a loop."
+version: "1.2.0"
+description: "Generate a structured /loop Goal Prompt through guided dialogue. Parses user's initial message to auto-fill known fields and match the best template, then clarifies only what's missing (depth-first, one question at a time). Outputs the Goal Prompt as text — the skill writes no files; the loop agent persists prompt.md/log.md/summary.md during execution per the embedded rules. Triggers: user says /init-goal, 'initialize a loop goal', 'set up a GOal', 'help me use /loop to accomplish X', or describes a repetitive autonomous task they want Claude to run in a loop."
 user_invocable: true
 ---
 
 # init-goal
 
-对话式向导，帮助用户为 `/loop` 命令生成结构化的初始化 prompt 文件。
+对话式向导，帮助用户为 `/loop` 命令生成一段结构化的 **Goal Prompt 文本**。
 
-输出：`~/.hskill/init-goal/<goal-slug>/prompt.md`（静态，loop 不修改）
-过程记录：`~/.hskill/init-goal/<goal-slug>/log.md`（每轮追加）
-总结文档：`~/.hskill/init-goal/<goal-slug>/summary.md`（loop 退出时生成）
+**这个 skill 的唯一产物就是这段 Goal Prompt 文本。** 它内含「执行期间维护文档」的规则——这些规则是写给跑 loop 的 agent 的指令，由那个 agent 在执行 loop 时落盘三个文件。**init-goal 自己不创建任何目录、不写任何文件。**
+
+执行期间由 loop agent 生成的文件（slug 取自 GOAL）：
+- `~/.hskill/init-goal/<goal-slug>/prompt.md`（agent 首轮存档，静态不变）
+- `~/.hskill/init-goal/<goal-slug>/log.md`（agent 每轮追加）
+- `~/.hskill/init-goal/<goal-slug>/summary.md`（agent 退出时生成）
 
 **规则：每次只发一条消息，等用户回复后再继续。**
 
@@ -173,18 +176,16 @@ EXIT_FALLBACK: 连续 2 轮无新节点则汇总已知结构并停止。
 
 ---
 
-## Step 2 — 生成文件
+## Step 2 — 生成并输出 Goal Prompt 文本
 
-**生成 goal-slug：**
+这一步**不写任何文件**。init-goal 的产物就是下面这段文本——把它生成出来，直接展示给用户，由用户拿去喂给 `/loop`。文本里的 `## 文档维护` 段是写给执行 loop 的 agent 的指令，三个文档由那个 agent 在跑 loop 时落盘。
+
+**先生成 goal-slug：**
 若 GOAL 是英文，转为 kebab-case（小写 + 连字符），截取前 40 字符。
 若 GOAL 是中文，生成一个简短的英文描述（5-8 个单词，kebab-case）。
+把生成的 slug 填进下面文本里所有 `[goal-slug]` 占位处。
 
-**创建目录并写入：**
-```bash
-mkdir -p ~/.hskill/init-goal/<goal-slug>
-```
-
-写入 `~/.hskill/init-goal/<goal-slug>/prompt.md`：
+**生成并展示这段 Goal Prompt 文本**（占位符全部替换为实际值后呈现）：
 
 ```markdown
 ## GOal
@@ -208,12 +209,15 @@ mkdir -p ~/.hskill/init-goal/<goal-slug>
 - 明确条件：[EXIT_EXPLICIT]
 - 兜底逻辑：[EXIT_FALLBACK]
 
-## 过程文档
+## 文档维护（执行期间——由你，即运行本 loop 的 agent，负责落盘）
 
-路径：~/.hskill/init-goal/[goal-slug]/log.md
+工作目录：~/.hskill/init-goal/[goal-slug]/
 
-每轮开始前：读取 log.md 最后一个 Round 条目获取上下文（首轮若 log.md 不存在则跳过）。
-每轮末尾：将本轮记录追加到 log.md，格式如下：
+**首轮开始时：** 若 prompt.md 不存在，`mkdir -p` 创建工作目录，并把本 Goal Prompt 完整存为 `prompt.md`（静态存档，之后不再修改）。
+
+**每轮开始前：** 读取 log.md 最后一个 Round 条目获取上下文（首轮若 log.md 不存在则跳过）。
+
+**每轮末尾：** 将本轮记录追加到 log.md，格式如下：
 
 ### Round N — YYYY-MM-DD HH:MM
 
@@ -225,7 +229,7 @@ mkdir -p ~/.hskill/init-goal/<goal-slug>
 
 ---
 
-Loop 退出时（明确条件触发、兜底逻辑触发或用户中断），在同目录生成 summary.md：
+**Loop 退出时**（明确条件触发、兜底逻辑触发或用户中断），在同目录生成 summary.md：
 
 # GOal Summary — [goal-slug]
 
@@ -248,17 +252,15 @@ Loop 退出时（明确条件触发、兜底逻辑触发或用户中断），在
 <若未完全达成，建议的下一步方向>
 ```
 
-**向用户展示：**
+**展示完文本后，附上启动说明：**
 
 ---
-✅ 已生成：`~/.hskill/init-goal/[goal-slug]/prompt.md`
+✅ Goal Prompt 已生成（如上）。复制整段，启动 loop（interval 自选）：
 
-启动 loop（选择你合适的 interval）：
 ```
-/loop <interval> $(cat ~/.hskill/init-goal/[goal-slug]/prompt.md)
+/loop <interval> <粘贴上面整段 Goal Prompt>
 ```
 
-过程记录：`~/.hskill/init-goal/[goal-slug]/log.md`
-结束总结：`~/.hskill/init-goal/[goal-slug]/summary.md`
+首轮运行时，loop agent 会按 `## 文档维护` 的指令把它存为 `~/.hskill/init-goal/[goal-slug]/prompt.md`，每轮追加 `log.md`，结束时写 `summary.md`。
 
 ---
