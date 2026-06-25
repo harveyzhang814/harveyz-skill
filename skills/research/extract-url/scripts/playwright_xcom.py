@@ -77,10 +77,17 @@ _EXTRACT_JS_HEADED = r"""() => {
         const article = document.querySelector('article[data-testid="tweet"]');
         if (!article) return {error: 'No article found'};
 
-        const titleEl = article.querySelector('[data-testid="twitter-article-title"]');
+        // X Notes: rich text body lives outside the tweet wrapper — use it as content root
+        const richTextView = document.querySelector('[data-testid="twitterArticleRichTextView"]');
+        const contentRoot = richTextView || article;
+
+        // Title: explicit title element first, then H1 inside rich text view
+        const titleEl = article.querySelector('[data-testid="twitter-article-title"]')
+            || (richTextView ? richTextView.querySelector('h1') : null);
         const title = titleEl ? titleEl.innerText.replace(/\s+/g, ' ').trim() : 'Untitled';
 
-        const timeEl = article.querySelector('article time');
+        // Author and date always from the outer tweet wrapper (not the notes body)
+        const timeEl = article.querySelector('time');
         const publishDate = timeEl ? timeEl.getAttribute('datetime') : '';
 
         const authorEl = article.querySelector('[data-testid="User-Name"]');
@@ -90,14 +97,25 @@ _EXTRACT_JS_HEADED = r"""() => {
             author = authorText.split('@')[0].trim();
         }
 
+        // Skip nodes that are inside a nested embedded tweet article (quoted tweets)
+        function insideNestedTweet(node) {
+            let el = node.parentElement;
+            while (el && el !== contentRoot) {
+                if (el.tagName === 'ARTICLE' && el.getAttribute('data-testid') === 'tweet') return true;
+                el = el.parentElement;
+            }
+            return false;
+        }
+
         const skipTags = new Set(['SCRIPT','STYLE','NAV','FOOTER','HEADER','ASIDE']);
         const contentUnits = [];
         let lastText = '';
 
-        const walker = document.createTreeWalker(article, NodeFilter.SHOW_ELEMENT);
+        const walker = document.createTreeWalker(contentRoot, NodeFilter.SHOW_ELEMENT);
         let node;
         while (node = walker.nextNode()) {
             if (skipTags.has(node.tagName.toUpperCase())) continue;
+            if (insideNestedTweet(node)) continue;
             const tag = node.tagName.toUpperCase();
             const tid = node.getAttribute('data-testid') || '';
 
@@ -105,6 +123,12 @@ _EXTRACT_JS_HEADED = r"""() => {
                 const img = node.querySelector('img');
                 if (img && img.src && !img.src.includes('data:') && !img.src.includes('/profile_images/')) {
                     contentUnits.push({type: 'image', src: img.src, alt: img.alt || ''});
+                }
+            } else if (tag === 'IMG' && richTextView) {
+                // X Notes inline images may not be wrapped in tweetPhoto divs
+                if (node.src && !node.src.includes('data:') && !node.src.includes('/profile_images/')
+                        && !node.src.includes('/emoji/') && node.width > 50) {
+                    contentUnits.push({type: 'image', src: node.src, alt: node.alt || ''});
                 }
             } else if (tag === 'SPAN' && tid === '') {
                 let directText = '';
@@ -170,7 +194,7 @@ _EXTRACT_JS_HEADED = r"""() => {
 
         // Direct fallback: query code.language-text (Draft.js atomic render)
         // These are NOT visited reliably by the tree walker due to lazy rendering timing
-        article.querySelectorAll('code.language-text, pre').forEach(el => {
+        contentRoot.querySelectorAll('code.language-text, pre').forEach(el => {
             const t = el.innerText;
             if (t && t.trim().length > 5) {
                 const key = t.trim().substring(0, 50);
@@ -208,10 +232,15 @@ _EXTRACT_JS_HEADLESS = r"""() => {
         const article = document.querySelector('article[data-testid="tweet"]');
         if (!article) return {error: 'No article found'};
 
-        const titleEl = article.querySelector('[data-testid="twitter-article-title"]');
+        // X Notes: rich text body lives outside the tweet wrapper — use it as content root
+        const richTextView = document.querySelector('[data-testid="twitterArticleRichTextView"]');
+        const contentRoot = richTextView || article;
+
+        const titleEl = article.querySelector('[data-testid="twitter-article-title"]')
+            || (richTextView ? richTextView.querySelector('h1') : null);
         const title = titleEl ? titleEl.innerText.replace(/\s+/g, ' ').trim() : 'Untitled';
 
-        const timeEl = article.querySelector('article time');
+        const timeEl = article.querySelector('time');
         const publishDate = timeEl ? timeEl.getAttribute('datetime') : '';
 
         const authorEl = article.querySelector('[data-testid="User-Name"]');
@@ -221,14 +250,24 @@ _EXTRACT_JS_HEADLESS = r"""() => {
             author = authorText.split('@')[0].trim();
         }
 
+        function insideNestedTweet(node) {
+            let el = node.parentElement;
+            while (el && el !== contentRoot) {
+                if (el.tagName === 'ARTICLE' && el.getAttribute('data-testid') === 'tweet') return true;
+                el = el.parentElement;
+            }
+            return false;
+        }
+
         const skipTags = new Set(['SCRIPT','STYLE','NAV','FOOTER','HEADER','ASIDE']);
         const contentUnits = [];
         let lastText = '';
 
-        const walker = document.createTreeWalker(article, NodeFilter.SHOW_ELEMENT);
+        const walker = document.createTreeWalker(contentRoot, NodeFilter.SHOW_ELEMENT);
         let node;
         while (node = walker.nextNode()) {
             if (skipTags.has(node.tagName.toUpperCase())) continue;
+            if (insideNestedTweet(node)) continue;
             const tag = node.tagName.toUpperCase();
             const tid = node.getAttribute('data-testid') || '';
 
@@ -236,6 +275,11 @@ _EXTRACT_JS_HEADLESS = r"""() => {
                 const img = node.querySelector('img');
                 if (img && img.src && !img.src.includes('data:') && !img.src.includes('/profile_images/')) {
                     contentUnits.push({type: 'image', src: img.src, alt: img.alt || ''});
+                }
+            } else if (tag === 'IMG' && richTextView) {
+                if (node.src && !node.src.includes('data:') && !node.src.includes('/profile_images/')
+                        && !node.src.includes('/emoji/') && node.width > 50) {
+                    contentUnits.push({type: 'image', src: node.src, alt: node.alt || ''});
                 }
             } else if (tag === 'SPAN' && tid === '') {
                 let directText = '';
@@ -315,19 +359,27 @@ def _do_scrape(headless: bool) -> dict:
 
         if not headless:
             # X Notes articles render content lazily; wait for the rich text view before extracting.
+            is_x_notes = False
             try:
                 page.wait_for_selector('[data-testid="twitterArticleRichTextView"]', timeout=70000)
+                is_x_notes = True
             except Exception:
                 pass  # not an X Notes article, proceed normally
-            # Scroll to trigger Draft.js atomic block rendering (code blocks lazy-render in viewport)
-            for _i in range(25):
-                page.evaluate(f"window.scrollTo(0, {_i * 400})")
-                page.wait_for_timeout(200)
-            try:
-                page.wait_for_selector('code.language-text, pre', timeout=8000)
-            except Exception:
-                pass
-            page.wait_for_timeout(1000)
+
+            if is_x_notes:
+                # Do NOT scroll for X Notes: scrolling unmounts richTextView from the virtual DOM
+                # and causes reply articles to appear before the main tweet in DOM order.
+                page.wait_for_timeout(2000)
+            else:
+                # Regular tweet: scroll to trigger Draft.js atomic block rendering
+                for _i in range(25):
+                    page.evaluate(f"window.scrollTo(0, {_i * 400})")
+                    page.wait_for_timeout(200)
+                try:
+                    page.wait_for_selector('code.language-text, pre', timeout=8000)
+                except Exception:
+                    pass
+                page.wait_for_timeout(1000)
 
         result = page.evaluate(_EXTRACT_JS_HEADLESS if headless else _EXTRACT_JS_HEADED)
         result['publishDate'] = result.get('publishDate', '')

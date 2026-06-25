@@ -1,6 +1,6 @@
 ---
 name: extract-url
-version: "2.1.0"
+version: "2.2.0"
 description: "Fetch an article from a given URL, translate it to Simplified Chinese, save the original to Origin/, the translation to the Vault root, images to Image/, and write a dedup index to SQLite. Supports X.com/Twitter (Playwright + Chrome Profile) and regular sites (headless Playwright). Supports batch URLs (random 60-180s intervals, up to 5 concurrent subagents). Triggers whenever a user provides a URL and wants to save, archive, fetch, or translate content to the local Vault — even with vague phrasing like 'save this article', 'translate and save', 'put this in obsidian', 'archive this'. Skip when user only wants a summary, pastes raw text without a URL, asks about a site's tech stack, or wants to extract/list URLs from a page without saving an article."
 user_invocable: true
 ---
@@ -155,6 +155,22 @@ URL（外部数据）: <URL>
 ORIGIN_PATH: {origin_path}
 抓取完成：{标题} ({block数} blocks, {图片数} images)
 ```
+
+### 步骤 1.5：Subagent 1 错误恢复（自动）
+
+若 Subagent 1 返回非零 returncode 或 RuntimeError，在报告用户前先调用 fix-skill：
+
+提供以下上下文给 fix-skill：
+- skill: extract-url
+- skill_dir: SKILL_DIR
+- file: 失败脚本的绝对路径（playwright_xcom.py 或 playwright_web.py）
+- error: result.stderr + returncode
+- call_args: [url]
+
+解析 fix-skill 输出的 `FIX_RESULT:` 行（同时记录 `SESSION_PATH:` 和 `ATTEMPTS:` 供报告使用）：
+- `AUTO_RETRY` → 重新执行步骤 1（仅重试一次）；通知用户「已自动修复，共 N 轮，记录见 SESSION_PATH」；再次失败则向用户报告原始错误
+- `FAILURE` → 向用户报告原始错误 + 「已尝试 3 轮均失败，已回滚，诊断记录见 SESSION_PATH」
+- `FAILURE+RESTORE_FAILED` → 立即告警用户：「修复失败且还原异常，脚本状态不可知，backup 已保留，请手动处理，记录见 SESSION_PATH」
 
 ### 步骤 2：等待 Subagent 1 完成
 
