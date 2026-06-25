@@ -1,7 +1,7 @@
 ---
 name: init-goal
-version: "1.0.0"
-description: "Generate a structured /loop prompt file through guided dialogue. Elicits goal, per-round execution steps, evaluation metrics, constraints, and exit conditions. Supports 5 built-in templates (Fix Until Green, Research Loop, Refine Until Satisfied, Monitor & React, Explore & Map). Saves prompt.md to ~/.hskill/init-goal/<goal-slug>/. Triggers: user says /init-goal, 'initialize a loop goal', 'set up a GOal', or 'help me use /loop to accomplish X'."
+version: "1.1.0"
+description: "Generate a structured /loop prompt file through guided dialogue. Parses user's initial message to auto-fill known fields and match the best template, then clarifies only what's missing (depth-first, one question at a time). Saves prompt.md to ~/.hskill/init-goal/<goal-slug>/. Triggers: user says /init-goal, 'initialize a loop goal', 'set up a GOal', 'help me use /loop to accomplish X', or describes a repetitive autonomous task they want Claude to run in a loop."
 user_invocable: true
 ---
 
@@ -13,31 +13,58 @@ user_invocable: true
 过程记录：`~/.hskill/init-goal/<goal-slug>/log.md`（每轮追加）
 总结文档：`~/.hskill/init-goal/<goal-slug>/summary.md`（loop 退出时生成）
 
-**规则：每个步骤只发一条消息，等待用户回复后再进入下一步。**
+**规则：每次只发一条消息，等用户回复后再继续。**
 
 ---
 
-## Step 1 — 模版选择
+## Step 0 — 解析输入，自动填充，深度优先澄清
 
-向用户展示以下菜单，**一次性发送**，等待选择：
+### 0a: 解析
 
----
-请选择一个模版，或输入 0 从零开始：
+从用户的初始消息中提取所有已知信息，填入对应字段：
 
-**1. Fix Until Green** — 持续修 bug 直到测试全通过
-**2. Research Loop** — 反复搜索直到信息足够
-**3. Refine Until Satisfied** — 迭代优化某个输出（文案/代码/方案）
-**4. Monitor & React** — 持续监控状态并响应变化
-**5. Explore & Map** — 系统性探索未知领域/代码库
+| 字段 | 提取什么 |
+|---|---|
+| GOAL | 用户想达成的目标，含成功标准 |
+| EXECUTION | 用户描述的每轮步骤或动作 |
+| EVAL | 用户提到的衡量进展的方式 |
+| CONSTRAINTS | 用户提到的限制（不能改什么、最多多少轮…） |
+| EXIT_EXPLICIT | 用户提到的停止条件 |
+| EXIT_FALLBACK | 用户提到的兜底行为 |
 
-**0. 从零开始**（不使用模版）
+### 0b: 匹配模版
 
----
+根据用户描述，选最匹配的模版，用模版默认值填充所有**用户未提供**的字段：
 
-根据用户选择，将对应模版的默认值存为工作变量（见下方模版数据）。
-选 0 则所有字段为空，需逐步填写。
+| 匹配信号 | 模版 |
+|---|---|
+| 测试 / test / bug / 修复 / fix | Fix Until Green |
+| 研究 / 搜索 / 信息收集 / search | Research Loop |
+| 优化 / 改进 / 迭代 / refine / 润色 | Refine Until Satisfied |
+| 监控 / 检查状态 / watch / monitor | Monitor & React |
+| 探索 / 代码库 / 结构 / map / 未知领域 | Explore & Map |
+| 无明显匹配 | 从零开始（所有字段留空） |
 
-然后进入 Step 2。
+置信度高时直接套用，不问用户确认模版名称。
+
+### 0c: 深度优先澄清
+
+按以下优先级，逐一澄清**缺失或不够具体**的字段。每次只问一个，等回复后再判断是否还需要继续问。
+
+**优先级（从高到低）：**
+
+1. **GOAL** — 如果目标不够具体（缺少成功标准、范围不清楚），先把这个搞清楚。其他一切从 GOAL 派生。
+2. **EXIT_EXPLICIT** — 如果用户没有明确说"达到什么状态停止"，问这个。这是 loop 的终点，必须清晰。
+3. **CONSTRAINTS** — 如果用户提到了限制但不完整（比如"不能改某些文件"但没说具体哪些），确认一下。
+4. **EXECUTION** — 如果模版默认步骤明显不适用当前场景，才问。通常不需要问。
+5. **EVAL / EXIT_FALLBACK** — 几乎不需要问；模版默认值在绝大多数情况下够用。
+
+**什么时候停止澄清：**
+- GOAL 足够具体（有明确的成功标准）
+- EXIT_EXPLICIT 已知
+- 其余关键字段都有合理的值（用户提供的或模版默认值）
+
+澄清完成后，进入 Step 1。
 
 ---
 
@@ -118,105 +145,12 @@ EXIT_FALLBACK: 连续 2 轮无新节点则汇总已知结构并停止。
 
 ---
 
-## Step 2 — 目标
+## Step 1 — 展示预填摘要，确认
 
-若使用模版，展示默认 GOAL 并询问：
-
-> 目标预设为：「[GOAL]」
-> 直接回车接受，或输入你自己的目标描述（成功是什么样子？）：
-
-若从零开始，直接问：
-
-> 你想达成什么？成功是什么样子？
-
-将用户回答记为 `GOAL`。
+展示所有字段的当前值（用户已提供的 + 模版默认值），一次性呈现：
 
 ---
-
-## Step 3 — 每轮执行内容
-
-若使用模版，展示默认 EXECUTION 并询问：
-
-> 每轮执行步骤预设为：
-> [EXECUTION]
-> 直接回车接受，或描述你想要的步骤：
-
-若从零开始：
-
-> 每次 loop 应该做什么动作？请描述每轮的具体步骤。
-
-将用户回答记为 `EXECUTION`。
-
----
-
-## Step 4 — 评估指标
-
-若使用模版，展示默认 EVAL 并询问：
-
-> 评估方式预设为：「[EVAL]」
-> 直接回车接受，或输入你的评估方式（打分 / 检查清单 / 比对结果…）：
-
-若从零开始：
-
-> 每轮结束后如何判断进展？（例如：打分 1-10、检查特定文件是否存在、对比前后差异）
-
-将用户回答记为 `EVAL`。
-
----
-
-## Step 5 — 约束条件
-
-若使用模版，展示默认 CONSTRAINTS 并询问：
-
-> 约束预设为：「[CONSTRAINTS]」
-> 直接回车接受，输入"无"跳过，或输入你的约束：
-
-若从零开始：
-
-> 有什么限制？（例如：最多运行 10 轮、不能修改某些文件、必须保留某个行为）
-> 输入"无"跳过。
-
-将用户回答记为 `CONSTRAINTS`（若为"无"则写入"无"）。
-
----
-
-## Step 6 — 退出条件
-
-**子问题 6a（明确条件）：**
-
-若使用模版，展示默认 EXIT_EXPLICIT 并询问：
-
-> 明确退出条件预设为：「[EXIT_EXPLICIT]」
-> 直接回车接受，或输入达到什么状态可以停止：
-
-若从零开始：
-
-> 达到什么状态可以停止？（例如：测试全通过、找到 10 条有效结果、评分 ≥ 8）
-
-将用户回答记为 `EXIT_EXPLICIT`。
-
-**子问题 6b（兜底逻辑）：**
-
-若使用模版，展示默认 EXIT_FALLBACK 并询问：
-
-> 兜底逻辑预设为：「[EXIT_FALLBACK]」
-> 直接回车接受，或描述当 Claude 无法判断是否达到目标时应该怎么做：
-
-若从零开始：
-
-> 如果 Claude 无法判断是否达到目标，应该怎么做？
-> （例如：连续 2 轮无实质进展则停止并汇报原因）
-
-将用户回答记为 `EXIT_FALLBACK`。
-
----
-
-## Step 7 — 汇总确认
-
-展示所有字段摘要：
-
----
-**请确认以下内容：**
+**这是根据你的描述整理的 loop 配置，请确认：**
 
 **目标：** [GOAL]
 
@@ -233,26 +167,24 @@ EXIT_FALLBACK: 连续 2 轮无新节点则汇总已知结构并停止。
 
 ---
 
-询问：「确认无误吗？直接回车生成文件，或告诉我需要修改哪个字段。」
+询问：「确认后直接生成文件，或告诉我需要调整哪个字段。」
 
-若用户指出修改，回到对应步骤重新问，然后再次展示摘要。直到用户确认。
+若用户要调整，只修改被指出的字段，重新展示摘要。直到用户确认。
 
 ---
 
-## Step 8 — 生成文件
+## Step 2 — 生成文件
 
 **生成 goal-slug：**
-将 GOAL 转为 kebab-case：小写，空格和标点替换为连字符，去掉连续连字符，截取前 40 个字符。
-例："持续修复代码直到测试通过" → 先取英文关键词或拼音简写，或直接用英文摘要。
-若 GOAL 是英文："fix auth tests until all pass" → `fix-auth-tests-until-all-pass`（截取前 40 字符）。
-若 GOAL 是中文，生成一个简短的英文 slug 来描述目标（5-8 个英文单词，kebab-case）。
+若 GOAL 是英文，转为 kebab-case（小写 + 连字符），截取前 40 字符。
+若 GOAL 是中文，生成一个简短的英文描述（5-8 个单词，kebab-case）。
 
-**创建目录：**
+**创建目录并写入：**
 ```bash
 mkdir -p ~/.hskill/init-goal/<goal-slug>
 ```
 
-**写入 `~/.hskill/init-goal/<goal-slug>/prompt.md`：**
+写入 `~/.hskill/init-goal/<goal-slug>/prompt.md`：
 
 ```markdown
 ## GOal
@@ -326,13 +258,7 @@ Loop 退出时（明确条件触发、兜底逻辑触发或用户中断），在
 /loop <interval> $(cat ~/.hskill/init-goal/[goal-slug]/prompt.md)
 ```
 
-如需修改目标后重新运行：
-```
-# 编辑 prompt.md 后重启
-/loop <interval> $(cat ~/.hskill/init-goal/[goal-slug]/prompt.md)
-```
-
-过程记录将自动写入：`~/.hskill/init-goal/[goal-slug]/log.md`
-Loop 结束后总结：`~/.hskill/init-goal/[goal-slug]/summary.md`
+过程记录：`~/.hskill/init-goal/[goal-slug]/log.md`
+结束总结：`~/.hskill/init-goal/[goal-slug]/summary.md`
 
 ---

@@ -236,8 +236,8 @@
       "path": "meta/init-goal",
       "bundle": "meta",
       "installScope": "essential",
-      "contentHash": "6371d6d1b42f40a8",
-      "contentVersion": "1.0.0"
+      "contentHash": "616e6a83b5da9307",
+      "contentVersion": "1.1.0"
     },
     {
       "path": "experiment/extract-cognition",
