@@ -19,17 +19,6 @@
 
 ---
 
-## extract-url — 图片下载修复
-
-### 修复 playwright_xcom.py 图片下载 SSL 验证失败
-**优先级**: P2 | **日期**: 2026-06-18
-
-`urllib.request.urlopen` 默认 SSL 验证对 X.com 图片 CDN（`pbs.twimg.com`）失败，图片被静默跳过，仅文字保存成功。常见于 macOS 使用代理/VPN 的环境。
-
-**已验证方案**：在下载前构造 `ssl.create_default_context()`，优先加载 `certifi` 证书包；若 `certifi` 不可用则 fallback 到 `CERT_NONE`。将 `context` 传给 `urlopen`。修复已应用于 `scripts/playwright_xcom.py`，重新抓取验证 6/6 图片下载成功。
-
----
-
 ## harveyz-skill — 论文分析 Skill
 
 ### 设计 Agent 批量筛选论文 skill（screen-papers）
@@ -63,13 +52,6 @@ sync-agent 已完成，现在将 Hermes agent 配置目录 `~/.hermes` 纳入同
 **优先级**: P2 | **日期**: 2026-06-18
 
 给定任意输入（文档、Skill、文章、对话等），提取其背后的思维元框架——即决策逻辑、分析结构、推理模式等认知层面的框架，而非内容本身。目标是让用户能复用他人的思维方式，而不只是结论。
-
----
-
-## harveyz-skill — 推理模式提取前置 skill
-
-### [x] 开发两阶段引导式推理模式提取 skill（元框架前置层）
-**已落地为** `skills/experiment/extract-cognition`（认知签名抽取方法论，取代原两阶段锚点设计）。设计见 docs/superpowers/specs/2026-06-22-extract-cognition-design.md。
 
 ---
 
