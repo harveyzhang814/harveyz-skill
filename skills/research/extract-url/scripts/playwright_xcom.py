@@ -24,7 +24,8 @@ vault_path     = get_vault_path()
 chrome_profile = get_chrome_profile()
 skill_dir      = str(Path(__file__).parent.parent)
 
-import json, urllib.request, hashlib, shutil, tempfile
+import json, urllib.request, urllib.error, ssl, hashlib, shutil, tempfile
+import certifi
 from datetime import datetime, timezone, timedelta
 from playwright.sync_api import sync_playwright
 import pycookiecheat
@@ -411,7 +412,8 @@ for i, img in enumerate(result.get('imageBlocks', [])):
     fpath = os.path.join(image_dir, fname)
     try:
         req = urllib.request.Request(img['src'], headers={'User-Agent': 'Mozilla/5.0', 'Accept': 'image/*'})
-        with urllib.request.urlopen(req, timeout=15) as resp:
+        ssl_ctx = ssl.create_default_context(cafile=certifi.where())
+        with urllib.request.urlopen(req, timeout=15, context=ssl_ctx) as resp:
             data = resp.read()
         with open(fpath, 'wb') as f:
             f.write(data)
