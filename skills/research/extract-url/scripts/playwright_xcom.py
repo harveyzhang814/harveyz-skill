@@ -126,8 +126,9 @@ _EXTRACT_JS_HEADED = r"""() => {
                     contentUnits.push({type: 'image', src: img.src, alt: img.alt || ''});
                 }
             } else if (tag === 'IMG' && richTextView) {
-                // X Notes inline images may not be wrapped in tweetPhoto divs
-                if (node.src && !node.src.includes('data:') && !node.src.includes('/profile_images/')
+                // X Notes inline images not wrapped in tweetPhoto divs (tweetPhoto imgs already captured above)
+                if (!node.closest('div[data-testid="tweetPhoto"]')
+                        && node.src && !node.src.includes('data:') && !node.src.includes('/profile_images/')
                         && !node.src.includes('/emoji/') && node.width > 50) {
                     contentUnits.push({type: 'image', src: node.src, alt: node.alt || ''});
                 }
@@ -278,7 +279,8 @@ _EXTRACT_JS_HEADLESS = r"""() => {
                     contentUnits.push({type: 'image', src: img.src, alt: img.alt || ''});
                 }
             } else if (tag === 'IMG' && richTextView) {
-                if (node.src && !node.src.includes('data:') && !node.src.includes('/profile_images/')
+                if (!node.closest('div[data-testid="tweetPhoto"]')
+                        && node.src && !node.src.includes('data:') && !node.src.includes('/profile_images/')
                         && !node.src.includes('/emoji/') && node.width > 50) {
                     contentUnits.push({type: 'image', src: node.src, alt: node.alt || ''});
                 }
