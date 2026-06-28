@@ -75,12 +75,3 @@ sync-agent 已完成，现在将 Hermes agent 配置目录 `~/.hermes` 纳入同
 
 ---
 
-## capture-todo — 合并步骤双校验兼容
-
-### 修复 capture-todo 合并步骤同时通过分支来源与提交格式检查
-**优先级**: P2 | **日期**: 2026-06-21
-
-当目标项目同时启用分支来源校验（pre-commit 读取 MERGE_MSG，要求 `Merge branch 'xxx'` 格式）和提交格式校验（commit-msg 要求 Conventional Commits 格式）时，`git merge --no-ff -m "..."` 的 `-m` 参数会同时写入 MERGE_MSG，导致两个 hook 的格式要求冲突。修复方向：合并前先手动将 MERGE_MSG 写成标准 git 格式，再用 `-m "chore(...): ..."` 满足 Conventional Commits，两路分开处理。
-
----
-

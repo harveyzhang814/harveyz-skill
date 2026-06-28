@@ -160,8 +160,12 @@ git add TODO.md
 git commit -m "todo: add [任务标题]"
 
 # 2. 合并到 staging（或主分支）
+# --no-commit 让 git 自动写入标准格式的 MERGE_MSG（Merge branch 'chore/todo'），
+# 满足 pre-commit 的分支来源校验；再用 -m 传 Conventional Commits 格式，
+# 满足 commit-msg 校验。两路分开处理，避免双 hook 冲突。
 git checkout "$BASE_BRANCH"
-git merge --no-ff chore/todo -m "Merge chore/todo: add [任务标题]"
+git merge --no-ff --no-commit chore/todo
+git commit -m "chore(todo): add [任务标题]"
 
 # 3. 切回原分支
 git checkout "$ORIGINAL_BRANCH"
