@@ -58,8 +58,8 @@
       "path": "creative/capture-todo",
       "bundle": "creative",
       "installScope": "essential",
-      "contentHash": "6c6e5b013c5c0db9",
-      "contentVersion": "4.5.0"
+      "contentHash": "17eff9048a5da9af",
+      "contentVersion": "4.5.1"
     },
     {
       "path": "creative/capture-insight",
@@ -149,8 +149,8 @@
       "path": "design/sync-design",
       "bundle": "design",
       "installScope": "project",
-      "contentHash": "b70e26f9023883a8",
-      "contentVersion": "3.0.0"
+      "contentHash": "c306109c397f0f32",
+      "contentVersion": "3.1.0"
     },
     {
       "path": "experiment/init-skill",
