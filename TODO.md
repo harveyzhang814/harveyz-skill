@@ -64,14 +64,3 @@ sync-agent 已完成，现在将 Hermes agent 配置目录 `~/.hermes` 纳入同
 
 ---
 
-## harveyz-skill — sync-design-html 输出路径迁移
-
-### 将 sync-design-html 的 HTML 输出与 manifest 迁移至项目 `.hskill/` 文件夹
-**优先级**: P2 | **日期**: 2026-06-22
-
-当前 `sync-design-html` skill 将 HTML 设计备份写入 `docs/superpowers/`，manifest 存放在 `docs/reference/design-html-manifest.json`。按 skill 设计哲学，skill 产出物应归属 `.hskill/` 目录，与项目文档目录解耦。
-
-需完成：将输出路径（HTML 文件 + manifest）统一迁移到项目的 `.hskill/design-html/`，并更新 skill 中的路径引用。
-
----
-
