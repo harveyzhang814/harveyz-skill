@@ -1,5 +1,25 @@
 # TODO
 
+## 🚧 待开发
+
+### 重构 extract-url tag 为固定集与候选集分离
+**优先级**: P2 | **日期**: 2026-06-14
+
+extract-url skill 抓取文章时生成的 tags 目前全由 LLM 从内容推断，无固定词表，导致：① 每次抓取标签不稳定（同一主题表述不一致）；② 无法保证核心关键词（如 loop engineering）必现；③ 候选标签与确定标签混在一起，难以管理。
+
+**目标**：将 tag 拆分为两类：
+- **固定 Tag**（`fixed_tags`）：维护在 skill 目录词表中，每次抓取必定注入，与文章内容无关（如来源站点分类、技术栈、语言等跨文章共性标签）
+- **候选 Tag**（`candidate_tags`）：从文章内容提取，模糊/候选性质，定期 review 决定是否升入固定集
+
+**需修改的文件**：
+1. `skills/extract-url/` 下新建 `fixed_tags.txt`（初始词表）
+2. 修改 `validate_article.py` / `article_utils.py` 的 frontmatter 构建逻辑，将 tag 拆为 `fixed_tags` 和 `candidate_tags` 两个 YAML 列表字段
+3. 更新 `references/file-format.md` 文档说明新字段
+
+---
+
+## ✅ 已完成
+
 ## mermaid-diagram — 渲染样式增强
 
 ### [ ] CSS 注入提升 Mermaid 渲染质量
@@ -102,3 +122,20 @@ sync-agent 已完成，现在将 Hermes agent 配置目录 `~/.hermes` 纳入同
 
 ---
 
+
+### 设计多平台 Skill 补丁的同步与生命周期管理机制
+**优先级**: P2 | **日期**: 2026-06-30
+
+harveyz-skill 项目维护多个跨平台 Skill（如 extract-url），每个平台（Claude Code / Codex / Hermes）有独立的补丁文件（`SKILL.<platform>.md`），采用「主流程 + 各平台差异覆盖」模式。
+
+**问题**：
+- 主流程变更时，无法自动知道哪些平台补丁需要同步更新
+- 各平台补丁边界不清晰，生命周期状态（active / deprecated / pending-update）无追踪
+- 缺乏版本绑定机制
+
+**目标**：设计并实现一套机制，包括：
+1. **补丁声明式元数据**：每个补丁文件头部声明覆盖的主流程章节、依赖主流程版本、平台、状态
+2. **变更检测脚本**：主流程发布时，自动比对输出哪些补丁需要检查/更新
+3. **生命周期状态管理**：active / deprecated / pending-update 三态及其转换规则
+
+---
