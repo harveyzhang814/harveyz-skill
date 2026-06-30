@@ -52,6 +52,21 @@ ls ~/.hskill/url-extract/config.json 2>/dev/null && echo "EXISTS" || echo "NOT_F
    print(f"配置已保存：{cfg_path}")
    ```
 
+4. 检查并创建固定词表模板（若不存在）：
+   ```python
+   from pathlib import Path
+   fixed_tags_path = Path.home() / '.hskill' / 'url-extract' / 'fixed_tags.txt'
+   if not fixed_tags_path.exists():
+       fixed_tags_path.write_text(
+           "# topic\n# 示例：loop-engineering, ai, productivity\n\n"
+           "# language\n# 示例：english, chinese\n\n"
+           "# source\n# 示例：substack, twitter\n",
+           encoding='utf-8'
+       )
+       print(f"词表模板已创建：{fixed_tags_path}")
+       print("请用文本编辑器填入初始词条，# 开头为注释行。")
+   ```
+
 **③ 若输出 `EXISTS`，直接继续执行。**
 
 ---
