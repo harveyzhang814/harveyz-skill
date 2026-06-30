@@ -26,5 +26,5 @@ expected_candidate_contains:
 
 # 评估指标
 # Recall    = |predicted_tags ∩ expected_tags| / |expected_tags|  （越高越好，目标 ≥ 0.8）
-# Noise     = |predicted_tags ∩ expected_not_in_tags| / |predicted_tags|  （越低越好，目标 = 0）
+# Noise     = |predicted_tags ∩ expected_not_in_tags|  （越低越好，目标 = 0）
 # Candidate = expected_candidate_contains 中有多少出现在 candidate_tags  （越多越好）

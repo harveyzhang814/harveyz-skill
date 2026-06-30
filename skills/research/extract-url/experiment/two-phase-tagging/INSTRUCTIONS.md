@@ -22,7 +22,7 @@
 ## 运行方式
 
 在 Claude Code 主 session 中，用 Agent 工具分别派发三次 subagent。
-运行前，将 `fixture-article.txt` 全文粘贴替换各 prompt 文件中的「（粘贴 fixture-article.txt 全部内容）」占位符。
+各 prompt 文件（v1/v2/v3-prompt.txt）已内嵌 `fixture-article.txt` 全文，可直接使用。
 
 - V1 实验：使用 v1-prompt.txt 作为 Agent prompt
 - V2 实验：使用 v2-prompt.txt 作为 Agent prompt
