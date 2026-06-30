@@ -58,51 +58,165 @@ Expected: 切换到新分支 `feat/extract-url-tag-separation`
 
 **Files:**
 - Create: `skills/research/extract-url/experiment/two-phase-tagging/fixture-article.txt`
+- Create: `skills/research/extract-url/experiment/two-phase-tagging/fixture-fixed-tags.txt`
+- Create: `skills/research/extract-url/experiment/two-phase-tagging/expected-output.yaml`
 - Create: `skills/research/extract-url/experiment/two-phase-tagging/v1-prompt.txt`
 - Create: `skills/research/extract-url/experiment/two-phase-tagging/v2-prompt.txt`
 - Create: `skills/research/extract-url/experiment/two-phase-tagging/v3-prompt.txt`
 - Create: `skills/research/extract-url/experiment/two-phase-tagging/INSTRUCTIONS.md`
 
 **Interfaces:**
-- Produces: 实验结论（三种 variant 的 tags/candidate_tags 输出质量），供 Task 5 决定采用哪种 variant
+- Produces: 实验结论（三种 variant 的 precision/recall 得分），供 Task 5 决定采用哪种 variant
 
-- [ ] **Step 1: 创建实验目录和固定词表样本**
+- [ ] **Step 1: 创建实验目录**
 
 ```bash
 mkdir -p skills/research/extract-url/experiment/two-phase-tagging
 ```
 
-创建 `skills/research/extract-url/experiment/two-phase-tagging/fixture-article.txt`：
+- [ ] **Step 2: 创建测试文章（真实历史文章 Origin 文件）**
+
+创建 `skills/research/extract-url/experiment/two-phase-tagging/fixture-article.txt`，内容来自 vault 历史文章 `Loop Engineering Works On Memory`（来源：`https://x.com/mem0ai/status/2067305118891163833`）：
 
 ```
-Title: Why Loop Engineering Changes How Teams Ship
+source_url: https://x.com/mem0ai/status/2067305118891163833
+author: mem0
+publish_date: 2026-06-17
+language: english
 
-The fastest teams I've studied share a single trait: they treat shipping as 
-a learning loop, not a one-way door. Instead of long planning phases followed 
-by big releases, they ship small changes continuously, measure what happens, 
-and adjust in the next cycle. This isn't just an engineering preference — it 
-reshapes how product decisions get made.
+# Loop Engineering Works On Memory
 
-The key insight is feedback latency. When a team ships weekly instead of 
-quarterly, they get 13x more data points per year. Each data point is a 
-chance to course-correct before the error compounds. Teams that ship slowly 
-optimize for the perfection of individual decisions; teams that ship fast 
-optimize for the quality of the learning process.
+Loop Engineering Works On Memory
 
-This also changes team structure. Loop-oriented teams need fewer handoffs. 
-A long release cycle demands coordination between design, engineering, QA, 
-and product management at each phase boundary. A tight loop pushes those 
-conversations to happen continuously, not sequentially, which reduces the 
-cost of disagreement.
+recently tweeted: "You shouldn't be prompting coding agents anymore. You should be designing loops that prompt your agents."
 
-The practical implication: if you want to know how a team thinks, don't ask 
-about their process — ask about their last three deploys. What did they learn? 
-How fast did they find out? What changed next?
+Boris Cherny, who runs Claude Code at Anthropic, put it differently: "I don't prompt Claude anymore. My job is to write loops."
+
+The argument that followed gave the idea a name.
+
+As Osmani puts it, "loop engineering is replacing yourself as the person who prompts the agent. You design the system that does it instead."
+
+You stop being the one who types the next prompt and start building the thing that does.
+
+Here is what almost every breakdown of loop engineering skips. Those loops do not fail because the model is not smart enough. They fail when it forgets. The binding constraint on a long-running loop is not intelligence, tools, or prompting. It is memory. This article is the proof of that claim, and what to do about it.
+
+## What a loop is made of
+
+The progression people have settled on is: context engineering -> then harness engineering -> then loop engineering.
+
+- Context is what you put in the window.
+- The harness is everything wrapping a single agent run.
+- The loop sits one level above: the outer system that keeps the agent running, spawns helpers, verifies output, and decides the next move.
+
+Every loop moves through the same five stages: discover, plan, execute, verify, iterate.
+
+Osmani lists five components you actually build: automations (/loop, /goal, cron) that trigger discovery, git worktrees that keep parallel agents from colliding, skills (SKILL.md) that carry project knowledge, MCP connectors that let the loop act in real tools, and sub-agents that separate the maker from the checker.
+
+## Where loops break, and why every break is a memory failure
+
+The failure modes of long-running agents are now well documented, and they rhyme. Every one is the agent losing the plot because something fell out of context.
+
+Performance degrades as the window fills. The consistent observation is that agents hold coherence for roughly 20 to 30 turns, then start to hallucinate edge facts, misapply earlier assumptions, and double down on conclusions that no longer match reality.
+
+Long pipelines show three linked failures: detail loss, goal drift, and catastrophic forgetting. The loop keeps rolling the rock and keeps forgetting it already did.
+
+## Why a loop makes memory harder than anything before it
+
+You cannot solve this by stuffing more into context, for three reasons.
+
+First, the window is finite and the automatic fix is lossy. Compaction summarizes history to make room, and it routinely drops detail the agent later needs.
+
+Second, loops reach the token scale where even good external memory degrades. Standard memory benchmarks cap near 1.5M tokens; a multi-week loop blows past that.
+
+And it costs money. Practitioner breakdowns put a single agent loop at 50,000 to 200,000 tokens, a fleet at 500,000 to 2,000,000, and a scheduled loop at millions per week.
+
+## How practitioners actually fix it
+
+The fixes are uniform, and they are all memory engineering.
+
+The anchor-file set has stabilized: VISION.md for the goal, CLAUDE.md or AGENTS.md for rules, PROMPT.md for the per-iteration instruction, MEMORY.md for accumulated knowledge, SKILL.md for reusable procedure. Run 47 reads what runs 1 through 46 wrote.
+
+The frontier turns memory from a passive file into an active step in the loop. Cloudflare's Agent Memory intervenes at compaction: instead of discarding context, it extracts and deduplicates the facts worth keeping, so a weeks-long agent accumulates memory rather than losing it.
+
+## The bigger loop: memory is what makes it compound
+
+Step back from coding agents and the same structure appears at the scale of the firm. A company turns its workflows and judgment into a system that improves with every use. "This loop becomes the new IP of the firm." What makes it compound is memory. A loop with no durable memory cannot learn; it can only repeat.
+
+## The takeaway
+
+Loop engineering is the headline, but memory is the mechanism. The loop gives an agent persistence across time; memory gives it persistence across forgetting. Get the memory layer right — durable, external, semantic, curated — and a loop runs for days against a real goal and gets better each pass.
 ```
 
-- [ ] **Step 2: 创建 V1 实验 prompt**
+- [ ] **Step 3: 创建固定词表 fixture（基于 vault 历史词频归一化）**
 
-创建 `skills/research/extract-url/experiment/two-phase-tagging/v1-prompt.txt`：
+创建 `skills/research/extract-url/experiment/two-phase-tagging/fixture-fixed-tags.txt`：
+
+```
+# topic
+loop-engineering
+context-engineering
+prompt-engineering
+
+# technology
+ai
+llm
+agent
+claude
+
+# source
+twitter
+substack
+
+# language
+english
+chinese
+
+# domain
+productivity
+research
+design
+```
+
+- [ ] **Step 4: 创建 ground truth（期望输出）**
+
+创建 `skills/research/extract-url/experiment/two-phase-tagging/expected-output.yaml`：
+
+```yaml
+# 期望命中 tags（文章适用的固定词表条目）
+expected_tags:
+  - loop-engineering    # 标题 + 全文核心主题
+  - context-engineering # 正文显式提及 ("context engineering -> harness engineering -> loop engineering")
+  - ai                  # 主题：AI agents
+  - agent               # 主题：agent loop, sub-agents
+  - twitter             # 来源：x.com/mem0ai
+  - english             # 原文语言
+
+# 不应进 tags（词表中有但文章不适用）
+expected_not_in_tags:
+  - substack            # 来源不是 substack
+  - chinese             # 非中文原文
+  - productivity        # 非文章核心，不应命中
+  - design              # 文章不涉及设计
+  - research            # 文章不是研究论文
+  - prompt-engineering  # 仅作为参照系提及，非主题
+  - llm                 # 隐含但非核心词
+  - claude              # 仅一句话提及，非主题
+
+# candidate_tags 合理范围（内容提取，不在固定词表中）
+expected_candidate_contains:
+  - memory              # 全文第二主题
+  - agent-memory        # 具体概念
+  - multi-agent         # 文章提及 fleet / sub-agents
+
+# 评估指标
+# Recall    = |predicted_tags ∩ expected_tags| / |expected_tags|  （越高越好，目标 ≥ 0.8）
+# Noise     = |predicted_tags ∩ expected_not_in_tags| / |predicted_tags|  （越低越好，目标 = 0）
+# Candidate = expected_candidate_contains 中有多少出现在 candidate_tags  （越多越好）
+```
+
+- [ ] **Step 5: 创建 V1 实验 prompt**
+
+创建 `skills/research/extract-url/experiment/two-phase-tagging/v1-prompt.txt`（将 fixture-article.txt 全文嵌入 [ARTICLE] 块）：
 
 ```
 你是文章翻译和整理助手。请按以下两个阶段完成任务。
@@ -113,29 +227,7 @@ How fast did they find out? What changed next?
 翻译完成后，将全文输出。
 
 [ARTICLE]
-Title: Why Loop Engineering Changes How Teams Ship
-
-The fastest teams I've studied share a single trait: they treat shipping as
-a learning loop, not a one-way door. Instead of long planning phases followed
-by big releases, they ship small changes continuously, measure what happens,
-and adjust in the next cycle. This isn't just an engineering preference — it
-reshapes how product decisions get made.
-
-The key insight is feedback latency. When a team ships weekly instead of
-quarterly, they get 13x more data points per year. Each data point is a
-chance to course-correct before the error compounds. Teams that ship slowly
-optimize for the perfection of individual decisions; teams that ship fast
-optimize for the quality of the learning process.
-
-This also changes team structure. Loop-oriented teams need fewer handoffs.
-A long release cycle demands coordination between design, engineering, QA,
-and product management at each phase boundary. A tight loop pushes those
-conversations to happen continuously, not sequentially, which reduces the
-cost of disagreement.
-
-The practical implication: if you want to know how a team thinks, don't ask
-about their process — ask about their last three deploys. What did they learn?
-How fast did they find out? What changed next?
+（粘贴 fixture-article.txt 全部内容）
 [/ARTICLE]
 
 --- 阶段 2：打标 ---
@@ -143,19 +235,30 @@ How fast did they find out? What changed next?
 基于你刚才翻译的文章内容，生成标签。
 规则：优先从以下固定词表中选取适用于本文的词条；固定词表之外的标签作为候选标签。
 
-固定词表：
-loop-engineering, ai, productivity, english, chinese, substack, twitter, management, engineering
+固定词表（每行一个词，# 开头为注释）：
+loop-engineering
+context-engineering
+prompt-engineering
+ai
+llm
+agent
+claude
+twitter
+substack
+english
+chinese
+productivity
+research
+design
 
 以以下格式输出（YAML）：
 tags:
-  - （从固定词表中选出的、适用于本文的词条）
+  - （从固定词表中选出的、适用于本文的词条，可为空列表）
 candidate_tags:
-  - （固定词表之外、从内容提取的额外标签）
-
-注意：tags 和 candidate_tags 均可为空列表。
+  - （固定词表之外、从内容提取的额外标签，可为空列表）
 ```
 
-- [ ] **Step 3: 创建 V2 实验 prompt**
+- [ ] **Step 6: 创建 V2 实验 prompt**
 
 创建 `skills/research/extract-url/experiment/two-phase-tagging/v2-prompt.txt`：
 
@@ -168,44 +271,24 @@ candidate_tags:
 翻译完成后，将全文输出。
 
 [ARTICLE]
-Title: Why Loop Engineering Changes How Teams Ship
-
-The fastest teams I've studied share a single trait: they treat shipping as
-a learning loop, not a one-way door. Instead of long planning phases followed
-by big releases, they ship small changes continuously, measure what happens,
-and adjust in the next cycle. This isn't just an engineering preference — it
-reshapes how product decisions get made.
-
-The key insight is feedback latency. When a team ships weekly instead of
-quarterly, they get 13x more data points per year. Each data point is a
-chance to course-correct before the error compounds. Teams that ship slowly
-optimize for the perfection of individual decisions; teams that ship fast
-optimize for the quality of the learning process.
-
-This also changes team structure. Loop-oriented teams need fewer handoffs.
-A long release cycle demands coordination between design, engineering, QA,
-and product management at each phase boundary. A tight loop pushes those
-conversations to happen continuously, not sequentially, which reduces the
-cost of disagreement.
-
-The practical implication: if you want to know how a team thinks, don't ask
-about their process — ask about their last three deploys. What did they learn?
-How fast did they find out? What changed next?
+（粘贴 fixture-article.txt 全部内容）
 [/ARTICLE]
 
 --- 阶段 2：自由生成标签 ---
 
-基于你刚才翻译的文章内容，自由生成 6-8 个描述本文主题的标签。
-要求：小写、英文优先、连字符分隔。
+基于你刚才翻译的文章内容，自由生成 6-10 个描述本文主题的标签。
+要求：小写、英文优先、连字符分隔（如 loop-engineering）。
 直接列出这些标签（一行一个）。
 
 --- 阶段 3：分类 ---
 
-将阶段 2 生成的标签分类：
-- 若某标签与以下固定词表中的词条完全匹配 → 归入 tags
+将阶段 2 生成的标签逐一与以下固定词表对比（精确字符串匹配）：
+- 若完全匹配词表中的某个词条 → 归入 tags
 - 否则 → 归入 candidate_tags
 
-固定词表：loop-engineering, ai, productivity, english, chinese, substack, twitter, management, engineering
+固定词表：
+loop-engineering, context-engineering, prompt-engineering, ai, llm, agent, claude,
+twitter, substack, english, chinese, productivity, research, design
 
 以以下格式输出（YAML）：
 tags:
@@ -214,12 +297,12 @@ candidate_tags:
   - （未命中固定词表的标签）
 ```
 
-- [ ] **Step 4: 创建 V3 实验 prompt**
+- [ ] **Step 7: 创建 V3 实验 prompt**
 
 创建 `skills/research/extract-url/experiment/two-phase-tagging/v3-prompt.txt`：
 
 ```
-你是文章翻译和整理助手。请按以下三个步骤完成任务。
+你是文章翻译和整理助手。请按以下步骤完成任务。
 
 --- 阶段 1：翻译 ---
 
@@ -227,47 +310,31 @@ candidate_tags:
 翻译完成后，将全文输出。
 
 [ARTICLE]
-Title: Why Loop Engineering Changes How Teams Ship
-
-The fastest teams I've studied share a single trait: they treat shipping as
-a learning loop, not a one-way door. Instead of long planning phases followed
-by big releases, they ship small changes continuously, measure what happens,
-and adjust in the next cycle. This isn't just an engineering preference — it
-reshapes how product decisions get made.
-
-The key insight is feedback latency. When a team ships weekly instead of
-quarterly, they get 13x more data points per year. Each data point is a
-chance to course-correct before the error compounds. Teams that ship slowly
-optimize for the perfection of individual decisions; teams that ship fast
-optimize for the quality of the learning process.
-
-This also changes team structure. Loop-oriented teams need fewer handoffs.
-A long release cycle demands coordination between design, engineering, QA,
-and product management at each phase boundary. A tight loop pushes those
-conversations to happen continuously, not sequentially, which reduces the
-cost of disagreement.
-
-The practical implication: if you want to know how a team thinks, don't ask
-about their process — ask about their last three deploys. What did they learn?
-How fast did they find out? What changed next?
+（粘贴 fixture-article.txt 全部内容）
 [/ARTICLE]
 
---- 阶段 2a：从固定词表选取 ---
+--- 阶段 2a：从固定词表选取（有界选择）---
 
 以下是固定词表，每个词都有明确含义：
-- loop-engineering：关于持续交付、学习循环、快速迭代的工程文化
-- ai：与人工智能相关
-- productivity：关于个人或团队效率
+- loop-engineering：关于持续交付、学习循环、长期运行 agent 的工程设计
+- context-engineering：关于如何向 LLM 提供上下文的工程方法
+- prompt-engineering：关于如何设计 prompt 提升 LLM 输出质量
+- ai：文章主题与人工智能相关
+- llm：文章主题与大语言模型本身相关
+- agent：文章主题与 AI agent 相关
+- claude：文章重点涉及 Claude 产品或 Anthropic
+- twitter：文章来源为 Twitter/X 平台
+- substack：文章来源为 Substack 平台
 - english：原文为英文
 - chinese：原文为中文
-- substack：来源为 Substack 平台
-- twitter：来源为 Twitter/X 平台
-- management：关于团队管理、组织设计
-- engineering：关于软件工程实践
+- productivity：文章主题是个人或团队生产力提升
+- research：文章是学术或系统性研究
+- design：文章主题是产品或交互设计
 
 从上面的词表中，选出所有适用于本文的词条，输出为 tags。
+判断标准：词条描述的概念是否是文章的核心主题之一？
 
---- 阶段 2b：自由提取候选标签 ---
+--- 阶段 2b：自由提取候选标签（开放生成）---
 
 从你翻译的文章内容中，自由提取 3-5 个额外的描述性标签。
 要求：不得与阶段 2a 已选出的词条重复；小写、连字符分隔、英文优先。
@@ -275,12 +342,12 @@ How fast did they find out? What changed next?
 
 最终以以下格式输出（YAML）：
 tags:
-  - （阶段 2a 选出的词条）
+  - （阶段 2a 选出的词条，可为空列表）
 candidate_tags:
-  - （阶段 2b 自由提取的标签）
+  - （阶段 2b 自由提取的标签，可为空列表）
 ```
 
-- [ ] **Step 5: 创建实验说明文件**
+- [ ] **Step 8: 创建实验说明文件**
 
 创建 `skills/research/extract-url/experiment/two-phase-tagging/INSTRUCTIONS.md`：
 
@@ -293,44 +360,65 @@ candidate_tags:
 1. 同一 Subagent 内两阶段机制是否可行（阶段 1 译文上下文能否有效用于阶段 2）
 2. 三种打标 variant（V1/V2/V3）哪种质量最优
 
+## 测试文章
+
+`fixture-article.txt` — 真实历史文章「Loop Engineering Works On Memory」
+来源：https://x.com/mem0ai/status/2067305118891163833（Twitter，英文）
+
+## 固定词表
+
+`fixture-fixed-tags.txt` — 15 个词条，基于 vault 历史词频归一化
+
+## Ground Truth
+
+`expected-output.yaml` — 人工标注期望输出，含 expected_tags（6 个应命中词）和 expected_not_in_tags（8 个不应命中词）
+
 ## 运行方式
 
-在 Claude Code 主 session 中，用 Agent 工具分别派发三次 subagent，每次使用一个 variant prompt：
+在 Claude Code 主 session 中，用 Agent 工具分别派发三次 subagent。
+运行前，将 `fixture-article.txt` 全文粘贴替换各 prompt 文件中的「（粘贴 fixture-article.txt 全部内容）」占位符。
 
-```
-使用 v1-prompt.txt / v2-prompt.txt / v3-prompt.txt 的内容作为 Agent prompt
-（将 fixture-article.txt 全文替换 prompt 中的占位符）
-```
+- V1 实验：使用 v1-prompt.txt 作为 Agent prompt
+- V2 实验：使用 v2-prompt.txt 作为 Agent prompt
+- V3 实验：使用 v3-prompt.txt 作为 Agent prompt
 
-## 评估维度
+## 评分方法
 
-对每个 variant 的输出记录：
-- `tags` 是否准确命中固定词表中适用的词（本文应命中 loop-engineering, english, engineering, management）
-- `candidate_tags` 是否有意义且不与固定词表重复
-- 输出格式是否合规（合法 YAML 列表）
-- 是否有遗漏或噪音
+对每个 variant，将输出与 expected-output.yaml 对比，填入评分表：
 
-## 结论记录
+| 指标 | 计算方式 | 目标 |
+|------|----------|------|
+| Recall | `predicted_tags ∩ expected_tags` 的数量 / 6 | ≥ 0.8（命中 ≥5 个） |
+| Noise | `predicted_tags ∩ expected_not_in_tags` 的数量 | = 0 |
+| Candidate | `expected_candidate_contains` 中出现在 candidate_tags 的数量 / 3 | ≥ 0.67 |
+
+## 记录结果
 
 实验完成后，在本文件末尾追加：
 
-### 实验结论（填写日期）
+### 实验结果（YYYY-MM-DD）
+
+| Variant | Recall | Noise | Candidate | 输出 tags | 输出 candidate_tags |
+|---------|--------|-------|-----------|-----------|---------------------|
+| V1 | | | | | |
+| V2 | | | | | |
+| V3 | | | | | |
+
+### 实验结论
 - 选用 variant：V?
-- 理由：...
-- Task 5 中采用此 variant 的 prompt
+- 理由：
 ```
 
-- [ ] **Step 6: 运行实验**
+- [ ] **Step 9: 运行实验**
 
-在 Claude Code 主 session 中，分三次用 Agent 工具派发 subagent，分别使用 v1/v2/v3-prompt.txt 的内容（将 fixture-article.txt 全文嵌入）。
+在 Claude Code 主 session 中，将 `fixture-article.txt` 全文嵌入后，分三次用 Agent 工具派发 subagent（V1 / V2 / V3）。
+记录三次输出，对照 `expected-output.yaml` 计算各指标，填入 INSTRUCTIONS.md 结果表。
 
-记录三次输出的 `tags` 和 `candidate_tags` 值，对比评估维度，将结论追加到 `INSTRUCTIONS.md`。
-
-- [ ] **Step 7: Commit 实验文件**
+- [ ] **Step 10: Commit 实验文件**
 
 ```bash
 git add skills/research/extract-url/experiment/two-phase-tagging/
-git commit -m "experiment(extract-url): 两阶段打标 variant 实验文件"
+git commit -m "experiment(extract-url): 两阶段打标 variant 实验文件（真实文章 + ground truth）"
 ```
 
 ---
