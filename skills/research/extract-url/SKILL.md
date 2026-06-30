@@ -59,8 +59,10 @@ ls ~/.hskill/url-extract/config.json 2>/dev/null && echo "EXISTS" || echo "NOT_F
    if not fixed_tags_path.exists():
        fixed_tags_path.write_text(
            "# topic\n# 示例：loop-engineering, ai, productivity\n\n"
+           "# technology\n# 示例：python, cli, browser-automation\n\n"
+           "# source\n# 示例：substack, twitter\n\n"
            "# language\n# 示例：english, chinese\n\n"
-           "# source\n# 示例：substack, twitter\n",
+           "# domain\n# 示例：web-scraping, data-extraction, automation\n",
            encoding='utf-8'
        )
        print(f"词表模板已创建：{fixed_tags_path}")
