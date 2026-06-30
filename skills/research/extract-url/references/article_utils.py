@@ -140,7 +140,7 @@ def repair_frontmatter(fp, url, defaults=None):
                 sub_lines.append(raw_fm_lines[j])
                 j += 1
             if sub_lines:
-                fm[k] = (v + '\n' + '\n'.join(sub_lines)) if v else '\n'.join(sub_lines)
+                fm[k] = (v + '\n' + '\n'.join(sub_lines)) if v else '\n' + '\n'.join(sub_lines)
                 i = j
             else:
                 fm[k] = v
