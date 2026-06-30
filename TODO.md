@@ -95,6 +95,15 @@ hub Phase 1（core + CLI）和 Phase 2（三栏 TUI）已完成。Phase 3 是最
 
 ---
 
+## harveyz-skill — question-me skill
+
+### 开发参考 grill-me 风格的 question-me skill
+**优先级**: P2 | **日期**: 2026-06-30
+
+参考 grill-me/grilling 的「一次一问 + 给推荐答案 + 决策树依赖顺序」风格，创建一个 skill，在执行任务前帮用户明确更好的指令、查明隐含假设、理清决策因素。核心约束：一次只问一个问题，每问必附推荐答案，能自查的问题先自查再问用户，按决策依赖顺序逐一推进，直到达成 shared understanding 再开始实现。
+
+---
+
 ## hskill — tool lifecycle
 
 ### [x] Tool uninstall mechanism
