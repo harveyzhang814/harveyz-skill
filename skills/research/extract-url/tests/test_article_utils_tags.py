@@ -127,3 +127,13 @@ Content here.
     enforce_tag_separation(str(article), str(fixed))
 
     assert article.read_text(encoding='utf-8') == original
+
+
+def test_enforce_tag_separation_no_overlap_is_noop(tmp_path):
+    ft = tmp_path / "fixed_tags.txt"
+    ft.write_text("loop-engineering\n")
+    article = tmp_path / "article.md"
+    content = "---\ntags: []\ncandidate_tags:\n  - productivity\n---\nBody\n"
+    article.write_text(content, encoding="utf-8")
+    enforce_tag_separation(str(article), str(ft))
+    assert article.read_text(encoding="utf-8") == content
