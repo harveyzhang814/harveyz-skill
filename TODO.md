@@ -95,6 +95,15 @@ hub Phase 1（core + CLI）和 Phase 2（三栏 TUI）已完成。Phase 3 是最
 
 ---
 
+## extract-url — 词表初始化
+
+### 填入 fixed_tags.txt 初始词条
+**优先级**: P2 | **日期**: 2026-07-01
+
+`~/.hskill/url-extract/fixed_tags.txt` 已自动创建模板，但词条全为注释示例，无真实词条。首次实测（alex_prompter 文章）时 `tags` 字段命中率低。需手动填入 topic / technology / source / language / domain 五类初始词条，让后续抓取的 `tags` 产生有意义的命中，并通过 candidate_tags 的 review 来逐步扩充词表。
+
+---
+
 ## harveyz-skill — question-me skill
 
 ### 开发参考 grill-me 风格的 question-me skill
