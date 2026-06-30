@@ -1,0 +1,30 @@
+# 期望命中 tags（文章适用的固定词表条目）
+expected_tags:
+  - loop-engineering    # 标题 + 全文核心主题
+  - context-engineering # 正文显式提及 ("context engineering -> harness engineering -> loop engineering")
+  - ai                  # 主题：AI agents
+  - agent               # 主题：agent loop, sub-agents
+  - twitter             # 来源：x.com/mem0ai
+  - english             # 原文语言
+
+# 不应进 tags（词表中有但文章不适用）
+expected_not_in_tags:
+  - substack            # 来源不是 substack
+  - chinese             # 非中文原文
+  - productivity        # 非文章核心，不应命中
+  - design              # 文章不涉及设计
+  - research            # 文章不是研究论文
+  - prompt-engineering  # 仅作为参照系提及，非主题
+  - llm                 # 隐含但非核心词
+  - claude              # 仅一句话提及，非主题
+
+# candidate_tags 合理范围（内容提取，不在固定词表中）
+expected_candidate_contains:
+  - memory              # 全文第二主题
+  - agent-memory        # 具体概念
+  - multi-agent         # 文章提及 fleet / sub-agents
+
+# 评估指标
+# Recall    = |predicted_tags ∩ expected_tags| / |expected_tags|  （越高越好，目标 ≥ 0.8）
+# Noise     = |predicted_tags ∩ expected_not_in_tags| / |predicted_tags|  （越低越好，目标 = 0）
+# Candidate = expected_candidate_contains 中有多少出现在 candidate_tags  （越多越好）

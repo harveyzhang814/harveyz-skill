@@ -1,0 +1,102 @@
+你是文章翻译和整理助手。请按以下两个阶段完成任务。
+
+--- 阶段 1：翻译 ---
+
+将以下英文文章翻译为简体中文，尽可能保留原文结构和语气。
+翻译完成后，将全文输出。
+
+[ARTICLE]
+source_url: https://x.com/mem0ai/status/2067305118891163833
+author: mem0
+publish_date: 2026-06-17
+language: english
+
+# Loop Engineering Works On Memory
+
+Loop Engineering Works On Memory
+
+recently tweeted: "You shouldn't be prompting coding agents anymore. You should be designing loops that prompt your agents."
+
+Boris Cherny, who runs Claude Code at Anthropic, put it differently: "I don't prompt Claude anymore. My job is to write loops."
+
+The argument that followed gave the idea a name.
+
+As Osmani puts it, "loop engineering is replacing yourself as the person who prompts the agent. You design the system that does it instead."
+
+You stop being the one who types the next prompt and start building the thing that does.
+
+Here is what almost every breakdown of loop engineering skips. Those loops do not fail because the model is not smart enough. They fail when it forgets. The binding constraint on a long-running loop is not intelligence, tools, or prompting. It is memory. This article is the proof of that claim, and what to do about it.
+
+## What a loop is made of
+
+The progression people have settled on is: context engineering -> then harness engineering -> then loop engineering.
+
+- Context is what you put in the window.
+- The harness is everything wrapping a single agent run.
+- The loop sits one level above: the outer system that keeps the agent running, spawns helpers, verifies output, and decides the next move.
+
+Every loop moves through the same five stages: discover, plan, execute, verify, iterate.
+
+Osmani lists five components you actually build: automations (/loop, /goal, cron) that trigger discovery, git worktrees that keep parallel agents from colliding, skills (SKILL.md) that carry project knowledge, MCP connectors that let the loop act in real tools, and sub-agents that separate the maker from the checker.
+
+## Where loops break, and why every break is a memory failure
+
+The failure modes of long-running agents are now well documented, and they rhyme. Every one is the agent losing the plot because something fell out of context.
+
+Performance degrades as the window fills. The consistent observation is that agents hold coherence for roughly 20 to 30 turns, then start to hallucinate edge facts, misapply earlier assumptions, and double down on conclusions that no longer match reality.
+
+Long pipelines show three linked failures: detail loss, goal drift, and catastrophic forgetting. The loop keeps rolling the rock and keeps forgetting it already did.
+
+## Why a loop makes memory harder than anything before it
+
+You cannot solve this by stuffing more into context, for three reasons.
+
+First, the window is finite and the automatic fix is lossy. Compaction summarizes history to make room, and it routinely drops detail the agent later needs.
+
+Second, loops reach the token scale where even good external memory degrades. Standard memory benchmarks cap near 1.5M tokens; a multi-week loop blows past that.
+
+And it costs money. Practitioner breakdowns put a single agent loop at 50,000 to 200,000 tokens, a fleet at 500,000 to 2,000,000, and a scheduled loop at millions per week.
+
+## How practitioners actually fix it
+
+The fixes are uniform, and they are all memory engineering.
+
+The anchor-file set has stabilized: VISION.md for the goal, CLAUDE.md or AGENTS.md for rules, PROMPT.md for the per-iteration instruction, MEMORY.md for accumulated knowledge, SKILL.md for reusable procedure. Run 47 reads what runs 1 through 46 wrote.
+
+The frontier turns memory from a passive file into an active step in the loop. Cloudflare's Agent Memory intervenes at compaction: instead of discarding context, it extracts and deduplicates the facts worth keeping, so a weeks-long agent accumulates memory rather than losing it.
+
+## The bigger loop: memory is what makes it compound
+
+Step back from coding agents and the same structure appears at the scale of the firm. A company turns its workflows and judgment into a system that improves with every use. "This loop becomes the new IP of the firm." What makes it compound is memory. A loop with no durable memory cannot learn; it can only repeat.
+
+## The takeaway
+
+Loop engineering is the headline, but memory is the mechanism. The loop gives an agent persistence across time; memory gives it persistence across forgetting. Get the memory layer right — durable, external, semantic, curated — and a loop runs for days against a real goal and gets better each pass.
+[/ARTICLE]
+
+--- 阶段 2：打标 ---
+
+基于你刚才翻译的文章内容，生成标签。
+规则：优先从以下固定词表中选取适用于本文的词条；固定词表之外的标签作为候选标签。
+
+固定词表（每行一个词，# 开头为注释）：
+loop-engineering
+context-engineering
+prompt-engineering
+ai
+llm
+agent
+claude
+twitter
+substack
+english
+chinese
+productivity
+research
+design
+
+以以下格式输出（YAML）：
+tags:
+  - （从固定词表中选出的、适用于本文的词条，可为空列表）
+candidate_tags:
+  - （固定词表之外、从内容提取的额外标签，可为空列表）
