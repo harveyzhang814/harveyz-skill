@@ -99,6 +99,15 @@ sync-agent 已完成，现在将 Hermes agent 配置目录 `~/.hermes` 纳入同
 
 ---
 
+## extract-url — 词表初始化
+
+### 填入 fixed_tags.txt 初始词条
+**优先级**: P2 | **日期**: 2026-07-01
+
+`~/.hskill/url-extract/fixed_tags.txt` 已自动创建模板，但词条全为注释示例，无真实词条。首次实测（alex_prompter 文章）时 `tags` 字段命中率低。需手动填入 topic / technology / source / language / domain 五类初始词条，让后续抓取的 `tags` 产生有意义的命中，并通过 candidate_tags 的 review 来逐步扩充词表。
+
+---
+
 ## harveyz-skill — GitHub 相似项目探索 skill
 
 ### 探索 GitHub 相似项目借鉴设计的 skill
