@@ -52,7 +52,8 @@ description: 一两句话摘要，概括文章核心内容，供快速阅读。
 | `source_url` | ✅ 必须 | ✅ 必须 | 当前抓取的 URL |
 | `origin_title` | — | ✅ 必须 | 原文标题，用于 obsidian 双向链接 |
 | `category` | 可选 | 可选 | 来源列表页抓取的分类标签，由 cron 任务注入，article-fetcher skill 只做透传 |
-| `tags` | — | ✅ 必须 | YAML 列表格式，非逗号分隔 |
+| `tags` | 可选 | ✅ 必须 | YAML 列表格式；来自 `~/.hskill/url-extract/fixed_tags.txt` 词表，由 Subagent 2 从词表中选取适用条目；可为空列表 |
+| `candidate_tags` | — | 可选 | YAML 列表格式；由 LLM 从文章内容自由提取的候选标签，定期 review 决定是否升入固定词表；可为空列表或缺失 |
 | `description` | — | ✅ 必须 | 一两句话摘要，供快速阅读，基于译文内容提取 |
 
 ## 文件命名规则
@@ -71,3 +72,28 @@ origin_filename = re.sub(r'[\\/:*?<>|".]', '', title) + '.md'
 | 原文 | `Origin/<origin_title>.md` |
 | 译文 | `<title>.md`（无 Origin 子文件夹） |
 | 图片 | `Image/<url_hash>_img_N.ext` |
+
+## 固定词表（fixed_tags.txt）
+
+路径：`~/.hskill/url-extract/fixed_tags.txt`
+
+格式：分组注释平铺文本，`#` 开头行为注释，脚本读取时跳过。
+
+```
+# topic
+loop-engineering
+ai
+
+# language
+english
+chinese
+
+# source
+substack
+twitter
+```
+
+**维护规则：**
+- 直接用文本编辑器编辑，修改立即生效（无需重新安装 skill）
+- `candidate_tags` 中反复出现的词条，可手动升入词表
+- validate_article.py 会自动将 `candidate_tags` 中命中词表的条目移入 `tags`（兜底移位）
