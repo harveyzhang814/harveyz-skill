@@ -1,4 +1,4 @@
-import sqlite3, subprocess, os
+import sqlite3, subprocess, os, yaml
 from pathlib import Path
 
 SCRIPTS_DIR = Path(__file__).parent.parent / 'scripts'
@@ -151,7 +151,6 @@ def test_validate_moves_fixed_tag_from_candidate(skill_config, url_index_db, tmp
     )
     assert result.returncode == 0, result.stderr
 
-    import yaml
     parts = article.read_text(encoding='utf-8').split('---', 2)
     fm = yaml.safe_load(parts[1])
     assert 'loop-engineering' in fm['tags']
