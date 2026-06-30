@@ -316,3 +316,93 @@ def sanitize_filename(name):
     for ch in ['\\', '/', '*', '?', '<', '>', '|', ':', '"']:
         name = name.replace(ch, '')
     return name.lstrip('.')
+
+
+# ------------------------------------------------------------
+# 10. load_fixed_tags: 读取固定词表文件
+# ------------------------------------------------------------
+def load_fixed_tags(path):
+    """从分组注释文本文件中读取固定词表，跳过 # 注释行和空行。"""
+    try:
+        with open(path, encoding='utf-8') as f:
+            return {line.strip() for line in f if line.strip() and not line.startswith('#')}
+    except FileNotFoundError:
+        return set()
+
+
+# ------------------------------------------------------------
+# 11. move_fixed_from_candidate: 将候选集中命中固定词表的条目移入确定集
+# ------------------------------------------------------------
+def move_fixed_from_candidate(tags, candidate_tags, fixed_tags):
+    """
+    遍历 candidate_tags，命中 fixed_tags 的条目移入 tags（去重）。
+    返回 (new_tags, new_candidate_tags)。
+    """
+    new_tags = list(tags)
+    new_candidate = []
+    for t in candidate_tags:
+        if t in fixed_tags and t not in new_tags:
+            new_tags.append(t)
+        elif t not in fixed_tags:
+            new_candidate.append(t)
+    return new_tags, new_candidate
+
+
+# ------------------------------------------------------------
+# 12. enforce_tag_separation: 兜底移位（candidate → tags）
+# ------------------------------------------------------------
+def _replace_yaml_list_field(fm_raw, field, values):
+    """在原始 frontmatter 文本中替换指定 YAML 列表字段，不触碰其余字段。"""
+    if values:
+        new_block = f'{field}:\n' + ''.join(f'  - {v}\n' for v in values)
+    else:
+        new_block = f'{field}: []\n'
+    # 匹配 "field:" 行 + 后续缩进列表行
+    pattern = re.compile(
+        rf'^{re.escape(field)}:[ \t]*(?:\[\])?[ \t]*\n(?:  -[^\n]*\n)*',
+        re.MULTILINE
+    )
+    if pattern.search(fm_raw):
+        return pattern.sub(new_block, fm_raw)
+    # 字段不存在：追加到末尾
+    return fm_raw.rstrip('\n') + '\n' + new_block
+
+
+def enforce_tag_separation(fp, fixed_tags_path):
+    """
+    读取 fixed_tags_path 词表，将 fp 文章中 candidate_tags 里命中词表的条目移入 tags。
+    若 fixed_tags_path 不存在或 candidate_tags 无改动，则不写文件。
+    """
+    fixed = load_fixed_tags(fixed_tags_path)
+    if not fixed:
+        return
+
+    with open(fp, encoding='utf-8') as f:
+        content = f.read()
+
+    if not content.startswith('---'):
+        return
+
+    m = re.match(r'^---\n(.*?)\n---', content, re.DOTALL)
+    if not m:
+        return
+
+    fm_raw = m.group(1)
+    rest = content[m.end():]
+
+    fm_parsed = yaml.safe_load(fm_raw) or {}
+    tags = [t for t in (fm_parsed.get('tags') or []) if t]
+    candidate_tags = [t for t in (fm_parsed.get('candidate_tags') or []) if t]
+
+    if not candidate_tags:
+        return
+
+    new_tags, new_candidate = move_fixed_from_candidate(tags, candidate_tags, fixed)
+    if new_tags == tags and new_candidate == candidate_tags:
+        return
+
+    fm_raw = _replace_yaml_list_field(fm_raw, 'tags', new_tags)
+    fm_raw = _replace_yaml_list_field(fm_raw, 'candidate_tags', new_candidate)
+
+    with open(fp, 'w', encoding='utf-8') as f:
+        f.write('---\n' + fm_raw.rstrip('\n') + '\n---' + rest)
