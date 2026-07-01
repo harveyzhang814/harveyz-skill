@@ -1,3 +1,12 @@
+---
+migrated: 2026-07-02
+docs:
+  - reference/hotfix-lifecycle.md  # HOTFIXES.md 格式规范、编号规则、fix-skill 自动写入、sync-hotfix 工作流
+implemented_in:
+  - skills/meta/fix-skill/SKILL.md   # fix-skill Step 3a 自动追加 HOTFIXES.md 条目
+  - skills/meta/sync-hotfix/SKILL.md  # sync-hotfix 合并回源工作流
+---
+
 # Skill Hotfix 生命周期管理设计
 
 **日期：** 2026-07-01  

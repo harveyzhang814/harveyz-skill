@@ -1,3 +1,12 @@
+---
+migrated: 2026-07-02
+docs:
+  - explanation/cognitive-signature-philosophy.md  # 学习化重构的核心哲学：先学发生器、隐含作者、warrant 即地基
+  - how-to/use-extract-cognition.md                # 模式 A/B 决策、--pass 分段、认知动作手册使用方式
+implemented_in:
+  - skills/experiment/extract-cognition/SKILL.md  # 学习化重构后的主体管线
+---
+
 # extract-cognition 学习化重构 — 设计文档
 
 **日期**: 2026-06-22

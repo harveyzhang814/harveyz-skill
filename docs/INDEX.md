@@ -21,6 +21,7 @@ methodology: diataxis
 | [how-to/use-hskill-config.md](how-to/use-hskill-config.md) | 如何用 hskill config 设置默认 target 和 scope，避免每次传相同 flag |
 | [how-to/use-hub.md](how-to/use-hub.md) | 如何安装和使用 hub：TUI 启动、项目注册、任务管理、分支列表与 push/pull 操作 |
 | [how-to/use-extract-cognition.md](how-to/use-extract-cognition.md) | 如何用 extract-cognition：模式 A/B 决策、--pass 分段、产出四文件该读哪个、怎么把认知动作手册用起来 |
+| [how-to/use-init-goal.md](how-to/use-init-goal.md) | 如何用 init-goal 为 /loop 生成结构化目标：模版选择、生成文件说明、修改目标 |
 
 ## reference/ — 参考文档
 
@@ -32,6 +33,7 @@ methodology: diataxis
 | [reference/testing-guide.md](reference/testing-guide.md) | hskill 测试文件结构、bats 写法规范、hooks.bats 场景、hook 脚本验收测试模式 |
 | [reference/branch-cleanup-config.md](reference/branch-cleanup-config.md) | `.claude/branch-cleanup.md` 格式规范：Always Delete / Keep glob 规则、LLM 上下文段、内置默认值 |
 | [reference/hskill-cache.md](reference/hskill-cache.md) | hskill 本地缓存命令接口（cache clear/status/set-ttl）、缓存文件字段定义、失效规则 |
+| [reference/hotfix-lifecycle.md](reference/hotfix-lifecycle.md) | HOTFIXES.md 格式规范（字段定义、编号规则）、fix-skill 自动写入行为、sync-hotfix 合并回源工作流 |
 | [reference/hub-reference.md](reference/hub-reference.md) | hub CLI 完整参考：projects/tasks/git 子命令、所有参数、JSON 输出格式、错误格式 |
 | [reference/todo-format-spec.md](reference/todo-format-spec.md) | TODO.md 文件结构、字段规范、todo_format.yaml 完整定义 |
 | [reference/todo-tool-reference.md](reference/todo-tool-reference.md) | todo-tool 数据模型（SQL）、CLI 接口、API 端点完整参考 |
