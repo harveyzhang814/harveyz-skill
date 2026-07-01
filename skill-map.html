@@ -1,0 +1,961 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>harveyz-skill · Skill Map</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    /* ── Reset ── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    /* ── Tokens ── */
+    :root {
+      --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+      --font-mono: 'JetBrains Mono', 'Fira Code', ui-monospace, monospace;
+
+      --bg:         #F8FAFC;
+      --surface:    #FFFFFF;
+      --border:     #E2E8F0;
+      --border-sub: #F1F5F9;
+      --text-1:     #0F172A;
+      --text-2:     #475569;
+      --text-3:     #94A3B8;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: var(--font-sans);
+      background: var(--bg);
+      color: var(--text-1);
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ── Header ── */
+    .site-header {
+      background: #0D1117;
+      background-image: radial-gradient(circle at 1px 1px, rgba(255,255,255,0.06) 1px, transparent 0);
+      background-size: 28px 28px;
+      padding: 52px 40px 44px;
+    }
+
+    .header-inner {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .header-eyebrow {
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      font-weight: 500;
+      color: #388bfd;
+      letter-spacing: 0.04em;
+      margin-bottom: 14px;
+    }
+
+    .header-heading {
+      font-size: clamp(1.75rem, 4vw, 2.5rem);
+      font-weight: 800;
+      letter-spacing: -0.035em;
+      color: #F0F6FC;
+      line-height: 1.1;
+    }
+
+    .header-heading strong {
+      color: #58A6FF;
+      font-weight: 800;
+    }
+
+    .header-sub {
+      font-size: 0.9375rem;
+      color: #8B949E;
+      margin-top: 10px;
+      max-width: 480px;
+    }
+
+    .header-stats {
+      display: flex;
+      gap: 8px;
+      margin-top: 32px;
+      flex-wrap: wrap;
+    }
+
+    .stat {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.09);
+      border-radius: 7px;
+      padding: 8px 14px;
+    }
+
+    .stat-num {
+      font-family: var(--font-mono);
+      font-weight: 600;
+      font-size: 1.0625rem;
+      color: #F0F6FC;
+    }
+
+    .stat-lbl {
+      font-size: 0.75rem;
+      color: #6E7681;
+    }
+
+    .header-legend {
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+      margin-top: 24px;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.75rem;
+      color: #6E7681;
+    }
+
+    .legend-badge {
+      font-size: 0.6rem;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      padding: 2px 6px;
+      border-radius: 3px;
+    }
+
+    .legend-badge--exp      { background: #3D2A6B; color: #C4B5FD; }
+    .legend-badge--internal { background: #3A2A00; color: #FCD34D; }
+
+    /* ── Sticky bundle nav ── */
+    .bundle-nav {
+      position: sticky;
+      top: 0;
+      z-index: 200;
+      background: rgba(248, 250, 252, 0.92);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .bundle-nav-inner {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 40px;
+      display: flex;
+      gap: 2px;
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+
+    .bundle-nav-inner::-webkit-scrollbar { display: none; }
+
+    .nav-btn {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 11px 12px;
+      border: none;
+      background: transparent;
+      cursor: pointer;
+      font-family: var(--font-mono);
+      font-size: 0.7rem;
+      font-weight: 600;
+      color: var(--text-3);
+      white-space: nowrap;
+      border-bottom: 2px solid transparent;
+      margin-bottom: -1px;
+      transition: color 0.15s, border-color 0.15s;
+      letter-spacing: 0.04em;
+    }
+
+    .nav-btn:hover { color: var(--text-1); }
+
+    .nav-btn.is-active {
+      color: var(--bc);
+      border-bottom-color: var(--bc);
+    }
+
+    .nav-btn-count {
+      font-family: var(--font-sans);
+      font-size: 0.625rem;
+      font-weight: 600;
+      color: var(--text-3);
+      background: var(--border-sub);
+      padding: 1px 5px;
+      border-radius: 3px;
+      transition: background 0.15s, color 0.15s;
+    }
+
+    .nav-btn.is-active .nav-btn-count {
+      background: var(--bc-light);
+      color: var(--bc);
+    }
+
+    /* ── Page body ── */
+    .page-body {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 40px 100px;
+    }
+
+    /* ── Bundle section ── */
+    .bundle-section {
+      padding-top: 60px;
+      scroll-margin-top: 46px;
+    }
+
+    .bundle-head {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding-bottom: 20px;
+      border-bottom: 1.5px solid var(--border);
+    }
+
+    .bundle-icon {
+      width: 38px;
+      height: 38px;
+      border-radius: 9px;
+      background: var(--bc-light);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.0625rem;
+      flex-shrink: 0;
+    }
+
+    .bundle-info { flex: 1; min-width: 0; }
+
+    .bundle-tag {
+      font-family: var(--font-mono);
+      font-size: 0.6875rem;
+      font-weight: 600;
+      color: var(--bc);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .bundle-name {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--text-1);
+      margin-top: 2px;
+    }
+
+    .bundle-count-badge {
+      font-family: var(--font-mono);
+      font-size: 0.6875rem;
+      font-weight: 700;
+      color: var(--bc);
+      background: var(--bc-light);
+      padding: 5px 11px;
+      border-radius: 100px;
+      flex-shrink: 0;
+    }
+
+    /* ── Skill grid ── */
+    .skill-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(265px, 1fr));
+      gap: 1px;
+      background: var(--border);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+      margin-top: 18px;
+    }
+
+    /* ── Skill card ── */
+    .skill-card {
+      background: var(--surface);
+      padding: 17px 20px 19px;
+      position: relative;
+      cursor: default;
+      transition: background 0.12s;
+    }
+
+    /* Left-border reveal on hover — the accent enters from left */
+    .skill-card::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      width: 3px;
+      background: var(--bc);
+      transform: scaleX(0);
+      transform-origin: left;
+      transition: transform 0.14s ease;
+    }
+
+    .skill-card:hover { background: color-mix(in srgb, var(--bc-light) 60%, white); }
+    .skill-card:hover::before { transform: scaleX(1); }
+
+    .skill-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+
+    /* Signature element: blinking cursor on hover */
+    @keyframes cursor-blink {
+      0%, 100% { opacity: 1; }
+      50%       { opacity: 0; }
+    }
+
+    .skill-cmd {
+      font-family: var(--font-mono);
+      font-size: 0.8125rem;
+      font-weight: 600;
+      color: var(--text-1);
+      display: flex;
+      align-items: center;
+    }
+
+    .cmd-slash {
+      color: var(--text-3);
+      transition: color 0.14s;
+      margin-right: 1px;
+    }
+
+    .skill-card:hover .cmd-slash { color: var(--bc); }
+
+    .cmd-cursor {
+      display: inline-block;
+      width: 7px;
+      height: 13px;
+      background: var(--bc);
+      margin-left: 3px;
+      border-radius: 1px;
+      opacity: 0;
+      flex-shrink: 0;
+      vertical-align: text-bottom;
+    }
+
+    .skill-card:hover .cmd-cursor {
+      opacity: 1;
+      animation: cursor-blink 0.85s step-end infinite;
+    }
+
+    .skill-ver {
+      font-family: var(--font-mono);
+      font-size: 0.6375rem;
+      font-weight: 500;
+      color: var(--text-3);
+      background: var(--border-sub);
+      border: 1px solid var(--border);
+      padding: 2px 6px;
+      border-radius: 4px;
+      flex-shrink: 0;
+      white-space: nowrap;
+    }
+
+    .skill-desc {
+      font-size: 0.7813rem;
+      color: var(--text-2);
+      line-height: 1.56;
+    }
+
+    .skill-badges {
+      display: flex;
+      gap: 5px;
+      flex-wrap: wrap;
+      margin-top: 9px;
+    }
+
+    .badge {
+      font-size: 0.6rem;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      padding: 2px 6px;
+      border-radius: 3px;
+    }
+
+    .badge--exp      { background: #EDE9FE; color: #5B21B6; }
+    .badge--internal { background: #FEF3C7; color: #92400E; }
+
+    /* ── Bundle color themes ── */
+    .b-research { --bc: #1D4ED8; --bc-light: #EFF6FF; }
+    .b-creative  { --bc: #6D28D9; --bc-light: #F5F3FF; }
+    .b-coding    { --bc: #065F46; --bc-light: #ECFDF5; }
+    .b-writing   { --bc: #92400E; --bc-light: #FFFBEB; }
+    .b-design    { --bc: #9D174D; --bc-light: #FFF1F2; }
+    .b-mint      { --bc: #3730A3; --bc-light: #EEF2FF; }
+    .b-devops    { --bc: #9A3412; --bc-light: #FFF7ED; }
+
+    /* ── Footer ── */
+    .site-footer {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 40px 60px;
+    }
+
+    .footer-rule {
+      border: none;
+      border-top: 1px solid var(--border);
+      margin-bottom: 24px;
+    }
+
+    .footer-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .footer-text {
+      font-size: 0.8125rem;
+      color: var(--text-3);
+    }
+
+    .footer-cmds {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .cmd-chip {
+      font-family: var(--font-mono);
+      font-size: 0.7rem;
+      background: var(--border-sub);
+      border: 1px solid var(--border);
+      color: var(--text-2);
+      padding: 4px 10px;
+      border-radius: 5px;
+    }
+
+    /* ── Responsive ── */
+    @media (max-width: 768px) {
+      .site-header { padding: 36px 20px 32px; }
+      .bundle-nav-inner,
+      .page-body,
+      .site-footer { padding-left: 20px; padding-right: 20px; }
+      .skill-grid { grid-template-columns: 1fr; }
+      .header-heading { font-size: 1.75rem; }
+    }
+
+    /* ── Reduced motion ── */
+    @media (prefers-reduced-motion: reduce) {
+      html { scroll-behavior: auto; }
+      .skill-card, .skill-card::before { transition: none; }
+      .skill-card:hover .cmd-cursor { animation: none; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ══ Header ══ -->
+<header class="site-header">
+  <div class="header-inner">
+    <div class="header-eyebrow">harveyz-skill · v0.20.0</div>
+    <h1 class="header-heading">Skill <strong>Map</strong></h1>
+    <p class="header-sub">Claude Code 技能全景图 — 找到你需要的能力，了解它做什么</p>
+
+    <div class="header-stats">
+      <div class="stat">
+        <span class="stat-num">35</span>
+        <span class="stat-lbl">Active skills</span>
+      </div>
+      <div class="stat">
+        <span class="stat-num">7</span>
+        <span class="stat-lbl">Bundles</span>
+      </div>
+      <div class="stat">
+        <span class="stat-num">2</span>
+        <span class="stat-lbl">CLI tools</span>
+      </div>
+    </div>
+
+    <div class="header-legend">
+      <div class="legend-item">
+        <span class="legend-badge legend-badge--exp">Experimental</span>
+        version &lt; 1.0，功能可用但尚未稳定
+      </div>
+      <div class="legend-item">
+        <span class="legend-badge legend-badge--internal">Internal</span>
+        由其他 skill 自动调用，不对外暴露
+      </div>
+    </div>
+  </div>
+</header>
+
+<!-- ══ Bundle nav ══ -->
+<nav class="bundle-nav" aria-label="Bundle navigation">
+  <div class="bundle-nav-inner">
+    <button class="nav-btn b-research" style="--bc:#1D4ED8;--bc-light:#EFF6FF" data-target="research">
+      🔬 research <span class="nav-btn-count">8</span>
+    </button>
+    <button class="nav-btn b-creative" style="--bc:#6D28D9;--bc-light:#F5F3FF" data-target="creative">
+      ✨ creative <span class="nav-btn-count">2</span>
+    </button>
+    <button class="nav-btn b-coding" style="--bc:#065F46;--bc-light:#ECFDF5" data-target="coding">
+      ⚙️ coding <span class="nav-btn-count">5</span>
+    </button>
+    <button class="nav-btn b-writing" style="--bc:#92400E;--bc-light:#FFFBEB" data-target="writing">
+      ✍️ writing <span class="nav-btn-count">5</span>
+    </button>
+    <button class="nav-btn b-design" style="--bc:#9D174D;--bc-light:#FFF1F2" data-target="design">
+      🎨 design <span class="nav-btn-count">3</span>
+    </button>
+    <button class="nav-btn b-mint" style="--bc:#3730A3;--bc-light:#EEF2FF" data-target="mint">
+      🪄 mint <span class="nav-btn-count">8</span>
+    </button>
+    <button class="nav-btn b-devops" style="--bc:#9A3412;--bc-light:#FFF7ED" data-target="devops">
+      🔧 devops <span class="nav-btn-count">4</span>
+    </button>
+  </div>
+</nav>
+
+<!-- ══ Page body ══ -->
+<main class="page-body">
+
+  <!-- ── research ── -->
+  <section class="bundle-section b-research" id="research">
+    <div class="bundle-head">
+      <div class="bundle-icon">🔬</div>
+      <div class="bundle-info">
+        <div class="bundle-tag">research</div>
+        <div class="bundle-name">研究 · 知识提取</div>
+      </div>
+      <div class="bundle-count-badge">8 skills</div>
+    </div>
+
+    <div class="skill-grid">
+
+      <div class="skill-card">
+        <div class="skill-top">
+          <div class="skill-cmd"><span class="cmd-slash">/</span>extract-url<span class="cmd-cursor"></span></div>
+          <div class="skill-ver">v2.2.0</div>
+        </div>
+        <div class="skill-desc">抓取任意 URL 内容，翻译为中文并归档到 Obsidian Vault；支持 X.com / Twitter、批量列表，自动去重。</div>
+      </div>
+
+      <div class="skill-card">
+        <div class="skill-top">
+          <div class="skill-cmd"><span class="cmd-slash">/</span>learn-video<span class="cmd-cursor"></span></div>
+          <div class="skill-ver">v1.5.0</div>
+        </div>
+        <div class="skill-desc">处理 YouTube / Bilibili 视频：调用 vdl CLI 转录，生成可读文章与摘要。</div>
+      </div>
+
+      <div class="skill-card">
+        <div class="skill-top">
+          <div class="skill-cmd"><span class="cmd-slash">/</span>extract-vision<span class="cmd-cursor"></span></div>
+          <div class="skill-ver">v1.2.0</div>
+        </div>
+        <div class="skill-desc">从图片、截图、收据、菜单等含文字的图像中提取结构化信息（价格、日期、总计等）。</div>
+      </div>
+
+      <div class="skill-card">
+        <div class="skill-top">
+          <div class="skill-cmd"><span class="cmd-slash">/</span>learn-skill<span class="cmd-cursor"></span></div>
+          <div class="skill-ver">v2.0.0</div>
+        </div>
+        <div class="skill-desc">深读单个 skill 的 SKILL.md，从四维解析：执行流程、设计标准、边界条件、设计哲学。</div>
+      </div>
+
+      <div class="skill-card">
+        <div class="skill-top">
+          <div class="skill-cmd"><span class="cmd-slash">/</span>survey-skillrepo<span class="cmd-cursor"></span></div>
+          <div class="skill-ver">v2.0.1</div>
+        </div>
+        <div class="skill-desc">用四层洋葱模型对整个 skill 仓库做系统性分析，输出仓库级报告（设计意图 → 结构 → 关系 → 场景）。</div>
+      </div>
+
+      <div class="skill-card">
+        <div class="skill-top">
+          <div class="skill-cmd"><span class="cmd-slash">/</span>learn-paper<span class="cmd-cursor"></span></div>
+          <div class="skill-ver">v0.1.0</div>
+        </div>
+        <div class="skill-desc">三遍法精读学术 PDF：5C 结构定向 → 全文内容提取 → 批判性重构，每遍输出独立 Markdown 文件。</div>
+        <div class="skill-badges"><span class="badge badge--exp">Experimental</span></div>
+      </div>
+
+      <div class="skill-card">
+        <div class="skill-top">
+          <div class="skill-cmd"><span class="cmd-slash">/</span>extract-cognition<span class="cmd-cursor"></span></div>
+          <div class="skill-ver">v0.2.0</div>
+        </div>
+        <div class="skill-desc">从单篇文章提炼作者的可复用认知动作——命名每个思维动作，给出操作配方与适用边界。</div>
+        <div class="skill-badges"><span class="badge badge--exp">Experimental</span></div>
+      </div>
+
+      <div class="skill-card">
+        <div class="skill-top">
+          <div class="skill-cmd"><span class="cmd-slash">/</span>probe-session<span class="cmd-cursor"></span></div>
+          <div class="skill-ver">v0.3.0</div>
+        </div>
+        <div class="skill-desc">验证 Chrome Profile cookie 注入对目标 URL 是否有效：匿名 vs 注入两次对比，用于调试 extract-url 登录态。</div>
+        <div class="skill-badges"><span class="badge badge--exp">Experimental</span></div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ── creative ── -->
+  <section class="bundle-section b-creative" id="creative">
+    <div class="bundle-head">
+      <div class="bundle-icon">✨</div>
+      <div class="bundle-info">
+        <div class="bundle-tag">creative</div>
+        <div class="bundle-name">灵感 · 捕获记录</div>
+      </div>
+      <div class="bundle-count-badge">2 skills</div>
+    </div>
+
+    <div class="skill-grid">
+
+      <div class="skill-card">
+        <div class="skill-top">
+          <div class="skill-cmd"><span class="cmd-slash">/</span>capture-todo<span class="cmd-cursor"></span></div>
+          <div class="skill-ver">v4.5.1</div>
+        </div>
+        <div class="skill-desc">向任意项目的 TODO.md 添加需求、任务或功能请求，支持任意工作目录，即使措辞随意也能触发。</div>
+      </div>
+
+      <div class="skill-card">
+        <div class="skill-top">
+          <div class="skill-cmd"><span class="cmd-slash">/</span>capture-insight<span class="cmd-cursor"></span></div>
+          <div class="skill-ver">v2.0.0</div>
+        </div>
+        <div class="skill-desc">即时捕获转瞬即逝的洞察、判断或观察——通过 2–3 个快速问答提炼核心，保存到 Writing Agent 的 insights/ 目录。</div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ── coding ── -->
+  <section class="bundle-section b-coding" id="coding">
+    <div class="bundle-head">
+      <div class="bundle-icon">⚙️</div>
+      <div class="bundle-info">
+        <div class="bundle-tag">coding</div>
+        <div class="bundle-name">编程 · 任务工作流</div>
+      </div>
+      <div class="bundle-count-badge">5 skills</div>
+    </div>
+
+    <div class="skill-grid">
+
+      <div class="skill-card">
+        <div class="skill-top">
+          <div class="skill-cmd"><span class="cmd-slash">/</span>init-workflow<span class="cmd-cursor"></span></div>
+          <div class="skill-ver">v4.1.1</div>
+        </div>
+        <div class="skill-desc">初始化或更新 git 分支管理规范：读取 workflow-config.yml，差量部署 pre-commit / commit-msg / pre-push hooks，生成工作流文档。</div>
+      </div>
+
+      <div class="skill-card">
+        <div class="skill-top">
+          <div class="skill-cmd"><span class="cmd-slash">/</span>setup-debug<span class="cmd-cursor"></span></div>
+          <div class="skill-ver">v1.0.0</div>
+        </div>
+        <div class="skill-desc">为多组件应用搭建全栈日志监控环境：前端、后端、Worker、守护进程各层独立日志文件，供 Agent 精确查询。</div>
+      </div>
+
+      <div class="skill-card">
+        <div class="skill-top">
+          <div class="skill-cmd"><span class="cmd-slash">/</span>dispatch-task<span class="cmd-cursor"></span></div>
+          <div class="skill-ver">v1.0.0</div>
+        </div>
+        <div class="skill-desc">PM 任务派发：澄清需求 → 分析细化 → 创建任务文档 → 通过 sessions_send 派发给 Agent → 追踪反馈。</div>
+      </div>
+
+      <div class="skill-card">
+        <div class="skill-top">
+          <div class="skill-cmd"><span class="cmd-slash">/</span>close-task<span class="cmd-cursor"></span></div>
+          <div class="skill-ver">v1.0.0</div>
+        </div>
+        <div class="skill-desc">Agent 任务收尾：执行验收、生成总结、归档文档、记录经验教训——Agent 完成任务后自动触发。</div>
+      </div>
+
+      <div class="skill-card">
+        <div class="skill-top">
+          <div class="skill-cmd"><span class="cmd-slash">/</span>init-goal<span class="cmd-cursor"></span></div>
+          <div class="skill-ver">v1.3.0</div>
+        </div>
+        <div class="skill-desc">通过引导式对话生成 /loop 循环任务的 Goal Prompt；自动解析已知字段并匹配最佳模板，只追问缺失部分。</div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ── writing ── -->
+  <section class="bundle-section b-writing" id="writing">
+    <div class="bundle-head">
+      <div class="bundle-icon">✍️</div>
+      <div class="bundle-info">
+        <div class="bundle-tag">writing</div>
+        <div class="bundle-name">写作 · 文档输出</div>
+      </div>
+      <div class="bundle-count-badge">5 skills</div>
+    </div>
+
+    <div class="skill-grid">
+
+      <div class="skill-card">
+        <div class="skill-top">
+          <div class="skill-cmd"><span class="cmd-slash">/</span>forge-doc<span class="cmd-cursor"></span></div>
+          <div class="skill-ver">v2.5.0</div>
+        </div>
+        <div class="skill-desc">文档格式转换：Markdown → Word (.docx) 或 PDF；也可直接将对话内容导出为文件。</div>
+      </div>
+
+      <div class="skill-card">
+        <div class="skill-top">
+          <div class="skill-cmd"><span class="cmd-slash">/</span>draw-diagram<span class="cmd-cursor"></span></div>
+          <div class="skill-ver">v1.4.0</div>
+        </div>
+        <div class="skill-desc">专业 Mermaid 制图规范：流程图、序列图、状态机、甘特图、象限图、思维导图，含 12 项渲染前检查。</div>
+      </div>
+
+      <div class="skill-card">
+        <div class="skill-top">
+          <div class="skill-cmd"><span class="cmd-slash">/</span>manage-docs<span class="cmd-cursor"></span></div>
+          <div class="skill-ver">v1.0.0</div>
+        </div>
+        <div class="skill-desc">按 Diátaxis 方法论管理 docs/ 目录：新增或更新文档前先搜索，防止内容重复。</div>
+      </div>
+
+      <div class="skill-card">
+        <div class="skill-top">
+          <div class="skill-cmd"><span class="cmd-slash">/</span>manage-dir<span class="cmd-cursor"></span></div>
+          <div class="skill-ver">v1.0.0</div>
+        </div>
+        <div class="skill-desc">管理任何设有 DIR_METHOD.md 显式组织规范的目录：增删改文件时遵循目录的方法论约定。</div>
+      </div>
+
+      <div class="skill-card">
+        <div class="skill-top">
+          <div class="skill-cmd"><span class="cmd-slash">/</span>migrate-spec<span class="cmd-cursor"></span></div>
+          <div class="skill-ver">v1.0.0</div>
+        </div>
+        <div class="skill-desc">扫描 superpowers/specs/ 中未处理的设计规格，横向对比后写入 Diátaxis 正式文档，在 frontmatter 中标注迁移元信息。</div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ── design ── -->
+  <section class="bundle-section b-design" id="design">
+    <div class="bundle-head">
+      <div class="bundle-icon">🎨</div>
+      <div class="bundle-info">
+        <div class="bundle-tag">design</div>
+        <div class="bundle-name">设计 · 品牌视觉</div>
+      </div>
+      <div class="bundle-count-badge">3 skills</div>
+    </div>
+
+    <div class="skill-grid">
+
+      <div class="skill-card">
+        <div class="skill-top">
+          <div class="skill-cmd"><span class="cmd-slash">/</span>scout-brand<span class="cmd-cursor"></span></div>
+          <div class="skill-ver">v2.1.0</div>
+        </div>
+        <div class="skill-desc">从品牌官网扫描视觉设计风格，输出包含色彩、排版、布局规律的结构化设计知识文档（knowledge/design/）。</div>
+      </div>
+
+      <div class="skill-card">
+        <div class="skill-top">
+          <div class="skill-cmd"><span class="cmd-slash">/</span>build-style<span class="cmd-cursor"></span></div>
+          <div class="skill-ver">v1.4.0</div>
+        </div>
+        <div class="skill-desc">从品牌设计知识文档派生具体格式配置：doc-forge JSON、HTML CSS 变量、Mermaid 配色方案或 PPT 主题。</div>
+      </div>
+
+      <div class="skill-card">
+        <div class="skill-top">
+          <div class="skill-cmd"><span class="cmd-slash">/</span>sync-design<span class="cmd-cursor"></span></div>
+          <div class="skill-ver">v3.1.0</div>
+        </div>
+        <div class="skill-desc">UI 源码变更后，自动检测 git diff 中的视图/组件文件并同步到高保真 HTML 设计备份，维护 manifest 映射表。</div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ── mint ── -->
+  <section class="bundle-section b-mint" id="mint">
+    <div class="bundle-head">
+      <div class="bundle-icon">🪄</div>
+      <div class="bundle-info">
+        <div class="bundle-tag">mint</div>
+        <div class="bundle-name">Skill 生命周期管理</div>
+      </div>
+      <div class="bundle-count-badge">8 skills</div>
+    </div>
+
+    <div class="skill-grid">
+
+      <div class="skill-card">
+        <div class="skill-top">
+          <div class="skill-cmd"><span class="cmd-slash">/</span>init-skill<span class="cmd-cursor"></span></div>
+          <div class="skill-ver">v1.2.0</div>
+        </div>
+        <div class="skill-desc">从设计规格或笔记出发，脚手架完整的新 skill 目录：生成 SKILL.md、目录结构，从 feature 分支开始。</div>
+      </div>
+
+      <div class="skill-card">
+        <div class="skill-top">
+          <div class="skill-cmd"><span class="cmd-slash">/</span>publish-skill<span class="cmd-cursor"></span></div>
+          <div class="skill-ver">v1.3.0</div>
+        </div>
+        <div class="skill-desc">校验 SKILL.md 格式合规性（frontmatter 字段、semver、命名约定）并注册到 skills-index.json。</div>
+      </div>
+
+      <div class="skill-card">
+        <div class="skill-top">
+          <div class="skill-cmd"><span class="cmd-slash">/</span>archive-skill<span class="cmd-cursor"></span></div>
+          <div class="skill-ver">v1.1.1</div>
+        </div>
+        <div class="skill-desc">退役 / 归档 skill：移至 skills/archived/，从 skills-index.json 中移除，重新生成打包配置并提交。</div>
+      </div>
+
+      <div class="skill-card">
+        <div class="skill-top">
+          <div class="skill-cmd"><span class="cmd-slash">/</span>dedup-skill<span class="cmd-cursor"></span></div>
+          <div class="skill-ver">v1.0.0</div>
+        </div>
+        <div class="skill-desc">在逻辑块层面检测两个或多个 skill 之间的语义重叠，帮助决定合并、拆分还是明确边界。</div>
+      </div>
+
+      <div class="skill-card">
+        <div class="skill-top">
+          <div class="skill-cmd"><span class="cmd-slash">/</span>contribute-skill<span class="cmd-cursor"></span></div>
+          <div class="skill-ver">v1.0.0</div>
+        </div>
+        <div class="skill-desc">从其他项目导入 / 同步 skill 目录到本仓库：自动规范化 SKILL.md 格式、注册 index，支持双向同步。</div>
+      </div>
+
+      <div class="skill-card">
+        <div class="skill-top">
+          <div class="skill-cmd"><span class="cmd-slash">/</span>fix-skill<span class="cmd-cursor"></span></div>
+          <div class="skill-ver">v2.1.0</div>
+        </div>
+        <div class="skill-desc">自动诊断并修复失败的 skill，最多 3 轮 AI 诊断-修复循环；全部失败时还原原始文件并保留诊断记录。</div>
+        <div class="skill-badges"><span class="badge badge--internal">Internal Only</span></div>
+      </div>
+
+      <div class="skill-card">
+        <div class="skill-top">
+          <div class="skill-cmd"><span class="cmd-slash">/</span>runby-opencode<span class="cmd-cursor"></span></div>
+          <div class="skill-ver">v1.1.0</div>
+        </div>
+        <div class="skill-desc">用 opencode 作为独立 AI Agent 验证 skill 的指令逻辑，或与 Claude 进行 A/B 对比测试。</div>
+      </div>
+
+      <div class="skill-card">
+        <div class="skill-top">
+          <div class="skill-cmd"><span class="cmd-slash">/</span>scout-philosophy<span class="cmd-cursor"></span></div>
+          <div class="skill-ver">v1.0.0</div>
+        </div>
+        <div class="skill-desc">为新 skill 设计原则在已有 skill 生态（G stack、Superpowers、MSkill）中寻找实践依据和先例。</div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ── devops ── -->
+  <section class="bundle-section b-devops" id="devops">
+    <div class="bundle-head">
+      <div class="bundle-icon">🔧</div>
+      <div class="bundle-info">
+        <div class="bundle-tag">devops</div>
+        <div class="bundle-name">项目运维 · 发布管理</div>
+      </div>
+      <div class="bundle-count-badge">4 skills</div>
+    </div>
+
+    <div class="skill-grid">
+
+      <div class="skill-card">
+        <div class="skill-top">
+          <div class="skill-cmd"><span class="cmd-slash">/</span>clean-git<span class="cmd-cursor"></span></div>
+          <div class="skill-ver">v1.0.0</div>
+        </div>
+        <div class="skill-desc">用规则匹配 + LLM 语义分析整理本地 git 分支，按组批量确认后删除过期分支。</div>
+      </div>
+
+      <div class="skill-card">
+        <div class="skill-top">
+          <div class="skill-cmd"><span class="cmd-slash">/</span>release-project<span class="cmd-cursor"></span></div>
+          <div class="skill-ver">v1.1.0</div>
+        </div>
+        <div class="skill-desc">通用项目发布：两阶段——Init（首次生成发布配置）+ Execute（版本 bump、CHANGELOG、tag、发布）。支持 npm / Python / Rust 等。</div>
+      </div>
+
+      <div class="skill-card">
+        <div class="skill-top">
+          <div class="skill-cmd"><span class="cmd-slash">/</span>sync-hotfix<span class="cmd-cursor"></span></div>
+          <div class="skill-ver">v1.1.1</div>
+        </div>
+        <div class="skill-desc">处理已安装 skill 的 HOTFIXES.md 条目，并运行全文件 diff 安全网，检测已安装版与源仓库之间的未记录差异。</div>
+      </div>
+
+      <div class="skill-card">
+        <div class="skill-top">
+          <div class="skill-cmd"><span class="cmd-slash">/</span>sync-agent<span class="cmd-cursor"></span></div>
+          <div class="skill-ver">v1.1.1</div>
+        </div>
+        <div class="skill-desc">运行时管理 Syncthing 同步文件夹和设备：查询状态、添加/删除文件夹与设备、暂停、强制扫描（不启停守护进程）。</div>
+      </div>
+
+    </div>
+  </section>
+
+</main>
+
+<!-- ══ Footer ══ -->
+<footer class="site-footer">
+  <hr class="footer-rule">
+  <div class="footer-row">
+    <div class="footer-text">harveyz-skill v0.20.0 · 35 active skills · 7 bundles</div>
+    <div class="footer-cmds">
+      <span class="cmd-chip">hskill install --bundle &lt;name&gt;</span>
+      <span class="cmd-chip">hskill install --skill &lt;name&gt;</span>
+    </div>
+  </div>
+</footer>
+
+<script>
+  // ── Active nav tab tracking via IntersectionObserver ──
+  const sections = document.querySelectorAll('.bundle-section');
+  const navBtns  = document.querySelectorAll('.nav-btn');
+
+  const io = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        const id = entry.target.id;
+        navBtns.forEach(btn => {
+          btn.classList.toggle('is-active', btn.dataset.target === id);
+        });
+      }
+    });
+  }, { rootMargin: '-10% 0px -80% 0px', threshold: 0 });
+
+  sections.forEach(s => io.observe(s));
+
+  // ── Smooth scroll to bundle on nav click ──
+  navBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const target = document.getElementById(btn.dataset.target);
+      if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  });
+</script>
+
+</body>
+</html>

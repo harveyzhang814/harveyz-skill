@@ -17,13 +17,13 @@
     }
   ],
   "bundleMeta": {
-    "research": "研究工具（extract-url + learn-video + extract-vision + learn-skill）",
+    "research": "研究工具（extract-url + learn-video + extract-vision + learn-skill + survey-skillrepo + learn-paper + extract-cognition + probe-session）",
     "creative": "创意工具（capture-todo + capture-insight）",
     "coding": "程序工具（init-workflow + setup-debug + dispatch-task + close-task + init-goal）",
-    "writing": "写作工具（forge-doc + draw-diagram + manage-docs + manage-dir + migrate-spec）",
+    "writing": "写作工具（forge-doc + draw-diagram + manage-dir + migrate-spec）",
     "design": "设计工具（scout-brand + build-style + sync-design）",
-    "meta": "元操作工具（clean-git + archive-skill + dedup-skill + contribute-skill + publish-skill + release-project + runby-opencode）",
-    "experiment": "实验性工具（尚未稳定，不纳入正式 bundle）"
+    "mint": "Skill 生命周期工具（init-skill + publish-skill + archive-skill + dedup-skill + contribute-skill + fix-skill + runby-opencode + scout-philosophy）",
+    "devops": "项目运维工具（clean-git + release-project + sync-hotfix + sync-agent）"
   },
   "skills": [
     {
@@ -37,8 +37,8 @@
       "path": "research/extract-url",
       "bundle": "research",
       "installScope": "global",
-      "contentHash": "2e2df3604e577322",
-      "contentVersion": "2.0.0"
+      "contentHash": "609f536b940bf5c8",
+      "contentVersion": "2.2.0"
     },
     {
       "path": "research/extract-vision",
@@ -55,11 +55,39 @@
       "contentVersion": "1.5.0"
     },
     {
+      "path": "research/survey-skillrepo",
+      "bundle": "research",
+      "installScope": "global",
+      "contentHash": "ea823301b039a8aa",
+      "contentVersion": "2.0.1"
+    },
+    {
+      "path": "research/learn-paper",
+      "bundle": "research",
+      "installScope": "project",
+      "contentHash": "1fe085285d11bb6a",
+      "contentVersion": "0.1.0"
+    },
+    {
+      "path": "research/extract-cognition",
+      "bundle": "research",
+      "installScope": "project",
+      "contentHash": "d8489acfb63f0a1c",
+      "contentVersion": "0.2.0"
+    },
+    {
+      "path": "research/probe-session",
+      "bundle": "research",
+      "installScope": "project",
+      "contentHash": "91391f7b702e0797",
+      "contentVersion": "0.3.0"
+    },
+    {
       "path": "creative/capture-todo",
       "bundle": "creative",
       "installScope": "essential",
-      "contentHash": "6c6e5b013c5c0db9",
-      "contentVersion": "4.5.0"
+      "contentHash": "17eff9048a5da9af",
+      "contentVersion": "4.5.1"
     },
     {
       "path": "creative/capture-insight",
@@ -72,8 +100,8 @@
       "path": "coding/init-workflow",
       "bundle": "coding",
       "installScope": "essential",
-      "contentHash": "015d1aa865ecfacd",
-      "contentVersion": "4.1.0"
+      "contentHash": "f15dc837ff4cee01",
+      "contentVersion": "4.1.2"
     },
     {
       "path": "coding/setup-debug",
@@ -97,6 +125,13 @@
       "contentVersion": "1.0.0"
     },
     {
+      "path": "meta/init-goal",
+      "bundle": "coding",
+      "installScope": "essential",
+      "contentHash": "8db51b5ca77dc470",
+      "contentVersion": "1.3.0"
+    },
+    {
       "path": "writing/forge-doc",
       "bundle": "writing",
       "installScope": "global",
@@ -109,13 +144,6 @@
       "installScope": "global",
       "contentHash": "347865f4c7bf3d52",
       "contentVersion": "1.4.0"
-    },
-    {
-      "path": "writing/manage-docs",
-      "bundle": "writing",
-      "installScope": "project",
-      "contentHash": "ae6ac3c712e99eb8",
-      "contentVersion": "1.0.0"
     },
     {
       "path": "writing/manage-dir",
@@ -149,119 +177,92 @@
       "path": "design/sync-design",
       "bundle": "design",
       "installScope": "project",
-      "contentHash": "b70e26f9023883a8",
-      "contentVersion": "3.0.0"
+      "contentHash": "c306109c397f0f32",
+      "contentVersion": "3.1.0"
     },
     {
-      "path": "experiment/init-skill",
-      "bundle": "experiment",
+      "path": "mint/init-skill",
+      "bundle": "mint",
       "installScope": "project",
       "contentHash": "4053e6476d1c3f09",
       "contentVersion": "1.2.0"
     },
     {
-      "path": "research/survey-skillrepo",
-      "bundle": "research",
-      "installScope": "global",
-      "contentHash": "ea823301b039a8aa",
-      "contentVersion": "2.0.1"
+      "path": "mint/publish-skill",
+      "bundle": "mint",
+      "installScope": "project",
+      "contentHash": "9c0c8a7f339f91d8",
+      "contentVersion": "1.3.1"
     },
     {
-      "path": "meta/clean-git",
-      "bundle": "meta",
-      "installScope": "essential",
-      "contentHash": "47f0597ce1b5a6e2",
-      "contentVersion": "1.0.0"
-    },
-    {
-      "path": "meta/archive-skill",
-      "bundle": "meta",
+      "path": "mint/archive-skill",
+      "bundle": "mint",
       "installScope": "project",
       "contentHash": "080305f6ad678326",
       "contentVersion": "1.1.1"
     },
     {
-      "path": "meta/dedup-skill",
-      "bundle": "meta",
+      "path": "mint/dedup-skill",
+      "bundle": "mint",
       "installScope": "project",
       "contentHash": "6ebfca98f37241d0",
       "contentVersion": "1.0.0"
     },
     {
-      "path": "meta/contribute-skill",
-      "bundle": "meta",
+      "path": "mint/contribute-skill",
+      "bundle": "mint",
       "installScope": "project",
       "contentHash": "3143a6e8c98d4282",
       "contentVersion": "1.0.0"
     },
     {
-      "path": "meta/publish-skill",
-      "bundle": "meta",
-      "installScope": "project",
-      "contentHash": "55ab8e712c16aed3",
-      "contentVersion": "1.3.0"
+      "path": "mint/fix-skill",
+      "bundle": "mint",
+      "installScope": "global",
+      "contentHash": "e0aafcea982eab9c",
+      "contentVersion": "2.1.0"
     },
     {
-      "path": "meta/runby-opencode",
-      "bundle": "meta",
+      "path": "mint/runby-opencode",
+      "bundle": "mint",
       "installScope": "global",
       "contentHash": "49887e63af5eb692",
       "contentVersion": "1.1.0"
     },
     {
-      "path": "meta/release-project",
-      "bundle": "meta",
-      "installScope": "essential",
-      "contentHash": "ca9fdcd9f3eabfe1",
-      "contentVersion": "1.1.0"
-    },
-    {
-      "path": "meta/sync-agent",
-      "bundle": "meta",
-      "installScope": "global",
-      "contentHash": "3762c7b6488a5f90",
-      "contentVersion": "1.1.1"
-    },
-    {
-      "path": "experiment/probe-session",
-      "bundle": "experiment",
-      "installScope": "project",
-      "contentHash": "91391f7b702e0797",
-      "contentVersion": "0.3.0"
-    },
-    {
-      "path": "experiment/learn-paper",
-      "bundle": "experiment",
-      "installScope": "project",
-      "contentHash": "1fe085285d11bb6a",
-      "contentVersion": "0.1.0"
-    },
-    {
-      "path": "meta/scout-philosophy",
-      "bundle": "meta",
+      "path": "mint/scout-philosophy",
+      "bundle": "mint",
       "installScope": "project",
       "contentHash": "46b5c57f31d514bf",
       "contentVersion": "1.0.0"
     },
     {
-      "path": "meta/fix-skill",
-      "bundle": "meta",
-      "installScope": "global",
-      "contentHash": "185807f284915b8c",
-      "contentVersion": "2.0.0"
-    },
-    {
-      "path": "meta/init-goal",
-      "bundle": "coding",
+      "path": "meta/clean-git",
+      "bundle": "devops",
       "installScope": "essential",
-      "contentHash": "8db51b5ca77dc470",
-      "contentVersion": "1.3.0"
+      "contentHash": "47f0597ce1b5a6e2",
+      "contentVersion": "1.0.0"
     },
     {
-      "path": "experiment/extract-cognition",
-      "bundle": "experiment",
-      "installScope": "project",
-      "contentVersion": "0.2.0"
+      "path": "meta/release-project",
+      "bundle": "devops",
+      "installScope": "essential",
+      "contentHash": "ca9fdcd9f3eabfe1",
+      "contentVersion": "1.1.0"
+    },
+    {
+      "path": "meta/sync-hotfix",
+      "bundle": "devops",
+      "installScope": "global",
+      "contentHash": "54e218e7641dc514",
+      "contentVersion": "1.1.1"
+    },
+    {
+      "path": "meta/sync-agent",
+      "bundle": "devops",
+      "installScope": "global",
+      "contentHash": "3762c7b6488a5f90",
+      "contentVersion": "1.1.1"
     }
   ],
   "hooks": [

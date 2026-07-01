@@ -2,6 +2,11 @@
 title: init-goal skill design
 date: 2026-06-25
 status: approved
+migrated: 2026-07-02
+docs:
+  - how-to/use-init-goal.md  # 如何用 init-goal 生成结构化 /loop 目标：模版选择、生成文件说明、修改目标
+implemented_in:
+  - skills/meta/init-goal/SKILL.md
 ---
 
 # init-goal Skill Design

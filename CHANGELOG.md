@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.21.0] - 2026-07-01
+
+### Added
+- `init-workflow` v4.1.x：Step 4e git config 健康检查（`core.hooksPath` + `merge.ff`），类型 E 冲突检测与自动修复；lock 文件新增 `git_config` 节
+- `sync-hotfix` v1.1.x：Step 5 全文件差异扫描安全网，Step 1 不再退出确保 Step 5 始终执行
+- `extract-url` v2.2.0：X Notes 内容根节点修复、嵌套 tweet 过滤；tag 固定集（`fixed_tags.txt`）与候选集分离，两阶段打标流程
+- `fix-skill` v2.1.0：多轮 AI 修复 + per-skill session doc（含 HOTFIXES.md 写入）
+- `extract-cognition` v0.2.0：学习导向重设计——五阶段 evidence/audit layer + 学习层（Stage 5-6）
+- `skill-map.html`：全景参考页面，Grid 布局按 bundle 分组展示所有 35 个 skill
+- `sync-design` v3.1.0：`.hskill/` outputDir 默认路径 + legacy path 迁移
+
+### Changed
+- Bundle 重组：`meta` 拆分为 `mint`（skill 生命周期）和 `devops`（项目运维）；`experiment` 解散，各 skill 回归领域 bundle
+- `publish-skill` v1.3.1：F7 动词词表新增 `survey`
+- `capture-todo` v4.5.1：修复 merge dual-hook 兼容性（`--no-commit` 解耦 MERGE_MSG 与 commit-msg）
+- Pre-commit hook：允许 remote staging sync merge 不被拦截
+
+### Removed
+- `manage-docs`：归档（功能已由 `manage-dir` + `references/built-in/diataxis.md` 覆盖）
+
 ## [0.20.0] - 2026-06-25
 
 ### Added

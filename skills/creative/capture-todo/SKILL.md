@@ -1,6 +1,6 @@
 ---
 name: capture-todo
-version: "4.5.0"
+version: "4.5.1"
 user_invocable: true
 description: "Add a new requirement, task, or feature request to any project's TODO.md — from any working directory. Triggers whenever the user wants to capture a new need — even phrased casually like 'we should do X later', 'add this to the backlog', 'note this down', 'remember to build X', 'we need to do Y at some point', or 'record this for later'."
 ---
@@ -160,8 +160,12 @@ git add TODO.md
 git commit -m "todo: add [任务标题]"
 
 # 2. 合并到 staging（或主分支）
+# --no-commit 让 git 自动写入标准格式的 MERGE_MSG（Merge branch 'chore/todo'），
+# 满足 pre-commit 的分支来源校验；再用 -m 传 Conventional Commits 格式，
+# 满足 commit-msg 校验。两路分开处理，避免双 hook 冲突。
 git checkout "$BASE_BRANCH"
-git merge --no-ff chore/todo -m "Merge chore/todo: add [任务标题]"
+git merge --no-ff --no-commit chore/todo
+git commit -m "chore(todo): add [任务标题]"
 
 # 3. 切回原分支
 git checkout "$ORIGINAL_BRANCH"

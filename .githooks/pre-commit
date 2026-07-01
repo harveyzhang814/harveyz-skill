@@ -32,6 +32,11 @@ if [ "$BRANCH" = "staging" ]; then
         echo "❌ 禁止直接在 staging 上提交。请在 feature/*、fix/*、chore/* 或 doc/* 分支开发后合并。"
         exit 1
     fi
+    # Allow remote sync: "Merge branch 'staging' of <remote>"
+    MERGE_MSG_LINE=$(head -1 "$(git rev-parse --git-dir)/MERGE_MSG" 2>/dev/null)
+    case "$MERGE_MSG_LINE" in
+        "Merge branch 'staging' of "*) exit 0 ;;
+    esac
     SRC=$(merge_source_branch)
     case "$SRC" in
         feature/*|fix/*|chore/*|doc/*) exit 0 ;;
