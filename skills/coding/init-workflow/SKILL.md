@@ -2,7 +2,7 @@
 name: init-workflow
 description: "Initialize or update git branch management standards: reads .hskill/init-workflow/workflow-config.yml, audits config, incrementally generates and deploys git hooks (pre-commit, commit-msg, pre-push, post-checkout), and generates workflow docs. Triggers: initializing a new git repo, first-time git setup, user asks to set/update branch protection or naming rules, reinstalling git hooks, or syncing after skill/template updates."
 user_invocable: true
-version: "4.1.0"
+version: "4.1.1"
 ---
 
 # Git 工作流初始化
@@ -80,6 +80,21 @@ echo "" | grep -E "<pattern>" > /dev/null 2>&1; echo $?
 
 #### 4d. 冲突检测
 综合 4a/4b/4c，识别四种冲突类型（A 条件重叠、B 引用断裂、C 手改冲突、D 新增重叠）。类型定义与选项见 `references/conflict-analysis.md`。
+
+#### 4e. git config 健康检查
+
+检查以下两项本地 git config：
+
+```bash
+git config --local core.hooksPath   # 期望：.githooks
+git config --local merge.ff         # 期望：false
+```
+
+1. 读取 lock 文件的 `git_config` 节（不存在则跳过对比，直接检测实际值）
+2. 执行上述命令，获取实际值
+3. 实际值与期望不符，或实际值缺失 → 类型 E 冲突
+
+类型 E 冲突在 Step 5 列出（附期望值 vs 实际值），默认选项为"自动修复（A）"。Step 6 写入 hooks 后立即执行修复命令。类型 E 完整定义见 `references/conflict-analysis.md`。
 
 ---
 
@@ -212,7 +227,8 @@ python3 <skill-path>/references/render_docs.py \
 .githooks/commit-msg               UNCHANGED
 .githooks/pre-push                 UNCHANGED
 .githooks/post-checkout            NEW
-core.hooksPath                     = .githooks
+core.hooksPath               = .githooks   ✅（或 ❌ 已修复 / ❌ 未修复）
+merge.ff                     = false        ✅（或 ❌ 已修复 / ❌ 未修复）
 docs/reference/git-workflow.md     UPDATED
 CLAUDE.md                          已有引用，跳过
 ─────────────────────────────────────────────────────
@@ -221,6 +237,8 @@ CLAUDE.md                          已有引用，跳过
   [2/3] develop 分支条件重叠 → 用户选择使用新配置
   [3/3] wip 类型引用断裂 → 用户选择保留用户代码
 ```
+
+首次安装时 Step 4 整体跳过，Step 6 直接设置两项配置；Step 9 对应行均显示 `✅`。
 
 若有保留的无法映射规则，附注提示。
 
@@ -231,7 +249,7 @@ CLAUDE.md                          已有引用，跳过
 | 文件 | 说明 | 读取时机 |
 |------|------|---------|
 | `references/workflow-config.yml` | 配置文件模板 | Step 2：用户无配置时复制 |
-| `references/conflict-analysis.md` | 4a–4d 实现脚本、冲突类型 A/B/C/D 完整定义与选项、Step 5 呈现格式 | Step 4/5：执行分析前读取 |
+| `references/conflict-analysis.md` | 4a–4e 实现脚本、冲突类型 A/B/C/D/E 完整定义与选项、Step 5 呈现格式 | Step 4/5：执行分析前读取 |
 | `references/hook-templates.md` | 4 个 hook 的代码模板、块 ID 规范、hash 计算、多行写入技巧 | Step 6：生成 hooks 前 |
 | `references/acceptance-test.md` | 验收场景 bash 脚本、期望结果、结果表格格式 | Step 6.5：用户选 Y 时读取 |
 | `references/lock-file-format.md` | lock 文件 YAML 格式 | Step 9：写入 lock 文件前 |
