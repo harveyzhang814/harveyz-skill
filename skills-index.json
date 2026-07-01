@@ -17,13 +17,13 @@
     }
   ],
   "bundleMeta": {
-    "research": "研究工具（extract-url + learn-video + extract-vision + learn-skill）",
+    "research": "研究工具（extract-url + learn-video + extract-vision + learn-skill + survey-skillrepo + learn-paper + extract-cognition + probe-session）",
     "creative": "创意工具（capture-todo + capture-insight）",
     "coding": "程序工具（init-workflow + setup-debug + dispatch-task + close-task + init-goal）",
     "writing": "写作工具（forge-doc + draw-diagram + manage-docs + manage-dir + migrate-spec）",
     "design": "设计工具（scout-brand + build-style + sync-design）",
-    "skill-dev": "Skill 开发工具（init-skill + publish-skill + archive-skill + dedup-skill + contribute-skill + fix-skill + scout-philosophy + runby-opencode）",
-    "devops": "工程运维工具（clean-git + sync-hotfix + release-project + sync-agent + probe-session）"
+    "mint": "Skill 生命周期工具（init-skill + publish-skill + archive-skill + dedup-skill + contribute-skill + fix-skill + runby-opencode + scout-philosophy）",
+    "devops": "项目运维工具（clean-git + release-project + sync-hotfix + sync-agent）"
   },
   "skills": [
     {
@@ -53,6 +53,33 @@
       "installScope": "global",
       "contentHash": "34f46d669589b3cb",
       "contentVersion": "1.5.0"
+    },
+    {
+      "path": "research/survey-skillrepo",
+      "bundle": "research",
+      "installScope": "global",
+      "contentHash": "ea823301b039a8aa",
+      "contentVersion": "2.0.1"
+    },
+    {
+      "path": "research/learn-paper",
+      "bundle": "research",
+      "installScope": "project",
+      "contentHash": "1fe085285d11bb6a",
+      "contentVersion": "0.1.0"
+    },
+    {
+      "path": "research/extract-cognition",
+      "bundle": "research",
+      "installScope": "project",
+      "contentVersion": "0.2.0"
+    },
+    {
+      "path": "research/probe-session",
+      "bundle": "research",
+      "installScope": "project",
+      "contentHash": "91391f7b702e0797",
+      "contentVersion": "0.3.0"
     },
     {
       "path": "creative/capture-todo",
@@ -95,6 +122,13 @@
       "installScope": "global",
       "contentHash": "9766f9e6f9f149a3",
       "contentVersion": "1.0.0"
+    },
+    {
+      "path": "meta/init-goal",
+      "bundle": "coding",
+      "installScope": "essential",
+      "contentHash": "8db51b5ca77dc470",
+      "contentVersion": "1.3.0"
     },
     {
       "path": "writing/forge-doc",
@@ -153,18 +187,60 @@
       "contentVersion": "3.1.0"
     },
     {
-      "path": "experiment/init-skill",
-      "bundle": "skill-dev",
+      "path": "mint/init-skill",
+      "bundle": "mint",
       "installScope": "project",
       "contentHash": "4053e6476d1c3f09",
       "contentVersion": "1.2.0"
     },
     {
-      "path": "research/survey-skillrepo",
-      "bundle": "research",
+      "path": "mint/publish-skill",
+      "bundle": "mint",
+      "installScope": "project",
+      "contentHash": "55ab8e712c16aed3",
+      "contentVersion": "1.3.0"
+    },
+    {
+      "path": "mint/archive-skill",
+      "bundle": "mint",
+      "installScope": "project",
+      "contentHash": "080305f6ad678326",
+      "contentVersion": "1.1.1"
+    },
+    {
+      "path": "mint/dedup-skill",
+      "bundle": "mint",
+      "installScope": "project",
+      "contentHash": "6ebfca98f37241d0",
+      "contentVersion": "1.0.0"
+    },
+    {
+      "path": "mint/contribute-skill",
+      "bundle": "mint",
+      "installScope": "project",
+      "contentHash": "3143a6e8c98d4282",
+      "contentVersion": "1.0.0"
+    },
+    {
+      "path": "mint/fix-skill",
+      "bundle": "mint",
       "installScope": "global",
-      "contentHash": "ea823301b039a8aa",
-      "contentVersion": "2.0.1"
+      "contentHash": "e0aafcea982eab9c",
+      "contentVersion": "2.1.0"
+    },
+    {
+      "path": "mint/runby-opencode",
+      "bundle": "mint",
+      "installScope": "global",
+      "contentHash": "49887e63af5eb692",
+      "contentVersion": "1.1.0"
+    },
+    {
+      "path": "mint/scout-philosophy",
+      "bundle": "mint",
+      "installScope": "project",
+      "contentHash": "46b5c57f31d514bf",
+      "contentVersion": "1.0.0"
     },
     {
       "path": "meta/clean-git",
@@ -174,101 +250,25 @@
       "contentVersion": "1.0.0"
     },
     {
-      "path": "meta/archive-skill",
-      "bundle": "meta",
-      "installScope": "project",
-      "contentHash": "080305f6ad678326",
-      "contentVersion": "1.1.1"
-    },
-    {
-      "path": "meta/dedup-skill",
-      "bundle": "meta",
-      "installScope": "project",
-      "contentHash": "6ebfca98f37241d0",
-      "contentVersion": "1.0.0"
-    },
-    {
-      "path": "meta/contribute-skill",
-      "bundle": "meta",
-      "installScope": "project",
-      "contentHash": "3143a6e8c98d4282",
-      "contentVersion": "1.0.0"
-    },
-    {
-      "path": "meta/publish-skill",
-      "bundle": "meta",
-      "installScope": "project",
-      "contentHash": "55ab8e712c16aed3",
-      "contentVersion": "1.3.0"
-    },
-    {
-      "path": "meta/runby-opencode",
-      "bundle": "meta",
-      "installScope": "global",
-      "contentHash": "49887e63af5eb692",
-      "contentVersion": "1.1.0"
-    },
-    {
       "path": "meta/release-project",
-      "bundle": "meta",
+      "bundle": "devops",
       "installScope": "essential",
       "contentHash": "ca9fdcd9f3eabfe1",
       "contentVersion": "1.1.0"
     },
     {
-      "path": "meta/sync-agent",
-      "bundle": "meta",
-      "installScope": "global",
-      "contentHash": "3762c7b6488a5f90",
-      "contentVersion": "1.1.1"
-    },
-    {
-      "path": "experiment/probe-session",
-      "bundle": "experiment",
-      "installScope": "project",
-      "contentHash": "91391f7b702e0797",
-      "contentVersion": "0.3.0"
-    },
-    {
-      "path": "experiment/learn-paper",
-      "bundle": "experiment",
-      "installScope": "project",
-      "contentHash": "1fe085285d11bb6a",
-      "contentVersion": "0.1.0"
-    },
-    {
-      "path": "meta/scout-philosophy",
-      "bundle": "meta",
-      "installScope": "project",
-      "contentHash": "46b5c57f31d514bf",
-      "contentVersion": "1.0.0"
-    },
-    {
-      "path": "meta/fix-skill",
-      "bundle": "meta",
-      "installScope": "global",
-      "contentHash": "e0aafcea982eab9c",
-      "contentVersion": "2.1.0"
-    },
-    {
       "path": "meta/sync-hotfix",
-      "bundle": "meta",
+      "bundle": "devops",
       "installScope": "global",
       "contentHash": "54e218e7641dc514",
       "contentVersion": "1.1.1"
     },
     {
-      "path": "meta/init-goal",
-      "bundle": "coding",
-      "installScope": "essential",
-      "contentHash": "8db51b5ca77dc470",
-      "contentVersion": "1.3.0"
-    },
-    {
-      "path": "experiment/extract-cognition",
-      "bundle": "experiment",
-      "installScope": "project",
-      "contentVersion": "0.2.0"
+      "path": "meta/sync-agent",
+      "bundle": "devops",
+      "installScope": "global",
+      "contentHash": "3762c7b6488a5f90",
+      "contentVersion": "1.1.1"
     }
   ],
   "hooks": [

@@ -144,9 +144,9 @@ _skill_version() {
 
 # ── bundle installation ───────────────────────────────────────────────────────
 
-@test "install --bundle meta: installs all skills in the bundle" {
-  _install --bundle meta --target claude --scope user --force
-  # meta bundle contains clean-git.
+@test "install --bundle devops: installs all skills in the bundle" {
+  _install --bundle devops --target claude --scope user --force
+  # devops bundle contains clean-git.
   [ -f "${MOCK_HOME}/.claude/skills/clean-git/SKILL.md" ]
 }
 
