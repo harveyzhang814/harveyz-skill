@@ -254,6 +254,7 @@
       "path": "meta/sync-hotfix",
       "bundle": "meta",
       "installScope": "global",
+      "contentHash": "",
       "contentVersion": "1.0.0"
     },
     {

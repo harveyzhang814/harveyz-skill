@@ -214,3 +214,9 @@ _uninstall() {
   run _uninstall "${SKILL1_NAME}" --scope user --target claude
   [ "$status" -eq 0 ]
 }
+
+@test "install --skill: sync-hotfix installs SKILL.md to claude skills dir" {
+  _install --skill sync-hotfix --target claude --scope user --force
+  [ -f "${MOCK_HOME}/.claude/skills/sync-hotfix/SKILL.md" ]
+  [ "$(_skill_version "${MOCK_HOME}/.claude/skills/sync-hotfix/SKILL.md")" = "1.0.0" ]
+}
