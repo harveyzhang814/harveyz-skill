@@ -32,3 +32,13 @@ push_rules:
 ```
 
 只记录影响 hook 生成的字段，不需要照搬 `workflow-config.yml` 的完整结构。
+
+以及本次运行后的 git 本地配置状态：
+
+```yaml
+git_config:
+  core_hooks_path: ".githooks"   # 上次运行时设置的值
+  merge_ff: "false"              # 上次运行时设置的值
+```
+
+**4e 读取逻辑：** lock 文件缺少 `git_config` 节时视为首次含此节的运行，跳过与 lock 的对比，直接检测当前实际值；若实际值不符或缺失，仍报类型 E 冲突。
