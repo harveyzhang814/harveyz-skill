@@ -18,6 +18,13 @@ extract-url skill 抓取文章时生成的 tags 目前全由 LLM 从内容推断
 
 ---
 
+### 约定 skill 任务在 session 中的回报信息格式
+**优先级**: P2 | **日期**: 2026-07-01
+
+skill 执行任务（如 extract-url 的抓取/翻译 subagent）完成后，主 session 收到的通知格式尚未统一约定。需明确：任务完成时应在 session 中回报哪些字段（如标题、路径、状态、耗时）、以何种格式呈现，以便用户一眼读懂结果，也便于后续 skill 串联时解析。
+
+---
+
 ## ✅ 已完成
 
 ## mermaid-diagram — 渲染样式增强
