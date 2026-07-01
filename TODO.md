@@ -18,6 +18,30 @@ extract-url skill 抓取文章时生成的 tags 目前全由 LLM 从内容推断
 
 ---
 
+### 开发参考 grill-me 风格的 question-me skill
+**优先级**: P2 | **日期**: 2026-06-30
+
+参考 grill-me/grilling 的「一次一问 + 给推荐答案 + 决策树依赖顺序」风格，创建一个 skill，在执行任务前帮用户明确更好的指令、查明隐含假设、理清决策因素。核心约束：一次只问一个问题，每问必附推荐答案，能自查的问题先自查再问用户，按决策依赖顺序逐一推进，直到达成 shared understanding 再开始实现。
+
+---
+
+### 设计多平台 Skill 补丁的同步与生命周期管理机制
+**优先级**: P2 | **日期**: 2026-06-30
+
+harveyz-skill 项目维护多个跨平台 Skill（如 extract-url），每个平台（Claude Code / Codex / Hermes）有独立的补丁文件（`SKILL.<platform>.md`），采用「主流程 + 各平台差异覆盖」模式。
+
+**问题**：
+- 主流程变更时，无法自动知道哪些平台补丁需要同步更新
+- 各平台补丁边界不清晰，生命周期状态（active / deprecated / pending-update）无追踪
+- 缺乏版本绑定机制
+
+**目标**：设计并实现一套机制，包括：
+1. **补丁声明式元数据**：每个补丁文件头部声明覆盖的主流程章节、依赖主流程版本、平台、状态
+2. **变更检测脚本**：主流程发布时，自动比对输出哪些补丁需要检查/更新
+3. **生命周期状态管理**：active / deprecated / pending-update 三态及其转换规则
+
+---
+
 ## ✅ 已完成
 
 ## mermaid-diagram — 渲染样式增强
@@ -75,6 +99,15 @@ sync-agent 已完成，现在将 Hermes agent 配置目录 `~/.hermes` 纳入同
 
 ---
 
+## extract-url — 词表初始化
+
+### 填入 fixed_tags.txt 初始词条
+**优先级**: P2 | **日期**: 2026-07-01
+
+`~/.hskill/url-extract/fixed_tags.txt` 已自动创建模板，但词条全为注释示例，无真实词条。首次实测（alex_prompter 文章）时 `tags` 字段命中率低。需手动填入 topic / technology / source / language / domain 五类初始词条，让后续抓取的 `tags` 产生有意义的命中，并通过 candidate_tags 的 review 来逐步扩充词表。
+
+---
+
 ## harveyz-skill — GitHub 相似项目探索 skill
 
 ### 探索 GitHub 相似项目借鉴设计的 skill
@@ -84,20 +117,16 @@ sync-agent 已完成，现在将 Hermes agent 配置目录 `~/.hermes` 纳入同
 
 ---
 
+## hskill — tool lifecycle
 
-### 设计多平台 Skill 补丁的同步与生命周期管理机制
-**优先级**: P2 | **日期**: 2026-06-30
+### [x] Tool uninstall mechanism
+**背景**：hskill 目前只能安装和更新 tool，没有卸载命令。  
+部分 tool（如 p-launch）在安装后会在用户目录写入额外数据：
+- `~/.local/bin/p-launch` — 可执行文件
+- `~/.local/share/hskill/tools/p-launch.py` — Python 模块
+- `~/.local/share/hskill/tools/p-launch.json` — 版本元数据
+- `~/.local/share/hskill/p-launch-venv/` — 隔离 venv（pip 依赖）
+- `~/.config/p-launch/config.zsh` — 用户配置
 
-harveyz-skill 项目维护多个跨平台 Skill（如 extract-url），每个平台（Claude Code / Codex / Hermes）有独立的补丁文件（`SKILL.<platform>.md`），采用「主流程 + 各平台差异覆盖」模式。
-
-**问题**：
-- 主流程变更时，无法自动知道哪些平台补丁需要同步更新
-- 各平台补丁边界不清晰，生命周期状态（active / deprecated / pending-update）无追踪
-- 缺乏版本绑定机制
-
-**目标**：设计并实现一套机制，包括：
-1. **补丁声明式元数据**：每个补丁文件头部声明覆盖的主流程章节、依赖主流程版本、平台、状态
-2. **变更检测脚本**：主流程发布时，自动比对输出哪些补丁需要检查/更新
-3. **生命周期状态管理**：active / deprecated / pending-update 三态及其转换规则
-
----
+**期望行为**：`hskill uninstall p-launch` 清理上述所有文件，并从 `~/.zshrc` 移除 snippet。  
+**扩展点**：tool 可在 `tool.json` 里声明 `uninstallPaths[]`，installer 统一处理。
