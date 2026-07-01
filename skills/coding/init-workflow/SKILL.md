@@ -79,7 +79,7 @@ echo "" | grep -E "<pattern>" > /dev/null 2>&1; echo $?
 提取每个 hook 中 MANAGED 块外的用户手写代码，识别其中引用的分支名、提交类型、pattern、外部脚本调用。
 
 #### 4d. 冲突检测
-综合 4a/4b/4c，识别四种冲突类型（A 条件重叠、B 引用断裂、C 手改冲突、D 新增重叠）。类型定义与选项见 `references/conflict-analysis.md`。
+综合 4a/4b/4c，识别四种冲突类型（A 条件重叠、B 引用断裂、C 手改冲突、D 新增重叠）；第五种类型 E（git config 漂移）由 Step 4e 另行检测。类型定义与选项见 `references/conflict-analysis.md`。
 
 #### 4e. git config 健康检查
 
@@ -227,8 +227,8 @@ python3 <skill-path>/references/render_docs.py \
 .githooks/commit-msg               UNCHANGED
 .githooks/pre-push                 UNCHANGED
 .githooks/post-checkout            NEW
-core.hooksPath               = .githooks   ✅（或 ❌ 已修复 / ❌ 未修复）
-merge.ff                     = false        ✅（或 ❌ 已修复 / ❌ 未修复）
+core.hooksPath                     = .githooks  ✅（或 ❌ 已修复 / ❌ 未修复）
+merge.ff                           = false      ✅（或 ❌ 已修复 / ❌ 未修复）
 docs/reference/git-workflow.md     UPDATED
 CLAUDE.md                          已有引用，跳过
 ─────────────────────────────────────────────────────
