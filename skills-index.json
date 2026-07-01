@@ -132,6 +132,13 @@
       "contentVersion": "1.3.0"
     },
     {
+      "path": "coding/question-me",
+      "bundle": "coding",
+      "installScope": "global",
+      "contentHash": "aa147e510ef6ee68",
+      "contentVersion": "1.0.0"
+    },
+    {
       "path": "writing/forge-doc",
       "bundle": "writing",
       "installScope": "global",
