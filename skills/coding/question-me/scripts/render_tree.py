@@ -55,6 +55,8 @@ def build_tree(nodes: List[Node]):
     stack = list(roots)
     while stack:
         n = stack.pop()
+        if n.node_id in reachable:
+            continue
         reachable.add(n.node_id)
         stack.extend(n.children)
     for node in nodes:
