@@ -46,9 +46,19 @@ def build_tree(nodes: List[Node]):
     id_map = {n.node_id: n for n in nodes}
     roots = []
     for node in nodes:
-        if node.dep_id and node.dep_id in id_map:
+        if node.dep_id and node.dep_id in id_map and node.dep_id != node.node_id:
             id_map[node.dep_id].children.append(node)
         else:
+            roots.append(node)
+    # Collect any nodes unreachable from roots (mutual cycles) and surface them
+    reachable = set()
+    stack = list(roots)
+    while stack:
+        n = stack.pop()
+        reachable.add(n.node_id)
+        stack.extend(n.children)
+    for node in nodes:
+        if node.node_id not in reachable:
             roots.append(node)
     return roots, id_map
 

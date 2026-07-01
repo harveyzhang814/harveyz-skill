@@ -57,6 +57,28 @@ def test_find_current_none_when_all_done():
     _, id_map = build_tree(nodes)
     assert find_current(nodes, id_map) is None
 
+def test_build_tree_self_dep_not_lost():
+    text = "[goal:done] id=G 目标\n[bad:open] id=X dep=X 自引用节点\n"
+    nodes = parse_nodes(text)
+    roots, id_map = build_tree(nodes)
+    root_ids = {r.node_id for r in roots}
+    assert 'X' in root_ids, "Self-dep node must not be silently dropped"
+
+def test_build_tree_mutual_dep_not_lost():
+    text = "[a:open] id=A dep=B 节点A\n[b:open] id=B dep=A 节点B\n"
+    nodes = parse_nodes(text)
+    roots, id_map = build_tree(nodes)
+    root_ids = {r.node_id for r in roots}
+    assert 'A' in root_ids or 'B' in root_ids, "At least one node in a cycle must be reachable"
+    # Both should be reachable
+    all_ids = set()
+    stack = list(roots)
+    while stack:
+        n = stack.pop()
+        all_ids.add(n.node_id)
+        stack.extend(n.children)
+    assert {'A', 'B'}.issubset(all_ids), "Both nodes in mutual cycle must be reachable"
+
 if __name__ == '__main__':
     import traceback
     passed = failed = 0
