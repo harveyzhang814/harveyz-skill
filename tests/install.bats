@@ -16,8 +16,8 @@ SKILL1_NAME="survey-skillrepo"
 SKILL1_SRC="${REPO_ROOT}/skills/research/survey-skillrepo"
 SKILL1_VER="2.0.1"
 
-SKILL2_NAME="manage-docs"
-SKILL2_SRC="${REPO_ROOT}/skills/writing/manage-docs"
+SKILL2_NAME="manage-dir"
+SKILL2_SRC="${REPO_ROOT}/skills/writing/manage-dir"
 
 setup() {
   TEST_DIR="$(mktemp -d)"

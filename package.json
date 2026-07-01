@@ -1,6 +1,6 @@
 {
   "name": "harveyz-skill",
-  "version": "0.20.0",
+  "version": "0.21.0",
   "description": "Skill manager for Claude Code, Cursor, and Codex",
   "type": "module",
   "bin": {
