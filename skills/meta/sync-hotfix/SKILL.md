@@ -1,6 +1,6 @@
 ---
 name: sync-hotfix
-version: "1.1.0"
+version: "1.1.1"
 description: "Merge hotfixes recorded in the installed skill back to the source repo. Processes HOTFIXES.md entries first, then runs a full file diff safety net to detect and categorize undocumented differences between the installed and source skill."
 user_invocable: true
 ---
@@ -55,11 +55,11 @@ user_invocable: true
 
 读取 `skill_dir/references/HOTFIXES.md`：
 
-- 文件不存在 → 输出"HOTFIXES.md 不存在，无记录"并退出
-- 文件存在但无 `merged_back: false` 条目 → 输出"无待合并条目"并退出
-- 筛出所有 `merged_back: false` 的条目，记为待处理列表
+- 文件不存在 → 输出"HOTFIXES.md 不存在，跳过 Steps 2-3"，直接进入 Step 4
+- 文件存在但无 `merged_back: false` 条目 → 输出"无待合并条目，跳过 Steps 2-3"，直接进入 Step 4
+- 筛出所有 `merged_back: false` 的条目，记为待处理列表，输出条目数量及编号列表
 
-输出待处理条目数量及编号列表，供用户了解规模。
+无论哪种情况，Step 4 和 Step 5 都必须执行。
 
 ---
 
