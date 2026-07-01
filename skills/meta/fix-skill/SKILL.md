@@ -1,6 +1,6 @@
 ---
 name: fix-skill
-version: "2.0.0"
+version: "2.1.0"
 description: "Diagnose and fix errors in any skill file autonomously. Called automatically by other skills on failure. Attempts up to 3 rounds of AI-driven diagnosis and repair, accumulating context across rounds. Writes a fix session document in real time. On success, notifies caller to auto-retry. On all-round failure, restores the original file and preserves the full diagnosis record."
 user_invocable: false
 ---

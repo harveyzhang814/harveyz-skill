@@ -247,13 +247,14 @@
       "path": "meta/fix-skill",
       "bundle": "meta",
       "installScope": "global",
-      "contentHash": "185807f284915b8c",
-      "contentVersion": "2.0.0"
+      "contentHash": "e0aafcea982eab9c",
+      "contentVersion": "2.1.0"
     },
     {
       "path": "meta/sync-hotfix",
       "bundle": "meta",
       "installScope": "global",
+      "contentHash": "e8b2933d9588ec01",
       "contentVersion": "1.0.0"
     },
     {

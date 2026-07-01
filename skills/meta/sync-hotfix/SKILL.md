@@ -1,7 +1,7 @@
 ---
 name: sync-hotfix
 version: "1.0.0"
-description: "将安装版 skill 中记录的 hotfix 合并回源仓库。读取安装版 references/HOTFIXES.md，逐条展示未合并（merged_back: false）条目，引导用户将改动应用到源仓库对应文件，完成后标记 merged_back: true。"
+description: "Merge hotfixes recorded in the installed skill back to the source repo. Reads references/HOTFIXES.md from the installed skill, presents each unmerged entry (merged_back: false), guides the user to apply changes to the source repo, and marks entries as merged_back: true when done."
 user_invocable: true
 ---
 
