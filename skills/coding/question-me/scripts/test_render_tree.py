@@ -75,6 +75,8 @@ def test_build_tree_mutual_dep_not_lost():
     stack = list(roots)
     while stack:
         n = stack.pop()
+        if n.node_id in all_ids:
+            continue
         all_ids.add(n.node_id)
         stack.extend(n.children)
     assert {'A', 'B'}.issubset(all_ids), "Both nodes in mutual cycle must be reachable"
