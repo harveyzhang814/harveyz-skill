@@ -20,7 +20,7 @@
     "research": "研究工具（extract-url + learn-video + extract-vision + learn-skill + survey-skillrepo + learn-paper + extract-cognition + probe-session）",
     "creative": "创意工具（capture-todo + capture-insight）",
     "coding": "程序工具（init-workflow + setup-debug + dispatch-task + close-task + init-goal）",
-    "writing": "写作工具（forge-doc + draw-diagram + manage-docs + manage-dir + migrate-spec）",
+    "writing": "写作工具（forge-doc + draw-diagram + manage-dir + migrate-spec）",
     "design": "设计工具（scout-brand + build-style + sync-design）",
     "mint": "Skill 生命周期工具（init-skill + publish-skill + archive-skill + dedup-skill + contribute-skill + fix-skill + runby-opencode + scout-philosophy）",
     "devops": "项目运维工具（clean-git + release-project + sync-hotfix + sync-agent）"
@@ -143,13 +143,6 @@
       "installScope": "global",
       "contentHash": "347865f4c7bf3d52",
       "contentVersion": "1.4.0"
-    },
-    {
-      "path": "writing/manage-docs",
-      "bundle": "writing",
-      "installScope": "project",
-      "contentHash": "ae6ac3c712e99eb8",
-      "contentVersion": "1.0.0"
     },
     {
       "path": "writing/manage-dir",
