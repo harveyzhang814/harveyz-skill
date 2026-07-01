@@ -16,6 +16,7 @@ user_invocable: false
 | `file` | 是 | 出错文件绝对路径（任意类型） |
 | `error` | 是 | stderr 原文 + returncode |
 | `call_args` | 否 | 验证时重跑脚本所需参数；无则做内容自洽检查 |
+| `platform` | 否 | 当前平台标识（如 `claude`、`codex`、`hermes`），不传则写 `unknown` |
 
 ---
 
@@ -83,6 +84,33 @@ user_invocable: false
 - 「最终结果：成功（第 N 轮）」
 
 删除 `backup_path`。
+
+**写入 HOTFIXES.md：**
+
+1. 检查 `skill_dir/references/HOTFIXES.md` 是否存在：
+   - 不存在 → 创建文件，写入首行 `# HOTFIXES`
+2. 统计文件中现有 `## HF-` 条目数量，记为 `n`，新编号为 `HF-{n+1:03d}`（如 `HF-001`）
+3. 根据本轮修复内容生成条目并 append 到文件末尾：
+   - `platform`：来自输入字段，未传则 `unknown`
+   - `date`：`date +%Y-%m-%d` 输出
+   - `file`：`file` 输入字段的文件名部分（`basename $file`）
+   - `section`：从本轮实际修改位置推断最近的 markdown 章节标题（如 `## Step 2：...`）；无法定位则写 `unknown`
+   - `change`：用一段话描述改前状态和改后状态（根据 diff 内容生成）
+   - `reason`：`error` 字段的单句摘要
+   - `merged_back: false`
+
+条目格式：
+
+~~~markdown
+## HF-001
+- platform: claude
+- date: 2026-07-01
+- file: SKILL.md
+- section: "## Step 2：尝试修复"
+- change: "原：... 改后：..."
+- reason: "..."
+- merged_back: false
+~~~
 
 输出：
 ```
