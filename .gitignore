@@ -4,6 +4,7 @@
 # 保留根目录文件
 !.gitignore
 !README.md
+!skill-map.html
 !CHANGELOG.md
 !CLAUDE.md
 !TODO.md
