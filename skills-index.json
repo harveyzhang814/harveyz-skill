@@ -251,6 +251,12 @@
       "contentVersion": "2.0.0"
     },
     {
+      "path": "meta/sync-hotfix",
+      "bundle": "meta",
+      "installScope": "global",
+      "contentVersion": "1.0.0"
+    },
+    {
       "path": "meta/init-goal",
       "bundle": "coding",
       "installScope": "essential",
