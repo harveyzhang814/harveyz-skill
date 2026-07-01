@@ -22,8 +22,8 @@
     "coding": "程序工具（init-workflow + setup-debug + dispatch-task + close-task + init-goal）",
     "writing": "写作工具（forge-doc + draw-diagram + manage-docs + manage-dir + migrate-spec）",
     "design": "设计工具（scout-brand + build-style + sync-design）",
-    "meta": "元操作工具（clean-git + archive-skill + dedup-skill + contribute-skill + publish-skill + release-project + runby-opencode）",
-    "experiment": "实验性工具（尚未稳定，不纳入正式 bundle）"
+    "skill-dev": "Skill 开发工具（init-skill + publish-skill + archive-skill + dedup-skill + contribute-skill + fix-skill + scout-philosophy + runby-opencode）",
+    "devops": "工程运维工具（clean-git + sync-hotfix + release-project + sync-agent + probe-session）"
   },
   "skills": [
     {
@@ -154,7 +154,7 @@
     },
     {
       "path": "experiment/init-skill",
-      "bundle": "experiment",
+      "bundle": "skill-dev",
       "installScope": "project",
       "contentHash": "4053e6476d1c3f09",
       "contentVersion": "1.2.0"
@@ -168,7 +168,7 @@
     },
     {
       "path": "meta/clean-git",
-      "bundle": "meta",
+      "bundle": "devops",
       "installScope": "essential",
       "contentHash": "47f0597ce1b5a6e2",
       "contentVersion": "1.0.0"

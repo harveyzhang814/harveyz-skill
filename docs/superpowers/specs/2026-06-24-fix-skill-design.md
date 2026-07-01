@@ -1,3 +1,11 @@
+---
+migrated: 2026-07-02
+superseded_by:
+  - 2026-06-24-fix-skill-v2-design.md  # v2 扩展了修复轮次（最多 3 轮）、任意文件类型支持，完全取代本版设计
+implemented_in:
+  - skills/meta/fix-skill/SKILL.md
+---
+
 # fix-skill 设计文档
 
 ## 概述

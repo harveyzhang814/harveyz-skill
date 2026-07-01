@@ -1,3 +1,9 @@
+---
+migrated: 2026-07-02
+implemented_in:
+  - skills/research/extract-url/experiment/two-phase-tagging/  # 两阶段打标实验分支，主路径尚未切换
+---
+
 # extract-url tag 重构设计：固定集与候选集分离
 
 **日期**：2026-07-01
