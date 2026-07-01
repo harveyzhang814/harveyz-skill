@@ -25,22 +25,6 @@ extract-url skill 抓取文章时生成的 tags 目前全由 LLM 从内容推断
 
 ---
 
-### 设计多平台 Skill 补丁的同步与生命周期管理机制
-**优先级**: P2 | **日期**: 2026-06-30
-
-harveyz-skill 项目维护多个跨平台 Skill（如 extract-url），每个平台（Claude Code / Codex / Hermes）有独立的补丁文件（`SKILL.<platform>.md`），采用「主流程 + 各平台差异覆盖」模式。
-
-**问题**：
-- 主流程变更时，无法自动知道哪些平台补丁需要同步更新
-- 各平台补丁边界不清晰，生命周期状态（active / deprecated / pending-update）无追踪
-- 缺乏版本绑定机制
-
-**目标**：设计并实现一套机制，包括：
-1. **补丁声明式元数据**：每个补丁文件头部声明覆盖的主流程章节、依赖主流程版本、平台、状态
-2. **变更检测脚本**：主流程发布时，自动比对输出哪些补丁需要检查/更新
-3. **生命周期状态管理**：active / deprecated / pending-update 三态及其转换规则
-
----
 
 ### 约定 skill 任务在 session 中的回报信息格式
 **优先级**: P2 | **日期**: 2026-07-01
@@ -50,6 +34,13 @@ skill 执行任务（如 extract-url 的抓取/翻译 subagent）完成后，主
 ---
 
 ## ✅ 已完成
+
+### 设计多平台 Skill 补丁的同步与生命周期管理机制
+**完成日期**: 2026-07-01
+
+实现了完整的热修生命周期管理方案：fix-skill v2.1.0 自动写入 HOTFIXES.md，新增 sync-hotfix v1.1.1 处理合并回源（HOTFIXES.md 扫描 + Step 5 全文件 diff 安全网）。方法论文档见 `docs/explanation/skill-hotfix-lifecycle.md`，格式规范见 `docs/reference/hotfix-lifecycle.md`。
+
+---
 
 ## mermaid-diagram — 渲染样式增强
 

@@ -55,3 +55,4 @@ methodology: diataxis
 | [explanation/sync-agent-architecture.md](explanation/sync-agent-architecture.md) | sync-agent 架构：tool/skill 分工、config/state 分离原因、setup 幂等性、Syncthing REST 集成 |
 | [explanation/cognitive-signature-philosophy.md](explanation/cognitive-signature-philosophy.md) | extract-cognition 背后的哲学：隐含作者、法证 vs 教学两种目的、为何先学发生器、warrant 即地基、防鸡汤锁、该学/该防、无基线不归因 |
 | [explanation/pbpe-methodology.md](explanation/pbpe-methodology.md) | PBPE 方法论：从同质制品归纳设计哲学、反推规则的归纳—演绎闭环方法（Phase 0–4 完整流程、偏差对冲机制） |
+| [explanation/skill-hotfix-lifecycle.md](explanation/skill-hotfix-lifecycle.md) | Skill 热修补丁生命周期管理设计原理：速度与完整性的张力、两层同步机制（HOTFIXES.md + 全文件 diff 安全网）、差异分类系统的设计决策 |
