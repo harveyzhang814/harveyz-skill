@@ -1,3 +1,11 @@
+---
+migrated: 2026-07-02
+docs:
+  - reference/hotfix-lifecycle.md  # HOTFIXES.md 格式、fix-skill 自动写入行为、sync-hotfix 合并回源工作流
+implemented_in:
+  - skills/meta/fix-skill/SKILL.md
+---
+
 # fix-skill v2 设计文档
 
 ## 概述

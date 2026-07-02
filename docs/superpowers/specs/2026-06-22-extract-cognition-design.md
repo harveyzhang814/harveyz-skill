@@ -1,3 +1,11 @@
+---
+migrated: 2026-07-02
+superseded_by:
+  - 2026-06-22-extract-cognition-learning-redesign-design.md  # SKILL.md 主体管线被学习化重构取代；法证证据层保留为新版 2-signature.md 的基础
+implemented_in:
+  - skills/experiment/extract-cognition/SKILL.md  # 证据层（阶段 1–4）仍以本 spec 为蓝本
+---
+
 # extract-cognition — 设计文档
 
 **日期**: 2026-06-22

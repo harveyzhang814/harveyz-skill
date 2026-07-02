@@ -29,6 +29,11 @@ tags:
 push_rules:
   enforce: true
   block_force_push: [main, staging]
+git_config:
+  core_hooks_path: ".githooks"   # 上次运行时设置的值
+  merge_ff: "false"              # 上次运行时设置的值
 ```
 
-只记录影响 hook 生成的字段，不需要照搬 `workflow-config.yml` 的完整结构。
+只记录影响 hook 生成的字段，不需要照搬 `workflow-config.yml` 的完整结构。`git_config` 节与其他字段同属一个 YAML 文档，追加在末尾。
+
+**4e 读取逻辑（仅在 skill 重新运行时执行，首次安装时 Step 4 整体跳过）：** lock 文件缺少 `git_config` 节时（即 skill 在本功能加入前已运行过），跳过与 lock 的对比，直接检测当前实际值；若实际值不符或缺失，仍报类型 E 冲突。

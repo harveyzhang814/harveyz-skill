@@ -1,6 +1,6 @@
 ---
 name: init-goal
-version: "1.2.1"
+version: "1.3.0"
 description: "Generate a structured /loop Goal Prompt through guided dialogue. Parses user's initial message to auto-fill known fields and match the best template, then clarifies only what's missing (depth-first, one question at a time). Outputs the Goal Prompt as text — the skill writes no files; the loop agent persists prompt.md/log.md/summary.md during execution per the embedded rules. Triggers: user says /init-goal, 'initialize a loop goal', 'set up a GOal', 'help me use /loop to accomplish X', or describes a repetitive autonomous task they want Claude to run in a loop."
 user_invocable: true
 ---
@@ -50,6 +50,8 @@ user_invocable: true
 
 置信度高时直接套用，不问用户确认模版名称。
 
+匹配后，读取 `references/templates.md` 中对应模版的字段值，填入用户未提供的字段。
+
 ### 0c: 深度优先澄清
 
 按以下优先级，逐一澄清**缺失或不够具体**的字段。每次只问一个，等回复后再判断是否还需要继续问。
@@ -68,83 +70,6 @@ user_invocable: true
 - 其余关键字段都有合理的值（用户提供的或模版默认值）
 
 澄清完成后，进入 Step 1。
-
----
-
-## 模版数据
-
-### 模版 1: Fix Until Green
-
-```
-GOAL: 持续修复代码问题，直到所有测试通过。
-EXECUTION:
-1. 运行测试套件，记录当前通过数和失败列表
-2. 分析失败用例，定位根因
-3. 针对根因做最小化修复（每轮最多修改 3 个文件，不修改测试文件）
-4. 重新运行测试，记录新的通过数
-EVAL: 测试通过率（通过数 / 总数），本轮净增通过数。
-CONSTRAINTS: 不修改测试文件本身；每轮最多修改 3 个源文件。
-EXIT_EXPLICIT: 所有测试通过（通过率 100%）
-EXIT_FALLBACK: 连续 2 轮通过率无变化则停止，汇报当前卡点和失败原因。
-```
-
-### 模版 2: Research Loop
-
-```
-GOAL: 持续搜索和整理信息，直到对目标主题有足够深度的理解。
-EXECUTION:
-1. 回顾当前已知信息和未解答的问题
-2. 选择下一个最有价值的搜索方向（不重复已用关键词组合）
-3. 执行搜索（每轮不超过 5 个查询）
-4. 摘要新发现，追加到 log
-EVAL: 本轮新增有效信息条数；预设问题中已有答案的比例。
-CONSTRAINTS: 每轮搜索不超过 5 个查询；不重复已搜索过的关键词组合。
-EXIT_EXPLICIT: 所有预设问题均已有答案，且连续 1 轮无新发现。
-EXIT_FALLBACK: 连续 2 轮无新发现则停止，输出当前已知信息汇总。
-```
-
-### 模版 3: Refine Until Satisfied
-
-```
-GOAL: 反复优化指定输出，直到质量达到满意标准。
-EXECUTION:
-1. 评审当前版本，列出最重要的 3 个改进点
-2. 执行改进（每轮只改 3 处，不推翻上一轮已确认的改动）
-3. 对新版本自评分（1-10），说明理由
-EVAL: 自评分（1-10），记录分数变化趋势。
-CONSTRAINTS: 每轮只改进不超过 3 处；不推翻上一轮已确认的改动。
-EXIT_EXPLICIT: 自评分 ≥ 8。
-EXIT_FALLBACK: 连续 2 轮分数不再提升则停止，说明当前瓶颈。
-```
-
-### 模版 4: Monitor & React
-
-```
-GOAL: 持续监控指定状态，发现变化时执行响应动作。
-EXECUTION:
-1. 检查目标状态
-2. 与上轮状态（见 log 最后条目）对比，判断是否有变化
-3. 若有变化则执行预定响应动作（仅限预定范围）
-4. 记录本轮状态快照
-EVAL: 状态是否稳定；本轮是否触发响应动作。
-CONSTRAINTS: 响应动作仅限预定范围，不做范围外操作。
-EXIT_EXPLICIT: 目标状态连续 3 轮稳定。
-EXIT_FALLBACK: 超过 20 轮未达到稳定则停止并上报当前状态。
-```
-
-### 模版 5: Explore & Map
-
-```
-GOAL: 系统性探索未知领域/代码库，建立完整的结构地图。
-EXECUTION:
-1. 从未探索节点中选择下一个最重要的节点
-2. 深入分析该节点（结构、依赖、行为）
-3. 记录发现与关联，更新探索进度
-EVAL: 已探索节点数 / 总节点估算数；覆盖率百分比。
-CONSTRAINTS: 每轮只深入一个节点；不跳跃式探索。
-EXIT_EXPLICIT: 覆盖率达到目标阈值，或确认无新节点。
-EXIT_FALLBACK: 连续 2 轮无新节点则汇总已知结构并停止。
-```
 
 ---
 

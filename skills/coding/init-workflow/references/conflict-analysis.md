@@ -1,6 +1,6 @@
 # 冲突分析实现细节
 
-Step 4（4a–4d）的具体实现方法，Step 5 冲突类型的完整定义。
+Step 4（4a–4e）的具体实现方法，Step 5 冲突类型的完整定义。
 
 ---
 
@@ -124,3 +124,49 @@ actual_hash=$(printf '%s' "<block_content>" | git hash-object --stdin | cut -c1-
 ```
 
 其他冲突类型按同样格式呈现，选项见上方类型定义。
+
+---
+
+## 类型 E — git config 漂移
+
+**触发条件：** `core.hooksPath` 或 `merge.ff` 与期望值不符，或在本地 git config 中缺失。
+
+**严重程度：** 高（hooks 已部署但完全失效）
+
+**检测方式（Step 4e）：**
+
+```bash
+git config --local core.hooksPath   # 期望：.githooks
+git config --local merge.ff         # 期望：false
+```
+
+判定规则：
+- 值正确 → 无问题
+- 值存在但不正确 → 类型 E 冲突（配置漂移）
+- 值缺失（命令返回空 / exit 1） → 类型 E 冲突（配置丢失）
+
+lock 文件含 `git_config` 节时，优先与 lock 中记录的值对比；lock 缺失该节时直接检测实际值。
+
+**Step 5 呈现格式（每项独立列出，最多两条）：**
+
+```
+─────────────────────────────────────────────────────────
+[N/M] git config 漂移（类型 E）
+问题：core.hooksPath 未配置，.githooks/ 中的 hooks 不会被 git 加载
+期望：core.hooksPath = .githooks
+实际：（未设置）
+影响：所有分支保护、提交信息校验、push 限制均失效
+
+选项：
+  A) 自动修复（推荐）：运行 git config core.hooksPath .githooks
+  B) 跳过（保持当前状态，hooks 继续失效）
+─────────────────────────────────────────────────────────
+```
+
+`merge.ff` 缺失时替换对应字段：`问题` 改为"merge.ff 未配置，fast-forward 合并未被禁止"，`期望` 改为 `merge.ff = false`，`影响` 改为"所有合并均将 fast-forward，pre-commit hook 无法检查合并来源分支"。
+
+**默认选项：A（自动修复）。**
+
+**Step 6 修复执行时机：** 写入 hooks 后，对用户选择 A 的每一条类型 E 冲突立即执行对应的 `git config` 命令，无需用户手动操作。
+
+**用户选 B（跳过）时：** Step 9 对应行显示 `❌ 未修复`，并附注"hooks 当前不生效"。

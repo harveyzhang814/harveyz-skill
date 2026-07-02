@@ -1,5 +1,56 @@
 # TODO
 
+## 🚧 待开发
+
+### 重构 extract-url tag 为固定集与候选集分离
+**优先级**: P2 | **日期**: 2026-06-14
+
+extract-url skill 抓取文章时生成的 tags 目前全由 LLM 从内容推断，无固定词表，导致：① 每次抓取标签不稳定（同一主题表述不一致）；② 无法保证核心关键词（如 loop engineering）必现；③ 候选标签与确定标签混在一起，难以管理。
+
+**目标**：将 tag 拆分为两类：
+- **固定 Tag**（`fixed_tags`）：维护在 skill 目录词表中，每次抓取必定注入，与文章内容无关（如来源站点分类、技术栈、语言等跨文章共性标签）
+- **候选 Tag**（`candidate_tags`）：从文章内容提取，模糊/候选性质，定期 review 决定是否升入固定集
+
+**需修改的文件**：
+1. `skills/extract-url/` 下新建 `fixed_tags.txt`（初始词表）
+2. 修改 `validate_article.py` / `article_utils.py` 的 frontmatter 构建逻辑，将 tag 拆为 `fixed_tags` 和 `candidate_tags` 两个 YAML 列表字段
+3. 更新 `references/file-format.md` 文档说明新字段
+
+---
+
+### 开发参考 grill-me 风格的 question-me skill
+**优先级**: P2 | **日期**: 2026-06-30
+
+参考 grill-me/grilling 的「一次一问 + 给推荐答案 + 决策树依赖顺序」风格，创建一个 skill，在执行任务前帮用户明确更好的指令、查明隐含假设、理清决策因素。核心约束：一次只问一个问题，每问必附推荐答案，能自查的问题先自查再问用户，按决策依赖顺序逐一推进，直到达成 shared understanding 再开始实现。
+
+---
+
+### 设计多平台 Skill 补丁的同步与生命周期管理机制
+**优先级**: P2 | **日期**: 2026-06-30
+
+harveyz-skill 项目维护多个跨平台 Skill（如 extract-url），每个平台（Claude Code / Codex / Hermes）有独立的补丁文件（`SKILL.<platform>.md`），采用「主流程 + 各平台差异覆盖」模式。
+
+**问题**：
+- 主流程变更时，无法自动知道哪些平台补丁需要同步更新
+- 各平台补丁边界不清晰，生命周期状态（active / deprecated / pending-update）无追踪
+- 缺乏版本绑定机制
+
+**目标**：设计并实现一套机制，包括：
+1. **补丁声明式元数据**：每个补丁文件头部声明覆盖的主流程章节、依赖主流程版本、平台、状态
+2. **变更检测脚本**：主流程发布时，自动比对输出哪些补丁需要检查/更新
+3. **生命周期状态管理**：active / deprecated / pending-update 三态及其转换规则
+
+---
+
+### 约定 skill 任务在 session 中的回报信息格式
+**优先级**: P2 | **日期**: 2026-07-01
+
+skill 执行任务（如 extract-url 的抓取/翻译 subagent）完成后，主 session 收到的通知格式尚未统一约定。需明确：任务完成时应在 session 中回报哪些字段（如标题、路径、状态、耗时）、以何种格式呈现，以便用户一眼读懂结果，也便于后续 skill 串联时解析。
+
+---
+
+## ✅ 已完成
+
 ## mermaid-diagram — 渲染样式增强
 
 ### [ ] CSS 注入提升 Mermaid 渲染质量
@@ -16,17 +67,6 @@
 
 **实现位置**：`skills/writing/doc-forge/scripts/md_to_pdf.py`，在渲染前向 HTML 注入品牌 CSS。
 **工作量**：2-3 天。
-
----
-
-## extract-url — 图片下载修复
-
-### 修复 playwright_xcom.py 图片下载 SSL 验证失败
-**优先级**: P2 | **日期**: 2026-06-18
-
-`urllib.request.urlopen` 默认 SSL 验证对 X.com 图片 CDN（`pbs.twimg.com`）失败，图片被静默跳过，仅文字保存成功。常见于 macOS 使用代理/VPN 的环境。
-
-**已验证方案**：在下载前构造 `ssl.create_default_context()`，优先加载 `certifi` 证书包；若 `certifi` 不可用则 fallback 到 `CERT_NONE`。将 `context` 传给 `urlopen`。修复已应用于 `scripts/playwright_xcom.py`，重新抓取验证 6/6 图片下载成功。
 
 ---
 
@@ -66,10 +106,12 @@ sync-agent 已完成，现在将 Hermes agent 配置目录 `~/.hermes` 纳入同
 
 ---
 
-## harveyz-skill — 推理模式提取前置 skill
+## extract-url — 词表初始化
 
-### [x] 开发两阶段引导式推理模式提取 skill（元框架前置层）
-**已落地为** `skills/experiment/extract-cognition`（认知签名抽取方法论，取代原两阶段锚点设计）。设计见 docs/superpowers/specs/2026-06-22-extract-cognition-design.md。
+### 填入 fixed_tags.txt 初始词条
+**优先级**: P2 | **日期**: 2026-07-01
+
+`~/.hskill/url-extract/fixed_tags.txt` 已自动创建模板，但词条全为注释示例，无真实词条。首次实测（alex_prompter 文章）时 `tags` 字段命中率低。需手动填入 topic / technology / source / language / domain 五类初始词条，让后续抓取的 `tags` 产生有意义的命中，并通过 candidate_tags 的 review 来逐步扩充词表。
 
 ---
 
@@ -82,23 +124,16 @@ sync-agent 已完成，现在将 Hermes agent 配置目录 `~/.hermes` 纳入同
 
 ---
 
-## harveyz-skill — sync-design-html 输出路径迁移
+## hskill — tool lifecycle
 
-### 将 sync-design-html 的 HTML 输出与 manifest 迁移至项目 `.hskill/` 文件夹
-**优先级**: P2 | **日期**: 2026-06-22
+### [x] Tool uninstall mechanism
+**背景**：hskill 目前只能安装和更新 tool，没有卸载命令。  
+部分 tool（如 p-launch）在安装后会在用户目录写入额外数据：
+- `~/.local/bin/p-launch` — 可执行文件
+- `~/.local/share/hskill/tools/p-launch.py` — Python 模块
+- `~/.local/share/hskill/tools/p-launch.json` — 版本元数据
+- `~/.local/share/hskill/p-launch-venv/` — 隔离 venv（pip 依赖）
+- `~/.config/p-launch/config.zsh` — 用户配置
 
-当前 `sync-design-html` skill 将 HTML 设计备份写入 `docs/superpowers/`，manifest 存放在 `docs/reference/design-html-manifest.json`。按 skill 设计哲学，skill 产出物应归属 `.hskill/` 目录，与项目文档目录解耦。
-
-需完成：将输出路径（HTML 文件 + manifest）统一迁移到项目的 `.hskill/design-html/`，并更新 skill 中的路径引用。
-
----
-
-## capture-todo — 合并步骤双校验兼容
-
-### 修复 capture-todo 合并步骤同时通过分支来源与提交格式检查
-**优先级**: P2 | **日期**: 2026-06-21
-
-当目标项目同时启用分支来源校验（pre-commit 读取 MERGE_MSG，要求 `Merge branch 'xxx'` 格式）和提交格式校验（commit-msg 要求 Conventional Commits 格式）时，`git merge --no-ff -m "..."` 的 `-m` 参数会同时写入 MERGE_MSG，导致两个 hook 的格式要求冲突。修复方向：合并前先手动将 MERGE_MSG 写成标准 git 格式，再用 `-m "chore(...): ..."` 满足 Conventional Commits，两路分开处理。
-
----
-
+**期望行为**：`hskill uninstall p-launch` 清理上述所有文件，并从 `~/.zshrc` 移除 snippet。  
+**扩展点**：tool 可在 `tool.json` 里声明 `uninstallPaths[]`，installer 统一处理。

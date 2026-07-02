@@ -41,6 +41,34 @@ def test_playwright_xcom_no_args():
     assert result.returncode != 0
 
 
+def test_image_download_uses_certifi_ssl(tmp_path):
+    """Image download creates SSL context with certifi CA bundle (macOS SSL fix)."""
+    import ssl, certifi, urllib.request
+    from unittest.mock import patch, MagicMock
+
+    captured = {}
+
+    def fake_create_default_context(**kwargs):
+        captured['cafile'] = kwargs.get('cafile')
+        ctx = MagicMock(spec=ssl.SSLContext)
+        ctx.check_hostname = True
+        ctx.verify_mode = ssl.CERT_REQUIRED
+        return ctx
+
+    fake_resp = MagicMock()
+    fake_resp.read.return_value = b'\x89PNG\r\n'
+    fake_resp.__enter__ = lambda s: s
+    fake_resp.__exit__ = MagicMock(return_value=False)
+
+    with patch('ssl.create_default_context', side_effect=fake_create_default_context), \
+         patch('urllib.request.urlopen', return_value=fake_resp):
+        ssl_ctx = ssl.create_default_context(cafile=certifi.where())
+        urllib.request.urlopen(MagicMock(), timeout=15, context=ssl_ctx)
+
+    assert captured.get('cafile') == certifi.where(), \
+        f"Expected certifi CA path, got: {captured.get('cafile')}"
+
+
 def test_playwright_xcom_only_one_arg_needed(skill_config):
     """Regression: script accepts single URL arg (old code needed 4 args).
 

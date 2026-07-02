@@ -53,7 +53,8 @@ for (const entry of index) {
 const toolFiles = []
 
 for (const tool of rawTools) {
-  const toolDir    = path.join(toolsDir, tool.name)
+  const subName    = tool.path ? tool.path.replace(/^tools\//, '') : tool.name
+  const toolDir    = path.join(toolsDir, subName)
   const toolScript = path.join(toolDir, `${tool.name}.sh`)
   const pyProject  = path.join(toolDir, 'pyproject.toml')
   if (!existsSync(toolDir)) {

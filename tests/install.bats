@@ -16,8 +16,8 @@ SKILL1_NAME="survey-skillrepo"
 SKILL1_SRC="${REPO_ROOT}/skills/research/survey-skillrepo"
 SKILL1_VER="2.0.1"
 
-SKILL2_NAME="manage-docs"
-SKILL2_SRC="${REPO_ROOT}/skills/writing/manage-docs"
+SKILL2_NAME="manage-dir"
+SKILL2_SRC="${REPO_ROOT}/skills/writing/manage-dir"
 
 setup() {
   TEST_DIR="$(mktemp -d)"
@@ -144,9 +144,9 @@ _skill_version() {
 
 # ── bundle installation ───────────────────────────────────────────────────────
 
-@test "install --bundle meta: installs all skills in the bundle" {
-  _install --bundle meta --target claude --scope user --force
-  # meta bundle contains clean-git.
+@test "install --bundle devops: installs all skills in the bundle" {
+  _install --bundle devops --target claude --scope user --force
+  # devops bundle contains clean-git.
   [ -f "${MOCK_HOME}/.claude/skills/clean-git/SKILL.md" ]
 }
 
@@ -213,4 +213,10 @@ _uninstall() {
 @test "uninstall skill: exits 0 when skill not installed" {
   run _uninstall "${SKILL1_NAME}" --scope user --target claude
   [ "$status" -eq 0 ]
+}
+
+@test "install --skill: sync-hotfix installs SKILL.md to claude skills dir" {
+  _install --skill sync-hotfix --target claude --scope user --force
+  [ -f "${MOCK_HOME}/.claude/skills/sync-hotfix/SKILL.md" ]
+  [ "$(_skill_version "${MOCK_HOME}/.claude/skills/sync-hotfix/SKILL.md")" = "1.1.1" ]
 }
