@@ -135,8 +135,8 @@
       "path": "coding/question-me",
       "bundle": "coding",
       "installScope": "global",
-      "contentHash": "aa147e510ef6ee68",
-      "contentVersion": "1.0.0"
+      "contentHash": "2496270c52272fc8",
+      "contentVersion": "2.0.0"
     },
     {
       "path": "writing/forge-doc",
