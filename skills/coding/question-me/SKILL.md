@@ -2,7 +2,7 @@
 name: question-me
 description: "Pre-task clarification skill — clarifies ambiguous or complex tasks before execution through structured Q&A with a live decision tree. One question at a time, each with a recommended answer, in decision-dependency order. Triggers: '/question-me', 'help me clarify this', 'question me before starting', 'let's define this first'. Claude auto-triggers when detecting ambiguous or complex requests (multiple conflicting goals, vague keywords like 'optimize/refactor/clean up', missing success criteria, unstated context assumptions)."
 user_invocable: true
-version: "1.0.0"
+version: "2.0.0"
 ---
 
 # question-me — 执行前指令澄清
@@ -44,21 +44,30 @@ version: "1.0.0"
 
 ---
 
-### Step 1 — 意图校准（固定 3 问）
+### Step 1 — 意图校准（固定 3 问，每问答完即评估子节点）
 
-每问一次，等用户回答后再问下一问。每问附推荐答案。
+三个固定问题按顺序问，**每答完一问立即评估子节点**，不等三问全部答完。
 
 **Q1 — 目标：** 这件事做完，最核心的变化是什么？
 **Q2 — 成功标准：** 怎么判断做对了？（可测量的验收条件）
 **Q3 — 范围边界：** 明确不做什么，或哪些东西不能动？
 
-Step 1 全部回答后：
-1. 初始化决策树（格式见下节）
-2. 调用渲染器（首次加 `--open`）：
-   ```bash
-   echo '<决策树文本>' | python3 SKILL_DIR/scripts/render_tree.py /tmp/question-me-tree.html --open
-   ```
-3. 进入 Step 2。
+**每问的处理流程：**
+```
+问 Qn → 等用户回答
+  → [必须] 子节点评估：这个答案是否引出需要追问的不确定性？
+      是 → 生成子节点追加到树（BFS：一次生成所有潜在子节点）
+      否 → 不生成（Qn 为叶子节点）
+  → 渲染树（首次调用加 --open）
+  → 问 Q(n+1)
+```
+
+Q3 答完并评估子节点后，进入 Step 3。
+
+**首次渲染（Q1 答完后）：**
+```bash
+echo '<当前树文本>' | python3 SKILL_DIR/scripts/render_tree.py /tmp/question-me-tree.html --open
+```
 
 ---
 
@@ -72,28 +81,30 @@ Step 1 全部回答后：
 
 字段规则：
 - `status`: `done` / `open` / `infer` / `skip`
-- `id`: 全树唯一短 ID（2–3 字母），更新引用稳定
+- `id`: 全树唯一短 ID（2–3 字母），更新时引用稳定
 - `dep=YY`: 可选，指向另一节点 id，表示"YY 答完后此节点才可问"；渲染器用它重建树结构
 - 无 `dep` 的节点为根节点
 
-示例（Phase 1 结束后初始化的树）：
-```
-[goal:done]     id=G              将 tags 拆为 fixed_tags + candidate_tags
-[success:done]  id=S              新文章有两字段；旧文章不迁移
-[scope:done]    id=SC             只改 Python 脚本；SKILL.md 可补充
-[storage:open]  id=ST  dep=SC     fixed_tags 词表存放位置
-[format:open]   id=FF  dep=ST     frontmatter 字段结构变化
-[compat:open]   id=CP  dep=FF     旧文章向后兼容处理
-[review:open]   id=RV  dep=SC     candidate_tags review 流程
-```
+状态含义：
+
+| status | 含义 | 子节点 |
+|--------|------|--------|
+| `done` | 已答 | 可有可无；无子节点即为叶子 |
+| `open` | 待问（dep 已满足或无 dep） | 答完后评估 |
+| `infer` | Claude 填默认值，不追问 | 无；在摘要中透明列出 |
+| `skip` | 兄弟答案使其无关，跳过 | 无 |
+
+**叶子节点不是状态**，是结构属性——`done` 且无子节点即为叶子，分支自然结束。
 
 **更新规则：**
-- 每次用户回答后，**只修改变化的行**，不重写全树
-- 依赖节点变为 `done` 后，不需要手动标注其他节点的 dep 状态——渲染器自行查 ID 状态
+- 每次用户回答后，只修改变化的行，不重写全树
+- 新生成的子节点追加在父节点行之后
 - `infer` 节点直接填入推断内容，不追问用户
 
-**选题逻辑（Phase 2 每轮）：**
-> 找所有 `open` 节点中，`dep` 指向的节点状态为 `done` 的（或无 `dep` 的） → 优先选被其他节点依赖次数最多的（影响面最大）
+**选题逻辑（Step 3 每轮）：**
+> 从所有 `dep` 已满足（或无 `dep`）的 `open` 节点中，选被其他节点依赖次数最多的（影响面最大）；并列时按树中出现顺序选最早的
+
+**[禁止] 顺序操纵：** 不得通过调整提问顺序来为另一个 open 节点制造 `infer` 的理由。若节点 X 的 dep 已满足且处于 `open` 状态，必须在轮到它时进行问答流程或当场评估 infer——不能先问节点 Y，再以"Y 的答案已覆盖 X"为由跳过 X。
 
 **每次树更新后**立即重新渲染（不加 `--open`）：
 ```bash
@@ -104,20 +115,37 @@ echo '<更新后的决策树文本>' | python3 SKILL_DIR/scripts/render_tree.py 
 
 ### Step 3 — 动态深挖
 
-按选题逻辑逐一追问，每问格式：
+按选题逻辑逐一追问，每轮处理流程：
 
 ```
-[当前节点文本]？
-推荐答案：[Claude 的推荐]
+1. 选影响面最大的 open 节点
+2. 提问（附推荐答案）：
+   [当前节点文本]？
+   推荐答案：[Claude 的推荐]
+3. 等用户回答 → 标记为 done
+4. [必须] 子节点评估：
+     这个答案下有需要追问的不确定性且影响执行方向？
+       是 → 一次生成所有潜在子节点（dep 指向当前节点）
+       否 → 不生成（当前节点为叶子）
+     子问题 Claude 可合理默认的 → 标 infer，填入假设，不追问
+5. [必须] 兄弟扫描：
+     此答案是否让同级兄弟节点变无关或矛盾？
+       是 → 标 skip
+       否 → 继续
+6. 更新树文本 → 重新渲染
+7. 还有 open 节点？→ 是：回到 1 / 否：进入 Step 4
 ```
 
-等用户回答 → 更新树对应行 → 重新渲染 → 继续选下一问。
+**分支切换是自动的。** 某分支 open 节点耗尽后，选题逻辑自动切到影响面最大的其他 open 节点。不需要显式"切换分支"操作。
+
+**重大方向修正（例外情况）：** 若用户答案与已答祖先节点根本矛盾，不走兄弟扫描，而是：
+1. 显式指出冲突
+2. 询问用户是否需要修改已答节点
+3. 用户确认后重标受影响节点为 `open`，重新提问
 
 **停止条件：**
-- 所有 `open` 节点已变为 `done` 或 `infer`
+- 所有 `open` 节点已变为 `done` / `infer` / `skip`（树自动清空）
 - 用户说"够了"、"开始"、"可以了"、"stop"等打断信号
-
-**不追问的节点：** 可以合理默认处理的，标为 `infer` 并填入推断理由，在摘要中透明列出。
 
 ---
 
@@ -130,7 +158,7 @@ echo '<更新后的决策树文本>' | python3 SKILL_DIR/scripts/render_tree.py 
 **成功标准：** ...
 **范围：** 包含 ... / 不包含 ...
 **关键决策：** ...
-**假设：** ...
+**假设：** （infer 节点的默认处理，透明列出）
 
 确认后开始执行。
 ```
@@ -145,3 +173,5 @@ echo '<更新后的决策树文本>' | python3 SKILL_DIR/scripts/render_tree.py 
 - 强制跑完全部 open 节点（用户可随时打断）
 - 问答结果写入文件（只在会话内输出摘要）
 - 自动交棒特定 skill（执行方式由 Claude 自行判断）
+- 子节点超过 1 层的预生成（孙节点等父节点答完再评估）
+- 跨分支远端节点的自动扫描（只扫同级兄弟）

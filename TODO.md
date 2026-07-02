@@ -18,14 +18,6 @@ extract-url skill 抓取文章时生成的 tags 目前全由 LLM 从内容推断
 
 ---
 
-### 开发参考 grill-me 风格的 question-me skill
-**优先级**: P2 | **日期**: 2026-06-30
-
-参考 grill-me/grilling 的「一次一问 + 给推荐答案 + 决策树依赖顺序」风格，创建一个 skill，在执行任务前帮用户明确更好的指令、查明隐含假设、理清决策因素。核心约束：一次只问一个问题，每问必附推荐答案，能自查的问题先自查再问用户，按决策依赖顺序逐一推进，直到达成 shared understanding 再开始实现。
-
----
-
-
 ### 约定 skill 任务在 session 中的回报信息格式
 **优先级**: P2 | **日期**: 2026-07-01
 
@@ -34,6 +26,13 @@ skill 执行任务（如 extract-url 的抓取/翻译 subagent）完成后，主
 ---
 
 ## ✅ 已完成
+
+### 开发参考 grill-me 风格的 question-me skill
+**完成日期**: 2026-07-01
+
+实现了 question-me skill（`skills/coding/question-me/`）：Phase 0-4 流程（自查 → 意图校准 3 问 → 动态深挖 → 摘要确认），内部决策树格式（`[status] id=XX [dep=YY] 文本`），render_tree.py 生成可视化 HTML（card 树 + 自动刷新），9 项单元测试覆盖解析/树构建/环检测。
+
+---
 
 ### 设计多平台 Skill 补丁的同步与生命周期管理机制
 **完成日期**: 2026-07-01
