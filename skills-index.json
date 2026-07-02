@@ -19,7 +19,7 @@
   "bundleMeta": {
     "research": "研究工具（extract-url + learn-video + extract-vision + learn-skill + survey-skillrepo + learn-paper + extract-cognition + probe-session）",
     "creative": "创意工具（capture-todo + capture-insight）",
-    "coding": "程序工具（init-workflow + setup-debug + init-goal）",
+    "coding": "程序工具（init-workflow + setup-debug + init-goal + question-me）",
     "writing": "写作工具（forge-doc + draw-diagram + manage-dir + migrate-spec）",
     "design": "设计工具（scout-brand + build-style + sync-design）",
     "mint": "Skill 生命周期工具（init-skill + publish-skill + archive-skill + dedup-skill + contribute-skill + fix-skill + runby-opencode + scout-philosophy）",
@@ -111,9 +111,9 @@
       "contentVersion": "1.0.0"
     },
     {
-      "path": "meta/init-goal",
+      "path": "coding/init-goal",
       "bundle": "coding",
-      "installScope": "essential",
+      "installScope": "global",
       "contentHash": "8db51b5ca77dc470",
       "contentVersion": "1.3.0"
     },
