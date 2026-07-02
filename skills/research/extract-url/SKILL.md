@@ -274,6 +274,66 @@ candidate_tags:
 
 ### 步骤 4：向用户报告最终结果
 
+> 回报格式遵循 `knowledge/skill-philosophy/04-completion-report/standard.md`，以下为 extract-url 的字段定义。
+
+收到 Subagent 2 完成通知后，从报告中提取 `article_path`，然后：
+
+1. 运行统计脚本：
+   ```python
+   import subprocess, os
+   result = subprocess.run(
+       ['python3', 'SKILL_DIR/scripts/count_article_stats.py', article_path],
+       capture_output=True, text=True
+   )
+   # 解析输出中的 CHARS: / CODE_BLOCKS: / IMAGES: 行
+   ```
+
+2. 从译文 frontmatter 读取 `description` 字段作为摘要。
+
+3. 向用户输出卡片：
+
+**成功：**
+```
+── 完成 ──────────────────────────────
+标题  《文章标题》
+路径  /Vault/Reading/article.md
+字符  12,345
+代码  3 段
+图片  8 张
+摘要  一句话描述文章核心内容
+──────────────────────────────────────
+```
+
+**失败（Subagent 1 或 2 均未成功）：**
+```
+── 失败 ──────────────────────────────
+标题  《文章标题》（未知则填原始 URL）
+原因  抓取超时（Playwright timeout 300s）
+──────────────────────────────────────
+```
+
+**部分完成（抓取成功，翻译失败）：**
+```
+── 部分完成 ───────────────────────────
+标题  《文章标题》
+路径  /Vault/Origin/article.md（仅原文）
+原因  翻译超时，原文已保存
+──────────────────────────────────────
+```
+
+**已跳过（dedup 命中）：**
+```
+── 已跳过 ────────────────────────────
+标题  《文章标题》（或原始 URL）
+原因  已抓取（dedup）
+──────────────────────────────────────
+```
+
+批量模式：每篇完成立即输出一张卡片；所有篇完成后追加：
+```
+共 N 篇 | 完成 X  失败 Y  跳过 Z
+```
+
 ---
 
 ## 批量抓取流程（2 篇或以上）
@@ -294,7 +354,7 @@ candidate_tags:
 Subagent 1 (抓取) → Subagent 2 (翻译) → [等待] → Subagent 1 (抓取) → ...
 ```
 
-每篇 Subagent 2 完成后，**在主 session 中随机等待**再发下一篇：
+每篇 Subagent 2 完成后，执行**步骤 4**（运行统计脚本、读取 description、输出完成卡片），再**随机等待**后发下一篇：
 
 ```python
 import time, random
@@ -302,6 +362,14 @@ wait = random.randint(60, 180)
 print(f"等待 {wait} 秒后继续下一篇...")
 time.sleep(wait)
 ```
+
+所有篇完成后输出汇总行：
+
+```
+共 N 篇 | 完成 X  失败 Y  跳过 Z
+```
+
+（主 session 自行统计每篇的最终状态，将 N / X / Y / Z 替换为实际数字）
 
 ---
 
