@@ -1,6 +1,7 @@
 ---
 title: Skill 完成回报格式规范
-version: 1.0.0
+version: 1.1.0
+source: "[[research]] · 04-completion-report"
 ---
 
 # Skill 完成回报格式规范
@@ -53,6 +54,24 @@ version: 1.0.0
 
 ## 引用此规范
 
-在 SKILL.md 的完成报告章节开头注明：
+在 SKILL.md 的完成报告章节开头注明，并声明本 Skill 的必填字段：
 
-> 回报格式遵循 `knowledge/skill-philosophy/04-completion-report/standard.md`，以下为本 skill 的字段定义。
+> 回报格式遵循 `knowledge/skill-philosophy/04-completion-report/standard.md`。
+> 本 Skill 必填字段：`{字段 A}`、`{字段 B}`（失败时还需：`原因`）。
+
+**必填字段说明：**
+- 每个 Skill 引用此规范时，必须声明哪些字段在什么状态下是必填的
+- `原因` 字段在失败 / 部分完成 / 已跳过时普遍必填（来自字段规则）
+- 路径类字段（如"译文路径"、"原文路径"）在有产物时必填，无产物时不出现
+
+---
+
+## 设计说明
+
+此规范的核心设计来自三个生态的实践：
+
+- **状态词汇强制**（来自 G stack `ship`）：预定义固定词汇，保证可扫描性
+- **每项立即输出**（来自 MSkill `triage` 的隐含实践）：批量任务不等全部完成
+- **状态层强制 + 字段层自由**（研究结论）：卡片壳固定，字段由各 Skill 自定义
+
+"部分完成"状态是对 G stack 4 状态（DONE / DONE_WITH_CONCERNS / BLOCKED / NEEDS_CONTEXT）的补充，用于覆盖批量任务中的混合结果场景。
