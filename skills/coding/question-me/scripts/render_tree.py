@@ -2,6 +2,8 @@
 """
 Render question-me internal tree text to a visual HTML card tree.
 Usage: echo "<tree text>" | python3 render_tree.py OUTPUT_PATH [--open]
+
+Optional: include "# task description" as the first comment line to label the root node.
 """
 
 import sys
@@ -31,7 +33,10 @@ class Node:
 def parse_nodes(tree_text: str) -> List[Node]:
     nodes = []
     for line in tree_text.splitlines():
-        m = LINE_RE.match(line.strip())
+        stripped = line.strip()
+        if stripped.startswith('#'):
+            continue
+        m = LINE_RE.match(stripped)
         if m:
             d = m.groupdict()
             nodes.append(Node(
@@ -42,6 +47,14 @@ def parse_nodes(tree_text: str) -> List[Node]:
     return nodes
 
 
+def _parse_task_title(tree_text: str) -> str:
+    for line in tree_text.splitlines():
+        stripped = line.strip()
+        if stripped.startswith('# '):
+            return stripped[2:].strip()
+    return ''
+
+
 def build_tree(nodes: List[Node]):
     id_map = {n.node_id: n for n in nodes}
     roots = []
@@ -50,7 +63,6 @@ def build_tree(nodes: List[Node]):
             id_map[node.dep_id].children.append(node)
         else:
             roots.append(node)
-    # Collect any nodes unreachable from roots (mutual cycles) and surface them
     reachable = set()
     stack = list(roots)
     while stack:
@@ -66,7 +78,6 @@ def build_tree(nodes: List[Node]):
 
 
 def find_current(nodes: List[Node], id_map: dict) -> Optional[str]:
-    """Return node_id of the highest-impact open node with satisfied dep."""
     candidates = []
     for node in nodes:
         if node.status != 'open':
@@ -86,6 +97,12 @@ STATUS_CFG = {
     'open':  {'border': '#eab308', 'bg': '#fffbeb', 'icon': '?'},
     'infer': {'border': '#94a3b8', 'bg': '#f8fafc', 'icon': '~'},
     'skip':  {'border': '#e2e8f0', 'bg': '#f8fafc', 'icon': '-'},
+}
+
+TERM_COLOR = {
+    'done':  '#22c55e',
+    'infer': '#94a3b8',
+    'skip':  '#cbd5e1',
 }
 
 
@@ -124,21 +141,30 @@ def _render_card(node: Node, current_id: Optional[str], id_map: dict) -> str:
     dep_row = f'<div class="meta">dep: {node.dep_id}</div>' if node.dep_id else ''
     divider_dep = '<hr class="div">' + dep_row if node.dep_id else ''
 
-    children_html = ''
-    if node.children:
-        cards = ''.join(_render_card(c, current_id, id_map) for c in node.children)
-        children_html = f'<div class="ch">{cards}</div>'
+    card_html = (
+        f'<div class="card" style="border-left:4px solid {cfg["border"]};'
+        f'background:{cfg["bg"]};opacity:{opacity};{highlight}">'
+        f'<div class="ct"><span class="ic">{cfg["icon"]}</span>'
+        f'<span class="nid">{node.node_id}</span></div>'
+        f'<hr class="div">'
+        f'<div class="row"><span class="lb q">Q</span><span class="qt">{q_html}</span></div>'
+        f'<div class="row"><span class="lb a">A</span>{a_html}</div>'
+        f'{divider_dep}</div>'
+    )
 
-    return f'''<div class="nw" id="n-{node.node_id}">
-  <div class="card" style="border-left:4px solid {cfg['border']};background:{cfg['bg']};opacity:{opacity};{highlight}">
-    <div class="ct"><span class="ic">{cfg['icon']}</span><span class="nid">{node.node_id}</span></div>
-    <hr class="div">
-    <div class="row"><span class="lb q">Q</span><span class="qt">{q_html}</span></div>
-    <div class="row"><span class="lb a">A</span>{a_html}</div>
-    {divider_dep}
-  </div>
-  {children_html}
-</div>'''
+    has_children = bool(node.children)
+    is_closed_leaf = not has_children and node.status in TERM_COLOR
+
+    if has_children:
+        inner = ''.join(_render_card(c, current_id, id_map) for c in node.children)
+        tail = f'<div class="stem"></div><div class="ch">{inner}</div>'
+    elif is_closed_leaf:
+        color = TERM_COLOR[node.status]
+        tail = f'<div class="stem"></div><div class="term-dot" style="background:{color}"></div>'
+    else:
+        tail = ''
+
+    return f'<div class="nw" id="n-{node.node_id}">{card_html}{tail}</div>'
 
 
 CSS = """
@@ -152,9 +178,23 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
 .pb{width:120px;height:6px;background:#e2e8f0;border-radius:3px}
 .pf{height:100%;background:#22c55e;border-radius:3px}
 .pl{font-size:12px;color:#64748b}
-.tree{padding:32px 24px;overflow-x:auto}
-.roots{display:flex;gap:24px;align-items:flex-start}
+.tree{padding:32px 24px;overflow-x:auto;display:flex;justify-content:center}
 .nw{display:flex;flex-direction:column;align-items:center}
+.ch{display:flex;align-items:flex-start}
+.ch>.nw{padding:20px 16px 0;position:relative}
+.ch>.nw::before{content:'';position:absolute;top:0;left:0;right:0;
+                border-top:2px solid #cbd5e1}
+.ch>.nw:first-child::before{left:50%}
+.ch>.nw:last-child::before{right:50%}
+.ch>.nw:only-child::before{display:none}
+.ch>.nw::after{content:'';position:absolute;top:0;left:50%;
+               transform:translateX(-1px);width:2px;height:20px;background:#cbd5e1}
+.stem{width:2px;height:20px;background:#cbd5e1;flex-shrink:0}
+.term-dot{width:10px;height:10px;border-radius:50%;margin:2px 0}
+.task-card{border:2px solid #334155;background:#fff;border-radius:8px;
+           padding:10px 20px;font-size:13px;font-weight:600;color:#1e293b;
+           max-width:300px;text-align:center;
+           box-shadow:0 1px 3px rgba(0,0,0,.08)}
 .card{width:220px;border-radius:8px;padding:12px;border:1px solid #e2e8f0;
       border-left-width:4px;box-shadow:0 1px 3px rgba(0,0,0,.06)}
 .ct{display:flex;align-items:center;gap:8px;margin-bottom:8px}
@@ -172,13 +212,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
 .a.infer{color:#64748b;font-style:italic}
 .a.skip{color:#94a3b8;text-decoration:line-through}
 .meta{font-size:10px;color:#94a3b8;font-family:monospace;margin-top:2px}
-.ch{display:flex;gap:16px;padding-top:20px;position:relative}
-.ch::before{content:'';position:absolute;top:0;left:calc(50% - 1px);
-            width:2px;height:20px;background:#cbd5e1}
-.nw{position:relative}
-.nw::after{content:'';position:absolute;bottom:-20px;left:calc(50% - 1px);
-           width:2px;height:20px;background:#cbd5e1}
-.nw:last-child::after,.nw:only-child::after{display:none}
 .bar{position:fixed;bottom:0;left:0;right:0;background:#fff;
      border-top:1px solid #e2e8f0;padding:12px 24px;
      box-shadow:0 -2px 8px rgba(0,0,0,.06)}
@@ -188,6 +221,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
 
 def render_html(tree_text: str) -> str:
     nodes = parse_nodes(tree_text)
+    task_title = _parse_task_title(tree_text)
     roots, id_map = build_tree(nodes)
     current_id = find_current(nodes, id_map)
 
@@ -195,7 +229,19 @@ def render_html(tree_text: str) -> str:
     total = len(nodes)
     pct = int(done_count / total * 100) if total else 0
 
-    tree_html = ''.join(_render_card(r, current_id, id_map) for r in roots)
+    label = _esc(task_title) if task_title else '任务'
+
+    if roots:
+        roots_html = ''.join(_render_card(r, current_id, id_map) for r in roots)
+        tree_html = (
+            f'<div class="nw">'
+            f'<div class="task-card">{label}</div>'
+            f'<div class="stem"></div>'
+            f'<div class="ch">{roots_html}</div>'
+            f'</div>'
+        )
+    else:
+        tree_html = f'<div class="task-card">{label}</div>'
 
     bar_html = ''
     if current_id and current_id in id_map:
@@ -216,7 +262,7 @@ def render_html(tree_text: str) -> str:
     <span class="pl">{done_count} / {total}</span>
   </div>
 </div>
-<div class="tree"><div class="roots">{tree_html}</div></div>
+<div class="tree">{tree_html}</div>
 {bar_html}
 </body></html>'''
 
