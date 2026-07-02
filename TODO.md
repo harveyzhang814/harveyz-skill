@@ -2,14 +2,16 @@
 
 ## 🚧 待开发
 
-### 约定 skill 任务在 session 中的回报信息格式
-**优先级**: P2 | **日期**: 2026-07-01
-
-skill 执行任务（如 extract-url 的抓取/翻译 subagent）完成后，主 session 收到的通知格式尚未统一约定。需明确：任务完成时应在 session 中回报哪些字段（如标题、路径、状态、耗时）、以何种格式呈现，以便用户一眼读懂结果，也便于后续 skill 串联时解析。
-
 ---
 
 ## ✅ 已完成
+
+### 约定 skill 任务在 session 中的回报信息格式
+**完成日期**: 2026-07-02
+
+以 extract-url 为例落地：新增 `count_article_stats.py` 统计字符/代码块/图片；SKILL.md 步骤 4 定义四种状态卡片（完成/失败/部分完成/已跳过）；批量流程每篇即时输出 + 汇总行；通用卡片壳规范写入 `knowledge/skill-philosophy/04-completion-report/standard.md`。
+
+---
 
 ### 重构 extract-url tag 为固定集与候选集分离
 **完成日期**: 2026-07-02
