@@ -48,8 +48,8 @@ def test_chars_exclude_frontmatter(tmp_path):
     f.write_text(_ARTICLE, encoding='utf-8')
     r = subprocess.run(['python3', SCRIPT, str(f)], capture_output=True, text=True)
     d = _parse(r.stdout)
-    body_start = _ARTICLE.index('---\n', 4) + 4
-    assert d['CHARS'] == len(_ARTICLE[body_start:])
+    expected_body = _ARTICLE.split('---\n', 2)[2]
+    assert d['CHARS'] == len(expected_body)
 
 
 def test_no_code_no_images(tmp_path):
@@ -76,3 +76,16 @@ def test_no_frontmatter(tmp_path):
     assert r.returncode == 0
     d = _parse(r.stdout)
     assert d['CHARS'] == len(body)
+
+
+def test_frontmatter_without_trailing_newline(tmp_path):
+    # Frontmatter regex requires '\n' after closing '---'; without it,
+    # stripping is skipped and the whole file is counted as body.
+    content = '---\ntitle: X\n---'  # no trailing newline
+    f = tmp_path / 'noeol.md'
+    f.write_text(content, encoding='utf-8')
+    r = subprocess.run(['python3', SCRIPT, str(f)], capture_output=True, text=True)
+    assert r.returncode == 0
+    d = _parse(r.stdout)
+    # Whole file treated as body (no stripping) — documented fallback behavior
+    assert d['CHARS'] == len(content)

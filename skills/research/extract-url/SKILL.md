@@ -276,7 +276,9 @@ candidate_tags:
 
 > 回报格式遵循 `knowledge/skill-philosophy/04-completion-report/standard.md`，以下为 extract-url 的字段定义。
 
-收到 Subagent 2 完成通知后，从报告中提取 `article_path`，然后：
+收到 Subagent 2 完成通知后，从报告中提取 `article_path`。
+
+**成功时**（article_path 存在）执行步骤 1–2，然后输出完成卡片；失败/跳过时直接输出对应状态卡片，跳过步骤 1–2。
 
 1. 运行统计脚本：
    ```python
