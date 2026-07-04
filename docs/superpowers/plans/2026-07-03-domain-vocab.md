@@ -48,7 +48,7 @@ user_invocable: true
 
 ## 概述
 
-管理项目级领域术语字典。词汇表存于 `hskill/domain-vocab/vocab.md`，供用户和 agent 定义、查询业务专有名词。每个术语包含：规范名称、定义、Avoid 列表。
+管理项目级领域术语字典。词汇表存于 `hskill/domain-vocab/vocab.md`，供用户和 agent 定义、查询业务专有名词。每个术语包含：规范名称、定义、Avoid 列表、Reference（可选）。
 
 词汇表只存业务领域概念（跨前后端、跨 AI/人类对话都会出现的词）。函数名、变量名等技术命名不进词汇表。
 
@@ -71,7 +71,10 @@ user_invocable: true
 ## 术语名
 定义文本（一到两句话，说清楚概念是什么）。
 _Avoid_: 旧叫法, 混用词
+_Reference_: src/models/order.ts:42, docs/business/order-flow.md
 ```
+
+`_Avoid_:` 和 `_Reference_:` 均为可选，不填时省略该行。`_Reference_:` 为自由文本，可写代码文件路径+行号、文档位置、任意引用。
 
 ## 操作
 
@@ -82,19 +85,16 @@ _Avoid_: 旧叫法, 混用词
 3. 若不存在：
    - 提示"请输入 **<term>** 的定义："，等待用户输入
    - 提示"请输入 Avoid 列表（逗号分隔，可留空）："，等待用户输入
+   - 提示"请输入 Reference（代码路径/文档位置，可留空）："，等待用户输入
    - 若目录 `hskill/domain-vocab/` 不存在，创建它
    - 若 `vocab.md` 不存在，创建并写入 `# Domain Vocabulary\n`
-   - 在文件末尾追加：
-     ```
-     \n## <term>\n<定义>\n_Avoid_: <avoid列表>
-     ```
-     若 Avoid 为空，省略 `_Avoid_:` 行
+   - 在文件末尾追加新 section，Avoid/Reference 为空时省略对应行
 
 ### query `<term>`
 
 1. 检查 `hskill/domain-vocab/vocab.md` 是否存在；若不存在，输出"词汇表尚未初始化，请先用 `add` 添加术语"并退出
 2. 按 `## <term>` 标题匹配（大小写不敏感），读取该 section 直到下一个 `##` 或文件末尾
-3. 返回该 section 的完整内容（定义 + Avoid）
+3. 返回该 section 的完整内容（定义 + Avoid + Reference）
 4. 若未找到，输出"未找到术语 '<term>'"，然后列出 vocab.md 中所有 `##` 标题作为已有术语名
 
 ### update `<term>`
@@ -103,7 +103,8 @@ _Avoid_: 旧叫法, 混用词
 2. 展示当前条目的完整内容
 3. 提示"新定义（留空保持不变）："，等待用户输入
 4. 提示"新 Avoid 列表（留空保持不变）："，等待用户输入
-5. 用新值替换该 section 内容，写回文件；留空的字段保持原值不变
+5. 提示"新 Reference（留空保持不变）："，等待用户输入
+6. 用新值替换该 section 内容，写回文件；留空的字段保持原值不变
 
 ### remove `<term>`
 

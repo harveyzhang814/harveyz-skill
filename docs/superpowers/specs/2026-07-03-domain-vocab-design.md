@@ -30,9 +30,12 @@ status: approved
 ## 术语名
 定义文本（一到两句话，说清楚概念是什么，不是它做什么）。
 _Avoid_: 旧叫法, 混用词, alternative-name
+_Reference_: src/models/order.ts:42, docs/business/order-flow.md
 ```
 
 - 每个术语对应一个 `##` section
+- `_Avoid_:` 和 `_Reference_:` 均为可选字段，不填时省略该行
+- `_Reference_:` 为自由文本，可写代码文件路径+行号、文档链接、任意位置引用，逗号分隔或换行均可
 - 首次执行 `add` 时 skill 自动创建文件（含 `# Domain Vocabulary` 标题）
 - 文件不存在时，`query`/`remove`/`update` 输出明确错误，提示先用 `add` 初始化
 
@@ -43,7 +46,8 @@ _Avoid_: 旧叫法, 混用词, alternative-name
 1. 检查术语是否已存在；若存在，提示"已存在，请用 update"并退出
 2. 提示用户输入**定义**（必填）
 3. 提示用户输入 **Avoid 列表**（可留空，逗号分隔）
-4. 在 `vocab.md` 末尾追加新 section
+4. 提示用户输入 **Reference**（可留空，自由文本）
+5. 在 `vocab.md` 末尾追加新 section
 
 ### query `<term>`
 
@@ -54,7 +58,7 @@ _Avoid_: 旧叫法, 混用词, alternative-name
 ### update `<term>`
 
 1. 找到对应 section，展示当前内容
-2. 逐字段提示新值（留空则保持不变）：定义、Avoid 列表
+2. 逐字段提示新值（留空则保持不变）：定义、Avoid 列表、Reference
 3. 写回文件
 
 ### remove `<term>`
