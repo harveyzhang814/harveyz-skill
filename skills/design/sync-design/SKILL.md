@@ -1,7 +1,7 @@
 ---
 name: sync-design
-description: Use after any UI source file change — detects changed view/component files via git diff and syncs them to high-fidelity HTML design backups. Maintains a manifest as the source-of-truth mapping between source files and HTML previews. Also invocable as a post-step from /ship or /review. Trigger when user says "sync design", "update HTML preview", "design changed", or after UI code edits.
-version: "4.0.0"
+description: Use after any UI source file change — detects changed view/component files via git diff and syncs them to high-fidelity HTML design backups. Also supports pre-development design phase: creates or updates design draft HTML based on user feature descriptions. Maintains a manifest as the source-of-truth mapping between source files, design drafts, and HTML previews. Trigger when user says "sync design", "update HTML preview", "design changed", "设计", "create design", "帮我设计", or after UI code edits.
+version: "5.0.0"
 user_invocable: true
 ---
 
@@ -9,7 +9,26 @@ user_invocable: true
 
 检测前端视图文件变动，同步更新高保真 HTML 设计备份文件。
 
+支持两种模式：
+- **同步模式**（默认）：检测 UI 源文件变动，更新高保真 HTML 完成稿（存于 `outputDir/`）
+- **设计模式**：根据功能描述创建或修改设计稿 HTML（存于 `outputDir/drafts/`）
+
 **Announce at start:** "I'm using sync-design to detect UI changes and update HTML design backups."
+
+---
+
+## 模式检测
+
+读取用户消息和上下文，判断调用意图，**记录为本次模式**（设计 / 同步），初始化完成后据此路由。
+
+**设计模式触发词：** 「设计」「create design」「做个设计稿」「帮我设计」「design this」；或描述功能需求/界面改动但无代码变动信号。
+
+**同步模式触发词：** 「sync design」「同步」「update HTML preview」「design changed」；或存在 UI 源文件 git diff。
+
+**歧义时辅助判断：**
+- `drafts[]` 非空且无 UI 文件 git diff → 倾向设计模式
+- 检测到 UI 文件 git diff → 倾向同步模式
+- 仍不确定 → 询问：「你是想更新设计稿，还是同步代码变动到 HTML？」
 
 ---
 
@@ -24,6 +43,10 @@ user_invocable: true
 - 以 `.hskill/` 开头 → 继续。
 
 **`entries` 为空：** 执行[已有 HTML 导入](#已有-html-导入)，完成后继续。
+
+**`version` 小于 4：** 在现有字段基础上追加 `"drafts": []`，将 `version` 更新为 `4`，写回文件后继续。
+
+**路由：** 根据本次模式，跳转至[设计阶段](#设计阶段)或继续[同步流程](#流程strict--不可跳过或合并阶段)。
 
 ---
 
