@@ -37,8 +37,8 @@
       "path": "research/extract-url",
       "bundle": "research",
       "installScope": "global",
-      "contentHash": "609f536b940bf5c8",
-      "contentVersion": "2.2.0"
+      "contentHash": "2cfab36bfbe268a3",
+      "contentVersion": "2.3.0"
     },
     {
       "path": "research/extract-vision",
