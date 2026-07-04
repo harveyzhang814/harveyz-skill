@@ -55,9 +55,10 @@ status: approved
    - 屏幕/组件名（kebab-case）
    - 需要覆盖的 UI 状态
    - 一句话功能描述
-2. 读取上下文（designSpec、设计系统文件、已有同平台 HTML 作风格参考）
-3. 生成完整高保真 HTML，存入 `outputDir/drafts/<screenName>-<platform>-design.html`
-4. 追加 entry 到 `drafts[]`，写回 manifest
+2. **检查 `entries[]` 中是否已有相同 id 的完成稿：**
+   - **有完成稿 →** 直接复制完成稿 HTML 到 `outputDir/drafts/<screenName>-<platform>-design.html` 作为基底，读取上下文（designSpec、designSystem、notes），根据用户描述增量修改（与「修改现有设计稿」路径相同）。`linkedEntryId` 在创建时直接写入，无需等 sync 阶段回填。
+   - **无完成稿 →** 读取上下文（designSpec、设计系统文件、已有同平台 HTML 作风格参考、源文件完整内容），生成完整高保真 HTML。`linkedEntryId` 设为 `null`，等待 sync 阶段创建 final entry 后回填。
+3. 追加 entry 到 `drafts[]`，写回 manifest
 
 ### HTML 质量要求
 与现有 sync 阶段完全相同（token 来源、CSS 变量命名、UI 状态完整性、离线可用、风格对齐、高保真）。区别仅在于输入来源是用户描述而非 git diff。
