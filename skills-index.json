@@ -121,8 +121,8 @@
       "path": "coding/question-me",
       "bundle": "coding",
       "installScope": "global",
-      "contentHash": "2496270c52272fc8",
-      "contentVersion": "2.0.0"
+      "contentHash": "6d2cd30c1ed4c4eb",
+      "contentVersion": "3.0.0"
     },
     {
       "path": "coding/capture-vocab",
@@ -177,8 +177,8 @@
       "path": "design/sync-design",
       "bundle": "design",
       "installScope": "project",
-      "contentHash": "c306109c397f0f32",
-      "contentVersion": "3.1.0"
+      "contentHash": "aaf5794eff6cf793",
+      "contentVersion": "5.0.0"
     },
     {
       "path": "mint/init-skill",
