@@ -50,6 +50,95 @@ user_invocable: true
 
 ---
 
+## 设计阶段
+
+（模式检测为「设计」时执行）
+
+### 1. 推断受影响页面
+
+从用户描述和上下文中识别涉及哪些页面或组件，列出清单：
+
+> 「我理解以下页面需要更新：<列表>，是否正确？」
+
+等待用户确认或修正后继续。
+
+---
+
+### 2. 逐一处理每个页面
+
+#### 情况 A：drafts[] 中已有对应 entry（修改现有设计稿）
+
+1. 读取 `<draft.htmlFile>`
+2. 读取上下文（后读优先级更高，可覆盖前面内容）：
+   - `manifest.config.designSpec`（若存在）
+   - 该 entry 所属平台的 `designSystemFile`（若有）
+   - 该平台 `stackRef` 指向的 reference 文件中与 `styleStrategy` 匹配的样式策略
+   - 该平台 `notes`
+3. 根据用户描述确定修改范围（哪些 UI 状态或区块）
+4. 增量修改 HTML，只替换受影响区块；若有新 UI 状态，追加 `uiStates`
+5. 写回 HTML 文件，更新 `drafts[].uiStates`（去重后写入，不写回 manifest，等步骤 3 统一写回）
+
+#### 情况 B：无对应 draft entry（创建新设计稿）
+
+**B1. 检查是否有对应完成稿**
+
+在 `manifest.entries[]` 中查找 `id` 与目标页面相同的 entry：
+
+**有对应完成稿 →**
+
+1. 将完成稿 HTML（`entry.htmlFile`）复制到 `<outputDir>/drafts/<screenName>-<platform>-design.html` 作为基底
+2. 读取上下文（同情况 A 的优先级顺序）
+3. 根据用户描述增量修改（同情况 A 步骤 3–4）
+4. 新增 draft entry（`linkedEntryId` 直接填入，无需等待 sync 阶段回填）：
+   ```json
+   {
+     "id": "<screenName>-<platform>",
+     "platform": "<platform>",
+     "htmlFile": "<outputDir>/drafts/<screenName>-<platform>-design.html",
+     "uiStates": ["<继承完成稿 uiStates，按用户描述追加新状态>"],
+     "description": "<从用户描述提炼>",
+     "linkedEntryId": "<screenName>-<platform>"
+   }
+   ```
+
+**无对应完成稿 →**
+
+1. 询问用户（最少必要信息）：
+   - `屏幕/组件名是什么？（kebab-case，如 "task-history"）`
+   - `这个界面有哪些 UI 状态？（逗号分隔，如 idle, loading, error）`
+   - `一句话描述这个界面的功能：`
+2. 读取上下文（后读优先级更高，可覆盖前面内容）：
+   - `manifest.config.designSpec`（若存在）
+   - 该平台的 `designSystemFile`（若有）
+   - 该平台 `stackRef` 指向的 reference 文件中与 `styleStrategy` 匹配的样式策略
+   - 该平台 `notes`
+   - `outputDir/drafts/` 下已有的同平台 HTML（选一个作风格参考）
+3. 生成完整高保真 HTML（质量要求见[HTML 生成质量要求](#html-生成质量要求)）
+4. 输出路径：`<outputDir>/drafts/<screenName>-<platform>-design.html`
+5. 新增 draft entry：
+   ```json
+   {
+     "id": "<screenName>-<platform>",
+     "platform": "<platform>",
+     "htmlFile": "<outputDir>/drafts/<screenName>-<platform>-design.html",
+     "uiStates": ["<用户输入的状态列表>"],
+     "description": "<用户输入的描述>",
+     "linkedEntryId": null
+   }
+   ```
+
+根据文件路径匹配 `manifest.config.platforms` 确定所属平台；无法自动匹配时询问用户。
+
+---
+
+### 3. 写回与摘要
+
+所有页面处理完毕后：
+1. 将更新后的 `drafts[]` 写回 `manifest.json`
+2. 输出摘要，按页面列出：已修改 / 已创建，以及变动内容
+
+---
+
 ## 流程（STRICT — 不可跳过或合并阶段）
 
 ### 阶段 1：Diff 检测
