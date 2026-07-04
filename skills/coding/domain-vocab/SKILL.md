@@ -1,6 +1,6 @@
 ---
 name: domain-vocab
-version: "1.0.0"
+version: "1.1.0"
 description: Use when you need to add, query, update, or remove project-specific domain terms — invoke with /domain-vocab add|query|update|remove <term> to manage a shared vocabulary file at hskill/domain-vocab/vocab.md
 user_invocable: true
 ---
@@ -43,13 +43,24 @@ _Reference_: src/models/order.ts:42, docs/business/order-flow.md
 
 1. 检查 `hskill/domain-vocab/vocab.md` 是否存在 `## <term>` section（大小写不敏感匹配）
 2. 若已存在：输出"术语 '<term>' 已存在，请用 `update` 修改"并退出
-3. 若不存在：
-   - 提示"请输入 **<term>** 的定义："，等待用户输入
-   - 提示"请输入 Avoid 列表（逗号分隔，可留空）："，等待用户输入
-   - 提示"请输入 Reference（代码路径/文档位置，可留空）："，等待用户输入
-   - 若目录 `hskill/domain-vocab/` 不存在，创建它
-   - 若 `vocab.md` 不存在，创建并写入 `# Domain Vocabulary\n`
-   - 在文件末尾追加新 section，Avoid/Reference 为空时省略对应行
+3. 若不存在，**先从当前对话上下文推断**各字段：
+   - **定义**：从对话中该词的使用方式推断一到两句话的定义；无法推断则留空
+   - **Avoid**：从对话中出现过的同义词或混用叫法推断；无法推断则留空
+   - **Reference**：从对话中提到的代码文件/文档位置推断；无法推断则留空
+4. 展示推断结果，格式如下，请用户确认或修改：
+   ```
+   准备添加以下条目，请确认或直接修改：
+
+   ## <term>
+   <推断的定义，或"（请输入）"若无法推断>
+   _Avoid_: <推断的 avoid，或省略>
+   _Reference_: <推断的 reference，或省略>
+
+   确认添加？(y / 直接输入修改内容)
+   ```
+5. 用户确认后（输入 `y` 或不输入内容直接回车）写入；若用户输入了修改内容，用修改后的值写入
+6. 若目录 `hskill/domain-vocab/` 不存在，创建它；若 `vocab.md` 不存在，创建并写入 `# Domain Vocabulary\n`
+7. 在文件末尾追加新 section，Avoid/Reference 为空时省略对应行
 
 ### query `<term>`
 
@@ -62,10 +73,9 @@ _Reference_: src/models/order.ts:42, docs/business/order-flow.md
 
 1. 检查词汇表存在且包含该术语；若文件不存在或术语不存在，输出对应错误后退出
 2. 展示当前条目的完整内容
-3. 提示"新定义（留空保持不变）："，等待用户输入
-4. 提示"新 Avoid 列表（留空保持不变）："，等待用户输入
-5. 提示"新 Reference（留空保持不变）："，等待用户输入
-6. 用新值替换该 section 内容，写回文件；留空的字段保持原值不变
+3. **从当前对话上下文推断**需要更新的字段（定义/Avoid/Reference）；若无新信息可推断，各字段显示为原值
+4. 展示推断后的新条目，请用户确认或修改（格式同 add 步骤 4）
+5. 用最终值替换该 section 内容，写回文件；未修改的字段保持原值不变
 
 ### remove `<term>`
 
