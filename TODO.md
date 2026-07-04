@@ -2,6 +2,11 @@
 
 ## 🚧 待开发
 
+### 按 description-trigger-role 研究优化所有 skill 的 description
+**优先级**: P3 | **日期**: 2026-07-04
+
+根据 `knowledge/skill-philosophy/07-description-trigger-role` 的研究结论，审视并优化 `skills/` 下所有 Skill 的 description 字段：移除操作内容与工作流摘要，改写为纯触发条件语言，补充合法额外信息（症状/情境/可达性声明）。
+
 ---
 
 ## ✅ 已完成
