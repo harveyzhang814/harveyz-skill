@@ -19,7 +19,7 @@
   "bundleMeta": {
     "research": "研究工具（extract-url + learn-video + extract-vision + survey-skillrepo + learn-paper + extract-cognition + probe-session）",
     "creative": "创意工具（capture-todo + capture-insight）",
-    "coding": "程序工具（init-workflow + setup-debug + init-goal + question-me + domain-vocab）",
+    "coding": "程序工具（init-workflow + setup-debug + init-goal + question-me + capture-vocab）",
     "writing": "写作工具（forge-doc + draw-diagram + manage-dir + migrate-spec）",
     "design": "设计工具（scout-brand + build-style + sync-design）",
     "mint": "Skill 生命周期工具（init-skill + publish-skill + archive-skill + dedup-skill + contribute-skill + fix-skill + runby-opencode + scout-philosophy + learn-skill）",
@@ -125,9 +125,11 @@
       "contentVersion": "2.0.0"
     },
     {
-      "path": "coding/domain-vocab",
+      "path": "coding/capture-vocab",
       "bundle": "coding",
-      "installScope": "project"
+      "installScope": "project",
+      "contentHash": "21b39abb2cffed8d",
+      "contentVersion": "1.1.0"
     },
     {
       "path": "writing/forge-doc",
@@ -375,6 +377,10 @@
     {
       "from": "research-skill-philosophy",
       "to": "scout-philosophy"
+    },
+    {
+      "from": "domain-vocab",
+      "to": "capture-vocab"
     }
   ]
 }
