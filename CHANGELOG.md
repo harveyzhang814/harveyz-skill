@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.22.0] - 2026-07-06
+
+### Added
+- `capture-vocab`：项目级领域术语字典 skill，支持 add/query/update/remove，上下文自动推断字段
+
+### Changed
+- `sync-design` v5.0.0：模式路由（sync/design），设计阶段流程（新建/修改草稿），三检查点草稿删除，`linkedEntryId` 自动回填
+- `question-me` v3.0.0：重构为 section-structure 标准；v2.0.0 动态树 + 遍历顺序漏洞修复
+- `extract-url` v2.3.0：章节结构重组，新增 `count_article_stats.py` 完成回报卡片
+- `scout-philosophy`：新增阶段八——产出可直接复制的起始模板（`standard.md`）
+- `init-goal`：移至 `coding/` bundle，`installScope` 改为 global
+- `learn-skill`：移至 `mint` bundle
+
+### Removed
+- `dispatch-task`、`close-task`：归档
+
 ## [0.21.0] - 2026-07-01
 
 ### Added
