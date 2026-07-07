@@ -2,7 +2,7 @@
 name: scout-philosophy
 description: Scout a skill design philosophy principle. Use when the user proposes a new principle about how skills should be authored or should behave, and wants to ground it in existing practices from skill ecosystems (G stack, Superpowers, MSkill).
 user_invocable: true
-version: "1.0.0"
+version: "1.0.1"
 ---
 
 将一个抽象的 Skill 设计哲学命题，通过在三个 Skill 生态中寻找同类研究对象、深度解析、提炼多种设计思路，转化为有研究支撑的设计指南。

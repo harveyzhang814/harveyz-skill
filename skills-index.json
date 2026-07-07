@@ -128,8 +128,8 @@
       "path": "coding/capture-vocab",
       "bundle": "coding",
       "installScope": "project",
-      "contentHash": "21b39abb2cffed8d",
-      "contentVersion": "1.1.0"
+      "contentHash": "5d78c9d9a91e7faa",
+      "contentVersion": "1.1.1"
     },
     {
       "path": "writing/forge-doc",
@@ -233,8 +233,8 @@
       "path": "mint/scout-philosophy",
       "bundle": "mint",
       "installScope": "project",
-      "contentHash": "46b5c57f31d514bf",
-      "contentVersion": "1.0.0"
+      "contentHash": "5c3b14c8dfa460b9",
+      "contentVersion": "1.0.1"
     },
     {
       "path": "meta/clean-git",
