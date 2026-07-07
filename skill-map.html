@@ -464,7 +464,7 @@
 
     <div class="header-stats">
       <div class="stat">
-        <span class="stat-num">35</span>
+        <span class="stat-num">34</span>
         <span class="stat-lbl">Active skills</span>
       </div>
       <div class="stat">
@@ -494,7 +494,7 @@
 <nav class="bundle-nav" aria-label="Bundle navigation">
   <div class="bundle-nav-inner">
     <button class="nav-btn b-research" style="--bc:#1D4ED8;--bc-light:#EFF6FF" data-target="research">
-      🔬 research <span class="nav-btn-count">8</span>
+      🔬 research <span class="nav-btn-count">7</span>
     </button>
     <button class="nav-btn b-creative" style="--bc:#6D28D9;--bc-light:#F5F3FF" data-target="creative">
       ✨ creative <span class="nav-btn-count">2</span>
@@ -503,13 +503,13 @@
       ⚙️ coding <span class="nav-btn-count">5</span>
     </button>
     <button class="nav-btn b-writing" style="--bc:#92400E;--bc-light:#FFFBEB" data-target="writing">
-      ✍️ writing <span class="nav-btn-count">5</span>
+      ✍️ writing <span class="nav-btn-count">4</span>
     </button>
     <button class="nav-btn b-design" style="--bc:#9D174D;--bc-light:#FFF1F2" data-target="design">
       🎨 design <span class="nav-btn-count">3</span>
     </button>
     <button class="nav-btn b-mint" style="--bc:#3730A3;--bc-light:#EEF2FF" data-target="mint">
-      🪄 mint <span class="nav-btn-count">8</span>
+      🪄 mint <span class="nav-btn-count">9</span>
     </button>
     <button class="nav-btn b-devops" style="--bc:#9A3412;--bc-light:#FFF7ED" data-target="devops">
       🔧 devops <span class="nav-btn-count">4</span>
@@ -528,7 +528,7 @@
         <div class="bundle-tag">research</div>
         <div class="bundle-name">研究 · 知识提取</div>
       </div>
-      <div class="bundle-count-badge">8 skills</div>
+      <div class="bundle-count-badge">7 skills</div>
     </div>
 
     <div class="skill-grid">
@@ -536,9 +536,9 @@
       <div class="skill-card">
         <div class="skill-top">
           <div class="skill-cmd"><span class="cmd-slash">/</span>extract-url<span class="cmd-cursor"></span></div>
-          <div class="skill-ver">v2.2.0</div>
+          <div class="skill-ver">v2.3.0</div>
         </div>
-        <div class="skill-desc">抓取任意 URL 内容，翻译为中文并归档到 Obsidian Vault；支持 X.com / Twitter、批量列表，自动去重。</div>
+        <div class="skill-desc">抓取任意 URL 内容，翻译为中文并归档到 Obsidian Vault；支持 X.com / Twitter，自动去重。</div>
       </div>
 
       <div class="skill-card">
@@ -555,14 +555,6 @@
           <div class="skill-ver">v1.2.0</div>
         </div>
         <div class="skill-desc">从图片、截图、收据、菜单等含文字的图像中提取结构化信息（价格、日期、总计等）。</div>
-      </div>
-
-      <div class="skill-card">
-        <div class="skill-top">
-          <div class="skill-cmd"><span class="cmd-slash">/</span>learn-skill<span class="cmd-cursor"></span></div>
-          <div class="skill-ver">v2.0.0</div>
-        </div>
-        <div class="skill-desc">深读单个 skill 的 SKILL.md，从四维解析：执行流程、设计标准、边界条件、设计哲学。</div>
       </div>
 
       <div class="skill-card">
@@ -651,7 +643,7 @@
       <div class="skill-card">
         <div class="skill-top">
           <div class="skill-cmd"><span class="cmd-slash">/</span>init-workflow<span class="cmd-cursor"></span></div>
-          <div class="skill-ver">v4.1.1</div>
+          <div class="skill-ver">v4.1.2</div>
         </div>
         <div class="skill-desc">初始化或更新 git 分支管理规范：读取 workflow-config.yml，差量部署 pre-commit / commit-msg / pre-push hooks，生成工作流文档。</div>
       </div>
@@ -666,26 +658,26 @@
 
       <div class="skill-card">
         <div class="skill-top">
-          <div class="skill-cmd"><span class="cmd-slash">/</span>dispatch-task<span class="cmd-cursor"></span></div>
-          <div class="skill-ver">v1.0.0</div>
-        </div>
-        <div class="skill-desc">PM 任务派发：澄清需求 → 分析细化 → 创建任务文档 → 通过 sessions_send 派发给 Agent → 追踪反馈。</div>
-      </div>
-
-      <div class="skill-card">
-        <div class="skill-top">
-          <div class="skill-cmd"><span class="cmd-slash">/</span>close-task<span class="cmd-cursor"></span></div>
-          <div class="skill-ver">v1.0.0</div>
-        </div>
-        <div class="skill-desc">Agent 任务收尾：执行验收、生成总结、归档文档、记录经验教训——Agent 完成任务后自动触发。</div>
-      </div>
-
-      <div class="skill-card">
-        <div class="skill-top">
           <div class="skill-cmd"><span class="cmd-slash">/</span>init-goal<span class="cmd-cursor"></span></div>
           <div class="skill-ver">v1.3.0</div>
         </div>
         <div class="skill-desc">通过引导式对话生成 /loop 循环任务的 Goal Prompt；自动解析已知字段并匹配最佳模板，只追问缺失部分。</div>
+      </div>
+
+      <div class="skill-card">
+        <div class="skill-top">
+          <div class="skill-cmd"><span class="cmd-slash">/</span>question-me<span class="cmd-cursor"></span></div>
+          <div class="skill-ver">v3.0.0</div>
+        </div>
+        <div class="skill-desc">执行前通过结构化问答澄清复杂或模糊任务，按决策依赖顺序逐步提问，每问附至少 3 个选项；检测到多目标冲突或缺少成功标准时自动触发。</div>
+      </div>
+
+      <div class="skill-card">
+        <div class="skill-top">
+          <div class="skill-cmd"><span class="cmd-slash">/</span>capture-vocab<span class="cmd-cursor"></span></div>
+          <div class="skill-ver">v1.1.0</div>
+        </div>
+        <div class="skill-desc">管理项目领域词表，支持增删改查，将专项术语保存到 vocab.md，供 AI 在全会话中保持一致命名。</div>
       </div>
 
     </div>
@@ -699,7 +691,7 @@
         <div class="bundle-tag">writing</div>
         <div class="bundle-name">写作 · 文档输出</div>
       </div>
-      <div class="bundle-count-badge">5 skills</div>
+      <div class="bundle-count-badge">4 skills</div>
     </div>
 
     <div class="skill-grid">
@@ -718,14 +710,6 @@
           <div class="skill-ver">v1.4.0</div>
         </div>
         <div class="skill-desc">专业 Mermaid 制图规范：流程图、序列图、状态机、甘特图、象限图、思维导图，含 12 项渲染前检查。</div>
-      </div>
-
-      <div class="skill-card">
-        <div class="skill-top">
-          <div class="skill-cmd"><span class="cmd-slash">/</span>manage-docs<span class="cmd-cursor"></span></div>
-          <div class="skill-ver">v1.0.0</div>
-        </div>
-        <div class="skill-desc">按 Diátaxis 方法论管理 docs/ 目录：新增或更新文档前先搜索，防止内容重复。</div>
       </div>
 
       <div class="skill-card">
@@ -779,7 +763,7 @@
       <div class="skill-card">
         <div class="skill-top">
           <div class="skill-cmd"><span class="cmd-slash">/</span>sync-design<span class="cmd-cursor"></span></div>
-          <div class="skill-ver">v3.1.0</div>
+          <div class="skill-ver">v5.0.0</div>
         </div>
         <div class="skill-desc">UI 源码变更后，自动检测 git diff 中的视图/组件文件并同步到高保真 HTML 设计备份，维护 manifest 映射表。</div>
       </div>
@@ -795,10 +779,18 @@
         <div class="bundle-tag">mint</div>
         <div class="bundle-name">Skill 生命周期管理</div>
       </div>
-      <div class="bundle-count-badge">8 skills</div>
+      <div class="bundle-count-badge">9 skills</div>
     </div>
 
     <div class="skill-grid">
+
+      <div class="skill-card">
+        <div class="skill-top">
+          <div class="skill-cmd"><span class="cmd-slash">/</span>learn-skill<span class="cmd-cursor"></span></div>
+          <div class="skill-ver">v2.0.0</div>
+        </div>
+        <div class="skill-desc">深读单个 skill 的 SKILL.md，从四维解析：执行流程、设计标准、边界条件、设计哲学。</div>
+      </div>
 
       <div class="skill-card">
         <div class="skill-top">
@@ -811,7 +803,7 @@
       <div class="skill-card">
         <div class="skill-top">
           <div class="skill-cmd"><span class="cmd-slash">/</span>publish-skill<span class="cmd-cursor"></span></div>
-          <div class="skill-ver">v1.3.0</div>
+          <div class="skill-ver">v1.3.1</div>
         </div>
         <div class="skill-desc">校验 SKILL.md 格式合规性（frontmatter 字段、semver、命名约定）并注册到 skills-index.json。</div>
       </div>
@@ -922,7 +914,7 @@
 <footer class="site-footer">
   <hr class="footer-rule">
   <div class="footer-row">
-    <div class="footer-text">harveyz-skill v0.20.0 · 35 active skills · 7 bundles</div>
+    <div class="footer-text">harveyz-skill v0.20.0 · 34 active skills · 7 bundles</div>
     <div class="footer-cmds">
       <span class="cmd-chip">hskill install --bundle &lt;name&gt;</span>
       <span class="cmd-chip">hskill install --skill &lt;name&gt;</span>

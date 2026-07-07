@@ -17,18 +17,18 @@
     }
   ],
   "bundleMeta": {
-    "research": "研究工具（extract-url + learn-video + extract-vision + learn-skill + survey-skillrepo + learn-paper + extract-cognition + probe-session）",
+    "research": "研究工具（extract-url + learn-video + extract-vision + survey-skillrepo + learn-paper + extract-cognition + probe-session）",
     "creative": "创意工具（capture-todo + capture-insight）",
-    "coding": "程序工具（init-workflow + setup-debug + dispatch-task + close-task + init-goal）",
+    "coding": "程序工具（init-workflow + setup-debug + init-goal + question-me + capture-vocab）",
     "writing": "写作工具（forge-doc + draw-diagram + manage-dir + migrate-spec）",
     "design": "设计工具（scout-brand + build-style + sync-design）",
-    "mint": "Skill 生命周期工具（init-skill + publish-skill + archive-skill + dedup-skill + contribute-skill + fix-skill + runby-opencode + scout-philosophy）",
+    "mint": "Skill 生命周期工具（init-skill + publish-skill + archive-skill + dedup-skill + contribute-skill + fix-skill + runby-opencode + scout-philosophy + learn-skill）",
     "devops": "项目运维工具（clean-git + release-project + sync-hotfix + sync-agent）"
   },
   "skills": [
     {
-      "path": "research/learn-skill",
-      "bundle": "research",
+      "path": "mint/learn-skill",
+      "bundle": "mint",
       "installScope": "global",
       "contentHash": "542f333a8a72024c",
       "contentVersion": "2.0.0"
@@ -37,8 +37,8 @@
       "path": "research/extract-url",
       "bundle": "research",
       "installScope": "global",
-      "contentHash": "609f536b940bf5c8",
-      "contentVersion": "2.2.0"
+      "contentHash": "2cfab36bfbe268a3",
+      "contentVersion": "2.3.0"
     },
     {
       "path": "research/extract-vision",
@@ -111,25 +111,25 @@
       "contentVersion": "1.0.0"
     },
     {
-      "path": "coding/dispatch-task",
+      "path": "coding/init-goal",
       "bundle": "coding",
       "installScope": "global",
-      "contentHash": "f504eee3f66d2042",
-      "contentVersion": "1.0.0"
-    },
-    {
-      "path": "coding/close-task",
-      "bundle": "coding",
-      "installScope": "global",
-      "contentHash": "9766f9e6f9f149a3",
-      "contentVersion": "1.0.0"
-    },
-    {
-      "path": "meta/init-goal",
-      "bundle": "coding",
-      "installScope": "essential",
       "contentHash": "8db51b5ca77dc470",
       "contentVersion": "1.3.0"
+    },
+    {
+      "path": "coding/question-me",
+      "bundle": "coding",
+      "installScope": "global",
+      "contentHash": "6d2cd30c1ed4c4eb",
+      "contentVersion": "3.0.0"
+    },
+    {
+      "path": "coding/capture-vocab",
+      "bundle": "coding",
+      "installScope": "project",
+      "contentHash": "5d78c9d9a91e7faa",
+      "contentVersion": "1.1.1"
     },
     {
       "path": "writing/forge-doc",
@@ -177,8 +177,8 @@
       "path": "design/sync-design",
       "bundle": "design",
       "installScope": "project",
-      "contentHash": "c306109c397f0f32",
-      "contentVersion": "3.1.0"
+      "contentHash": "aaf5794eff6cf793",
+      "contentVersion": "5.0.0"
     },
     {
       "path": "mint/init-skill",
@@ -233,8 +233,8 @@
       "path": "mint/scout-philosophy",
       "bundle": "mint",
       "installScope": "project",
-      "contentHash": "46b5c57f31d514bf",
-      "contentVersion": "1.0.0"
+      "contentHash": "5c3b14c8dfa460b9",
+      "contentVersion": "1.0.1"
     },
     {
       "path": "meta/clean-git",
@@ -377,6 +377,10 @@
     {
       "from": "research-skill-philosophy",
       "to": "scout-philosophy"
+    },
+    {
+      "from": "domain-vocab",
+      "to": "capture-vocab"
     }
   ]
 }

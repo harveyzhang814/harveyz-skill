@@ -1,13 +1,15 @@
 ---
 name: extract-url
-version: "2.2.0"
-description: "Fetch an article from a given URL, translate it to Simplified Chinese, save the original to Origin/, the translation to the Vault root, images to Image/, and write a dedup index to SQLite. Supports X.com/Twitter (Playwright + Chrome Profile) and regular sites (headless Playwright). Supports batch URLs (random 60-180s intervals, up to 5 concurrent subagents). Triggers whenever a user provides a URL and wants to save, archive, fetch, or translate content to the local Vault — even with vague phrasing like 'save this article', 'translate and save', 'put this in obsidian', 'archive this'. Skip when user only wants a summary, pastes raw text without a URL, asks about a site's tech stack, or wants to extract/list URLs from a page without saving an article."
+version: "2.3.0"
+description: "Use when a user provides a URL and wants to save, archive, fetch, or translate content to the local Obsidian Vault — even with vague phrasing like 'save this article', 'translate and save', 'put this in obsidian', 'archive this'. Skip when user only wants a summary, pastes raw text without a URL, asks about a site's tech stack, or wants to extract/list URLs from a page without saving an article."
 user_invocable: true
 ---
 
 # url-extract
 
-## 首先：加载平台补丁
+## 初始化（run first）
+
+**① 加载平台补丁**
 
 根据当前执行平台，读取对应的补丁文件，了解**补丁①**（Subagent 派发）、**补丁②**（网页内容获取）、**补丁③**（变量注入）的具体语法：
 
@@ -19,18 +21,13 @@ user_invocable: true
 
 以下流程中凡标注「**补丁①**」「**补丁②**」处，均使用对应平台补丁中定义的工具调用替换。代码示例中的 `SKILL_DIR` 为抽象占位符，由**补丁③**注入；`VAULT_PATH` 和 `CHROME_PROFILE` 由 Python 脚本在运行时从 `~/.hskill/url-extract/config.json` 读取，无需注入。
 
----
+**② 检查配置文件**
 
-## 初始化流程（每次执行前检查）
-
-读取平台补丁后，开始抓取前执行以下检查：
-
-**① 检查配置文件是否存在：**
 ```bash
 ls ~/.hskill/url-extract/config.json 2>/dev/null && echo "EXISTS" || echo "NOT_FOUND"
 ```
 
-**② 若输出 `NOT_FOUND`，进行初始化：**
+**若输出 `NOT_FOUND`，进行初始化：**
 
 1. 展示可用 Chrome Profile（仅供参考，不自动选择）：
    ```bash
@@ -69,18 +66,7 @@ ls ~/.hskill/url-extract/config.json 2>/dev/null && echo "EXISTS" || echo "NOT_F
        print("请用文本编辑器填入初始词条，# 开头为注释行。")
    ```
 
-**③ 若输出 `EXISTS`，直接继续执行。**
-
----
-
-## 核心设计：两步分离
-
-**第一步（Subagent 1）**：抓取文章 + 下载图片 → 保存原文到 Origin/
-**第二步（Subagent 2）**：读取 Origin → 翻译 → 保存译文到 Vault 根目录
-
-两步由主 session 串联：Subagent 1 完成后，再派发 Subagent 2。
-
-> 分离原因：翻译是 LLM 密集型任务，容易超时；抓取是 I/O 密集型任务，速度稳定。分开后各自超时独立，互不影响。
+**若输出 `EXISTS`，直接继续执行。**
 
 ---
 
@@ -173,21 +159,7 @@ ORIGIN_PATH: {origin_path}
 抓取完成：{标题} ({block数} blocks, {图片数} images)
 ```
 
-### 步骤 1.5：Subagent 1 错误恢复（自动）
-
-若 Subagent 1 返回非零 returncode 或 RuntimeError，在报告用户前先调用 fix-skill：
-
-提供以下上下文给 fix-skill：
-- skill: extract-url
-- skill_dir: SKILL_DIR
-- file: 失败脚本的绝对路径（playwright_xcom.py 或 playwright_web.py）
-- error: result.stderr + returncode
-- call_args: [url]
-
-解析 fix-skill 输出的 `FIX_RESULT:` 行（同时记录 `SESSION_PATH:` 和 `ATTEMPTS:` 供报告使用）：
-- `AUTO_RETRY` → 重新执行步骤 1（仅重试一次）；通知用户「已自动修复，共 N 轮，记录见 SESSION_PATH」；再次失败则向用户报告原始错误
-- `FAILURE` → 向用户报告原始错误 + 「已尝试 3 轮均失败，已回滚，诊断记录见 SESSION_PATH」
-- `FAILURE+RESTORE_FAILED` → 立即告警用户：「修复失败且还原异常，脚本状态不可知，backup 已保留，请手动处理，记录见 SESSION_PATH」
+→ 若 Subagent 1 返回非零 returncode 或 RuntimeError，见「错误恢复」章节。
 
 ### 步骤 2：等待 Subagent 1 完成
 
@@ -274,40 +246,78 @@ candidate_tags:
 
 ### 步骤 4：向用户报告最终结果
 
+> 回报格式遵循 `knowledge/skill-philosophy/04-completion-report/standard.md`，以下为 extract-url 的字段定义。
+
+收到 Subagent 2 完成通知后，从报告中提取 `article_path`。
+
+**成功时**（article_path 存在）执行步骤 1–2，然后输出完成卡片；失败/跳过时直接输出对应状态卡片，跳过步骤 1–2。
+
+1. 运行统计脚本：
+   ```python
+   import subprocess, os
+   result = subprocess.run(
+       ['python3', 'SKILL_DIR/scripts/count_article_stats.py', article_path],
+       capture_output=True, text=True
+   )
+   # 解析输出中的 CHARS: / CODE_BLOCKS: / IMAGES: 行
+   ```
+
+2. 从译文 frontmatter 读取 `description` 字段作为摘要。
+
+3. 向用户输出卡片：
+
+**成功：**
+```
+── 完成 ──────────────────────────────
+标题  《文章标题》
+路径  /Vault/Reading/article.md
+字符  12,345
+代码  3 段
+图片  8 张
+摘要  一句话描述文章核心内容
+──────────────────────────────────────
+```
+
+**失败（Subagent 1 或 2 均未成功）：**
+```
+── 失败 ──────────────────────────────
+标题  《文章标题》（未知则填原始 URL）
+原因  抓取超时（Playwright timeout 300s）
+──────────────────────────────────────
+```
+
+**部分完成（抓取成功，翻译失败）：**
+```
+── 部分完成 ───────────────────────────
+标题  《文章标题》
+路径  /Vault/Origin/article.md（仅原文）
+原因  翻译超时，原文已保存
+──────────────────────────────────────
+```
+
+**已跳过（dedup 命中）：**
+```
+── 已跳过 ────────────────────────────
+标题  《文章标题》（或原始 URL）
+原因  已抓取（dedup）
+──────────────────────────────────────
+```
+
 ---
 
-## 批量抓取流程（2 篇或以上）
+## 错误恢复（Subagent 1 失败时）
 
-### 核心原则
+若 Subagent 1 返回非零 returncode 或 RuntimeError，在报告用户前先调用 fix-skill：
 
-1. **随机间隔**：每次只启动 1 个 Subagent 1，等待完成后随机等 60~180 秒再派发下一个
-2. **同时活跃不超过 5 个**（抓取 + 翻译各算一个）
-3. **任务清单先确认**
+提供以下上下文给 fix-skill：
+- skill: extract-url
+- skill_dir: SKILL_DIR
+- file: 失败脚本的绝对路径（playwright_xcom.py 或 playwright_web.py）
+- error: result.stderr + returncode
+- call_args: [url]
 
-### 执行流程
+解析 fix-skill 输出的 `FIX_RESULT:` 行（同时记录 `SESSION_PATH:` 和 `ATTEMPTS:` 供报告使用）：
+- `AUTO_RETRY` → 重新执行步骤 1（仅重试一次）；通知用户「已自动修复，共 N 轮，记录见 SESSION_PATH」；再次失败则向用户报告原始错误
+- `FAILURE` → 向用户报告原始错误 + 「已尝试 3 轮均失败，已回滚，诊断记录见 SESSION_PATH」
+- `FAILURE+RESTORE_FAILED` → 立即告警用户：「修复失败且还原异常，脚本状态不可知，backup 已保留，请手动处理，记录见 SESSION_PATH」
 
-**步骤 1**：批量查 SQLite，整理任务清单（已抓取的标记跳过）
-
-**步骤 2**：逐一【补丁①】派发 Subagent 1（抓取），每完成一个立即派发对应的 Subagent 2（翻译）
-
-```
-Subagent 1 (抓取) → Subagent 2 (翻译) → [等待] → Subagent 1 (抓取) → ...
-```
-
-每篇 Subagent 2 完成后，**在主 session 中随机等待**再发下一篇：
-
-```python
-import time, random
-wait = random.randint(60, 180)
-print(f"等待 {wait} 秒后继续下一篇...")
-time.sleep(wait)
-```
-
----
-
-## 附录
-
-- 抓取脚本：[scripts/playwright_xcom.py](scripts/playwright_xcom.py)（X.com）、[scripts/playwright_web.py](scripts/playwright_web.py)（普通网站）
-- 校验脚本：[scripts/validate_article.py](scripts/validate_article.py)
-- 工具函数：[references/article_utils.py](references/article_utils.py)
-- 文件格式：[references/file-format.md](references/file-format.md)

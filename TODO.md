@@ -2,54 +2,58 @@
 
 ## 🚧 待开发
 
-### 重构 extract-url tag 为固定集与候选集分离
-**优先级**: P2 | **日期**: 2026-06-14
+### 修复 capture-vocab 写入路径点号缺失
+**优先级**: P2 | **日期**: 2026-07-05
 
-extract-url skill 抓取文章时生成的 tags 目前全由 LLM 从内容推断，无固定词表，导致：① 每次抓取标签不稳定（同一主题表述不一致）；② 无法保证核心关键词（如 loop engineering）必现；③ 候选标签与确定标签混在一起，难以管理。
-
-**目标**：将 tag 拆分为两类：
-- **固定 Tag**（`fixed_tags`）：维护在 skill 目录词表中，每次抓取必定注入，与文章内容无关（如来源站点分类、技术栈、语言等跨文章共性标签）
-- **候选 Tag**（`candidate_tags`）：从文章内容提取，模糊/候选性质，定期 review 决定是否升入固定集
-
-**需修改的文件**：
-1. `skills/extract-url/` 下新建 `fixed_tags.txt`（初始词表）
-2. 修改 `validate_article.py` / `article_utils.py` 的 frontmatter 构建逻辑，将 tag 拆为 `fixed_tags` 和 `candidate_tags` 两个 YAML 列表字段
-3. 更新 `references/file-format.md` 文档说明新字段
+`capture-vocab` skill 将词汇表写入 `hskill/capture-vocab/vocab.md`，但约定路径为 `.hskill/capture-vocab/vocab.md`（前缀带点号的隐藏目录）。在 agent-canvas 项目实测时已发现该问题并手动修复，需回源修正 SKILL.md 中的路径声明和写入逻辑。
 
 ---
 
-### 开发参考 grill-me 风格的 question-me skill
-**优先级**: P2 | **日期**: 2026-06-30
+### 同步 question-me SKILL.md label 字段文档修复至源码
+**优先级**: P2 | **日期**: 2026-07-05
 
-参考 grill-me/grilling 的「一次一问 + 给推荐答案 + 决策树依赖顺序」风格，创建一个 skill，在执行任务前帮用户明确更好的指令、查明隐含假设、理清决策因素。核心约束：一次只问一个问题，每问必附推荐答案，能自查的问题先自查再问用户，按决策依赖顺序逐一推进，直到达成 shared understanding 再开始实现。
+`question-me` 决策树格式示例为 `[label:status]`，但「字段规则」章节从未说明 `label` 是什么，导致 Claude 实际写成 `[done]`（省略 label），render_tree.py 正则匹配失败，树渲染为空。已在本地 `~/.claude/skills/question-me/SKILL.md` 修复：补充 `label` 字段说明（与 id 保持一致，不可省略）+ 具体格式例子。需将相同改动同步到 `skills/coding/question-me/SKILL.md` 源码。
 
----
-
-### 设计多平台 Skill 补丁的同步与生命周期管理机制
-**优先级**: P2 | **日期**: 2026-06-30
-
-harveyz-skill 项目维护多个跨平台 Skill（如 extract-url），每个平台（Claude Code / Codex / Hermes）有独立的补丁文件（`SKILL.<platform>.md`），采用「主流程 + 各平台差异覆盖」模式。
-
-**问题**：
-- 主流程变更时，无法自动知道哪些平台补丁需要同步更新
-- 各平台补丁边界不清晰，生命周期状态（active / deprecated / pending-update）无追踪
-- 缺乏版本绑定机制
-
-**目标**：设计并实现一套机制，包括：
-1. **补丁声明式元数据**：每个补丁文件头部声明覆盖的主流程章节、依赖主流程版本、平台、状态
-2. **变更检测脚本**：主流程发布时，自动比对输出哪些补丁需要检查/更新
-3. **生命周期状态管理**：active / deprecated / pending-update 三态及其转换规则
+修复记录：`~/.hskill/fix-skill/question-me/20260705T041232--SKILL.md.md`
 
 ---
 
-### 约定 skill 任务在 session 中的回报信息格式
-**优先级**: P2 | **日期**: 2026-07-01
+### 按 description-trigger-role 研究优化所有 skill 的 description
+**优先级**: P3 | **日期**: 2026-07-04
 
-skill 执行任务（如 extract-url 的抓取/翻译 subagent）完成后，主 session 收到的通知格式尚未统一约定。需明确：任务完成时应在 session 中回报哪些字段（如标题、路径、状态、耗时）、以何种格式呈现，以便用户一眼读懂结果，也便于后续 skill 串联时解析。
+根据 `knowledge/skill-philosophy/07-description-trigger-role` 的研究结论，审视并优化 `skills/` 下所有 Skill 的 description 字段：移除操作内容与工作流摘要，改写为纯触发条件语言，补充合法额外信息（症状/情境/可达性声明）。
 
 ---
 
 ## ✅ 已完成
+
+### 约定 skill 任务在 session 中的回报信息格式
+**完成日期**: 2026-07-02
+
+以 extract-url 为例落地：新增 `count_article_stats.py` 统计字符/代码块/图片；SKILL.md 步骤 4 定义四种状态卡片（完成/失败/部分完成/已跳过）；批量流程每篇即时输出 + 汇总行；通用卡片壳规范写入 `knowledge/skill-philosophy/04-completion-report/standard.md`。
+
+---
+
+### 重构 extract-url tag 为固定集与候选集分离
+**完成日期**: 2026-07-02
+
+`article_utils.py` 实现 `load_fixed_tags` / `move_fixed_from_candidate` / `enforce_tag_separation`；`validate_article.py` 调用兜底移位；`file-format.md` 更新 `tags` / `candidate_tags` 字段说明及 `fixed_tags.txt` 格式规范。词表路径：`~/.hskill/url-extract/fixed_tags.txt`（需手动填入初始词条）。
+
+---
+
+### 开发参考 grill-me 风格的 question-me skill
+**完成日期**: 2026-07-01
+
+实现了 question-me skill（`skills/coding/question-me/`）：Phase 0-4 流程（自查 → 意图校准 3 问 → 动态深挖 → 摘要确认），内部决策树格式（`[status] id=XX [dep=YY] 文本`），render_tree.py 生成可视化 HTML（card 树 + 自动刷新），9 项单元测试覆盖解析/树构建/环检测。
+
+---
+
+### 设计多平台 Skill 补丁的同步与生命周期管理机制
+**完成日期**: 2026-07-01
+
+实现了完整的热修生命周期管理方案：fix-skill v2.1.0 自动写入 HOTFIXES.md，新增 sync-hotfix v1.1.1 处理合并回源（HOTFIXES.md 扫描 + Step 5 全文件 diff 安全网）。方法论文档见 `docs/explanation/skill-hotfix-lifecycle.md`，格式规范见 `docs/reference/hotfix-lifecycle.md`。
+
+---
 
 ## mermaid-diagram — 渲染样式增强
 

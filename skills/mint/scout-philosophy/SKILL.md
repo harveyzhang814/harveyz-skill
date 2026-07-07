@@ -2,15 +2,16 @@
 name: scout-philosophy
 description: Scout a skill design philosophy principle. Use when the user proposes a new principle about how skills should be authored or should behave, and wants to ground it in existing practices from skill ecosystems (G stack, Superpowers, MSkill).
 user_invocable: true
-version: "1.0.0"
+version: "1.0.1"
 ---
 
 将一个抽象的 Skill 设计哲学命题，通过在三个 Skill 生态中寻找同类研究对象、深度解析、提炼多种设计思路，转化为有研究支撑的设计指南。
 
-产出物：`knowledge/skill-philosophy/NN-{name}/` 目录，包含三个文件：
+产出物：`knowledge/skill-philosophy/NN-{name}/` 目录，包含四个文件：
 - `direction.md`：研究方向定稿，澄清结束后立刻写入，是一切的起点
 - `principle.md`：命题归档（核心命题 + 悬而未决的设计问题）
 - `research.md`：研究报告（解析 + 思路提炼 + 对比 + 回答）
+- `standard.md`：可直接引用的操作规范（从研究结论提炼，独立于推导过程）
 
 ---
 
@@ -114,8 +115,25 @@ version: "1.0.0"
 
 ---
 
+## 阶段八：提炼操作规范 standard.md
+
+从 `research.md` 的结论中提炼出独立可引用的操作规范，写入 `standard.md`。
+
+`standard.md` 的定位：**直接用，不需要读推导过程**。适合在创建新 Skill 或 Review 现有 Skill 时作为 checklist 引用。
+
+`standard.md` 必须包含：
+- **核心原则**：一句话说清楚这个规范的底层逻辑
+- **正向规范**：创建时应该怎么做（可以是模板、决策树、或检查问题）
+- **反向规范**：Review 时识别问题的信号列表
+- **可直接复制的起始模板**：针对研究命题所覆盖的 Skill 类型，提供带占位符的 markdown 模板。其他 Skill 可以直接复制并微调（替换占位符、删除不适用的区块）后使用
+- frontmatter 注明 `source` 指向 `research.md`
+
+`standard.md` 不应包含：研究推导过程、对比分析、原文引用——这些留在 `research.md`。
+
+---
+
 ## 输出说明
 
-全程使用中文。文件顺序：先写 `direction.md`，再写 `principle.md`，最后写 `research.md`。
+全程使用中文。文件顺序：先写 `direction.md`，再写 `principle.md`，再写 `research.md`，最后写 `standard.md`。
 
 `research.md` 开头用 `> 关联文档：[[principle]]` 标注关联，并注明示例场景。示例写法统一用同一个场景，方便对比。
