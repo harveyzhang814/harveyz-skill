@@ -148,10 +148,10 @@ if (args[0] === '--version' || args[0] === '-v' || subcommand === 'version') {
 if (subcommand === 'update') {
   console.log(chalk.dim('  · Updating hskill…'))
   try {
-    execSync('npm update -g harveyz-skill', { stdio: 'inherit' })
+    execSync('npm install -g harveyz-skill@latest', { stdio: 'inherit' })
     console.log(chalk.green('  ✔ hskill updated'))
   } catch {
-    console.error(chalk.red('  ✗ Update failed. Try: npm update -g harveyz-skill'))
+    console.error(chalk.red('  ✗ Update failed. Try: npm install -g harveyz-skill@latest'))
     process.exit(1)
   }
   // Run skill rename migrations

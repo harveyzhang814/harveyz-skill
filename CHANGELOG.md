@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.22.1] - 2026-07-06
+
+### Fixed
+- `hskill update`：更新命令从 `npm update` 改为 `npm install -g harveyz-skill@latest`，修复 0.x.y semver 约束导致跨 minor 版本无法更新的问题
+
 ## [0.22.0] - 2026-07-06
 
 ### Added
