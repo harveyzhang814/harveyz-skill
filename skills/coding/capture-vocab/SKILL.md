@@ -1,6 +1,6 @@
 ---
 name: capture-vocab
-version: "1.1.0"
+version: "1.1.1"
 description: Use when you need to add, query, update, or remove project-specific domain terms — invoke with /capture-vocab add|query|update|remove <term> to manage a shared vocabulary file at hskill/capture-vocab/vocab.md
 user_invocable: true
 ---
