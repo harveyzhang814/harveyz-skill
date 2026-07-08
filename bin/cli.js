@@ -216,6 +216,27 @@ function resolveHookDisplayVersion(inst, sourceVersion) {
   return sourceVersion ?? '—'
 }
 
+// ── Shared skill scan ─────────────────────────────────────────────────────────
+function buildSkillRows(nameFilter = null) {
+  const items = nameFilter
+    ? getAllSkillItems().filter(s => s.skillName === nameFilter)
+    : getAllSkillItems()
+  return items.map(s => {
+    const inst = checkInstalled(s.skillName, s.version ?? '—')
+    return {
+      name:         s.skillName,
+      bundle:       s.bundle        ?? '—',
+      version:      s.version       ?? '—',
+      installScope: s.installScope  ?? null,
+      srcPath:      s.srcPath,
+      userStatus:   scopeSummary(inst.user),
+      projectStatus: scopeSummary(inst.project),
+      userDetail:   inst.user,
+      projectDetail: inst.project,
+    }
+  })
+}
+
 // ── Status / Outdated ─────────────────────────────────────────────────────────
 if (subcommand === 'status' || subcommand === 'outdated') {
   const outdatedOnly = subcommand === 'outdated'
@@ -244,15 +265,9 @@ if (subcommand === 'status' || subcommand === 'outdated') {
     return chalk.dim('—')
   }
 
-  const skillRows = skillItems.map(s => {
-    const inst = checkInstalled(s.skillName, s.version ?? '—')
-    return {
-      name: s.skillName, bundle: s.bundle ?? '—', version: s.version ?? '—',
-      installScope: s.installScope ?? null,
-      userStatus: scopeSummary(inst.user), projectStatus: scopeSummary(inst.project),
-      userDetail: inst.user, projectDetail: inst.project,
-    }
-  }).sort((a, b) => a.bundle.localeCompare(b.bundle) || a.name.localeCompare(b.name))
+  const skillRows = buildSkillRows().sort((a, b) =>
+    a.bundle.localeCompare(b.bundle) || a.name.localeCompare(b.name)
+  )
   const toolRows = toolItems.map(t => {
     const inst = checkToolInstalled(t.toolName, t.srcPath)
     return { name: t.toolName, version: t.version ?? '—', installScope: t.installScope ?? null, ...inst }
