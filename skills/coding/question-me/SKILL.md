@@ -162,7 +162,16 @@ echo '<当前树文本>' | python3 SKILL_DIR/scripts/render_tree.py /tmp/questio
 [label:status]  id=XX  [dep=YY]  节点文本
 ```
 
+具体例子：
+
+```
+[Q1:done]  id=Q1  目标：把 insight 写成一篇文章
+[Q1a:open]  id=Q1a dep=Q1  文章完成到哪个阶段？
+[Q2:open]  id=Q2  成功标准：怎么判断做对了？
+```
+
 字段规则：
+- `label`: 节点短标识，**与 `id` 保持一致**（如 `Q1`、`Q2a`）；`[label:status]` 两者之间用冒号分隔，不可省略 label
 - `status`: `done` / `open` / `infer` / `skip`
 - `id`: 全树唯一短 ID（2–3 字母），更新时引用稳定
 - `dep=YY`: 可选，指向另一节点 id，表示"YY 答完后此节点才可问"；渲染器用它重建树结构
