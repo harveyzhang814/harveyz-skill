@@ -2,22 +2,6 @@
 
 ## 🚧 待开发
 
-### 修复 capture-vocab 写入路径点号缺失
-**优先级**: P2 | **日期**: 2026-07-05
-
-`capture-vocab` skill 将词汇表写入 `hskill/capture-vocab/vocab.md`，但约定路径为 `.hskill/capture-vocab/vocab.md`（前缀带点号的隐藏目录）。在 agent-canvas 项目实测时已发现该问题并手动修复，需回源修正 SKILL.md 中的路径声明和写入逻辑。
-
----
-
-### 同步 question-me SKILL.md label 字段文档修复至源码
-**优先级**: P2 | **日期**: 2026-07-05
-
-`question-me` 决策树格式示例为 `[label:status]`，但「字段规则」章节从未说明 `label` 是什么，导致 Claude 实际写成 `[done]`（省略 label），render_tree.py 正则匹配失败，树渲染为空。已在本地 `~/.claude/skills/question-me/SKILL.md` 修复：补充 `label` 字段说明（与 id 保持一致，不可省略）+ 具体格式例子。需将相同改动同步到 `skills/coding/question-me/SKILL.md` 源码。
-
-修复记录：`~/.hskill/fix-skill/question-me/20260705T041232--SKILL.md.md`
-
----
-
 ### 按 description-trigger-role 研究优化所有 skill 的 description
 **优先级**: P3 | **日期**: 2026-07-04
 
@@ -26,6 +10,22 @@
 ---
 
 ## ✅ 已完成
+
+### 修复 capture-vocab 写入路径点号缺失
+**完成日期**: 2026-07-08
+
+SKILL.md 中 7 处路径引用均从 `hskill/capture-vocab/vocab.md` 改为 `.hskill/capture-vocab/vocab.md`（前缀点号，隐藏目录），版本升至 v1.1.2。
+
+---
+
+### 同步 question-me SKILL.md label 字段文档修复至源码
+**完成日期**: 2026-07-08
+
+`question-me` 决策树格式示例为 `[label:status]`，但「字段规则」章节从未说明 `label` 是什么，导致 Claude 实际写成 `[done]`（省略 label），render_tree.py 正则匹配失败，树渲染为空。已将本地 `~/.claude/skills/question-me/SKILL.md` 的修复（补充 `label` 字段说明 + 具体格式例子）同步至 `skills/coding/question-me/SKILL.md` 源码，两者内容已一致。
+
+修复记录：`~/.hskill/fix-skill/question-me/20260705T041232--SKILL.md.md`
+
+---
 
 ### 约定 skill 任务在 session 中的回报信息格式
 **完成日期**: 2026-07-02

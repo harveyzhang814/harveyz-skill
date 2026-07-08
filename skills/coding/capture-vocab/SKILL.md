@@ -1,7 +1,7 @@
 ---
 name: capture-vocab
-version: "1.1.1"
-description: Use when you need to add, query, update, or remove project-specific domain terms — invoke with /capture-vocab add|query|update|remove <term> to manage a shared vocabulary file at hskill/capture-vocab/vocab.md
+version: "1.1.2"
+description: Use when you need to add, query, update, or remove project-specific domain terms — invoke with /capture-vocab add|query|update|remove <term> to manage a shared vocabulary file at .hskill/capture-vocab/vocab.md
 user_invocable: true
 ---
 
@@ -9,7 +9,7 @@ user_invocable: true
 
 ## 概述
 
-管理项目级领域术语字典。词汇表存于 `hskill/capture-vocab/vocab.md`，供用户和 agent 定义、查询业务专有名词。每个术语包含：规范名称、定义、Avoid 列表、Reference（可选）。
+管理项目级领域术语字典。词汇表存于 `.hskill/capture-vocab/vocab.md`，供用户和 agent 定义、查询业务专有名词。每个术语包含：规范名称、定义、Avoid 列表、Reference（可选）。
 
 词汇表只存业务领域概念（跨前后端、跨 AI/人类对话都会出现的词）。函数名、变量名等技术命名不进词汇表。
 
@@ -24,7 +24,7 @@ user_invocable: true
 
 ## 词汇文件
 
-`<project-root>/hskill/capture-vocab/vocab.md`
+`<project-root>/.hskill/capture-vocab/vocab.md`
 
 ```markdown
 # Domain Vocabulary
@@ -41,7 +41,7 @@ _Reference_: src/models/order.ts:42, docs/business/order-flow.md
 
 ### add `<term>`
 
-1. 检查 `hskill/capture-vocab/vocab.md` 是否存在 `## <term>` section（大小写不敏感匹配）
+1. 检查 `.hskill/capture-vocab/vocab.md` 是否存在 `## <term>` section（大小写不敏感匹配）
 2. 若已存在：输出"术语 '<term>' 已存在，请用 `update` 修改"并退出
 3. 若不存在，**先从当前对话上下文推断**各字段：
    - **定义**：从对话中该词的使用方式推断一到两句话的定义；无法推断则留空
@@ -59,12 +59,12 @@ _Reference_: src/models/order.ts:42, docs/business/order-flow.md
    确认添加？(y / 直接输入修改内容)
    ```
 5. 用户确认后（输入 `y` 或不输入内容直接回车）写入；若用户输入了修改内容，用修改后的值写入
-6. 若目录 `hskill/capture-vocab/` 不存在，创建它；若 `vocab.md` 不存在，创建并写入 `# Domain Vocabulary\n`
+6. 若目录 `.hskill/capture-vocab/` 不存在，创建它；若 `vocab.md` 不存在，创建并写入 `# Domain Vocabulary\n`
 7. 在文件末尾追加新 section，Avoid/Reference 为空时省略对应行
 
 ### query `<term>`
 
-1. 检查 `hskill/capture-vocab/vocab.md` 是否存在；若不存在，输出"词汇表尚未初始化，请先用 `add` 添加术语"并退出
+1. 检查 `.hskill/capture-vocab/vocab.md` 是否存在；若不存在，输出"词汇表尚未初始化，请先用 `add` 添加术语"并退出
 2. 按 `## <term>` 标题匹配（大小写不敏感），读取该 section 直到下一个 `##` 或文件末尾
 3. 返回该 section 的完整内容（定义 + Avoid + Reference）
 4. 若未找到，输出"未找到术语 '<term>'"，然后列出 vocab.md 中所有 `##` 标题作为已有术语名
@@ -90,5 +90,5 @@ _Reference_: src/models/order.ts:42, docs/business/order-flow.md
 本 Skill 不自动注入词汇表到 session 上下文。如需在每次 session 开始时加载术语，在项目 `CLAUDE.md` 中加入：
 
 ```markdown
-每次 session 开始，读取 `hskill/capture-vocab/vocab.md`（如存在）。
+每次 session 开始，读取 `.hskill/capture-vocab/vocab.md`（如存在）。
 ```
