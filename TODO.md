@@ -2,13 +2,6 @@
 
 ## 🚧 待开发
 
-### 修复 capture-vocab 写入路径点号缺失
-**优先级**: P2 | **日期**: 2026-07-05
-
-`capture-vocab` skill 将词汇表写入 `hskill/capture-vocab/vocab.md`，但约定路径为 `.hskill/capture-vocab/vocab.md`（前缀带点号的隐藏目录）。在 agent-canvas 项目实测时已发现该问题并手动修复，需回源修正 SKILL.md 中的路径声明和写入逻辑。
-
----
-
 ### 按 description-trigger-role 研究优化所有 skill 的 description
 **优先级**: P3 | **日期**: 2026-07-04
 
@@ -17,6 +10,13 @@
 ---
 
 ## ✅ 已完成
+
+### 修复 capture-vocab 写入路径点号缺失
+**完成日期**: 2026-07-08
+
+SKILL.md 中 7 处路径引用均从 `hskill/capture-vocab/vocab.md` 改为 `.hskill/capture-vocab/vocab.md`（前缀点号，隐藏目录），版本升至 v1.1.2。
+
+---
 
 ### 同步 question-me SKILL.md label 字段文档修复至源码
 **完成日期**: 2026-07-08
