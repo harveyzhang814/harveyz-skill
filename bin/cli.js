@@ -124,6 +124,17 @@ if (args[0] === '--help' || args[0] === '-h') {
           ],
         },
         {
+          name: 'upgrade',
+          description: 'Upgrade already-installed skills to their latest version',
+          note: 'Only upgrades skills already installed on the given target. Never installs new ones.',
+          flags: [
+            { name: '--skill',  arg: '<name>',   description: 'Upgrade a specific skill (default: all installed)' },
+            { name: '--target', arg: '<target>', description: 'Limit to one target', enum: ['claude','cursor','codex','openclaw','hermes','opencode'] },
+            { name: '--scope',  arg: '<scope>',  description: 'Install scope', enum: ['user','project'], default: 'user' },
+            { name: '--json',   description: 'Machine-readable output' },
+          ],
+        },
+        {
           name: 'update',
           description: 'Update hskill to the latest version via npm',
         },
@@ -216,6 +227,27 @@ function resolveHookDisplayVersion(inst, sourceVersion) {
   return sourceVersion ?? '—'
 }
 
+// ── Shared skill scan ─────────────────────────────────────────────────────────
+function buildSkillRows(nameFilter = null) {
+  const items = nameFilter
+    ? getAllSkillItems().filter(s => s.skillName === nameFilter)
+    : getAllSkillItems()
+  return items.map(s => {
+    const inst = checkInstalled(s.skillName, s.version ?? '—')
+    return {
+      name:         s.skillName,
+      bundle:       s.bundle        ?? '—',
+      version:      s.version       ?? '—',
+      installScope: s.installScope  ?? null,
+      srcPath:      s.srcPath,
+      userStatus:   scopeSummary(inst.user),
+      projectStatus: scopeSummary(inst.project),
+      userDetail:   inst.user,
+      projectDetail: inst.project,
+    }
+  })
+}
+
 // ── Status / Outdated ─────────────────────────────────────────────────────────
 if (subcommand === 'status' || subcommand === 'outdated') {
   const outdatedOnly = subcommand === 'outdated'
@@ -244,15 +276,9 @@ if (subcommand === 'status' || subcommand === 'outdated') {
     return chalk.dim('—')
   }
 
-  const skillRows = skillItems.map(s => {
-    const inst = checkInstalled(s.skillName, s.version ?? '—')
-    return {
-      name: s.skillName, bundle: s.bundle ?? '—', version: s.version ?? '—',
-      installScope: s.installScope ?? null,
-      userStatus: scopeSummary(inst.user), projectStatus: scopeSummary(inst.project),
-      userDetail: inst.user, projectDetail: inst.project,
-    }
-  }).sort((a, b) => a.bundle.localeCompare(b.bundle) || a.name.localeCompare(b.name))
+  const skillRows = buildSkillRows().sort((a, b) =>
+    a.bundle.localeCompare(b.bundle) || a.name.localeCompare(b.name)
+  )
   const toolRows = toolItems.map(t => {
     const inst = checkToolInstalled(t.toolName, t.srcPath)
     return { name: t.toolName, version: t.version ?? '—', installScope: t.installScope ?? null, ...inst }
@@ -619,6 +645,61 @@ if (subcommand === 'hooks') {
 
   console.error(chalk.red(`  ✗ Unknown hooks subcommand: "${hooksSubcmd}". Use list, install, or uninstall.`))
   process.exit(1)
+}
+
+// ── Upgrade ───────────────────────────────────────────────────────────────────
+if (subcommand === 'upgrade') {
+  const upgradeSkillIdx  = args.indexOf('--skill')
+  const upgradeTargetIdx = args.indexOf('--target')
+  const upgradeScopeIdx  = args.indexOf('--scope')
+  const upgradeSkillArg  = upgradeSkillIdx  !== -1 ? args[upgradeSkillIdx  + 1] : null
+  const upgradeTargetArg = upgradeTargetIdx !== -1 ? args[upgradeTargetIdx + 1] : null
+  const upgradeScopeArg  = upgradeScopeIdx  !== -1 ? args[upgradeScopeIdx  + 1] : 'user'
+
+  // Validate --skill name early for clear error feedback
+  if (upgradeSkillArg) {
+    const known = getAllSkillItems().some(s => s.skillName === upgradeSkillArg)
+    if (!known) {
+      const msg = `Unknown skill: "${upgradeSkillArg}"`
+      if (jsonFlag) process.stderr.write(JSON.stringify({ error: true, message: msg }) + '\n')
+      else console.error(chalk.red('  ✗ ' + msg))
+      process.exit(1)
+    }
+  }
+
+  const rows        = buildSkillRows(upgradeSkillArg)
+  const targetList  = resolveTargets(upgradeTargetArg ? [upgradeTargetArg] : ['all'], upgradeScopeArg)
+  const scopeKey    = upgradeScopeArg + 'Detail'   // 'userDetail' or 'projectDetail'
+
+  const summary = {}
+  for (const { name: targetName, dir } of targetList) {
+    const upgradeList = rows
+      .filter(r => r[scopeKey]?.[targetName]?.status === 'update')
+      .map(r => ({ skillName: r.name, srcPath: r.srcPath, version: r.version }))
+
+    if (!upgradeList.length) continue
+
+    console.log('')
+    const result = await installSkills(upgradeList, [{ name: targetName, dir }], true)
+    Object.assign(summary, result)
+    console.log('')
+  }
+
+  const nothingUpgraded = Object.keys(summary).length === 0
+  if (jsonFlag) {
+    if (nothingUpgraded) {
+      console.log(JSON.stringify({ skills: {}, upToDate: true }, null, 2))
+    } else {
+      console.log(JSON.stringify({ skills: summary }, null, 2))
+    }
+  } else {
+    if (nothingUpgraded) {
+      console.log(chalk.green('  ✓ All installed skills are up to date'))
+    } else {
+      printSummary(summary, null)
+    }
+  }
+  process.exit(0)
 }
 
 // ── Install ───────────────────────────────────────────────────────────────────
