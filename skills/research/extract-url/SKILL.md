@@ -1,6 +1,6 @@
 ---
 name: extract-url
-version: "2.3.1"
+version: "2.3.2"
 description: "Use when a user provides a URL and wants to save, archive, fetch, or translate content to the local Obsidian Vault — even with vague phrasing like 'save this article', 'translate and save', 'put this in obsidian', 'archive this'. Skip when user only wants a summary, pastes raw text without a URL, asks about a site's tech stack, or wants to extract/list URLs from a page without saving an article."
 user_invocable: true
 ---
@@ -188,40 +188,50 @@ fetch_type: <fetch_type 可选，默认 manual>
 
 2. 读取 origin_path 文件
 
---- 阶段 1：打标 + 摘要 ---
+--- 阶段 1a：提炼摘要与候选标签（生成任务）---
 
-3. 读取固定词表：
+3. 基于上方原文内容，生成一句话摘要和候选标签。
+规则：
+- description：用简体中文撰写一句话摘要，概括文章核心内容。
+- candidate_tags：从原文提取能代表文章核心论点或主题的标签，须满足以下内容约束（不设数量上限，但每一条都必须通过全部约束）：
+  1. 代表性与抽象粒度：该候选词必须对应文章中用独立段落或多处论证展开讨论的一个概念，不能是仅作为举例、列举项出现的具体实例——例如原文列举了一组同类的具体名称（人名、产品名、文件名等）来说明某个更大的概念时，应选用概括性的上位概念词，而不是把每一项单独列为一条候选词；不要输出具体的人名、产品实例名、文件名本身，除非该实例正是文章从头到尾的核心讨论对象。
+  2. 去重合并：如果多个候选表达指向同一个概念，只保留其中最准确、最能概括全文用法的一个。
+  3. 保留原文技术术语原样，不要翻译成中文。
+
+直接输出：
+description: （一句话摘要，简体中文）
+candidate_tags:
+  - （从内容提取、满足上述约束的额外标签，可为空列表）
+
+--- 阶段 1b：匹配固定标签（分类任务）---
+
+4. 读取固定词表：
    from pathlib import Path
    fixed_tags_path = Path.home() / '.hskill' / 'url-extract' / 'fixed_tags.txt'
    # 将文件内容（跳过 # 行和空行）作为固定词表参考
 
-基于上方原文内容，生成一句话摘要和标签。
-规则：
-- description：用简体中文撰写一句话摘要，概括文章核心内容。
-- tags：优先从固定词表中选取适用于本文的词条；须确认该词条在原文中是核心论点或被反复呈现的主题，而不是仅作为例子、引用来源被提及一次——例如原文只用一句话提到某个人名/产品名（如作为引言的说话人），不构成选用理由；`llm` 仅在原文深入探讨大型语言模型本身的原理或应用时才选用，而非泛泛提及。
-- candidate_tags：固定词表之外、从原文内容提取的额外标签，须保留原文技术术语原样，不要翻译成中文。
+判断固定词表中，哪些词条适用于这篇文章。
+规则：须确认该词条在原文中是核心论点或被反复呈现的主题，而不是仅作为例子、引用来源被提及一次——例如原文只用一句话提到某个人名/产品名（如作为引言的说话人），不构成选用理由；`llm` 仅在原文深入探讨大型语言模型本身的原理或应用时才选用，而非泛泛提及。不要与阶段 1a 已选中的 candidate_tags 语义重复。
+
 直接输出：
-description: （一句话摘要，简体中文）
 tags:
   - （从固定词表中选出的、适用于本文的词条，可为空列表）
-candidate_tags:
-  - （固定词表之外、从内容提取的额外标签，可为空列表）
 
 --- 阶段 2：翻译 ---
 
-4. 将原文正文翻译为简体中文（图片标记和代码块原样保留，专有名词保留英文）。
+5. 将原文正文翻译为简体中文（图片标记和代码块原样保留，专有名词保留英文）。
    将译文保留在上下文中，暂不写文件。
 
 --- 阶段 3：写文件 ---
 
-5. 保存译文到 vault_path/<文件名>：
+6. 保存译文到 vault_path/<文件名>：
    - 文件名与 Origin 文件名相同
    - frontmatter：publish_date、fetch_date、author、source_url、origin_title、
-     category（如有）、fetch_type（默认 manual）、tags（阶段 1 输出）、
-     candidate_tags（阶段 1 输出）、description（阶段 1 输出）
+     category（如有）、fetch_type（默认 manual）、tags（阶段 1b 输出）、
+     candidate_tags（阶段 1a 输出）、description（阶段 1a 输出）
    - 正文首行插入双向链接 [[Origin/<文件名>]]
 
-6. 执行校验并写入 SQLite 索引：
+7. 执行校验并写入 SQLite 索引：
    import subprocess, os
    from pathlib import Path
    article_path = str(Path(vault_path) / os.path.basename(origin_path))
