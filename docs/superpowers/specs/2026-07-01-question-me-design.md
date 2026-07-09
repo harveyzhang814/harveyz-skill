@@ -1,5 +1,11 @@
 ---
 status: 待实现
+migrated: 2026-07-09
+superseded_by:
+  - 2026-07-01-question-me-v2-dynamic-tree-design.md  # 决策树生成时机：v1 三问全答完才一次性生成，v2 改为逐问即时追加子节点，完全取代
+implemented_in:
+  - skills/coding/question-me/SKILL.md  # 触发逻辑、Phase 0 自查、决策树生成时机以外的其余设计
+  - skills/coding/question-me/scripts/render_tree.py  # HTML 渲染、Card 结构、页面布局
 ---
 
 # question-me Skill 设计
