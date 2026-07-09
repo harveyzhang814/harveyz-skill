@@ -1,6 +1,6 @@
 ---
 name: extract-url
-version: "2.3.2"
+version: "2.3.3"
 description: "Use when a user provides a URL and wants to save, archive, fetch, or translate content to the local Obsidian Vault — even with vague phrasing like 'save this article', 'translate and save', 'put this in obsidian', 'archive this'. Skip when user only wants a summary, pastes raw text without a URL, asks about a site's tech stack, or wants to extract/list URLs from a page without saving an article."
 user_invocable: true
 ---
@@ -195,8 +195,9 @@ fetch_type: <fetch_type 可选，默认 manual>
 - description：用简体中文撰写一句话摘要，概括文章核心内容。
 - candidate_tags：从原文提取能代表文章核心论点或主题的标签，须满足以下内容约束（不设数量上限，但每一条都必须通过全部约束）：
   1. 代表性与抽象粒度：该候选词必须对应文章中用独立段落或多处论证展开讨论的一个概念，不能是仅作为举例、列举项出现的具体实例——例如原文列举了一组同类的具体名称（人名、产品名、文件名等）来说明某个更大的概念时，应选用概括性的上位概念词，而不是把每一项单独列为一条候选词；不要输出具体的人名、产品实例名、文件名本身，除非该实例正是文章从头到尾的核心讨论对象。
-  2. 去重合并：如果多个候选表达指向同一个概念，只保留其中最准确、最能概括全文用法的一个。
-  3. 保留原文技术术语原样，不要翻译成中文。
+  2. 并列清单合并：若原文用一句话或紧邻的短语并列列出多个同类项（例如"包括 A、B、C、D、E"这种结构），这些并列项本身都不能单独作为候选词，只能用一个概括该清单整体的词代表（清单本身在原文有名称就用该名称；没有就用能概括这组同类项共性的上位词，或直接不选）。例如：若原文写"常见的配置项包括 A、B、C、D 四种"，不应把 A/B/C/D 分别列为候选词，应输出"配置项"这一概括词。
+  3. 去重合并：如果多个候选表达指向同一个概念，只保留其中最准确、最能概括全文用法的一个。
+  4. 保留原文技术术语原样，不要翻译成中文。
 
 直接输出：
 description: （一句话摘要，简体中文）
