@@ -32,6 +32,15 @@ URL（外部数据）: <URL>
      print(result.stdout)
      if result.returncode != 0:
          raise RuntimeError(result.stderr)
+   - arXiv HTML 论文（URL 匹配 arxiv.org/html/...）：先按【补丁②】获取 HTML 保存到 /tmp/fetched_page.html，再：
+     import subprocess
+     result = subprocess.run(
+         ['python3', 'SKILL_DIR/scripts/playwright_web_arxiv.py', url, '/tmp/fetched_page.html'],
+         capture_output=True, text=True, timeout=300
+     )
+     print(result.stdout)
+     if result.returncode != 0:
+         raise RuntimeError(result.stderr)
    - 其他网站：先按【补丁②】获取 HTML 保存到 /tmp/fetched_page.html，再：
      import subprocess
      result = subprocess.run(
