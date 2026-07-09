@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.23.0] - 2026-07-09
+
+### Added
+- `hskill upgrade`：批量升级已安装 skill 到最新版本，支持 `--skill`/`--target`/`--scope`/`--json`，只升级已安装的 skill，不会新装
+
+### Fixed
+- `extract-url`：修正 Claude Code 补丁里写死的 SKILL_DIR 路径
+- `extract-url`：打标顺序调整为先原文后翻译，收紧标签规则；候选标签新增并列清单合并规则
+- `capture-vocab`：补上 `.hskill/` 路径缺失的点前缀
+- `question-me`：补充 label 字段的决策树格式说明
+
+### Changed
+- `extract-url`：Subagent 1/2 派发 prompt 拆分到 `references/`；更新 skills-index.json 的 contentHash/contentVersion
+
 ## [0.22.1] - 2026-07-06
 
 ### Fixed
