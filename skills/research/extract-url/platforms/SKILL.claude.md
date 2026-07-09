@@ -29,7 +29,7 @@ sessions_spawn \
 `SKILL_DIR` 为 Claude Code 平台固定值，在 subagent 任务代码中直接使用此路径字符串：
 
 ```
-$HOME/.claude/skills/url-extract
+$HOME/.claude/skills/extract-url
 ```
 
 配置文件不存在时，执行 SKILL.md「初始化流程」引导用户写入配置。
