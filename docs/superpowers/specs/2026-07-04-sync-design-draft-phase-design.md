@@ -2,6 +2,9 @@
 title: sync-design 设计阶段扩展
 date: 2026-07-04
 status: approved
+migrated: 2026-07-09
+implemented_in:
+  - skills/design/sync-design/SKILL.md  # 模式检测、设计阶段流程、manifest v4 drafts[]、删除检查点
 ---
 
 # sync-design 设计阶段扩展

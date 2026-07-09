@@ -1,5 +1,8 @@
 ---
 status: 待实现
+migrated: 2026-07-09
+implemented_in:
+  - skills/coding/question-me/SKILL.md  # 逐问即时评估子节点、兄弟扫描、BFS 生成规则、遍历规则
 ---
 
 # question-me v2：动态决策树设计
