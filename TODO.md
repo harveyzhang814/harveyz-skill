@@ -9,7 +9,7 @@
 
 ---
 
-### 调整 extract-url 标签生成顺序为先原文后翻译
+### [x] 调整 extract-url 标签生成顺序为先原文后翻译
 **优先级**: P1 | **日期**: 2026-07-08
 
 `extract-url` skill 当前 Subagent 2 流程是先翻译全文（阶段 1），再基于译文生成 `description`/`tags`/`candidate_tags`（阶段 2）。应改为先基于原文生成 `description` 和 `tags`/`candidate_tags`，再翻译全文，调整 SKILL.md 中「翻译 + 打标」步骤的阶段顺序与提示文案。
