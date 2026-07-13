@@ -135,8 +135,8 @@
       "path": "coding/rephrase",
       "bundle": "coding",
       "installScope": "global",
-      "contentHash": "afe9ccb2d6307ec4",
-      "contentVersion": "1.0.0"
+      "contentHash": "cc5a948ce0e80a53",
+      "contentVersion": "1.0.1"
     },
     {
       "path": "writing/forge-doc",
