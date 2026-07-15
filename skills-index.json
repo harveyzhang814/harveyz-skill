@@ -19,7 +19,7 @@
   "bundleMeta": {
     "research": "研究工具（extract-url + learn-video + extract-vision + survey-skillrepo + learn-paper + extract-cognition + probe-session）",
     "creative": "创意工具（capture-todo + capture-insight）",
-    "coding": "程序工具（init-workflow + setup-debug + init-goal + question-me + capture-vocab + rephrase）",
+    "coding": "程序工具（init-workflow + setup-debug + init-goal + question-me + capture-vocab + rephrase + explain-pm）",
     "writing": "写作工具（forge-doc + draw-diagram + manage-dir + migrate-spec）",
     "design": "设计工具（scout-brand + build-style + sync-design）",
     "mint": "Skill 生命周期工具（init-skill + publish-skill + archive-skill + dedup-skill + contribute-skill + fix-skill + runby-opencode + scout-philosophy + learn-skill）",
@@ -137,6 +137,11 @@
       "installScope": "global",
       "contentHash": "cc5a948ce0e80a53",
       "contentVersion": "1.0.1"
+    },
+    {
+      "path": "coding/explain-pm",
+      "bundle": "coding",
+      "installScope": "global"
     },
     {
       "path": "writing/forge-doc",
