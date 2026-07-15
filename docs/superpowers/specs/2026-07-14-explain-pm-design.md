@@ -1,5 +1,5 @@
 ---
-status: 待实现
+status: 已实现
 implemented_in:
   - skills/coding/explain-pm/SKILL.md
 ---
@@ -7,7 +7,7 @@ implemented_in:
 # explain-pm Skill 设计
 
 **日期：** 2026-07-14
-**状态：** 待实现
+**状态：** 已实现
 
 ---
 
