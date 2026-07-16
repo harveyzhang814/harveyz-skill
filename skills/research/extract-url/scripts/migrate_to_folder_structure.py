@@ -97,19 +97,35 @@ def build_plan(vault_path):
     origin_entries = _scan_dir(vault_path / 'Origin')
     translation_entries = _scan_dir(vault_path, pattern='*.md')
 
-    anomalies = {'missing_source_url': [], 'link_url_mismatch': [], 'missing_link': []}
+    anomalies = {'missing_source_url': [], 'link_url_mismatch': [], 'missing_link': [], 'duplicate_source_url': []}
 
     origin_by_url = {}
     for e in origin_entries:
         if not e['source_url']:
             anomalies['missing_source_url'].append(str(e['path']))
             continue
-        origin_by_url[e['source_url']] = e
+        if e['source_url'] in origin_by_url:
+            anomalies['duplicate_source_url'].append({
+                'kind': 'origin',
+                'source_url': e['source_url'],
+                'kept': str(origin_by_url[e['source_url']]['path']),
+                'dropped': str(e['path']),
+            })
+        else:
+            origin_by_url[e['source_url']] = e
 
     translation_by_url = {}
     for e in translation_entries:
         if not e['source_url']:
             anomalies['missing_source_url'].append(str(e['path']))
+            continue
+        if e['source_url'] in translation_by_url:
+            anomalies['duplicate_source_url'].append({
+                'kind': 'translation',
+                'source_url': e['source_url'],
+                'kept': str(translation_by_url[e['source_url']]['path']),
+                'dropped': str(e['path']),
+            })
             continue
         translation_by_url[e['source_url']] = e
 

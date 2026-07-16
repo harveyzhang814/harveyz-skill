@@ -230,3 +230,25 @@ def test_apply_plan_is_idempotent_on_rerun(tmp_path):
     result2 = migrate.apply_plan(vault, plan2, db_path)
     assert result2['moved'] == []
     assert result2['failed'] == []
+
+
+def test_build_plan_flags_duplicate_source_url_and_keeps_first(tmp_path):
+    vault = _make_vault(tmp_path)
+    url = 'https://example.com/dup'
+    origin1 = ORIGIN_TMPL.format(url=url, title='Dup Article One', img_line='')
+    (vault / 'Origin' / 'dup-article-one.md').write_text(origin1, encoding='utf-8')
+    origin2 = ORIGIN_TMPL.format(url=url, title='Dup Article Two', img_line='')
+    (vault / 'Origin' / 'dup-article-two.md').write_text(origin2, encoding='utf-8')
+
+    plan = migrate.build_plan(vault)
+
+    assert len(plan['anomalies']['duplicate_source_url']) == 1
+    dup = plan['anomalies']['duplicate_source_url'][0]
+    assert dup['kind'] == 'origin'
+    assert dup['source_url'] == url
+    assert dup['kept'] == str(vault / 'Origin' / 'dup-article-one.md')
+    assert dup['dropped'] == str(vault / 'Origin' / 'dup-article-two.md')
+    # exactly one partial entry created (for the kept file), the dropped one is absent from the plan
+    matching = [e for e in plan['partial'] if e['source_url'] == url]
+    assert len(matching) == 1
+    assert matching[0]['origin']['path'].name == 'dup-article-one.md'
