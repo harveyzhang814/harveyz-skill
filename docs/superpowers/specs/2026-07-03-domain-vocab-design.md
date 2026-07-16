@@ -2,6 +2,9 @@
 title: domain-vocab Skill 设计
 date: 2026-07-03
 status: approved
+migrated: 2026-07-09
+implemented_in:
+  - skills/coding/capture-vocab/SKILL.md  # skill 已改名为 capture-vocab，词汇文件路径改为 .hskill/capture-vocab/vocab.md（补齐点前缀）
 ---
 
 # domain-vocab Skill 设计

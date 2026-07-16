@@ -369,6 +369,69 @@ hskill uninstall p-launch --json
 
 ---
 
+## Upgrade
+
+### `upgrade`
+
+```bash
+hskill upgrade [--skill <name>] [--target <target>] [--scope user|project] [--json]
+```
+
+只升级**已经安装**的 skill 到最新版本，不会安装未装过的 skill。`--skill` 和 `--target` 均可省略，省略即代表"全部"；两者独立可组合。
+
+| Flag | 说明 |
+|------|------|
+| `--skill <name>` | 只升级指定 skill（省略则升级所有已装 skill） |
+| `--target <target>` | 只升级指定 target（省略则遍历所有 target） |
+| `--scope user\|project` | 安装 scope（默认 `user`） |
+| `--json` | 机器可读输出 |
+
+### 版本比较
+
+对每个 `{skill, target}` 组合读取已装 SKILL.md 的 `version:` 字段与源版本比较：只有状态为 `update`（版本不同）的才会被升级；`none`（未安装）跳过，`up-to-date` 静默跳过。
+
+### 输出
+
+**TTY，有升级：** 与 `install` 相同格式的摘要（`printSummary`）。
+
+**TTY，无需升级：**
+
+```
+  ✓ All installed skills are up to date
+```
+
+**`--json`，有升级：**
+
+```json
+{
+  "skills": {
+    "claude": { "installed": ["learn-skill"], "skipped": [], "failed": [] }
+  }
+}
+```
+
+**`--json`，无需升级：**
+
+```json
+{ "skills": {}, "upToDate": true }
+```
+
+### 错误处理
+
+`--skill <name>` 传入未知 skill 名：直接 exit 1，stderr 输出：
+
+```json
+{ "error": true, "message": "Unknown skill: \"<name>\"" }
+```
+
+（TTY 模式下为 `chalk.red` 文本，不是 JSON）
+
+`--target <name>` 无效：`resolveTargets` 抛出 `Unknown target: "<name>"`，同样 exit 1。
+
+**不在范围内：** `--tool`（tool 升级用 `install --force`）、hooks 升级、交互模式（`upgrade` 恒为非交互）、`--force` flag（状态为 `update` 即升级，无需强制）。
+
+---
+
 ## Install
 
 ### Minimal invocation
