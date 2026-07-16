@@ -120,3 +120,9 @@ def test_playwright_web_e2e(skill_config, tmp_path):
     content = origin_file.read_text(encoding='utf-8')
     assert 'E2E Test Article' in content
     assert 'source_url: https://example.com/e2e-test' in content
+
+    import hashlib
+    expected_hash = hashlib.md5('https://example.com/e2e-test'.encode()).hexdigest()[:8]
+    assert origin_file.parent.name == 'Origin'
+    assert origin_file.parent.parent.name == expected_hash
+    assert origin_file.parent.parent.parent == skill_config['vault']
