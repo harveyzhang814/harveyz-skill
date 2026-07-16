@@ -109,3 +109,14 @@ sync-agent 已完成，现在将 Hermes agent 配置目录 `~/.hermes` 纳入同
 
 **期望行为**：`hskill uninstall p-launch` 清理上述所有文件，并从 `~/.zshrc` 移除 snippet。  
 **扩展点**：tool 可在 `tool.json` 里声明 `uninstallPaths[]`，installer 统一处理。
+
+---
+
+## harveyz-skill — pdf-math-translate skill 优化
+
+### 审查优化 pdf-math-translate skill 内容质量
+**优先级**: P2 | **日期**: 2026-07-16
+
+刚从外部贡献进 `skills/research/pdf-math-translate/` 的 skill，需要全面内容质量审查：SKILL.md 中所有可执行路径硬编码为另一台机器的用户名（`/Users/harveyopenclaw/...`），在其他机器上无法直接跑通，需改为自适应检测或参数化；同时检查 SKILL.md 结构、触发词（description）、文档完整性是否符合仓库 skill 规范（参考 `docs/reference/skill-spec.md`）。
+
+---
