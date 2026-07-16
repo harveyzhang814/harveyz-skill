@@ -29,7 +29,7 @@ from config import get_vault_path, get_chrome_profile, get_article_paths
 vault_path = get_vault_path()
 skill_dir  = str(Path(__file__).parent.parent)
 
-import urllib.request, hashlib, shutil, tempfile
+import urllib.request, shutil, tempfile
 from datetime import datetime, timezone, timedelta
 from playwright.sync_api import sync_playwright
 
