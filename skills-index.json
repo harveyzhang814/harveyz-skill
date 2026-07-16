@@ -83,6 +83,12 @@
       "contentVersion": "0.3.0"
     },
     {
+      "path": "research/pdf-math-translate",
+      "bundle": "research",
+      "installScope": "project",
+      "contentVersion": "1.0.0"
+    },
+    {
       "path": "creative/capture-todo",
       "bundle": "creative",
       "installScope": "essential",
