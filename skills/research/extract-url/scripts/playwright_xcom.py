@@ -19,27 +19,21 @@ if _parsed.scheme not in ('http', 'https') or not _parsed.netloc:
 # --- Config (after security check) ---
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent))
-from config import get_vault_path, get_chrome_profile
+from config import get_vault_path, get_chrome_profile, get_article_paths
 vault_path     = get_vault_path()
 chrome_profile = get_chrome_profile()
 skill_dir      = str(Path(__file__).parent.parent)
 
-import json, urllib.request, urllib.error, ssl, hashlib, shutil, tempfile
+import json, urllib.request, urllib.error, ssl, shutil, tempfile
 import certifi
 from datetime import datetime, timezone, timedelta
 from playwright.sync_api import sync_playwright
 import pycookiecheat
 
 sys.path.insert(0, os.path.join(skill_dir, 'references'))
-from article_utils import infer_ext, format_block, sanitize_filename, repair_frontmatter, record_issues
+from article_utils import infer_ext, format_block, repair_frontmatter, record_issues
 
-url_hash   = hashlib.md5(url.encode()).hexdigest()[:8]
-image_dir  = os.path.join(vault_path, 'Image')
-origin_dir = os.path.join(vault_path, 'Origin')
-db_path    = os.path.join(vault_path, 'url-index.db')
-
-os.makedirs(image_dir, exist_ok=True)
-os.makedirs(origin_dir, exist_ok=True)
+db_path = os.path.join(vault_path, 'url-index.db')
 
 
 def _is_safe_image_url(src):
@@ -403,6 +397,14 @@ if result.get('error'):
     print(f"ERROR: {result['error']}", file=sys.stderr)
     sys.exit(1)
 
+title = result.get('title', 'Untitled')
+paths = get_article_paths(url, title)
+image_dir   = paths['image_dir']
+origin_dir  = paths['origin_dir']
+origin_path = paths['origin_path']
+os.makedirs(image_dir, exist_ok=True)
+os.makedirs(origin_dir, exist_ok=True)
+
 # --- Download images ---
 downloaded = []
 for i, img in enumerate(result.get('imageBlocks', [])):
@@ -410,7 +412,7 @@ for i, img in enumerate(result.get('imageBlocks', [])):
         print(f"  [{i+1}] Skipped unsafe image URL: {img['src'][:80]}")
         continue
     ext   = infer_ext(img['src'])
-    fname = f"{url_hash}_img_{i+1}{ext}"
+    fname = f"img_{i+1}{ext}"
     fpath = os.path.join(image_dir, fname)
     try:
         req = urllib.request.Request(img['src'], headers={'User-Agent': 'Mozilla/5.0', 'Accept': 'image/*'})
@@ -427,20 +429,16 @@ for i, img in enumerate(result.get('imageBlocks', [])):
 
 # --- Build origin file ---
 blocks       = result['blocks']
-title        = result.get('title', 'Untitled')
 author       = result.get('author', '')
 publish_date = result.get('publishDate', '')[:10]
 fetch_date   = datetime.now(timezone(timedelta(hours=8))).strftime('%Y-%m-%d')
-
-origin_filename = sanitize_filename(title) + '.md'
-origin_path     = os.path.join(origin_dir, origin_filename)
 
 body_units = []
 for i, block in enumerate(blocks):
     parts = [format_block(block)]
     for img in downloaded:
         if img.get('afterBlock') == i:
-            parts.append(f'![](Image/{img["filename"]})')
+            parts.append(f'![](../Image/{img["filename"]})')
     body_units.append('\n'.join(parts))
 
 body = '\n\n'.join(body_units)

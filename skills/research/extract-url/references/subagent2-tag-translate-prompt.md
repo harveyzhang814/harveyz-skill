@@ -14,11 +14,14 @@ fetch_type: <fetch_type 可选，默认 manual>
 
 执行步骤：
 1. 读取配置（获取 vault_path）：
-   import json, os
+   import sys
    from pathlib import Path
-   _cfg       = json.loads((Path.home() / '.hskill' / 'url-extract' / 'config.json').read_text())
-   vault_path = _cfg['VAULT_PATH']
-   skill_dir  = 'SKILL_DIR'
+   skill_dir = 'SKILL_DIR'
+   sys.path.insert(0, f'{skill_dir}/scripts')
+   from config import get_vault_path, get_article_paths
+   vault_path   = get_vault_path()
+   origin_title = Path(origin_path).stem
+   paths        = get_article_paths(url, origin_title)
 
 2. 读取 origin_path 文件
 
@@ -59,17 +62,18 @@ tags:
 
 --- 阶段 3：写文件 ---
 
-6. 保存译文到 vault_path/<文件名>：
-   - 文件名与 Origin 文件名相同
+6. 保存译文到 paths['translation_path']（先 mkdir -p paths['translation_dir']）：
+   - 文件名与 Origin 文件名相同（paths['translation_path'] 已是完整目标路径）
    - frontmatter：publish_date、fetch_date、author、source_url、origin_title、
      category（如有）、fetch_type（默认 manual）、tags（阶段 1b 输出）、
      candidate_tags（阶段 1a 输出）、description（阶段 1a 输出）
-   - 正文首行插入双向链接 [[Origin/<文件名>]]
+   - 正文首行插入双向链接 [[{paths['url_hash']}/Origin/<文件名>]]
+   - 正文中从原文复制来的图片引用（`![](../Image/xxx)`）原样保留、无需改路径——
+     Origin 和 Translation 是同级目录，相对路径天然一致
 
 7. 执行校验并写入 SQLite 索引：
    import subprocess, os
-   from pathlib import Path
-   article_path = str(Path(vault_path) / os.path.basename(origin_path))
+   article_path = paths['translation_path']
    result = subprocess.run(
        ['python3', f'{skill_dir}/scripts/validate_article.py'],
        env={
