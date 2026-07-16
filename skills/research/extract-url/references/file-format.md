@@ -35,7 +35,7 @@ tags:
 description: 一两句话摘要，概括文章核心内容，供快速阅读。
 ---
 
-[[Origin/文章原标题.md]]
+[[<hash8>/Origin/文章原标题.md]]
 
 ---
 
