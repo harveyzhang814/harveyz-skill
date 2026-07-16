@@ -14,6 +14,7 @@ Reads VAULT_PATH from ~/.hskill/url-extract/config.json (via config.get_vault_pa
 import argparse, os, re, shutil, sqlite3, sys, tarfile, time
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
+from urllib.parse import urlparse
 
 import yaml
 
@@ -270,6 +271,84 @@ def _backup_vault(vault_path):
     return str(backup_path)
 
 
+def _normalize_url(url):
+    p = urlparse(url or '')
+    netloc = p.netloc.lower()
+    path = p.path.rstrip('/')
+    query = '&'.join(
+        kv for kv in p.query.split('&')
+        if kv and not kv.split('=')[0].startswith('utm_')
+    )
+    normalized = f'{netloc}{path}'
+    if query:
+        normalized += f'?{query}'
+    return normalized
+
+
+def find_merge_candidates(vault_path):
+    vault_path = Path(vault_path)
+    partial_folders = []
+    for d in sorted(vault_path.iterdir()):
+        if not d.is_dir() or len(d.name) != 8:
+            continue
+        has_origin = (d / 'Origin').exists() and any((d / 'Origin').glob('*.md'))
+        has_translation = (d / 'Translation').exists() and any((d / 'Translation').glob('*.md'))
+        if has_origin and not has_translation:
+            side = 'origin'
+        elif has_translation and not has_origin:
+            side = 'translation'
+        else:
+            continue
+        sub = 'Origin' if side == 'origin' else 'Translation'
+        md_file = next((d / sub).glob('*.md'))
+        fm = _read_frontmatter(md_file)
+        partial_folders.append({
+            'hash': d.name, 'side': side, 'path': str(md_file),
+            'source_url': fm.get('source_url', ''),
+        })
+
+    candidates = []
+    for i, a in enumerate(partial_folders):
+        for b in partial_folders[i + 1:]:
+            if a['side'] == b['side']:
+                continue
+            if _normalize_url(a['source_url']) == _normalize_url(b['source_url']):
+                candidates.append({'a': a, 'b': b})
+    return candidates
+
+
+def apply_merge(vault_path, keep_hash, drop_hash):
+    vault_path = Path(vault_path)
+    keep_dir = vault_path / keep_hash
+    drop_dir = vault_path / drop_hash
+
+    for side in ('Origin', 'Translation'):
+        src_dir = drop_dir / side
+        if not src_dir.exists():
+            continue
+        dst_dir = keep_dir / side
+        dst_dir.mkdir(parents=True, exist_ok=True)
+        for f in src_dir.glob('*.md'):
+            shutil.move(str(f), str(dst_dir / f.name))
+
+    drop_image_dir = drop_dir / 'Image'
+    if drop_image_dir.exists():
+        keep_image_dir = keep_dir / 'Image'
+        keep_image_dir.mkdir(parents=True, exist_ok=True)
+        for f in drop_image_dir.glob('*'):
+            shutil.move(str(f), str(keep_image_dir / f.name))
+
+    shutil.rmtree(drop_dir, ignore_errors=True)
+
+    translation_files = list((keep_dir / 'Translation').glob('*.md')) if (keep_dir / 'Translation').exists() else []
+    origin_files = list((keep_dir / 'Origin').glob('*.md')) if (keep_dir / 'Origin').exists() else []
+    if translation_files and origin_files:
+        t_path = translation_files[0]
+        content = t_path.read_text(encoding='utf-8')
+        content = _rewrite_wikilink(content, keep_hash, origin_files[0].name)
+        t_path.write_text(content, encoding='utf-8')
+
+
 def _print_plan_summary(plan):
     print(f"完整配对：{len(plan['complete'])}")
     print(f"部分完成：{len(plan['partial'])}")
@@ -284,6 +363,10 @@ def main():
     sub.add_parser('plan')
     p_apply = sub.add_parser('apply')
     p_apply.add_argument('--no-backup', action='store_true')
+    sub.add_parser('find-merges')
+    p_merge = sub.add_parser('apply-merge')
+    p_merge.add_argument('--keep', required=True)
+    p_merge.add_argument('--drop', required=True)
 
     args = parser.parse_args()
     vault_path = get_vault_path()
@@ -300,6 +383,17 @@ def main():
         print(f"迁移完成：{len(result['moved'])} 篇成功，{len(result['failed'])} 篇失败")
         for f in result['failed']:
             print(f"  失败：{f['source_url']} - {f['error']}")
+    elif args.command == 'find-merges':
+        candidates = find_merge_candidates(vault_path)
+        if not candidates:
+            print('未发现合并候选')
+        for c in candidates:
+            print(f"候选：{c['a']['hash']} ({c['a']['side']}) <-> {c['b']['hash']} ({c['b']['side']})")
+            print(f"  URL A: {c['a']['source_url']}")
+            print(f"  URL B: {c['b']['source_url']}")
+    elif args.command == 'apply-merge':
+        apply_merge(vault_path, args.keep, args.drop)
+        print(f'已合并 {args.drop} → {args.keep}')
 
 
 if __name__ == '__main__':

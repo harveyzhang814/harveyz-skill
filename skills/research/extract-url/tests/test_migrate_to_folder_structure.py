@@ -252,3 +252,80 @@ def test_build_plan_flags_duplicate_source_url_and_keeps_first(tmp_path):
     matching = [e for e in plan['partial'] if e['source_url'] == url]
     assert len(matching) == 1
     assert matching[0]['origin']['path'].name == 'dup-article-one.md'
+
+
+def _make_partial_article_folder(vault, url, title, side):
+    url_hash = migrate.get_url_hash(url)
+    article_dir = vault / url_hash
+    sub = 'Origin' if side == 'origin' else 'Translation'
+    (article_dir / sub).mkdir(parents=True)
+    content = ORIGIN_TMPL.format(url=url, title=title, img_line='')
+    filename = title.lower().replace(' ', '-') + '.md'
+    (article_dir / sub / filename).write_text(content, encoding='utf-8')
+    return url_hash
+
+
+def test_find_merge_candidates_matches_normalized_urls(tmp_path):
+    vault = _make_vault(tmp_path)
+    hash_a = _make_partial_article_folder(
+        vault, 'https://example.com/l?utm_source=newsletter', 'Article L', 'origin')
+    hash_b = _make_partial_article_folder(vault, 'https://example.com/l', 'Article L', 'translation')
+
+    candidates = migrate.find_merge_candidates(vault)
+
+    assert len(candidates) == 1
+    hashes = {candidates[0]['a']['hash'], candidates[0]['b']['hash']}
+    assert hashes == {hash_a, hash_b}
+
+
+def test_find_merge_candidates_ignores_same_side_pairs(tmp_path):
+    vault = _make_vault(tmp_path)
+    _make_partial_article_folder(vault, 'https://example.com/m', 'Article M', 'origin')
+    _make_partial_article_folder(vault, 'https://example.com/m-different', 'Article M2', 'origin')
+
+    assert migrate.find_merge_candidates(vault) == []
+
+
+def test_find_merge_candidates_no_match_returns_empty(tmp_path):
+    vault = _make_vault(tmp_path)
+    _make_partial_article_folder(vault, 'https://example.com/n1', 'Article N1', 'origin')
+    _make_partial_article_folder(vault, 'https://example.com/n2', 'Article N2', 'translation')
+
+    assert migrate.find_merge_candidates(vault) == []
+
+
+def test_apply_merge_combines_origin_and_translation_folders(tmp_path):
+    vault = _make_vault(tmp_path)
+    hash_a = _make_partial_article_folder(
+        vault, 'https://example.com/o?utm_source=x', 'Article O', 'origin')
+    hash_b = _make_partial_article_folder(vault, 'https://example.com/o', 'Article O', 'translation')
+
+    migrate.apply_merge(vault, keep_hash=hash_a, drop_hash=hash_b)
+
+    assert (vault / hash_a / 'Origin').exists()
+    assert (vault / hash_a / 'Translation').exists()
+    assert not (vault / hash_b).exists()
+
+
+def test_apply_merge_rewrites_wikilink_to_keep_hash(tmp_path):
+    vault = _make_vault(tmp_path)
+    url = 'https://example.com/p'
+    hash_a = migrate.get_url_hash(url)
+    (vault / hash_a / 'Origin').mkdir(parents=True)
+    (vault / hash_a / 'Origin' / 'article-p.md').write_text(
+        ORIGIN_TMPL.format(url=url, title='Article P', img_line=''), encoding='utf-8'
+    )
+    hash_b = migrate.get_url_hash(url + '?utm_source=x')
+    (vault / hash_b / 'Translation').mkdir(parents=True)
+    (vault / hash_b / 'Translation' / 'article-p.md').write_text(
+        TRANSLATION_TMPL.format(
+            url=url + '?utm_source=x', title='Article P',
+            wikilink='[[Origin/some-other-name.md]]', img_line=''
+        ),
+        encoding='utf-8'
+    )
+
+    migrate.apply_merge(vault, keep_hash=hash_a, drop_hash=hash_b)
+
+    merged_content = (vault / hash_a / 'Translation' / 'article-p.md').read_text(encoding='utf-8')
+    assert f'[[{hash_a}/Origin/article-p.md]]' in merged_content
