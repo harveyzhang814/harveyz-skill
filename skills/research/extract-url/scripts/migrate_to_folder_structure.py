@@ -317,26 +317,36 @@ def find_merge_candidates(vault_path):
     return candidates
 
 
+def _move_dir_contents(src_dir, dst_dir):
+    """Move every file from src_dir into dst_dir. On a filename collision, the
+    incoming file is renamed with a numeric suffix instead of overwriting the
+    existing one."""
+    dst_dir.mkdir(parents=True, exist_ok=True)
+    for f in src_dir.iterdir():
+        if not f.is_file():
+            continue
+        dest = dst_dir / f.name
+        if dest.exists():
+            n = 1
+            while dest.exists():
+                dest = dst_dir / f'{f.stem}_merged{n}{f.suffix}'
+                n += 1
+        shutil.move(str(f), str(dest))
+
+
 def apply_merge(vault_path, keep_hash, drop_hash):
+    if keep_hash == drop_hash:
+        raise ValueError('keep_hash and drop_hash must be different')
+
     vault_path = Path(vault_path)
     keep_dir = vault_path / keep_hash
     drop_dir = vault_path / drop_hash
 
-    for side in ('Origin', 'Translation'):
+    for side in ('Origin', 'Translation', 'Image'):
         src_dir = drop_dir / side
         if not src_dir.exists():
             continue
-        dst_dir = keep_dir / side
-        dst_dir.mkdir(parents=True, exist_ok=True)
-        for f in src_dir.glob('*.md'):
-            shutil.move(str(f), str(dst_dir / f.name))
-
-    drop_image_dir = drop_dir / 'Image'
-    if drop_image_dir.exists():
-        keep_image_dir = keep_dir / 'Image'
-        keep_image_dir.mkdir(parents=True, exist_ok=True)
-        for f in drop_image_dir.glob('*'):
-            shutil.move(str(f), str(keep_image_dir / f.name))
+        _move_dir_contents(src_dir, keep_dir / side)
 
     shutil.rmtree(drop_dir, ignore_errors=True)
 
@@ -367,6 +377,7 @@ def main():
     p_merge = sub.add_parser('apply-merge')
     p_merge.add_argument('--keep', required=True)
     p_merge.add_argument('--drop', required=True)
+    p_merge.add_argument('--no-backup', action='store_true')
 
     args = parser.parse_args()
     vault_path = get_vault_path()
@@ -392,6 +403,8 @@ def main():
             print(f"  URL A: {c['a']['source_url']}")
             print(f"  URL B: {c['b']['source_url']}")
     elif args.command == 'apply-merge':
+        if not args.no_backup:
+            print(f'备份已创建：{_backup_vault(vault_path)}')
         apply_merge(vault_path, args.keep, args.drop)
         print(f'已合并 {args.drop} → {args.keep}')
 

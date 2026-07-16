@@ -329,3 +329,54 @@ def test_apply_merge_rewrites_wikilink_to_keep_hash(tmp_path):
 
     merged_content = (vault / hash_a / 'Translation' / 'article-p.md').read_text(encoding='utf-8')
     assert f'[[{hash_a}/Origin/article-p.md]]' in merged_content
+
+
+def test_apply_merge_renames_colliding_image_instead_of_overwriting(tmp_path):
+    vault = _make_vault(tmp_path)
+    url_a = 'https://example.com/q?utm_source=x'
+    url_b = 'https://example.com/q'
+    hash_a = migrate.get_url_hash(url_a)
+    hash_b = migrate.get_url_hash(url_b)
+
+    (vault / hash_a / 'Origin').mkdir(parents=True)
+    (vault / hash_a / 'Origin' / 'article-q.md').write_text(
+        ORIGIN_TMPL.format(url=url_a, title='Article Q', img_line=''), encoding='utf-8'
+    )
+    (vault / hash_a / 'Image').mkdir(parents=True)
+    (vault / hash_a / 'Image' / 'img_1.jpg').write_bytes(b'ORIGIN_IMAGE_BYTES')
+
+    (vault / hash_b / 'Translation').mkdir(parents=True)
+    (vault / hash_b / 'Translation' / 'article-q.md').write_text(
+        TRANSLATION_TMPL.format(url=url_b, title='Article Q', wikilink='[[Origin/article-q.md]]', img_line=''),
+        encoding='utf-8'
+    )
+    (vault / hash_b / 'Image').mkdir(parents=True)
+    (vault / hash_b / 'Image' / 'img_1.jpg').write_bytes(b'TRANSLATION_IMAGE_BYTES')
+
+    migrate.apply_merge(vault, keep_hash=hash_a, drop_hash=hash_b)
+
+    kept_image_dir = vault / hash_a / 'Image'
+    images = {f.name: f.read_bytes() for f in kept_image_dir.glob('*')}
+    assert len(images) == 2, f'expected both images preserved, got {list(images.keys())}'
+    assert b'ORIGIN_IMAGE_BYTES' in images.values()
+    assert b'TRANSLATION_IMAGE_BYTES' in images.values()
+
+
+def test_apply_merge_rejects_same_hash(tmp_path):
+    vault = _make_vault(tmp_path)
+    hash_a = _make_partial_article_folder(vault, 'https://example.com/r', 'Article R', 'origin')
+    import pytest
+    with pytest.raises(ValueError):
+        migrate.apply_merge(vault, keep_hash=hash_a, drop_hash=hash_a)
+
+
+def test_apply_merge_moves_non_md_content_instead_of_deleting(tmp_path):
+    """Regression: rmtree must not silently destroy content the move loop didn't glob for."""
+    vault = _make_vault(tmp_path)
+    hash_a = _make_partial_article_folder(vault, 'https://example.com/s?utm_source=x', 'Article S', 'origin')
+    hash_b = _make_partial_article_folder(vault, 'https://example.com/s', 'Article S', 'translation')
+    (vault / hash_b / 'Translation' / 'stray-note.txt').write_text('not markdown', encoding='utf-8')
+
+    migrate.apply_merge(vault, keep_hash=hash_a, drop_hash=hash_b)
+
+    assert (vault / hash_a / 'Translation' / 'stray-note.txt').exists()
