@@ -32,6 +32,22 @@ _TEST_HTML = """\
 </html>
 """
 
+_TEST_HTML_NO_AUTHOR = """\
+<!DOCTYPE html>
+<html>
+<head>
+  <title>No Author Article</title>
+</head>
+<body>
+  <article>
+    <h1>No Author Article</h1>
+    <p>First paragraph with sufficient content to be captured by the playwright_web scraper logic.</p>
+    <p>Second paragraph providing additional body text for the content extraction verification test.</p>
+  </article>
+</body>
+</html>
+"""
+
 
 def test_playwright_web_invalid_url_scheme(skill_config, tmp_path):
     """Security check rejects non-http/https URLs before reading config."""
@@ -78,24 +94,6 @@ def test_playwright_web_too_few_args(skill_config):
 @requires_playwright
 def test_playwright_web_e2e(skill_config, tmp_path):
     """Full e2e: HTML file → ORIGIN_PATH in stdout + file saved to vault."""
-    # Import conftest's url_index_db fixture
-    import sqlite3
-    db_path = skill_config['vault'] / 'url-index.db'
-    conn = sqlite3.connect(str(db_path))
-    conn.execute("""
-        CREATE TABLE IF NOT EXISTS url_index (
-            source_url   TEXT PRIMARY KEY,
-            title        TEXT,
-            fetched_at   TEXT,
-            issues       TEXT,
-            category     TEXT,
-            origin_path  TEXT,
-            article_path TEXT
-        )
-    """)
-    conn.commit()
-    conn.close()
-
     html = tmp_path / 'article.html'
     html.write_text(_TEST_HTML, encoding='utf-8')
 
@@ -126,3 +124,36 @@ def test_playwright_web_e2e(skill_config, tmp_path):
     assert origin_file.parent.name == 'Origin'
     assert origin_file.parent.parent.name == expected_hash
     assert origin_file.parent.parent.parent == skill_config['vault']
+
+    # author/date/source_url/origin_title 都齐全，description 已从原文校验里排除
+    # → remaining 应为空 → 不应留下临时 issues 文件
+    assert not (origin_file.parent.parent / '.fetch_issues.tmp').exists()
+
+
+@requires_playwright
+def test_playwright_web_e2e_writes_fetch_issues_tmp_when_incomplete(skill_config, tmp_path):
+    """When origin frontmatter has real gaps (missing author/date), a temp issues file is written."""
+    html = tmp_path / 'no-author.html'
+    html.write_text(_TEST_HTML_NO_AUTHOR, encoding='utf-8')
+
+    result = subprocess.run(
+        ['python3', str(SCRIPTS_DIR / 'playwright_web.py'),
+         'https://example.com/no-author-test', str(html)],
+        env=skill_config['env'],
+        capture_output=True, text=True,
+        timeout=60
+    )
+    assert result.returncode == 0, result.stderr
+
+    origin_path = next(
+        line.split('ORIGIN_PATH:', 1)[1].strip()
+        for line in result.stdout.splitlines()
+        if line.startswith('ORIGIN_PATH:')
+    )
+    article_dir = Path(origin_path).parent.parent
+    tmp_issues = article_dir / '.fetch_issues.tmp'
+    assert tmp_issues.exists()
+    text = tmp_issues.read_text(encoding='utf-8')
+    assert 'author空' in text
+    assert 'publish_date空' in text
+    assert 'description空' not in text

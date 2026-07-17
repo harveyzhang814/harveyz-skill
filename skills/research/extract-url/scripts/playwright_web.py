@@ -34,7 +34,7 @@ from datetime import datetime, timezone, timedelta
 from playwright.sync_api import sync_playwright
 
 sys.path.insert(0, os.path.join(skill_dir, 'references'))
-from article_utils import infer_ext, format_block, repair_frontmatter, record_issues
+from article_utils import infer_ext, format_block, repair_frontmatter, record_fetch_issues
 
 
 def _is_safe_image_url(src):
@@ -136,8 +136,6 @@ def _fetch_with_cookies(url):
         return None
 
 
-db_path = os.path.join(vault_path, 'url-index.db')
-
 # --- Load HTML and extract content ---
 with open(html_path, encoding='utf-8', errors='replace') as f:
     html = f.read()
@@ -218,12 +216,12 @@ with open(origin_path, 'w', encoding='utf-8') as f:
     f.write(origin_content)
 
 # --- Validate ---
-fm, fixed, remaining = repair_frontmatter(origin_path, url, {'fetch_date': fetch_date})
+fm, fixed, remaining = repair_frontmatter(origin_path, url, {'fetch_date': fetch_date}, skip_remaining_fields={'description'})
 if remaining:
-    record_issues(url, '; '.join(remaining), db_path)
+    record_fetch_issues('; '.join(remaining), paths['article_dir'])
     print(f"警告：校验问题 {remaining}", file=sys.stderr)
 else:
-    record_issues(url, '', db_path)
+    record_fetch_issues('', paths['article_dir'])
 
 print(f"ORIGIN_PATH: {origin_path}")
 print(f"抓取完成：{title} ({len(blocks)} blocks, {len(downloaded)} images)")
