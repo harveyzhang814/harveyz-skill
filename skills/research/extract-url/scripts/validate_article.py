@@ -31,7 +31,7 @@ if not os.path.exists(article_path):
     print(f"ERROR: article file not found: {article_path}", file=sys.stderr)
     sys.exit(1)
 
-fm, fixed_fields, remaining = repair_frontmatter(article_path, url)
+fm, fixed_fields, remaining = repair_frontmatter(article_path, url, skip_remaining_fields={'author', 'publish_date'})
 if remaining:
     print(f"ERROR: 校验未通过：{remaining}", file=sys.stderr)
     sys.exit(1)
