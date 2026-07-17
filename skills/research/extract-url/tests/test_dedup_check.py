@@ -1,4 +1,4 @@
-import sqlite3, subprocess, os
+import json, subprocess, os
 from pathlib import Path
 
 SCRIPTS_DIR = Path(__file__).parent.parent / 'scripts'
@@ -15,13 +15,10 @@ def test_dedup_check_ok_new_url(skill_config):
     assert result.stdout.strip() == 'OK'
 
 
-def test_dedup_check_already_fetched(skill_config, url_index_db):
-    """URL already in DB returns ALREADY_FETCHED."""
+def test_dedup_check_already_fetched(skill_config, write_meta_json_fixture):
+    """URL with existing meta.json returns ALREADY_FETCHED."""
     url = 'https://example.com/existing'
-    conn = sqlite3.connect(str(url_index_db))
-    conn.execute("INSERT INTO url_index (source_url) VALUES (?)", (url,))
-    conn.commit()
-    conn.close()
+    write_meta_json_fixture(url)
 
     result = subprocess.run(
         ['python3', str(SCRIPTS_DIR / 'dedup_check.py')],
@@ -32,17 +29,40 @@ def test_dedup_check_already_fetched(skill_config, url_index_db):
     assert result.stdout.strip() == 'ALREADY_FETCHED'
 
 
-def test_dedup_check_creates_db_file(skill_config):
-    """Script creates url-index.db if it does not yet exist."""
-    db_path = skill_config['vault'] / 'url-index.db'
-    assert not db_path.exists()
+def test_dedup_check_hash_collision_url_mismatch_returns_ok(skill_config):
+    """meta.json exists but source_url differs (hash collision) still returns OK."""
+    from config import get_url_hash
+    url = 'https://example.com/collision-check'
+    hash8 = get_url_hash(url)
+    article_dir = skill_config['vault'] / hash8
+    article_dir.mkdir(parents=True)
+    (article_dir / 'meta.json').write_text(
+        json.dumps({'source_url': 'https://example.com/a-different-url'}), encoding='utf-8'
+    )
 
-    subprocess.run(
+    result = subprocess.run(
         ['python3', str(SCRIPTS_DIR / 'dedup_check.py')],
-        env={**skill_config['env'], 'CHECK_URL': 'https://example.com/creates-db'},
+        env={**skill_config['env'], 'CHECK_URL': url},
         capture_output=True, text=True
     )
-    assert db_path.exists()
+    assert result.returncode == 0, result.stderr
+    assert result.stdout.strip() == 'OK'
+
+
+def test_dedup_check_partial_state_no_meta_json_returns_ok(skill_config):
+    """Origin exists (Subagent 1 done) but meta.json not yet written (Subagent 2 pending) -> OK, allow retry."""
+    from config import get_url_hash
+    url = 'https://example.com/partial'
+    hash8 = get_url_hash(url)
+    (skill_config['vault'] / hash8 / 'Origin').mkdir(parents=True)
+
+    result = subprocess.run(
+        ['python3', str(SCRIPTS_DIR / 'dedup_check.py')],
+        env={**skill_config['env'], 'CHECK_URL': url},
+        capture_output=True, text=True
+    )
+    assert result.returncode == 0, result.stderr
+    assert result.stdout.strip() == 'OK'
 
 
 def test_dedup_check_missing_config(tmp_path):
@@ -59,17 +79,3 @@ def test_dedup_check_missing_config(tmp_path):
     )
     assert result.returncode != 0
     assert '配置文件不存在' in result.stderr
-
-
-def test_dedup_check_no_db_path_env_needed(skill_config):
-    """Regression: DB_PATH env var must NOT be required after refactor."""
-    env = skill_config['env'].copy()
-    env.pop('DB_PATH', None)
-    env['CHECK_URL'] = 'https://example.com/no-db-path-test'
-
-    result = subprocess.run(
-        ['python3', str(SCRIPTS_DIR / 'dedup_check.py')],
-        env=env, capture_output=True, text=True
-    )
-    assert result.returncode == 0, result.stderr
-    assert result.stdout.strip() in ('OK', 'ALREADY_FETCHED')
