@@ -98,6 +98,92 @@ def test_validate_article_missing_config(tmp_path):
     assert result.returncode != 0
 
 
+_ARTICLE_MISSING_AUTHOR_DATE = """\
+---
+publish_date:
+fetch_date: 2024-01-02
+author:
+source_url: {url}
+origin_title: "Test Article"
+description: A test article for validation.
+tags:
+  - test
+---
+
+# Test Article
+
+This paragraph has more than ten characters and serves as content for testing.
+"""
+
+
+def test_validate_article_missing_author_and_date_still_succeeds(skill_config, tmp_path):
+    """author/publish_date missing (common for sites without that metadata) no longer blocks indexing."""
+    url = 'https://example.com/no-author-date'
+    content = _ARTICLE_MISSING_AUTHOR_DATE.format(url=url)
+    origin = skill_config['vault'] / 'Origin' / 'no-author-date.md'
+    article = skill_config['vault'] / 'no-author-date.md'
+    origin.write_text(content, encoding='utf-8')
+    article.write_text(content, encoding='utf-8')
+
+    env = {
+        **skill_config['env'],
+        'ARTICLE_URL':    url,
+        'ARTICLE_ORIGIN': str(origin),
+        'ARTICLE_PATH':   str(article),
+        'PATH': os.environ.get('PATH', ''),
+    }
+    result = subprocess.run(
+        ['python3', str(SCRIPTS_DIR / 'validate_article.py')],
+        env=env, capture_output=True, text=True
+    )
+    assert result.returncode == 0, result.stderr
+
+    from config import get_url_hash
+    meta_path = skill_config['vault'] / get_url_hash(url) / 'meta.json'
+    assert meta_path.exists(), 'meta.json should still be written when only author/publish_date are missing'
+
+
+_ARTICLE_MISSING_DESCRIPTION = """\
+---
+publish_date: 2024-01-01
+fetch_date: 2024-01-02
+author: Test Author
+source_url: {url}
+origin_title: "Test Article"
+tags:
+  - test
+---
+
+# Test Article
+
+This paragraph has more than ten characters and serves as content for testing.
+"""
+
+
+def test_validate_article_missing_description_still_blocks(skill_config, tmp_path):
+    """description is Subagent 2's own output; missing it must still block (regression guard)."""
+    url = 'https://example.com/no-description'
+    content = _ARTICLE_MISSING_DESCRIPTION.format(url=url)
+    origin = skill_config['vault'] / 'Origin' / 'no-description.md'
+    article = skill_config['vault'] / 'no-description.md'
+    origin.write_text(content, encoding='utf-8')
+    article.write_text(content, encoding='utf-8')
+
+    env = {
+        **skill_config['env'],
+        'ARTICLE_URL':    url,
+        'ARTICLE_ORIGIN': str(origin),
+        'ARTICLE_PATH':   str(article),
+        'PATH': os.environ.get('PATH', ''),
+    }
+    result = subprocess.run(
+        ['python3', str(SCRIPTS_DIR / 'validate_article.py')],
+        env=env, capture_output=True, text=True
+    )
+    assert result.returncode == 1
+    assert 'description空' in result.stderr
+
+
 _ARTICLE_WITH_MISPLACED_TAG = """\
 ---
 publish_date: 2024-01-01
