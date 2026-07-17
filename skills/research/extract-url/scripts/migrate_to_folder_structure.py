@@ -11,7 +11,7 @@ Usage:
 
 Reads VAULT_PATH from ~/.hskill/url-extract/config.json (via config.get_vault_path()).
 """
-import argparse, os, re, shutil, sqlite3, sys, tarfile, time
+import argparse, json, os, re, shutil, sqlite3, sys, tarfile, time
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
 from urllib.parse import urlparse
@@ -213,43 +213,7 @@ def _migrate_entry(vault_path, entry):
         entry['new_translation_path'] = str(target)
 
 
-def _rebuild_db(db_path, plan):
-    conn = sqlite3.connect(str(db_path))
-    conn.execute("""
-        CREATE TABLE IF NOT EXISTS url_index (
-            source_url   TEXT PRIMARY KEY,
-            title        TEXT,
-            fetched_at   TEXT,
-            issues       TEXT,
-            category     TEXT,
-            origin_path  TEXT,
-            article_path TEXT
-        )
-    """)
-    fetch_date = datetime.now(timezone(timedelta(hours=8))).strftime('%Y-%m-%d')
-    for entry in plan['complete'] + plan['partial']:
-        if 'new_origin_path' not in entry and 'new_translation_path' not in entry:
-            continue
-        origin_e = entry.get('origin')
-        translation_e = entry.get('translation')
-        fm = (translation_e or origin_e)['frontmatter']
-        title_path = entry.get('new_translation_path') or entry.get('new_origin_path')
-        conn.execute(
-            "INSERT OR REPLACE INTO url_index "
-            "(source_url, title, fetched_at, issues, category, origin_path, article_path) "
-            "VALUES (?,?,?,?,?,?,?)",
-            (
-                entry['source_url'], Path(title_path).stem, fetch_date, '',
-                fm.get('category') or '',
-                entry.get('new_origin_path') or '',
-                entry.get('new_translation_path') or '',
-            )
-        )
-    conn.commit()
-    conn.close()
-
-
-def apply_plan(vault_path, plan, db_path):
+def apply_plan(vault_path, plan):
     moved, failed = [], []
     for entry in plan['complete'] + plan['partial']:
         try:
@@ -257,9 +221,75 @@ def apply_plan(vault_path, plan, db_path):
             moved.append(entry['source_url'])
         except Exception as exc:
             failed.append({'source_url': entry['source_url'], 'error': str(exc)})
-
-    _rebuild_db(db_path, plan)
     return {'moved': moved, 'failed': failed}
+
+
+def _read_old_index_rows(old_db_path):
+    """Read legacy url_index rows keyed by source_url, for use as a fallback data source."""
+    if not old_db_path or not Path(old_db_path).exists():
+        return {}
+    conn = sqlite3.connect(str(old_db_path))
+    conn.row_factory = sqlite3.Row
+    try:
+        cols = {r[1] for r in conn.execute('PRAGMA table_info(url_index)')}
+        if 'source_url' not in cols:
+            return {}
+        return {r['source_url']: dict(r) for r in conn.execute('SELECT * FROM url_index')}
+    except sqlite3.OperationalError:
+        return {}
+    finally:
+        conn.close()
+
+
+def _write_meta_jsons(vault_path, plan, old_db_path):
+    """Write <hash8>/meta.json for every migrated entry. Frontmatter is the primary
+    data source; the legacy url_index row (if any) fills in fields the frontmatter
+    lacks."""
+    old_rows = _read_old_index_rows(old_db_path)
+    fetch_date = datetime.now(timezone(timedelta(hours=8))).strftime('%Y-%m-%d')
+    written = []
+    for entry in plan['complete'] + plan['partial']:
+        if 'new_origin_path' not in entry and 'new_translation_path' not in entry:
+            continue
+        origin_e = entry.get('origin')
+        translation_e = entry.get('translation')
+        fm = (translation_e or origin_e)['frontmatter']
+        old_row = old_rows.get(entry['source_url'], {})
+        title_path = entry.get('new_translation_path') or entry.get('new_origin_path')
+
+        meta = {
+            'source_url': entry['source_url'],
+            'title': Path(title_path).stem,
+            'category': fm.get('category') or old_row.get('category') or '',
+            'fetched_at': fm.get('fetch_date') or old_row.get('fetched_at') or fetch_date,
+            'issues': old_row.get('issues') or '',
+        }
+        article_dir = Path(vault_path) / entry['url_hash']
+        (article_dir / 'meta.json').write_text(json.dumps(meta, ensure_ascii=False, indent=2, default=str), encoding='utf-8')
+        written.append(entry['source_url'])
+    return written
+
+
+_LEGACY_DB_NAMES = [
+    'url-index.db', 'url_index.db', 'reading.db', 'reading_index.db',
+    '.fetch_history.db', 'articles.db', 'cursor-articles.db', 'article_fetch_log.sqlite',
+]
+
+
+def _cleanup_legacy_files(vault_path):
+    """Remove the old centralized index db and any leftover iCloud sync-conflict files."""
+    vault_path = Path(vault_path)
+    removed = []
+    for name in _LEGACY_DB_NAMES:
+        p = vault_path / name
+        if p.exists():
+            p.unlink()
+            removed.append(str(p))
+    for p in list(vault_path.rglob('*sync-conflict*')):
+        if p.is_file():
+            p.unlink()
+            removed.append(str(p))
+    return removed
 
 
 def _backup_vault(vault_path):
@@ -358,6 +388,16 @@ def apply_merge(vault_path, keep_hash, drop_hash):
         content = _rewrite_wikilink(content, keep_hash, origin_files[0].name)
         t_path.write_text(content, encoding='utf-8')
 
+        fm = _read_frontmatter(t_path)
+        meta = {
+            'source_url': fm.get('source_url', ''),
+            'title': t_path.stem,
+            'category': fm.get('category') or '',
+            'fetched_at': fm.get('fetch_date') or datetime.now(timezone(timedelta(hours=8))).strftime('%Y-%m-%d'),
+            'issues': '',
+        }
+        (keep_dir / 'meta.json').write_text(json.dumps(meta, ensure_ascii=False, indent=2, default=str), encoding='utf-8')
+
 
 def _print_plan_summary(plan):
     print(f"完整配对：{len(plan['complete'])}")
@@ -381,7 +421,7 @@ def main():
 
     args = parser.parse_args()
     vault_path = get_vault_path()
-    db_path = os.path.join(vault_path, 'url-index.db')
+    old_db_path = os.path.join(vault_path, 'url-index.db')
 
     if args.command == 'plan':
         _print_plan_summary(build_plan(vault_path))
@@ -390,10 +430,16 @@ def main():
         _print_plan_summary(plan)
         if not args.no_backup:
             print(f'备份已创建：{_backup_vault(vault_path)}')
-        result = apply_plan(vault_path, plan, db_path)
+        result = apply_plan(vault_path, plan)
+        written = _write_meta_jsons(vault_path, plan, old_db_path)
+        removed = _cleanup_legacy_files(vault_path)
         print(f"迁移完成：{len(result['moved'])} 篇成功，{len(result['failed'])} 篇失败")
         for f in result['failed']:
             print(f"  失败：{f['source_url']} - {f['error']}")
+        print(f"meta.json 写入：{len(written)} 篇")
+        print(f"清理遗留文件：{len(removed)} 个")
+        for r in removed:
+            print(f"  已删除：{r}")
     elif args.command == 'find-merges':
         candidates = find_merge_candidates(vault_path)
         if not candidates:

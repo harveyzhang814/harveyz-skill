@@ -1,4 +1,4 @@
-import sqlite3, sys
+import json, sqlite3, sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent / 'scripts'))
@@ -171,9 +171,8 @@ def test_apply_plan_moves_files_strips_hash_prefix_and_rewrites_links(tmp_path):
     _write_pair(vault, 'https://example.com/h', 'Article H', 'article-h',
                 image_names=['deadbeef_img_1.jpg'])
     plan = migrate.build_plan(vault)
-    db_path = vault / 'url-index.db'
 
-    result = migrate.apply_plan(vault, plan, db_path)
+    result = migrate.apply_plan(vault, plan)
 
     assert result['failed'] == []
     url_hash = migrate.get_url_hash('https://example.com/h')
@@ -196,38 +195,106 @@ def test_apply_plan_moves_files_strips_hash_prefix_and_rewrites_links(tmp_path):
     assert f'[[{url_hash}/Origin/article-h.md]]' in translation_content
 
 
-def test_apply_plan_writes_url_index_db(tmp_path):
+def test_apply_plan_then_write_meta_jsons_creates_meta_json(tmp_path):
     vault = _make_vault(tmp_path)
     _write_pair(vault, 'https://example.com/i', 'Article I', 'article-i')
     plan = migrate.build_plan(vault)
-    db_path = vault / 'url-index.db'
 
-    migrate.apply_plan(vault, plan, db_path)
+    migrate.apply_plan(vault, plan)
+    written = migrate._write_meta_jsons(vault, plan, vault / 'url-index.db')
 
-    conn = sqlite3.connect(str(db_path))
-    row = conn.execute(
-        'SELECT origin_path, article_path FROM url_index WHERE source_url=?',
-        ('https://example.com/i',)
-    ).fetchone()
-    conn.close()
-    assert row is not None
+    assert written == ['https://example.com/i']
     url_hash = migrate.get_url_hash('https://example.com/i')
-    assert row[0] == str(vault / url_hash / 'Origin' / 'article-i.md')
-    assert row[1] == str(vault / url_hash / 'Translation' / 'article-i.md')
+    meta_path = vault / url_hash / 'meta.json'
+    assert meta_path.exists()
+    meta = json.loads(meta_path.read_text(encoding='utf-8'))
+    assert meta['source_url'] == 'https://example.com/i'
+    assert meta['title'] == 'article-i'
+
+
+def test_write_meta_jsons_prefers_frontmatter_category_over_old_db(tmp_path):
+    vault = _make_vault(tmp_path)
+    _write_pair(vault, 'https://example.com/k', 'Article K', 'article-k')
+    t_path = vault / 'article-k.md'
+    content = t_path.read_text(encoding='utf-8')
+    content = content.replace('tags: []', 'tags: []\ncategory: from-frontmatter')
+    t_path.write_text(content, encoding='utf-8')
+
+    plan = migrate.build_plan(vault)
+    migrate.apply_plan(vault, plan)
+
+    old_db = vault / 'url-index.db'
+    conn = sqlite3.connect(str(old_db))
+    conn.execute("CREATE TABLE url_index (source_url TEXT PRIMARY KEY, category TEXT, fetched_at TEXT, issues TEXT)")
+    conn.execute("INSERT INTO url_index (source_url, category, fetched_at, issues) VALUES (?,?,?,?)",
+                 ('https://example.com/k', 'from-old-db', '2020-01-01', 'old issue'))
+    conn.commit()
+    conn.close()
+
+    migrate._write_meta_jsons(vault, plan, old_db)
+
+    url_hash = migrate.get_url_hash('https://example.com/k')
+    meta = json.loads((vault / url_hash / 'meta.json').read_text(encoding='utf-8'))
+    assert meta['category'] == 'from-frontmatter'
+
+
+def test_write_meta_jsons_falls_back_to_old_db_when_frontmatter_incomplete(tmp_path):
+    vault = _make_vault(tmp_path)
+    url = 'https://example.com/m'
+    origin_content = (
+        "---\npublish_date: 2026-01-01\nfetch_date:\nauthor: Test Author\n"
+        f"source_url: {url}\norigin_title: \"Article M\"\n---\n\n# Article M\n\nBody text here.\n"
+    )
+    (vault / 'Origin' / 'article-m.md').write_text(origin_content, encoding='utf-8')
+    translation_content = (
+        "---\npublish_date: 2026-01-01\nfetch_date:\nauthor: Test Author\n"
+        f"source_url: {url}\norigin_title: \"Article M\"\ntags: []\ndescription: A test article.\n---\n\n"
+        "[[Origin/article-m.md]]\n\n---\n\n# Article M（译文）\n\n正文内容。\n"
+    )
+    (vault / 'article-m.md').write_text(translation_content, encoding='utf-8')
+
+    plan = migrate.build_plan(vault)
+    migrate.apply_plan(vault, plan)
+
+    old_db = vault / 'url-index.db'
+    conn = sqlite3.connect(str(old_db))
+    conn.execute("CREATE TABLE url_index (source_url TEXT PRIMARY KEY, category TEXT, fetched_at TEXT, issues TEXT)")
+    conn.execute("INSERT INTO url_index (source_url, category, fetched_at, issues) VALUES (?,?,?,?)",
+                 (url, 'db-category', '2020-05-05', 'db issue'))
+    conn.commit()
+    conn.close()
+
+    migrate._write_meta_jsons(vault, plan, old_db)
+
+    url_hash = migrate.get_url_hash(url)
+    meta = json.loads((vault / url_hash / 'meta.json').read_text(encoding='utf-8'))
+    assert meta['category'] == 'db-category'
+    assert meta['fetched_at'] == '2020-05-05'
+    assert meta['issues'] == 'db issue'
+
+
+def test_write_meta_jsons_handles_missing_old_db(tmp_path):
+    vault = _make_vault(tmp_path)
+    _write_pair(vault, 'https://example.com/n', 'Article N', 'article-n')
+    plan = migrate.build_plan(vault)
+    migrate.apply_plan(vault, plan)
+
+    written = migrate._write_meta_jsons(vault, plan, vault / 'does-not-exist.db')
+
+    assert written == ['https://example.com/n']
 
 
 def test_apply_plan_is_idempotent_on_rerun(tmp_path):
     vault = _make_vault(tmp_path)
     _write_pair(vault, 'https://example.com/j', 'Article J', 'article-j')
-    db_path = vault / 'url-index.db'
 
     plan1 = migrate.build_plan(vault)
-    migrate.apply_plan(vault, plan1, db_path)
+    migrate.apply_plan(vault, plan1)
 
     plan2 = migrate.build_plan(vault)
     assert plan2['complete'] == []
     assert plan2['partial'] == []
-    result2 = migrate.apply_plan(vault, plan2, db_path)
+    result2 = migrate.apply_plan(vault, plan2)
     assert result2['moved'] == []
     assert result2['failed'] == []
 
@@ -380,3 +447,46 @@ def test_apply_merge_moves_non_md_content_instead_of_deleting(tmp_path):
     migrate.apply_merge(vault, keep_hash=hash_a, drop_hash=hash_b)
 
     assert (vault / hash_a / 'Translation' / 'stray-note.txt').exists()
+
+
+def test_cleanup_legacy_files_removes_known_names_and_sync_conflicts(tmp_path):
+    vault = _make_vault(tmp_path)
+    (vault / 'url-index.db').write_bytes(b'db')
+    (vault / 'url_index.db').write_bytes(b'db')
+    (vault / 'reading.db').write_bytes(b'db')
+    (vault / 'unrelated.db').write_bytes(b'db')
+    (vault / 'article.sync-conflict-20260101-ABC.md').write_text('x', encoding='utf-8')
+    (vault / 'Image' / 'photo.sync-conflict-20260101-ABC.jpg').write_bytes(b'img')
+
+    removed = migrate._cleanup_legacy_files(vault)
+
+    assert not (vault / 'url-index.db').exists()
+    assert not (vault / 'url_index.db').exists()
+    assert not (vault / 'reading.db').exists()
+    assert (vault / 'unrelated.db').exists()
+    assert not (vault / 'article.sync-conflict-20260101-ABC.md').exists()
+    assert not (vault / 'Image' / 'photo.sync-conflict-20260101-ABC.jpg').exists()
+    assert len(removed) == 5
+
+
+def test_apply_merge_writes_meta_json_when_both_sides_present(tmp_path):
+    vault = _make_vault(tmp_path)
+    url = 'https://example.com/t'
+    hash_a = migrate.get_url_hash(url + '?utm_source=x')
+    hash_b = migrate.get_url_hash(url)
+    (vault / hash_a / 'Origin').mkdir(parents=True)
+    (vault / hash_a / 'Origin' / 'article-t.md').write_text(
+        ORIGIN_TMPL.format(url=url + '?utm_source=x', title='Article T', img_line=''), encoding='utf-8'
+    )
+    (vault / hash_b / 'Translation').mkdir(parents=True)
+    (vault / hash_b / 'Translation' / 'article-t.md').write_text(
+        TRANSLATION_TMPL.format(url=url, title='Article T', wikilink='[[Origin/article-t.md]]', img_line=''),
+        encoding='utf-8'
+    )
+
+    migrate.apply_merge(vault, keep_hash=hash_a, drop_hash=hash_b)
+
+    meta_path = vault / hash_a / 'meta.json'
+    assert meta_path.exists()
+    meta = json.loads(meta_path.read_text(encoding='utf-8'))
+    assert meta['source_url'] == url
