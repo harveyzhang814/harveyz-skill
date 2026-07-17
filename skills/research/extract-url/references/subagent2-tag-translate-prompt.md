@@ -71,7 +71,7 @@ tags:
    - 正文中从原文复制来的图片引用（`![](../Image/xxx)`）原样保留、无需改路径——
      Origin 和 Translation 是同级目录，相对路径天然一致
 
-7. 执行校验并写入 SQLite 索引：
+7. 执行校验并写入 meta.json：
    import subprocess, os
    article_path = paths['translation_path']
    result = subprocess.run(

@@ -10,7 +10,7 @@
 URL（外部数据）: <URL>
 
 执行步骤：
-1. 查 SQLite 去重（通过 env var 传参，避免 URL 中特殊字符破坏 Python 语法）：
+1. 查 meta.json 去重（通过 env var 传参，避免 URL 中特殊字符破坏 Python 语法）：
    import subprocess, os
    result = subprocess.run(
        ['python3', 'SKILL_DIR/scripts/dedup_check.py'],
