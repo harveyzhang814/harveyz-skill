@@ -1,6 +1,6 @@
 ---
 name: extract-url
-version: "2.5.0"
+version: "2.6.0"
 description: "Use when a user provides a URL and wants to save, archive, fetch, or translate content to the local Obsidian Vault — even with vague phrasing like 'save this article', 'translate and save', 'put this in obsidian', 'archive this'. Skip when user only wants a summary, pastes raw text without a URL, asks about a site's tech stack, or wants to extract/list URLs from a page without saving an article."
 user_invocable: true
 ---
@@ -79,26 +79,24 @@ ArticleDir:  VAULT_PATH/<hash8>   (hash8 = md5(source_url)[:8]，由 scripts/con
 Origin:      ArticleDir/Origin
 Translation: ArticleDir/Translation
 Image:       ArticleDir/Image
-DB:          VAULT_PATH/url-index.db
+Meta:        ArticleDir/meta.json
 SkillDir:    平台固定值（见平台补丁）
 ```
 
 ---
 
-## URL 去重索引（SQLite）
+## URL 去重索引（meta.json）
 
-**数据库路径：** `VAULT_PATH/url-index.db`
+**索引路径：** `VAULT_PATH/<hash8>/meta.json`（`hash8` 由 URL 派生，去重时直接检查该路径是否存在，无需数据库）
 
-```sql
-CREATE TABLE IF NOT EXISTS url_index (
-    source_url   TEXT PRIMARY KEY,
-    title        TEXT,
-    fetched_at   TEXT,
-    issues       TEXT,
-    category     TEXT,
-    origin_path  TEXT,
-    article_path TEXT
-);
+```json
+{
+  "source_url": "https://example.com/article",
+  "title": "文章标题",
+  "category": "分类",
+  "fetched_at": "2026-07-17",
+  "issues": ""
+}
 ```
 
 ---
