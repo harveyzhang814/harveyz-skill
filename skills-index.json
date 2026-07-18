@@ -30,7 +30,7 @@
       "path": "mint/learn-skill",
       "bundle": "mint",
       "installScope": "global",
-      "contentHash": "542f333a8a72024c",
+      "contentHash": "5255c96c742fbab8",
       "contentVersion": "2.0.0"
     },
     {
@@ -58,7 +58,7 @@
       "path": "research/survey-skillrepo",
       "bundle": "research",
       "installScope": "global",
-      "contentHash": "ea823301b039a8aa",
+      "contentHash": "e9d46ca1e90ee289",
       "contentVersion": "2.0.1"
     },
     {
@@ -127,8 +127,8 @@
       "path": "coding/question-me",
       "bundle": "coding",
       "installScope": "global",
-      "contentHash": "6d2cd30c1ed4c4eb",
-      "contentVersion": "3.0.0"
+      "contentHash": "5c6c510e1fa77723",
+      "contentVersion": "3.0.1"
     },
     {
       "path": "coding/capture-vocab",
@@ -204,7 +204,7 @@
       "path": "mint/init-skill",
       "bundle": "mint",
       "installScope": "project",
-      "contentHash": "4053e6476d1c3f09",
+      "contentHash": "ff8aeceb83b17a1e",
       "contentVersion": "1.2.0"
     },
     {
