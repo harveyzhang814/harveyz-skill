@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.24.0] - 2026-07-18
+
+### Added
+- `extract-url`：用 per-article `meta.json` 索引替代 SQLite 索引，`article_utils`/`dedup_check`/`playwright_web(_arxiv)`/`playwright_xcom`/`validate_article` 全部切换到 meta.json 读写；提供旧数据迁移脚本（写 meta.json + 清理遗留文件）
+- `pdf-math-translate`：从其他项目贡献到 `research` bundle 的 PDF 数学翻译 skill
+- `explain-pm`：新增 skill，注册到 `coding` bundle
+- `rephrase`：新增 skill，单次改写用户陈述以提升精确度
+
+### Fixed
+- `extract-url`：放宽翻译文章的 author/publish_date 校验规则
+- `question-me`：补充决策树格式中 label 字段的示例与一致性规则（v3.0.1）
+- `publish-skill` 审计：修正 `learn-skill`/`survey-skillrepo`/`init-skill` 三个 skill 历史遗留的 contentHash 记录错误（内容本身未变更）
+
+### Changed
+- `extract-url`：SKILL.md 与 subagent prompt 更新以适配 meta.json 索引；skills-index.json 同步更新 contentHash
+
 ## [0.23.0] - 2026-07-09
 
 ### Added
