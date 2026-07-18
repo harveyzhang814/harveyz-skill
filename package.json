@@ -1,6 +1,6 @@
 {
   "name": "harveyz-skill",
-  "version": "0.23.0",
+  "version": "0.24.0",
   "description": "Skill manager for Claude Code, Cursor, and Codex",
   "type": "module",
   "bin": {
@@ -24,6 +24,7 @@
     "skills/research/learn-paper/",
     "skills/research/extract-cognition/",
     "skills/research/probe-session/",
+    "skills/research/pdf-math-translate/",
     "skills/creative/capture-todo/",
     "skills/creative/capture-insight/",
     "skills/coding/init-workflow/",
@@ -31,6 +32,8 @@
     "skills/coding/init-goal/",
     "skills/coding/question-me/",
     "skills/coding/capture-vocab/",
+    "skills/coding/rephrase/",
+    "skills/coding/explain-pm/",
     "skills/writing/forge-doc/",
     "skills/writing/draw-diagram/",
     "skills/writing/manage-dir/",

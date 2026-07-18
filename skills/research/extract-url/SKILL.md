@@ -1,6 +1,6 @@
 ---
 name: extract-url
-version: "2.3.4"
+version: "2.6.0"
 description: "Use when a user provides a URL and wants to save, archive, fetch, or translate content to the local Obsidian Vault — even with vague phrasing like 'save this article', 'translate and save', 'put this in obsidian', 'archive this'. Skip when user only wants a summary, pastes raw text without a URL, asks about a site's tech stack, or wants to extract/list URLs from a page without saving an article."
 user_invocable: true
 ---
@@ -73,30 +73,30 @@ ls ~/.hskill/url-extract/config.json 2>/dev/null && echo "EXISTS" || echo "NOT_F
 ## 路径变量（脚本自读 config.json，无需 Agent 传参）
 
 ```
-Config:   ~/.hskill/url-extract/config.json
-Base:     VAULT_PATH   (脚本从 config.json 读取)
-Origin:   VAULT_PATH/Origin
-Image:    VAULT_PATH/Image
-DB:       VAULT_PATH/url-index.db
-SkillDir: 平台固定值（见平台补丁）
+Config:      ~/.hskill/url-extract/config.json
+Base:        VAULT_PATH   (脚本从 config.json 读取)
+ArticleDir:  VAULT_PATH/<hash8>   (hash8 = md5(source_url)[:8]，由 scripts/config.py 的 get_article_paths() 统一计算)
+Origin:      ArticleDir/Origin
+Translation: ArticleDir/Translation
+Image:       ArticleDir/Image
+Meta:        ArticleDir/meta.json
+SkillDir:    平台固定值（见平台补丁）
 ```
 
 ---
 
-## URL 去重索引（SQLite）
+## URL 去重索引（meta.json）
 
-**数据库路径：** `VAULT_PATH/url-index.db`
+**索引路径：** `VAULT_PATH/<hash8>/meta.json`（`hash8` 由 URL 派生，去重时直接检查该路径是否存在，无需数据库）
 
-```sql
-CREATE TABLE IF NOT EXISTS url_index (
-    source_url   TEXT PRIMARY KEY,
-    title        TEXT,
-    fetched_at   TEXT,
-    issues       TEXT,
-    category     TEXT,
-    origin_path  TEXT,
-    article_path TEXT
-);
+```json
+{
+  "source_url": "https://example.com/article",
+  "title": "文章标题",
+  "category": "分类",
+  "fetched_at": "2026-07-17",
+  "issues": ""
+}
 ```
 
 ---
@@ -149,7 +149,7 @@ url_safe = re.sub(r'[\x00-\x1f\x7f]', '', url).strip()[:2048]
 ```
 ── 完成 ──────────────────────────────
 标题  《文章标题》
-路径  /Vault/Reading/article.md
+路径  /Vault/Reading/a1b2c3d4/Translation/article.md
 字符  12,345
 代码  3 段
 图片  8 张
@@ -169,7 +169,7 @@ url_safe = re.sub(r'[\x00-\x1f\x7f]', '', url).strip()[:2048]
 ```
 ── 部分完成 ───────────────────────────
 标题  《文章标题》
-路径  /Vault/Origin/article.md（仅原文）
+路径  /Vault/Reading/a1b2c3d4/Origin/article.md（仅原文）
 原因  翻译超时，原文已保存
 ──────────────────────────────────────
 ```

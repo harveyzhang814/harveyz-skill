@@ -91,3 +91,11 @@ def test_playwright_xcom_only_one_arg_needed(skill_config):
     # Either way, returncode != 0 — but stderr must NOT contain "IndexError"
     assert 'IndexError' not in result.stderr, \
         'Should not fail on argument count — old 4-arg interface was removed'
+
+
+def test_playwright_xcom_imports_get_article_paths():
+    """Regression: script must import get_article_paths, not compute url_hash/Image/Origin inline."""
+    content = (SCRIPTS_DIR / 'playwright_xcom.py').read_text(encoding='utf-8')
+    assert 'get_article_paths' in content
+    assert "os.path.join(vault_path, 'Image')" not in content
+    assert "os.path.join(vault_path, 'Origin')" not in content

@@ -1,10 +1,18 @@
 #!/usr/bin/env python3
 """
-Playwright scraper for general websites.
-Usage: python playwright_web.py <url> <html_path>
+Playwright scraper for arXiv HTML paper pages (e.g. https://arxiv.org/html/<id>).
+Usage: python playwright_web_arxiv.py <url> <html_path>
   html_path: path to pre-fetched HTML file (e.g. /tmp/fetched_page.html)
 Reads VAULT_PATH and CHROME_PROFILE from ~/.hskill/url-extract/config.json
 Stdout: "ORIGIN_PATH: <path>" on success
+
+Fork of playwright_web.py with two arXiv-specific fixes:
+1. Injects <base href="{url}"> before loading the HTML so relative image
+   paths (arXiv HTML papers reference figures as e.g. "2607.01233v1/x1.png")
+   resolve to real absolute URLs instead of about:blank-based ones.
+2. Extracts <table class="ltx_tabular ...">  (real data tables) into Markdown
+   pipe tables. LaTeXML also renders block equations as <table class="ltx_equation
+   ltx_eqn_table">, which are excluded since they aren't tabular data.
 
 If the pre-fetched HTML yields thin content (<20 blocks or <3000 chars), the
 script automatically retries by navigating directly with Chrome cookies injected
@@ -72,12 +80,53 @@ _EXTRACT_JS = r"""() => {
         ? (authorMeta.getAttribute('content') || authorMeta.innerText || '').trim()
         : '';
 
-    const main   = document.querySelector('main') || document.querySelector('article') || document.body;
+    const main = document.querySelector('main') || document.querySelector('article') || document.body;
+
+    function tableToMarkdown(table) {
+        const rows = Array.from(table.querySelectorAll('tr'));
+        if (!rows.length) return '';
+        const grid = rows.map(tr =>
+            Array.from(tr.querySelectorAll('th,td')).map(cell =>
+                cell.innerText.replace(/\s+/g, ' ').trim().replace(/\|/g, '\\|')
+            )
+        );
+        const nCols = Math.max(...grid.map(r => r.length));
+        const pad = r => { while (r.length < nCols) r.push(''); return r; };
+        const lines = [];
+        lines.push('| ' + pad(grid[0]).join(' | ') + ' |');
+        lines.push('| ' + Array(nCols).fill('---').join(' | ') + ' |');
+        for (let i = 1; i < grid.length; i++) {
+            lines.push('| ' + pad(grid[i]).join(' | ') + ' |');
+        }
+        return lines.join('\n');
+    }
+
+    // Only real data tables (ltx_tabular) — LaTeXML also renders block
+    // equations as <table class="ltx_equation ltx_eqn_table">, skip those.
+    const tables     = Array.from(main.querySelectorAll('table'));
+    const tableSlots = new Map();
+    for (const t of tables) {
+        if (!/\bltx_tabular\b/.test(t.className)) continue;
+        const md = tableToMarkdown(t);
+        if (md) tableSlots.set(t, md);
+    }
+
     const walker = document.createTreeWalker(main, NodeFilter.SHOW_ELEMENT);
     let node;
     while (node = walker.nextNode()) {
-        if (skipTags.has(node.tagName.toUpperCase())) continue;
         const tag = node.tagName.toUpperCase();
+        if (skipTags.has(tag)) continue;
+
+        if (tag === 'TABLE' && tableSlots.has(node)) {
+            contentUnits.push({tag: 'table', content: tableSlots.get(node)});
+            continue;
+        }
+
+        // Skip content inside an already-captured table (but not the table
+        // node itself — closest('table') matches self too) to avoid
+        // duplicating cell text as loose <p>/<li> blocks.
+        const ownerTable = node.closest ? node.closest('table') : null;
+        if (ownerTable && ownerTable !== node && tableSlots.has(ownerTable)) continue;
 
         if (tag === 'IMG') {
             const src = node.src || node.getAttribute('data-src') || '';
@@ -139,6 +188,14 @@ def _fetch_with_cookies(url):
 # --- Load HTML and extract content ---
 with open(html_path, encoding='utf-8', errors='replace') as f:
     html = f.read()
+
+# Inject <base> so relative image URLs resolve against the real page URL
+# instead of about:blank (page.set_content has no base URL by default).
+base_tag = f'<base href="{url}">'
+if '<head>' in html:
+    html = html.replace('<head>', f'<head>{base_tag}', 1)
+else:
+    html = base_tag + html
 
 with sync_playwright() as p:
     browser = p.chromium.launch(headless=True)

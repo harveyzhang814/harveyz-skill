@@ -19,7 +19,7 @@
   "bundleMeta": {
     "research": "研究工具（extract-url + learn-video + extract-vision + survey-skillrepo + learn-paper + extract-cognition + probe-session）",
     "creative": "创意工具（capture-todo + capture-insight）",
-    "coding": "程序工具（init-workflow + setup-debug + init-goal + question-me + capture-vocab）",
+    "coding": "程序工具（init-workflow + setup-debug + init-goal + question-me + capture-vocab + rephrase + explain-pm）",
     "writing": "写作工具（forge-doc + draw-diagram + manage-dir + migrate-spec）",
     "design": "设计工具（scout-brand + build-style + sync-design）",
     "mint": "Skill 生命周期工具（init-skill + publish-skill + archive-skill + dedup-skill + contribute-skill + fix-skill + runby-opencode + scout-philosophy + learn-skill）",
@@ -30,15 +30,15 @@
       "path": "mint/learn-skill",
       "bundle": "mint",
       "installScope": "global",
-      "contentHash": "542f333a8a72024c",
+      "contentHash": "5255c96c742fbab8",
       "contentVersion": "2.0.0"
     },
     {
       "path": "research/extract-url",
       "bundle": "research",
       "installScope": "global",
-      "contentHash": "c4c3177d183db91e",
-      "contentVersion": "2.3.4"
+      "contentHash": "4b72bb5e655884d5",
+      "contentVersion": "2.6.0"
     },
     {
       "path": "research/extract-vision",
@@ -58,7 +58,7 @@
       "path": "research/survey-skillrepo",
       "bundle": "research",
       "installScope": "global",
-      "contentHash": "ea823301b039a8aa",
+      "contentHash": "e9d46ca1e90ee289",
       "contentVersion": "2.0.1"
     },
     {
@@ -81,6 +81,12 @@
       "installScope": "project",
       "contentHash": "91391f7b702e0797",
       "contentVersion": "0.3.0"
+    },
+    {
+      "path": "research/pdf-math-translate",
+      "bundle": "research",
+      "installScope": "project",
+      "contentVersion": "1.0.0"
     },
     {
       "path": "creative/capture-todo",
@@ -121,8 +127,8 @@
       "path": "coding/question-me",
       "bundle": "coding",
       "installScope": "global",
-      "contentHash": "6d2cd30c1ed4c4eb",
-      "contentVersion": "3.0.0"
+      "contentHash": "5c6c510e1fa77723",
+      "contentVersion": "3.0.1"
     },
     {
       "path": "coding/capture-vocab",
@@ -130,6 +136,20 @@
       "installScope": "project",
       "contentHash": "5d78c9d9a91e7faa",
       "contentVersion": "1.1.1"
+    },
+    {
+      "path": "coding/rephrase",
+      "bundle": "coding",
+      "installScope": "global",
+      "contentHash": "cc5a948ce0e80a53",
+      "contentVersion": "1.0.1"
+    },
+    {
+      "path": "coding/explain-pm",
+      "bundle": "coding",
+      "installScope": "global",
+      "contentHash": "6e96c630e16371a0",
+      "contentVersion": "1.0.0"
     },
     {
       "path": "writing/forge-doc",
@@ -184,7 +204,7 @@
       "path": "mint/init-skill",
       "bundle": "mint",
       "installScope": "project",
-      "contentHash": "4053e6476d1c3f09",
+      "contentHash": "ff8aeceb83b17a1e",
       "contentVersion": "1.2.0"
     },
     {

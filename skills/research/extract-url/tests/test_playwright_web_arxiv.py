@@ -18,14 +18,14 @@ _TEST_HTML = """\
 <!DOCTYPE html>
 <html>
 <head>
-  <title>E2E Test Article</title>
-  <meta name="author" content="E2E Author">
+  <title>arXiv Test Article</title>
+  <meta name="author" content="arXiv Author">
   <meta property="article:published_time" content="2024-06-01">
 </head>
 <body>
   <article>
-    <h1>E2E Test Article</h1>
-    <p>First paragraph with sufficient content to be captured by the playwright_web scraper logic.</p>
+    <h1>arXiv Test Article</h1>
+    <p>First paragraph with sufficient content to be captured by the playwright_web_arxiv scraper logic.</p>
     <p>Second paragraph providing additional body text for the content extraction verification test.</p>
   </article>
 </body>
@@ -36,12 +36,12 @@ _TEST_HTML_NO_AUTHOR = """\
 <!DOCTYPE html>
 <html>
 <head>
-  <title>No Author Article</title>
+  <title>arXiv No Author Article</title>
 </head>
 <body>
   <article>
-    <h1>No Author Article</h1>
-    <p>First paragraph with sufficient content to be captured by the playwright_web scraper logic.</p>
+    <h1>arXiv No Author Article</h1>
+    <p>First paragraph with sufficient content to be captured by the playwright_web_arxiv scraper logic.</p>
     <p>Second paragraph providing additional body text for the content extraction verification test.</p>
   </article>
 </body>
@@ -49,12 +49,12 @@ _TEST_HTML_NO_AUTHOR = """\
 """
 
 
-def test_playwright_web_invalid_url_scheme(skill_config, tmp_path):
+def test_playwright_web_arxiv_invalid_url_scheme(skill_config, tmp_path):
     """Security check rejects non-http/https URLs before reading config."""
     html = tmp_path / 'test.html'
     html.write_text('<html><body><h1>X</h1></body></html>')
     result = subprocess.run(
-        ['python3', str(SCRIPTS_DIR / 'playwright_web.py'),
+        ['python3', str(SCRIPTS_DIR / 'playwright_web_arxiv.py'),
          'file:///etc/passwd', str(html)],
         env=skill_config['env'],
         capture_output=True, text=True
@@ -63,7 +63,7 @@ def test_playwright_web_invalid_url_scheme(skill_config, tmp_path):
     assert 'Rejected URL' in result.stderr
 
 
-def test_playwright_web_missing_config(tmp_path):
+def test_playwright_web_arxiv_missing_config(tmp_path):
     """Clear error when config.json does not exist."""
     html = tmp_path / 'test.html'
     html.write_text('<html><body><h1>X</h1></body></html>')
@@ -73,18 +73,18 @@ def test_playwright_web_missing_config(tmp_path):
         'PATH': os.environ.get('PATH', ''),
     }
     result = subprocess.run(
-        ['python3', str(SCRIPTS_DIR / 'playwright_web.py'),
-         'https://example.com', str(html)],
+        ['python3', str(SCRIPTS_DIR / 'playwright_web_arxiv.py'),
+         'https://arxiv.org/html/2024.01234', str(html)],
         env=env, capture_output=True, text=True
     )
     assert result.returncode != 0
 
 
-def test_playwright_web_too_few_args(skill_config):
+def test_playwright_web_arxiv_too_few_args(skill_config):
     """Script exits non-zero when html_path argument is missing."""
     result = subprocess.run(
-        ['python3', str(SCRIPTS_DIR / 'playwright_web.py'),
-         'https://example.com'],
+        ['python3', str(SCRIPTS_DIR / 'playwright_web_arxiv.py'),
+         'https://arxiv.org/html/2024.01234'],
         env=skill_config['env'],
         capture_output=True, text=True
     )
@@ -92,14 +92,14 @@ def test_playwright_web_too_few_args(skill_config):
 
 
 @requires_playwright
-def test_playwright_web_e2e(skill_config, tmp_path):
+def test_playwright_web_arxiv_e2e(skill_config, tmp_path):
     """Full e2e: HTML file → ORIGIN_PATH in stdout + file saved to vault."""
     html = tmp_path / 'article.html'
     html.write_text(_TEST_HTML, encoding='utf-8')
 
     result = subprocess.run(
-        ['python3', str(SCRIPTS_DIR / 'playwright_web.py'),
-         'https://example.com/e2e-test', str(html)],
+        ['python3', str(SCRIPTS_DIR / 'playwright_web_arxiv.py'),
+         'https://arxiv.org/html/2024.06001', str(html)],
         env=skill_config['env'],
         capture_output=True, text=True,
         timeout=60
@@ -116,29 +116,27 @@ def test_playwright_web_e2e(skill_config, tmp_path):
     assert origin_file.exists(), f'Origin file not found at {origin_path}'
 
     content = origin_file.read_text(encoding='utf-8')
-    assert 'E2E Test Article' in content
-    assert 'source_url: https://example.com/e2e-test' in content
+    assert 'arXiv Test Article' in content
+    assert 'source_url: https://arxiv.org/html/2024.06001' in content
 
     import hashlib
-    expected_hash = hashlib.md5('https://example.com/e2e-test'.encode()).hexdigest()[:8]
+    expected_hash = hashlib.md5('https://arxiv.org/html/2024.06001'.encode()).hexdigest()[:8]
     assert origin_file.parent.name == 'Origin'
     assert origin_file.parent.parent.name == expected_hash
     assert origin_file.parent.parent.parent == skill_config['vault']
 
-    # author/date/source_url/origin_title 都齐全，description 已从原文校验里排除
-    # → remaining 应为空 → 不应留下临时 issues 文件
     assert not (origin_file.parent.parent / '.fetch_issues.tmp').exists()
 
 
 @requires_playwright
-def test_playwright_web_e2e_writes_fetch_issues_tmp_when_incomplete(skill_config, tmp_path):
+def test_playwright_web_arxiv_e2e_writes_fetch_issues_tmp_when_incomplete(skill_config, tmp_path):
     """When origin frontmatter has real gaps (missing author/date), a temp issues file is written."""
     html = tmp_path / 'no-author.html'
     html.write_text(_TEST_HTML_NO_AUTHOR, encoding='utf-8')
 
     result = subprocess.run(
-        ['python3', str(SCRIPTS_DIR / 'playwright_web.py'),
-         'https://example.com/no-author-test', str(html)],
+        ['python3', str(SCRIPTS_DIR / 'playwright_web_arxiv.py'),
+         'https://arxiv.org/html/2024.07002', str(html)],
         env=skill_config['env'],
         capture_output=True, text=True,
         timeout=60

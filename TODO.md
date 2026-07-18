@@ -16,6 +16,13 @@
 
 ---
 
+### [x] 调研 extract-url 索引存储方案
+**优先级**: P2 | **日期**: 2026-07-17
+
+extract-url 目前用集中式 SQLite（`url-index.db`）维护所有文章的索引。调研方向：改成每个文章文件夹下维护独立的 `meta.json` 是否更合适，对比两种方案在查询、并发写入、迁移成本、与 Obsidian 生态兼容性等维度的优劣，产出结论后再决定是否实施。
+
+---
+
 ## mermaid-diagram — 渲染样式增强
 
 ### [ ] CSS 注入提升 Mermaid 渲染质量
@@ -102,3 +109,14 @@ sync-agent 已完成，现在将 Hermes agent 配置目录 `~/.hermes` 纳入同
 
 **期望行为**：`hskill uninstall p-launch` 清理上述所有文件，并从 `~/.zshrc` 移除 snippet。  
 **扩展点**：tool 可在 `tool.json` 里声明 `uninstallPaths[]`，installer 统一处理。
+
+---
+
+## harveyz-skill — pdf-math-translate skill 优化
+
+### 审查优化 pdf-math-translate skill 内容质量
+**优先级**: P2 | **日期**: 2026-07-16
+
+刚从外部贡献进 `skills/research/pdf-math-translate/` 的 skill，需要全面内容质量审查：SKILL.md 中所有可执行路径硬编码为另一台机器的用户名（`/Users/harveyopenclaw/...`），在其他机器上无法直接跑通，需改为自适应检测或参数化；同时检查 SKILL.md 结构、触发词（description）、文档完整性是否符合仓库 skill 规范（参考 `docs/reference/skill-spec.md`）。
+
+---

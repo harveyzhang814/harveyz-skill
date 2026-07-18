@@ -2,7 +2,7 @@
 name: question-me
 description: "Pre-task clarification skill — clarifies ambiguous or complex tasks before execution through structured Q&A with a live decision tree. One question at a time, each with at least 3 options + custom, in decision-dependency order. Triggers: '/question-me', 'help me clarify this', 'question me before starting', 'let's define this first'. Claude auto-triggers when detecting ambiguous or complex requests (multiple conflicting goals, vague keywords like 'optimize/refactor/clean up', missing success criteria, unstated context assumptions)."
 user_invocable: true
-version: "3.0.0"
+version: "3.0.1"
 ---
 
 # question-me — 执行前指令澄清

@@ -1,45 +1,27 @@
 #!/usr/bin/env python3
 """
-Check URL dedup in SQLite. Creates table if not exists (safe for first run).
-Migrates existing DBs (e.g. old article-fetcher schema) by adding missing columns.
+Check URL dedup via meta.json existence.
 Parameter via env var to avoid shell injection:
   CHECK_URL - URL to check
-Reads VAULT_PATH from ~/.hskill/url-extract/config.json to locate url-index.db.
+Reads VAULT_PATH from ~/.hskill/url-extract/config.json to locate <hash8>/meta.json.
 Prints: ALREADY_FETCHED or OK
 """
-import sqlite3, os, sys
+import json, os, sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
-from config import get_vault_path
+from config import get_vault_path, get_url_hash
 
-url     = os.environ['CHECK_URL']
-db_path = str(Path(get_vault_path()) / 'url-index.db')
+url = os.environ['CHECK_URL']
+vault_path = get_vault_path()
+meta_path = Path(vault_path) / get_url_hash(url) / 'meta.json'
 
-os.makedirs(os.path.dirname(os.path.abspath(db_path)), exist_ok=True)
+already_fetched = False
+if meta_path.exists():
+    try:
+        meta = json.loads(meta_path.read_text(encoding='utf-8'))
+        already_fetched = meta.get('source_url') == url
+    except (json.JSONDecodeError, OSError):
+        already_fetched = False
 
-conn = sqlite3.connect(db_path)
-conn.execute("""
-    CREATE TABLE IF NOT EXISTS url_index (
-        source_url   TEXT PRIMARY KEY,
-        title        TEXT,
-        fetched_at   TEXT,
-        issues       TEXT,
-        category     TEXT,
-        origin_path  TEXT,
-        article_path TEXT
-    )
-""")
-conn.commit()
-
-# Migrate: add columns missing from older DB schemas
-existing_cols = {row[1] for row in conn.execute('PRAGMA table_info(url_index)')}
-for col, typedef in [('fetched_at', 'TEXT'), ('issues', 'TEXT'),
-                     ('category', 'TEXT'), ('origin_path', 'TEXT'), ('article_path', 'TEXT')]:
-    if col not in existing_cols:
-        conn.execute(f'ALTER TABLE url_index ADD COLUMN {col} {typedef}')
-conn.commit()
-
-row = conn.execute('SELECT source_url FROM url_index WHERE source_url=?', (url,)).fetchone()
-conn.close()
-print('ALREADY_FETCHED' if row else 'OK')
+print('ALREADY_FETCHED' if already_fetched else 'OK')
