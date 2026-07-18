@@ -814,6 +814,15 @@ function scopeHint(installScope) {
   return D + '—' + R
 }
 
+// ── Hidden: fzf reload helper ─────────────────────────────────────────────────
+// 供 fzf 的 reload()/execute() 动作回调，重新打印某个视图的最新内容（不进入交互模式）
+if (subcommand === '__fzf-view') {
+  const key = args[1]
+  const content = key === 'skill' ? buildSkillViewInput() : buildSinglePlatformViewInput(key)
+  process.stdout.write(content + '\n')
+  process.exit(0)
+}
+
 // 构建"按 skill 维度"的 fzf 输入行（skill/tool/hook 都在同一列表里）
 function buildSkillViewInput() {
   const skillItems = getAllSkillItems()
@@ -883,12 +892,15 @@ function platformPrompt(key) {
 }
 
 // 静态 header：不随视图切换而变化，避免把 ANSI/中文塞进 fzf 的 shell 动作字符串里
-const COMBINED_HEADER = `  hskill  ·  ${G}✓${R}=ok ${Y}↑${R}=update ${Y}»${R}=essential ${C}▸${R}=recommended ${D}—${R}=none  ·  ctrl-t 循环切换 skill/各平台视图  ·  tab 多选  ·  enter 确认`
+const COMBINED_HEADER = `  hskill  ·  ${G}✓${R}=ok ${Y}↑${R}=update ${Y}»${R}=essential ${C}▸${R}=recommended ${D}—${R}=none  ·  ctrl-t 切平台  ctrl-u 一键升级本平台  ctrl-g 升级该 skill 全平台  ·  tab 多选  ·  enter 确认`
 
 // 用 fzf 交互式选择 skill/tool，返回选中的 item 列表
 function fzfSelect() {
   requireFzf()
   const previewPath = path.join(__dirname, 'preview.mjs')
+  const selfPath     = process.argv[1]
+  // 用不带 flag 的 read（bash/zsh 通用；-n/-p/-k 等 flag 在两者语义不同，混用会挂住）等待回车再回到 fzf
+  const pauseCmd     = `; printf '\\n  按 enter 返回…'; read _`
 
   // 视图顺序：skill 维度 → 逐个平台维度（每次只显示一个平台）→ 循环回 skill
   const viewKeys  = ['skill', ...SKILL_TARGETS]
@@ -913,6 +925,17 @@ function fzfSelect() {
   }).join('\n')
   const cycleScript = `case "$FZF_PROMPT" in\n${cycleCases}\nesac`
 
+  // ctrl-u：仅在单平台视图下生效，一键升级该平台上所有已装 skill（user scope），完成后刷新当前视图
+  const upgradeAllCases = viewKeys.map(key => {
+    if (key === 'skill') return `"${platformPrompt(key)}") echo "" ;;`
+    const upgradeCmd = `node ${selfPath} upgrade --target ${key} --scope user${pauseCmd}`
+    return `"${platformPrompt(key)}") echo "execute(${upgradeCmd})+reload(node ${selfPath} __fzf-view ${key})" ;;`
+  }).join('\n')
+  const upgradeAllScript = `case "$FZF_PROMPT" in\n${upgradeAllCases}\nesac`
+
+  // ctrl-g：任意视图下，把光标所在的 skill 升级到它已安装的所有平台（user scope），完成后刷新当前视图
+  const upgradeSkillScript = `if [ {5} = skill ]; then key=$(echo "$FZF_PROMPT" | awk '{print $1}'); echo "execute(node ${selfPath} upgrade --skill {2}${pauseCmd})+reload(node ${selfPath} __fzf-view $key)"; else echo ""; fi`
+
   let result
   try {
     result = spawnSync('fzf', [
@@ -928,6 +951,8 @@ function fzfSelect() {
       `--preview=node ${previewPath} {2} {3} {5} {6}`,
       '--preview-window=right:42%:wrap',
       `--bind=ctrl-t:transform:${cycleScript}`,
+      `--bind=ctrl-u:transform:${upgradeAllScript}`,
+      `--bind=ctrl-g:transform:${upgradeSkillScript}`,
     ], {
       input: skillViewInput,
       encoding: 'utf8',
