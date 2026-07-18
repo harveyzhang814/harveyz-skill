@@ -900,10 +900,16 @@ function fzfSelect() {
     writeFileSync(viewFiles[key], content)
   }
 
-  // ctrl-t 循环切换：根据当前 prompt 找到下一个视图，reload 对应文件并更新 prompt
+  // 每个视图对应的 preview 命令：单平台视图额外传入平台 key，让 preview.mjs 只输出该平台的状态
+  function previewCmdFor(key) {
+    const base = `node ${previewPath} {2} {3} {5} {6}`
+    return key === 'skill' ? base : `${base} ${key}`
+  }
+
+  // ctrl-t 循环切换：根据当前 prompt 找到下一个视图，reload 对应文件、更新 prompt 和 preview 命令
   const cycleCases = viewKeys.map((key, i) => {
     const next = viewKeys[(i + 1) % viewKeys.length]
-    return `"${platformPrompt(key)}") echo "reload(cat ${viewFiles[next]})+change-prompt(${platformPrompt(next)})" ;;`
+    return `"${platformPrompt(key)}") echo "reload(cat ${viewFiles[next]})+change-prompt(${platformPrompt(next)})+change-preview(${previewCmdFor(next)})" ;;`
   }).join('\n')
   const cycleScript = `case "$FZF_PROMPT" in\n${cycleCases}\nesac`
 
