@@ -11,6 +11,7 @@ const skillName        = process.argv[2]?.trim()
 const availableVersion = process.argv[3]?.trim() || '—'
 const kind             = process.argv[4]?.trim()
 const srcPath          = process.argv[5]?.trim()
+const platformKey      = process.argv[6]?.trim() || null
 
 const G = '\x1b[32m', Y = '\x1b[33m', D = '\x1b[2m', R = '\x1b[0m', B = '\x1b[1m'
 
@@ -73,9 +74,7 @@ function statusLine(version, status) {
   return ver + '  ' + D + '— not installed' + R
 }
 
-const userTargets    = SKILL_TARGETS
-const projectTargets = SKILL_TARGETS.filter(t => !USER_ONLY_TARGETS.has(t))
-const home    = os.homedir()
+const home = os.homedir()
 
 function checkScope(targets, dirFn) {
   return targets.map(t => {
@@ -86,6 +85,38 @@ function checkScope(targets, dirFn) {
     return { tool: t, version: ver, status }
   })
 }
+
+// 单平台视图：只展示 ctrl-t 当前所在平台的状态，不展示全平台矩阵
+if (platformKey && SKILL_TARGETS.includes(platformKey)) {
+  const cwd = process.cwd()
+  const userDir    = path.join(home, `.${platformKey}`, 'skills')
+  const projectDir = path.join(cwd, `.${platformKey}`, 'skills')
+  const [userDetail]    = checkScope([platformKey], () => userDir)
+  const projectDetail   = USER_ONLY_TARGETS.has(platformKey) || cwd === home
+    ? { version: '—', status: 'none' }
+    : checkScope([platformKey], () => projectDir)[0]
+
+  console.log(B + skillName + R)
+  console.log(D + 'available: ' + R + availableVersion)
+  console.log('')
+
+  console.log(B + platformKey.toUpperCase() + ' STATUS' + R)
+  console.log('  ' + 'user'.padEnd(8)    + statusLine(userDetail.version, userDetail.status))
+  console.log('  ' + 'project'.padEnd(8) + statusLine(projectDetail.version, projectDetail.status))
+  console.log('')
+
+  if (userDetail.status === 'update' || projectDetail.status === 'update') {
+    console.log(Y + 'ACTION: update → ' + platformKey + R)
+  } else if (userDetail.status === 'none' && projectDetail.status === 'none') {
+    console.log(D + 'STATUS: not installed' + R)
+  } else {
+    console.log(G + 'STATUS: ok' + R)
+  }
+  process.exit(0)
+}
+
+const userTargets    = SKILL_TARGETS
+const projectTargets = SKILL_TARGETS.filter(t => !USER_ONLY_TARGETS.has(t))
 
 const cwd = process.cwd()
 const userDetails    = checkScope(userTargets,    t => path.join(home, `.${t}`, 'skills'))

@@ -802,15 +802,34 @@ function requireFzf() {
   }
 }
 
-// 用 fzf 交互式选择 skill/tool，返回选中的 item 列表
-function fzfSelect() {
-  requireFzf()
-  const skillItems  = getAllSkillItems()
+const G = '\x1b[32m', Y = '\x1b[33m', C = '\x1b[36m', D = '\x1b[2m', R = '\x1b[0m'
+function colorIcon(status) {
+  if (status === 'up-to-date') return G + '✓' + R
+  if (status === 'update')     return Y + '↑' + R
+  return D + '—' + R
+}
+function scopeHint(installScope) {
+  if (installScope === 'essential') return Y + '»' + R
+  if (installScope === 'global' || installScope === 'project') return C + '▸' + R
+  return D + '—' + R
+}
+
+// ── Hidden: fzf reload helper ─────────────────────────────────────────────────
+// 供 fzf 的 reload()/execute() 动作回调，重新打印某个视图的最新内容（不进入交互模式）
+if (subcommand === '__fzf-view') {
+  const key = args[1]
+  const content = key === 'skill' ? buildSkillViewInput() : buildSinglePlatformViewInput(key)
+  process.stdout.write(content + '\n')
+  process.exit(0)
+}
+
+// 构建"按 skill 维度"的 fzf 输入行（skill/tool/hook 都在同一列表里）
+function buildSkillViewInput() {
+  const skillItems = getAllSkillItems()
   const toolItems   = getAllToolItems()
   const hookItems   = getAllHookItems()
-  const previewPath = path.join(__dirname, 'preview.mjs')
 
-  // 构建 fzf 输入：每行 "NAME\tVERSION\tBUNDLE\tKIND\tSRCPATH\tINSTALLSCOPE"
+  // 每行 "NAME\tVERSION\tBUNDLE\tKIND\tSRCPATH\tINSTALLSCOPE"
   const lines = [
     ...skillItems.map(s => {
       const bundle = s.srcPath.split('/').slice(-2, -1)[0]
@@ -822,18 +841,6 @@ function fzfSelect() {
 
   const nameWidth    = Math.max(...lines.map(l => l.split('\t')[0].length))
   const versionWidth = Math.max(...lines.map(l => l.split('\t')[1].length))
-
-  const G = '\x1b[32m', Y = '\x1b[33m', C = '\x1b[36m', D = '\x1b[2m', R = '\x1b[0m'
-  function colorIcon(status) {
-    if (status === 'up-to-date') return G + '✓' + R
-    if (status === 'update')     return Y + '↑' + R
-    return D + '—' + R
-  }
-  function scopeHint(installScope) {
-    if (installScope === 'essential') return Y + '»' + R
-    if (installScope === 'global' || installScope === 'project') return C + '▸' + R
-    return D + '—' + R
-  }
 
   // fzf 展示格式：NAME   VERSION   U:?  P:?  BUNDLE
   const displayLines = lines.map(l => {
@@ -857,28 +864,105 @@ function fzfSelect() {
     return `${name.padEnd(nameWidth)}  ${ver.padEnd(versionWidth)}  U:${uIcon}  P:${pIcon}  ${bundle}`
   })
 
-  // 把原始数据附在末尾（隐藏列，用于解析和 preview）
-  const fzfInput = displayLines.map((d, i) => `${d}\t${lines[i]}`).join('\n')
+  return displayLines.map((d, i) => `${d}\t${lines[i]}`).join('\n')
+}
 
-  const header = `  hskill  ·  U=user P=project  ${G}✓${R}=ok ${Y}↑${R}=update ${Y}»${R}=essential ${C}▸${R}=recommended ${D}—${R}=none  ·  tab 多选  ·  enter 确认`
+// 构建"单平台维度"的 fzf 输入行：每个 skill 一行，只展示该平台（user-scope）的安装状态
+function buildSinglePlatformViewInput(targetName) {
+  const skillItems = getAllSkillItems()
+  const nameWidth   = Math.max(...skillItems.map(s => s.skillName.length))
 
-  const result = spawnSync('fzf', [
-    '--multi',
-    '--ansi',
-    '--delimiter=\t',
-    '--with-nth=1',
-    '--prompt=  › ',
-    `--header=${header}`,
-    '--layout=reverse',
-    '--border=rounded',
-    '--color=header:italic:dim,prompt:cyan,pointer:cyan,hl:cyan,hl+:cyan:bold',
-    `--preview=node ${previewPath} {2} {3} {5} {6}`,
-    '--preview-window=right:42%:wrap',
-  ], {
-    input: fzfInput,
-    encoding: 'utf8',
-    stdio: ['pipe', 'pipe', 'inherit'],
+  const lines = skillItems.map(s => {
+    const bundle = s.srcPath.split('/').slice(-2, -1)[0]
+    return `${s.skillName}\t${s.version ?? '—'}\t${bundle}\tskill\t${s.srcPath}\t${s.installScope ?? ''}`
   })
+
+  const displayLines = skillItems.map(s => {
+    const installed = checkInstalled(s.skillName, s.version ?? '—')
+    const detail = installed.user[targetName]
+    const ver = detail.status === 'none' ? D + '—'.padEnd(7) + R : detail.version.padEnd(7)
+    return `${s.skillName.padEnd(nameWidth)}  ${colorIcon(detail.status)}  ${ver}`
+  })
+
+  return displayLines.map((d, i) => `${d}\t${lines[i]}`).join('\n')
+}
+
+function platformPrompt(key) {
+  return `  ${key} › `
+}
+
+// 静态 header：不随视图切换而变化，避免把 ANSI/中文塞进 fzf 的 shell 动作字符串里
+const COMBINED_HEADER = `  hskill  ·  ${G}✓${R}=ok ${Y}↑${R}=update ${Y}»${R}=essential ${C}▸${R}=recommended ${D}—${R}=none  ·  ctrl-t 切平台  ctrl-u 一键升级本平台  ctrl-g 升级该 skill 全平台  ·  tab 多选  ·  enter 确认`
+
+// 用 fzf 交互式选择 skill/tool，返回选中的 item 列表
+function fzfSelect() {
+  requireFzf()
+  const previewPath = path.join(__dirname, 'preview.mjs')
+  const selfPath     = process.argv[1]
+  // 用不带 flag 的 read（bash/zsh 通用；-n/-p/-k 等 flag 在两者语义不同，混用会挂住）等待回车再回到 fzf
+  const pauseCmd     = `; printf '\\n  按 enter 返回…'; read _`
+
+  // 视图顺序：skill 维度 → 逐个平台维度（每次只显示一个平台）→ 循环回 skill
+  const viewKeys  = ['skill', ...SKILL_TARGETS]
+  const skillViewInput = buildSkillViewInput()
+  const viewFiles = Object.fromEntries(viewKeys.map(key => [key, `/tmp/hskill-view-${key}-${process.pid}.txt`]))
+
+  for (const key of viewKeys) {
+    const content = key === 'skill' ? skillViewInput : buildSinglePlatformViewInput(key)
+    writeFileSync(viewFiles[key], content)
+  }
+
+  // 每个视图对应的 preview 命令：单平台视图额外传入平台 key，让 preview.mjs 只输出该平台的状态
+  function previewCmdFor(key) {
+    const base = `node ${previewPath} {2} {3} {5} {6}`
+    return key === 'skill' ? base : `${base} ${key}`
+  }
+
+  // ctrl-t 循环切换：根据当前 prompt 找到下一个视图，reload 对应文件、更新 prompt 和 preview 命令
+  const cycleCases = viewKeys.map((key, i) => {
+    const next = viewKeys[(i + 1) % viewKeys.length]
+    return `"${platformPrompt(key)}") echo "reload(cat ${viewFiles[next]})+change-prompt(${platformPrompt(next)})+change-preview(${previewCmdFor(next)})" ;;`
+  }).join('\n')
+  const cycleScript = `case "$FZF_PROMPT" in\n${cycleCases}\nesac`
+
+  // ctrl-u：仅在单平台视图下生效，一键升级该平台上所有已装 skill（user scope），完成后刷新当前视图
+  const upgradeAllCases = viewKeys.map(key => {
+    if (key === 'skill') return `"${platformPrompt(key)}") echo "" ;;`
+    const upgradeCmd = `node ${selfPath} upgrade --target ${key} --scope user${pauseCmd}`
+    return `"${platformPrompt(key)}") echo "execute(${upgradeCmd})+reload(node ${selfPath} __fzf-view ${key})" ;;`
+  }).join('\n')
+  const upgradeAllScript = `case "$FZF_PROMPT" in\n${upgradeAllCases}\nesac`
+
+  // ctrl-g：任意视图下，把光标所在的 skill 升级到它已安装的所有平台（user scope），完成后刷新当前视图
+  const upgradeSkillScript = `if [ {5} = skill ]; then key=$(echo "$FZF_PROMPT" | awk '{print $1}'); echo "execute(node ${selfPath} upgrade --skill {2}${pauseCmd})+reload(node ${selfPath} __fzf-view $key)"; else echo ""; fi`
+
+  let result
+  try {
+    result = spawnSync('fzf', [
+      '--multi',
+      '--ansi',
+      '--delimiter=\t',
+      '--with-nth=1',
+      `--prompt=${platformPrompt('skill')}`,
+      `--header=${COMBINED_HEADER}`,
+      '--layout=reverse',
+      '--border=rounded',
+      '--color=header:italic:dim,prompt:cyan,pointer:cyan,hl:cyan,hl+:cyan:bold',
+      `--preview=node ${previewPath} {2} {3} {5} {6}`,
+      '--preview-window=right:42%:wrap',
+      `--bind=ctrl-t:transform:${cycleScript}`,
+      `--bind=ctrl-u:transform:${upgradeAllScript}`,
+      `--bind=ctrl-g:transform:${upgradeSkillScript}`,
+    ], {
+      input: skillViewInput,
+      encoding: 'utf8',
+      stdio: ['pipe', 'pipe', 'inherit'],
+    })
+  } finally {
+    for (const file of Object.values(viewFiles)) {
+      try { unlinkSync(file) } catch { /* ignore */ }
+    }
+  }
 
   if (result.status !== 0 || !result.stdout.trim()) return []
 
