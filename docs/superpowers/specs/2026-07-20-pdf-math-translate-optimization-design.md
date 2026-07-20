@@ -1,7 +1,7 @@
 ---
 title: pdf-math-translate 重构设计——通用化 + 机器级 Init/Execute
 date: 2026-07-20
-status: draft
+status: approved
 ---
 
 # pdf-math-translate 重构设计
