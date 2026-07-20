@@ -1,8 +1,8 @@
 ---
 name: pdf-math-translate
-description: "PDFMathTranslate：翻译科学论文 PDF 为中文，导出 Markdown。双语对照 + 纯翻译双版本输出。支持 Google/DeepL/GPT 等翻译服务。用户 Harvey 的常用工具。"
+description: "PDFMathTranslate：翻译科学论文 PDF 为中文，导出 Markdown/Word。双语对照 + 纯翻译双版本输出。支持 Google/DeepL/OpenAI 等 24 种翻译服务。首次使用自动探测本机 CLI 路径与能力，写入 ~/.hskill/pdf-math-translate/config.md。用户 Harvey 的常用工具。"
 user_invocable: true
-version: "1.0.0"
+version: "2.0.0"
 author: Hermes Agent
 license: MIT
 platforms: [macos, linux]
@@ -14,126 +14,110 @@ metadata:
 
 # PDFMathTranslate
 
-将科学论文 PDF 翻译为中文，支持导出 Markdown。
+将科学论文 PDF 翻译为中文，支持导出 Markdown 或 Word。首次使用会自动探测本机 CLI 路径与能力，之后每次直接读取探测结果。
 
-## 安装状态
-
-- **CLI**：`pdf2zh`（已 PATH）
-- **位置**：`/Users/harveyopenclaw/.local/share/uv/tools/pdf2zh/bin/pdf2zh`
-- **源码**：`/Users/harveyopenclaw/Repositories/PDFMathTranslate`
-- **uv Python**：`/Users/harveyopenclaw/.local/share/uv/tools/pdf2zh/bin/python`
-
-## 执行命令
-
-**关键：必须清除 PYTHONPATH**，否则 ollama/pydantic 与 hermes-agent venv 冲突导致崩溃。**
+## 入口判断
 
 ```bash
-cd /Users/harveyopenclaw/Repositories/PDFMathTranslate && \
-  unset PYTHONPATH && \
-  /Users/harveyopenclaw/.local/share/uv/tools/pdf2zh/bin/pdf2zh \
-    "/path/to/paper.pdf" \
-    -s google -o "/output/dir/"
+ls "$HOME/.hskill/pdf-math-translate/config.md" 2>/dev/null && echo "EXISTS" || echo "NOT_FOUND"
 ```
 
-> **崩溃原因**：`PYTHONPATH` 包含 hermes-agent 的 venv（Python 3.11），pdf2zh 用 Python 3.12；ollama 尝试 import hermes 的 pydantic-2.x 但二进制是给 3.11 编译的，导致 `ModuleNotFoundError: pydantic_core._pydantic_core`。
+- **NOT_FOUND** → 执行下面的「Init 阶段」
+- **EXISTS** → 跳过 Init，直接执行「Execute 阶段」
+- 用户说"重新初始化"、或怀疑环境变了（升级了 pdf2zh、换了机器）→ 重新执行 Init 阶段（覆盖旧 config）
 
-## 翻译为 PDF（mono + dual）
+## Init 阶段（仅首次运行）
+
+依次执行以下探测命令，不实际运行翻译：
+
+### 1. 定位 CLI 二进制
 
 ```bash
-pdf2zh "/path/to/paper.pdf" -o "/output/dir/" \
-  --lang-in en --lang-out ZH \
-  --service google \
-  --mode fast
+which pdf2zh
 ```
 
-| 参数 | 说明 |
-|------|------|
-| `--lang-in` / `--lang-out` | 源语言 / 目标语言 |
-| `--service` | `google`（默认）/ `deepl` / `gpt` 等 |
-| `--mode` | `fast`（默认）/ `precise`（更高质量） |
-
-输出两个 PDF：
-- `*-mono.pdf`：纯翻译
-- `*-dual.pdf`：双语对照
-
-## 导出为 Markdown
+### 2. 解析实际 Python 解释器
 
 ```bash
-pdf2zh document.pdf --markdown -o ./output
+head -1 "$(which pdf2zh)"
 ```
 
-直接输出 `document-mono.md`，无需两步。
+shebang 行给出实际 Python 解释器路径。
 
-### 完整流程
-
-```python
-import os
-import sys
-
-PDF2ZH_PY = "/Users/harveyopenclaw/.local/share/uv/tools/pdf2zh/bin/python"
-sys.path.insert(0, "/Users/harveyopenclaw/Repositories/PDFMathTranslate")
-
-from pdf2zh.high_level import translate
-from pdf2zh.export_markdown import export_pdf_to_markdown
-
-INPUT_PDF = "/path/to/paper.pdf"
-OUTPUT_DIR = "/output/dir/"
-
-# 步骤1：翻译 + 提取 elements
-translate(
-    INPUT_PDF, OUTPUT_DIR,
-    lang_in='en', lang_out='ZH',
-    extract_elements=True  # 必须开启
-)
-
-# 步骤2：导出 Markdown
-elem_dir = os.path.join(OUTPUT_DIR, "paper-elements")
-os.makedirs(elem_dir, exist_ok=True)
-
-md_path = export_pdf_to_markdown(
-    os.path.join(OUTPUT_DIR, "paper-mono.pdf"),
-    elem_dir,
-    OUTPUT_DIR,
-    'zh'
-)
-# md_path → OUTPUT_DIR/paper-mono.md
-```
-
-### 单行执行
+### 3. 探测安装方式与源码路径
 
 ```bash
-PDF2ZH_PY=/Users/harveyopenclaw/.local/share/uv/tools/pdf2zh/bin/python
-$PDF2ZH_PY -c "
-import sys, os
-sys.path.insert(0, '/Users/harveyopenclaw/Repositories/PDFMathTranslate')
-from pdf2zh.high_level import translate
-from pdf2zh.export_markdown import export_pdf_to_markdown
-elem_dir = '/output/paper-elements'
-os.makedirs(elem_dir, exist_ok=True)
-translate('/input.pdf', '/output/', lang_in='en', lang_out='ZH', extract_elements=True)
-print(export_pdf_to_markdown('/output/input-mono.pdf', elem_dir, '/output/', 'zh'))
-"
+PY="<上一步解出的解释器路径>"
+$PY -c "import pdf2zh; print(pdf2zh.__file__)"
 ```
 
-## 常用命令一览
+- 若返回路径包含 `site-packages`：普通安装，无源码仓库路径
+- 若返回路径不包含 `site-packages`（指向某个仓库目录）：editable install，记录该仓库根路径
+
+### 4. 记录版本号
 
 ```bash
-# 基础翻译（PDF 输出）
-pdf2zh paper.pdf -o ./output/ --lang-in en --lang-out ZH
-
-# 指定翻译服务
-pdf2zh paper.pdf -o ./output/ --service deepl
-
-# 仅提取 elements（不翻译）
-pdf2zh paper.pdf -o ./output/ --extract-elements
-
-# 查看所有选项
-pdf2zh --help
+pdf2zh --version
 ```
 
-## 注意事项
+### 5. 探测 precise 模式可用性
 
-- **首次运行**：自动下载 ONNX 模型（~300MB），缓存在 `~/.paddlex/`
-- **elements 目录**：markdown 导出的必要中间产物，保留
-- **语言对**：中译英 `ZH-EN`，英译中 `EN-ZH`
-- 安装问题：`pip install -e .` 可能因 babeldoc 版本冲突失败，使用已装的 uv 工具链即可
+```bash
+$PY -c "import pdf2zh_next" 2>&1
+```
+
+- 无报错 → precise 模式可用
+- `ModuleNotFoundError` → 只有 fast 模式可用
+
+### 6. 探测 PYTHONPATH 冲突风险
+
+```bash
+echo "$PYTHONPATH"
+```
+
+- 为空 → 无风险
+- 非空但指向的 venv 与 `$PY` 版本一致 → 无风险
+- 非空且指向其他 Python 版本的 venv/site-packages → 记录为风险，规避方法是执行 pdf2zh 前 `unset PYTHONPATH`
+
+### 7. 询问用户默认输出目录
+
+问用户："翻译结果默认存到哪个目录？"（例如 `~/Documents/pdf-translations/`），获得答案后连同上述探测结果一起写入 config。
+
+### 写入 config.md
+
+```bash
+mkdir -p "$HOME/.hskill/pdf-math-translate"
+```
+
+按下面模板填入 1-7 的结果，写入 `$HOME/.hskill/pdf-math-translate/config.md`：
+
+```markdown
+# pdf-math-translate 机器配置
+
+探测时间：<日期>
+
+## CLI
+
+- 二进制路径：`<步骤1结果>`
+- 版本：`<步骤4结果>`
+- Python 解释器：`<步骤2结果>`
+
+## 安装方式
+
+- 类型：`editable install` | `regular install`
+- 源码仓库路径：`<步骤3结果，非 editable install 时写"（不适用，非可编辑安装）">`
+
+## 能力
+
+- precise 模式（`--mode precise`）：`可用` | `不可用（pdf2zh_next 未安装）`
+
+## 已知环境注意事项
+
+- PYTHONPATH 冲突风险：`无` | `<步骤6记录的具体描述与规避方法>`
+
+## 默认输出目录
+
+- `<步骤7用户确认的路径>`
+```
+
+写完后展示给用户确认无误，并告知：**该文件可随时手动编辑**，是之后每次调用的唯一依据。
