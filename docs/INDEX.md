@@ -38,6 +38,12 @@ methodology: diataxis
 | [reference/todo-format-spec.md](reference/todo-format-spec.md) | TODO.md 文件结构、字段规范、todo_format.yaml 完整定义 |
 | [reference/todo-tool-reference.md](reference/todo-tool-reference.md) | todo-tool 数据模型（SQL）、CLI 接口、API 端点完整参考 |
 
+## adr/ — 架构决策记录
+
+| 文件 | 用途 |
+|------|------|
+| [adr/2026-07-20-no-meta-json-completeness-check.md](adr/2026-07-20-no-meta-json-completeness-check.md) | 决策：extract-url 的 meta.json 不新增独立完整性/schema 校验脚本，原因与考虑过的替代方案 |
+
 ## explanation/ — 理解类
 
 | 文件 | 用途 |
