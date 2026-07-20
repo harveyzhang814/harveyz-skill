@@ -126,9 +126,11 @@ mkdir -p "$HOME/.hskill/pdf-math-translate"
 
 读取 `$HOME/.hskill/pdf-math-translate/config.md`，按其中记录的信息执行：
 
-- 若 config 记录了 PYTHONPATH 风险，执行 pdf2zh 命令前先按记录的规避方法处理（通常是 `unset PYTHONPATH`）
+- 若 config 中记录的 CLI 路径与当前 PATH 里的 `pdf2zh` 不一致，优先使用 config 中记录的路径调用
+- 若 config 记录了 PYTHONPATH 冲突风险，执行 pdf2zh 命令前先按记录的规避方法处理（通常是 `unset PYTHONPATH`）
 - 若用户要求 `--mode precise` 但 config 标注「不可用」，提示用户该模式依赖 `pdf2zh_next`（当前未安装），询问是否改用 `fast` 模式或先安装 `pdf2zh_next`
 - 未显式指定 `-o` 时，使用 config 中的默认输出目录
+- 若排查版本/导入相关问题，参考 config 中记录的 Python 解释器与安装方式（含源码仓库路径，若为 editable install）
 
 ### 基础翻译（PDF 输出）
 
