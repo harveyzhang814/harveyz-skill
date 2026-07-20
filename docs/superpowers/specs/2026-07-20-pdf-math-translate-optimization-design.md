@@ -21,7 +21,7 @@ status: approved
 - 实际 Python 解释器：`/opt/homebrew/opt/python@3.11/bin/python3.11`
 - `pdf2zh_next`（`--mode precise` 依赖）**未安装**，目前只有 `fast` 模式可用
 - 默认翻译服务是 `google`（CLI 源码默认值）
-- 实际支持 25 个翻译服务（见下方服务列表）
+- 实际支持 24 个翻译服务（见下方服务列表，另有 `base`/`identity` 两个内部服务不面向用户）
 
 ## 目标
 
