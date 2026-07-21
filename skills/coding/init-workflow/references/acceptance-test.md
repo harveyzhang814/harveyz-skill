@@ -60,14 +60,23 @@ rm -f /tmp/gwi-test-msg-${TIMESTAMP}.txt
 
 取 `push_rules.block_force_push` 第一个分支名作为 `PROTECTED_PUSH_BRANCH`。
 
+`pre-push/force-push` 块用 `git merge-base --is-ancestor` 判断非 fast-forward，因此必须用真实存在于仓库历史中的两个 commit 来构造"远端不是本地祖先"的场景，不能用假造的 SHA 字符串（假 SHA 在真实仓库里既不是祖先也不是非祖先，`git merge-base` 会因对象不存在报错，不代表 force push 语义）。用当前 `HEAD` 作为 remote_sha、`HEAD~1` 作为 local_sha：remote（较新）不是 local（较旧）的祖先，等价于历史被回退重写。仓库只有一个提交（无 `HEAD~1`）时跳过此场景。
+
 ```bash
-output=$(printf "refs/heads/%s abc1234 refs/heads/%s 0000000000000000000000000000000000000000\n" \
-    "$PROTECTED_PUSH_BRANCH" "$PROTECTED_PUSH_BRANCH" \
-    | sh .githooks/pre-push 2>&1)
-exit_code=$?
+if git rev-parse -q --verify HEAD~1 >/dev/null 2>&1; then
+    REMOTE_SHA=$(git rev-parse HEAD)
+    LOCAL_SHA=$(git rev-parse HEAD~1)
+    output=$(printf "refs/heads/%s %s refs/heads/%s %s\n" \
+        "$PROTECTED_PUSH_BRANCH" "$LOCAL_SHA" "$PROTECTED_PUSH_BRANCH" "$REMOTE_SHA" \
+        | sh .githooks/pre-push 2>&1)
+    exit_code=$?
+    SKIPPED=0
+else
+    SKIPPED=1
+fi
 ```
 
-**期望：** `exit_code = 1`。
+**期望：** 仓库提交数 ≥ 2 时 `exit_code = 1`；仅有一个提交时标记为 SKIP，不计入 PASS/FAIL。
 
 ---
 
@@ -114,7 +123,13 @@ pre-push      force push 到 <branch>（应拒绝）         PASS ✅
 pre-push      非法 tag 推送（应拒绝）                  PASS ✅
 post-checkout 不合规分支名（应有 ⚠️ 警告）             PASS ✅
 ──────────────────────────────────────────────────────
-✅ 全部通过（N/N）。继续 Step 7...
+✅ 全部通过（N/N，SKIP 不计入分母）。继续 Step 7...
+```
+
+若 force push 场景因仓库只有一个提交被跳过，对应行显示：
+
+```
+pre-push      force push 到 <branch>（应拒绝）         SKIP ⏭️（仓库提交数 < 2，无法构造历史）
 ```
 
 若有失败：
