@@ -1,6 +1,6 @@
 ---
 name: extract-url
-version: "2.6.0"
+version: "2.7.0"
 description: "Use when a user provides a URL and wants to save, archive, fetch, or translate content to the local Obsidian Vault — even with vague phrasing like 'save this article', 'translate and save', 'put this in obsidian', 'archive this'. Skip when user only wants a summary, pastes raw text without a URL, asks about a site's tech stack, or wants to extract/list URLs from a page without saving an article."
 user_invocable: true
 ---
