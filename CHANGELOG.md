@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.25.1] - 2026-07-22
+
+### Fixed
+- `extract-url`：新增微信公众号文章抓取脚本（`playwright_web_wechat.py`），修复隐藏正文、懒加载图片、发布日期提取失败问题
+- `extract-url`：修复 X.com Article 正文中加粗文字被错误拆分为独立段落、加粗样式丢失的问题
+
 ## [0.25.0] - 2026-07-20
 
 ### Added

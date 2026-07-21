@@ -100,8 +100,52 @@ _EXTRACT_JS_HEADED = r"""() => {
             return false;
         }
 
+        // X Articles/Notes render each paragraph as a Draft.js block div whose
+        // children are per-style-run spans (a new sibling span starts wherever
+        // bold toggles on/off). Without merging these runs, every bold word
+        // becomes its own top-level paragraph and the bold styling is lost.
+        function isDraftParagraphBlock(node) {
+            return node.tagName === 'DIV' && node.classList
+                && node.classList.contains('public-DraftStyleDefault-block');
+        }
+
+        function isBoldRun(span) {
+            // Inline style only (X marks bold runs with style="font-weight: bold"
+            // directly on the run) — NOT computed style, which would also pick up
+            // ambient bold from a heading ancestor and false-positive every run.
+            const w = span.style && span.style.fontWeight;
+            return w === 'bold' || parseInt(w) >= 600;
+        }
+
+        function paragraphToInlineMarkdown(blockDiv) {
+            let out = '';
+            for (const run of blockDiv.children) {
+                const text = (run.textContent || '').replace(/\s+/g, ' ');
+                if (!text) continue;
+                const trimmed = text.trim();
+                if (isBoldRun(run) && trimmed) {
+                    const lead = text.slice(0, text.indexOf(trimmed));
+                    const trail = text.slice(text.indexOf(trimmed) + trimmed.length);
+                    out += lead + '**' + trimmed + '**' + trail;
+                } else {
+                    out += text;
+                }
+            }
+            return out.trim();
+        }
+
+        function isInsideProcessedParagraph(node, processed) {
+            let el = node.parentElement;
+            while (el && el !== contentRoot) {
+                if (processed.has(el)) return true;
+                el = el.parentElement;
+            }
+            return false;
+        }
+
         const skipTags = new Set(['SCRIPT','STYLE','NAV','FOOTER','HEADER','ASIDE']);
         const contentUnits = [];
+        const processedParagraphs = new Set();
         let lastText = '';
 
         const walker = document.createTreeWalker(contentRoot, NodeFilter.SHOW_ELEMENT);
@@ -109,8 +153,19 @@ _EXTRACT_JS_HEADED = r"""() => {
         while (node = walker.nextNode()) {
             if (skipTags.has(node.tagName.toUpperCase())) continue;
             if (insideNestedTweet(node)) continue;
+            if (isInsideProcessedParagraph(node, processedParagraphs)) continue;
             const tag = node.tagName.toUpperCase();
             const tid = node.getAttribute('data-testid') || '';
+
+            if (isDraftParagraphBlock(node)) {
+                const md = paragraphToInlineMarkdown(node);
+                if (md && md.length > 5) {
+                    contentUnits.push({type: 'text', tag: 'p', content: md});
+                    lastText = md;
+                }
+                processedParagraphs.add(node);
+                continue;
+            }
 
             if (tag === 'DIV' && tid === 'tweetPhoto') {
                 const img = node.querySelector('img');
@@ -172,6 +227,10 @@ _EXTRACT_JS_HEADED = r"""() => {
                     lastText = t.trim();
                 }
             } else if (['H2','H3','P','LI','BLOCKQUOTE'].includes(tag)) {
+                // Mark processed so a nested Draft.js paragraph div (headings/
+                // blockquotes wrap one internally) isn't ALSO captured below,
+                // which would duplicate this element's text as an extra block.
+                processedParagraphs.add(node);
                 const t = node.innerText.replace(/\s+/g, ' ').trim();
                 if (t && t.length > 5) {
                     contentUnits.push({type: 'text', tag: tag.toLowerCase(), content: t});
@@ -253,8 +312,52 @@ _EXTRACT_JS_HEADLESS = r"""() => {
             return false;
         }
 
+        // X Articles/Notes render each paragraph as a Draft.js block div whose
+        // children are per-style-run spans (a new sibling span starts wherever
+        // bold toggles on/off). Without merging these runs, every bold word
+        // becomes its own top-level paragraph and the bold styling is lost.
+        function isDraftParagraphBlock(node) {
+            return node.tagName === 'DIV' && node.classList
+                && node.classList.contains('public-DraftStyleDefault-block');
+        }
+
+        function isBoldRun(span) {
+            // Inline style only (X marks bold runs with style="font-weight: bold"
+            // directly on the run) — NOT computed style, which would also pick up
+            // ambient bold from a heading ancestor and false-positive every run.
+            const w = span.style && span.style.fontWeight;
+            return w === 'bold' || parseInt(w) >= 600;
+        }
+
+        function paragraphToInlineMarkdown(blockDiv) {
+            let out = '';
+            for (const run of blockDiv.children) {
+                const text = (run.textContent || '').replace(/\s+/g, ' ');
+                if (!text) continue;
+                const trimmed = text.trim();
+                if (isBoldRun(run) && trimmed) {
+                    const lead = text.slice(0, text.indexOf(trimmed));
+                    const trail = text.slice(text.indexOf(trimmed) + trimmed.length);
+                    out += lead + '**' + trimmed + '**' + trail;
+                } else {
+                    out += text;
+                }
+            }
+            return out.trim();
+        }
+
+        function isInsideProcessedParagraph(node, processed) {
+            let el = node.parentElement;
+            while (el && el !== contentRoot) {
+                if (processed.has(el)) return true;
+                el = el.parentElement;
+            }
+            return false;
+        }
+
         const skipTags = new Set(['SCRIPT','STYLE','NAV','FOOTER','HEADER','ASIDE']);
         const contentUnits = [];
+        const processedParagraphs = new Set();
         let lastText = '';
 
         const walker = document.createTreeWalker(contentRoot, NodeFilter.SHOW_ELEMENT);
@@ -262,8 +365,19 @@ _EXTRACT_JS_HEADLESS = r"""() => {
         while (node = walker.nextNode()) {
             if (skipTags.has(node.tagName.toUpperCase())) continue;
             if (insideNestedTweet(node)) continue;
+            if (isInsideProcessedParagraph(node, processedParagraphs)) continue;
             const tag = node.tagName.toUpperCase();
             const tid = node.getAttribute('data-testid') || '';
+
+            if (isDraftParagraphBlock(node)) {
+                const md = paragraphToInlineMarkdown(node);
+                if (md && md.length > 5) {
+                    contentUnits.push({type: 'text', tag: 'p', content: md});
+                    lastText = md;
+                }
+                processedParagraphs.add(node);
+                continue;
+            }
 
             if (tag === 'DIV' && tid === 'tweetPhoto') {
                 const img = node.querySelector('img');
@@ -305,6 +419,10 @@ _EXTRACT_JS_HEADLESS = r"""() => {
                     lastText = directText;
                 }
             } else if (['H2','H3','P','LI','BLOCKQUOTE','PRE'].includes(tag)) {
+                // Mark processed so a nested Draft.js paragraph div (headings/
+                // blockquotes wrap one internally) isn't ALSO captured below,
+                // which would duplicate this element's text as an extra block.
+                processedParagraphs.add(node);
                 const t = node.innerText.replace(/\s+/g, ' ').trim();
                 if (t && t.length > 5) {
                     contentUnits.push({type: 'text', tag: tag.toLowerCase(), content: t});

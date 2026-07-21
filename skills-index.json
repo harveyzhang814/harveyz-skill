@@ -38,7 +38,7 @@
       "bundle": "research",
       "installScope": "global",
       "contentHash": "4b72bb5e655884d5",
-      "contentVersion": "2.6.0"
+      "contentVersion": "2.7.1"
     },
     {
       "path": "research/extract-vision",
