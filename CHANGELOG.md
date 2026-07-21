@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.25.0] - 2026-07-20
+
+### Added
+- `hskill` install menu：新增按平台切换的循环视图（per-platform cycling view），一键升级快捷键
+- `pdf-math-translate`：重写 frontmatter，补充 Init/Execute 两阶段流程与最新 CLI 参考
+
+### Fixed
+- `explain-pm`：警示性意见调整为统一放在结尾，不再穿插
+- `init-workflow`：修正 force-push 检测逻辑，合并提交（merge commit）豁免检查
+
+### Changed
+- 记录不新增 meta.json 完整性检查的 ADR 决策
+
 ## [0.24.0] - 2026-07-18
 
 ### Added
