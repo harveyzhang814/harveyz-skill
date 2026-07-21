@@ -93,8 +93,21 @@ SUBJECT=$(printf '%s\n' "$SUBJECT" | sed '/^#/d' | sed 's/^[[:space:]]*//')
 ```
 
 **格式检查 MANAGED 块（`commit-msg/format`）：**
+块内首行固定豁免合并提交（`MERGE_HEAD` 存在即视为合并提交，直接放行，不做格式/长度校验）：
+```sh
+# --- BEGIN MANAGED: commit-msg/format (hash:<hash>) ---
+[ -f "$(git rev-parse --git-dir)/MERGE_HEAD" ] && exit 0
+if ! printf '%s\n' "$SUBJECT" | grep -qE "<pattern>"; then
+    echo "❌ 提交信息不符合 Conventional Commits 规范"
+    ...
+    exit 1
+fi
+# --- END MANAGED: commit-msg/format ---
+```
 - `format: conventional`：将 `types` 列表拼接为正则 `^(feat|fix|...)(\(.+\))?: .+`；`require_scope: false` 时 scope 部分为可选 `(\(.+\))?`
 - `format: regex`：使用配置的 `pattern` 字段直接作为 grep 表达式
+
+若不豁免合并提交，git 默认生成的 "Merge branch '...'" 信息永远无法通过 Conventional Commits 校验；而若强行要求合并提交也写成 conventional 格式，pre-commit 中 `merge_source_branch()` 依赖 git 默认 `MERGE_MSG` 文本解析来源分支，自定义信息会导致解析失败。豁免合并提交让两个 hook 同时成立。
 
 **长度检查 MANAGED 块（`commit-msg/length`）：**
 ```sh
@@ -145,14 +158,22 @@ while IFS=' ' read -r local_ref local_sha remote_ref remote_sha; do
 # --- BEGIN MANAGED: pre-push/force-push (hash:<hash>) ---
         refs/heads/main|refs/heads/staging)
             if [ "$local_sha" = "0000000000000000000000000000000000000000" ]; then
-                echo "❌ 禁止 force push 到受保护分支：$remote_ref"
+                echo "❌ 禁止删除受保护分支：$remote_ref"
                 exit 1
+            fi
+            if [ "$remote_sha" != "0000000000000000000000000000000000000000" ]; then
+                if ! git merge-base --is-ancestor "$remote_sha" "$local_sha" 2>/dev/null; then
+                    echo "❌ 禁止强制推送到受保护分支：$remote_ref"
+                    exit 1
+                fi
             fi
             ;;
 # --- END MANAGED: pre-push/force-push ---
 ```
 
 `refs/heads/main|refs/heads/staging` 从 `push_rules.block_force_push` 列表动态生成。
+
+`local_sha` 全零表示删除远端分支，与 force push 是两码事，单独拦截并报出不同的提示。真正的非 fast-forward（force push）检测用 `git merge-base --is-ancestor "$remote_sha" "$local_sha"`：若远端当前 SHA 不是本地待推送 SHA 的祖先，说明历史被重写，即 force push；`remote_sha` 全零（推送全新分支）时跳过该判断，因为此时没有旧历史可比较。
 
 **固定尾部：**
 ```sh
