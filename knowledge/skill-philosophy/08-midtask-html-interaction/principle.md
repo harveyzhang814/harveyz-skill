@@ -36,4 +36,4 @@
 
 ---
 
-*研究方向定稿见 [[direction]]，完整研究报告见 [[research]]*
+*研究方向定稿见 [[direction]]，完整研究报告见 [[research]]，可直接查用的决策清单见 [[decision]]*
