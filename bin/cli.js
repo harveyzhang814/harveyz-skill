@@ -27,7 +27,7 @@ const jsonFlag = args.includes('--json')
 // ── Help ─────────────────────────────────────────────────────────────────────
 function printHelp() {
   console.log(`
-  ${chalk.bold('hskill')} — skill manager for Claude Code, Cursor, Codex, OpenClaw, Hermes, and OpenCode  v${version}
+  ${chalk.bold('hskill')} — skill manager for Claude Code, Cursor, Codex, OpenClaw, Hermes, OpenCode, and Pi  v${version}
 
   ${chalk.cyan('Usage:')}
     hskill                         interactive install (requires TTY + fzf)
@@ -35,7 +35,7 @@ function printHelp() {
     hskill install --bundle <b>    install a skill bundle
     hskill install --skill <s>     install specific skill(s)
     hskill install --tool <t>      install shell tool(s)
-    hskill install --target <t>    set target (claude/cursor/codex/openclaw/hermes/opencode/all)
+    hskill install --target <t>    set target (${SKILL_TARGETS.join('/')}/all)
     hskill install --scope <s>     set scope: user (default) or project
     hskill install --force         overwrite existing installs
     hskill list [--json]           list available skills and bundles
@@ -75,7 +75,7 @@ if (args[0] === '--help' || args[0] === '-h') {
     console.log(JSON.stringify({
       name: 'hskill',
       version,
-      description: 'Skill manager for Claude Code, Cursor, Codex, OpenClaw, and Hermes',
+      description: 'Skill manager for Claude Code, Cursor, Codex, OpenClaw, Hermes, OpenCode, and Pi',
       agent_notes: 'Interactive mode requires TTY. Use --json for machine-readable output. Set NO_COLOR=1 to suppress ANSI codes.',
       commands: [
         {
@@ -87,7 +87,7 @@ if (args[0] === '--help' || args[0] === '-h') {
             { name: '--bundle', arg: '<name>',   description: 'Install a skill bundle (comma-separated)' },
             { name: '--skill',  arg: '<name>',   description: 'Install specific skill(s) (comma-separated)' },
             { name: '--tool',   arg: '<name>',   description: 'Install shell tool(s) (comma-separated)' },
-            { name: '--target', arg: '<target>', description: 'Install target', enum: ['claude','cursor','codex','openclaw','hermes','opencode','all'] },
+            { name: '--target', arg: '<target>', description: 'Install target', enum: [...SKILL_TARGETS,'all'] },
             { name: '--scope',  arg: '<scope>',  description: 'Install scope', enum: ['user','project'], default: 'user' },
             { name: '--force',  description: 'Overwrite existing installs' },
           ],
@@ -129,7 +129,7 @@ if (args[0] === '--help' || args[0] === '-h') {
           note: 'Only upgrades skills already installed on the given target. Never installs new ones.',
           flags: [
             { name: '--skill',  arg: '<name>',   description: 'Upgrade a specific skill (default: all installed)' },
-            { name: '--target', arg: '<target>', description: 'Limit to one target', enum: ['claude','cursor','codex','openclaw','hermes','opencode'] },
+            { name: '--target', arg: '<target>', description: 'Limit to one target', enum: SKILL_TARGETS },
             { name: '--scope',  arg: '<scope>',  description: 'Install scope', enum: ['user','project'], default: 'user' },
             { name: '--json',   description: 'Machine-readable output' },
           ],
@@ -285,7 +285,7 @@ if (subcommand === 'status' || subcommand === 'outdated') {
   })
 
   if (jsonFlag) {
-    const targets = ['claude', 'cursor', 'codex', 'openclaw', 'hermes', 'opencode']
+    const targets = SKILL_TARGETS
     const jsonSkills = skillRows.map(r => ({
       name: r.name,
       version: r.version,
@@ -317,7 +317,7 @@ if (subcommand === 'status' || subcommand === 'outdated') {
       process.exit(0)
     }
 
-    const targets = ['claude', 'cursor', 'codex', 'openclaw', 'hermes', 'opencode']
+    const targets = SKILL_TARGETS
 
     if (outdatedSkills.length) {
       console.log('\n  ' + chalk.bold('SKILLS WITH UPDATES'))
@@ -420,7 +420,7 @@ if (subcommand === 'info') {
     process.exit(1)
   }
 
-  const targets = ['claude', 'cursor', 'codex']
+  const targets = SKILL_TARGETS
 
   function statusLabel(status) {
     if (status === 'up-to-date') return chalk.green('✓ up to date')
@@ -506,7 +506,7 @@ if (subcommand === 'uninstall') {
   const scope = scopeArg2
   const selectedTargets = targetArg2
     ? [targetArg2]
-    : ['claude', 'cursor', 'codex', 'openclaw', 'hermes', 'opencode']
+    : SKILL_TARGETS
   const targets = resolveTargets(selectedTargets, scope)
 
   let anyRemoved = false
@@ -721,19 +721,23 @@ const scopeArg  = scopeIdx  !== -1 ? installArgs[scopeIdx  + 1] : undefined
 const TOOL_BUNDLE_VALUES = new Set(TOOL_BUNDLE_CHOICES.map(c => c.value))
 
 // ── Two-step target→scope selector ───────────────────────────────────────────
-const ALL_SKILL_TARGETS = ['claude', 'cursor', 'codex', 'openclaw', 'hermes', 'opencode']
+// Paths are derived from SKILL_TARGETS/userSkillDir (lib/targets.js) — the single
+// source of truth — so adding a target there is enough to update every view here.
+const TARGET_DIRS = SKILL_TARGETS.map(name => {
+  const real = userSkillDir(name)
+  return { name, real, disp: real.replace(os.homedir(), '~') }
+})
 
 function selectTargetThenScope() {
   // Step 1: platform (target)
   const targetInput = [
-    'claude    ~/.claude/skills/',
-    'cursor    ~/.cursor/skills/',
-    'codex     ~/.codex/skills/',
-    'openclaw  ~/.openclaw/skills/',
-    'hermes    ~/.hermes/skills/',
-    'opencode  ~/.config/opencode/skills/',
-    'all       all 6 targets',
+    ...TARGET_DIRS.map(({ name, disp }) => `${name.padEnd(8)}  ${disp}/`),
+    `all       all ${TARGET_DIRS.length} targets`,
   ].join('\n')
+
+  const allEchoLines = TARGET_DIRS.map(({ disp }) => `echo "  ${disp}/";`).join(' ')
+  const caseArms      = TARGET_DIRS.map(({ name, disp, real }) => `${name}) disp="${disp}/"; real="${real}/";;`).join(' ')
+  const previewScript = `t=$(echo {} | awk '{print $1}'); if [ "$t" = "all" ]; then echo ""; echo "  安装到所有平台:"; echo ""; ${allEchoLines} else case "$t" in ${caseArms} esac; echo ""; echo "  安装路径:"; echo ""; printf "  \\033[36m%s\\033[0m\\n" "$disp"; echo ""; if [ -d "$real" ]; then echo "  ✓ 目录已存在"; else echo "  · 将自动新建"; fi; fi`
 
   const targetResult = spawnSync('fzf', [
     '--multi',
@@ -742,7 +746,7 @@ function selectTargetThenScope() {
     '--layout=reverse',
     '--border=rounded',
     '--color=header:italic:dim,prompt:cyan,pointer:cyan,hl:cyan,hl+:cyan:bold',
-    '--preview=t=$(echo {} | awk \'{print $1}\'); if [ "$t" = "all" ]; then echo ""; echo "  安装到所有平台:"; echo ""; for p in claude cursor codex openclaw hermes opencode; do printf "  ~/.%s/skills/\\n" "$p"; done; else p="${HOME}/.${t}/skills/"; echo ""; echo "  安装路径:"; echo ""; printf "  \\033[36m%s\\033[0m\\n" "$p"; echo ""; if [ -d "$p" ]; then echo "  ✓ 目录已存在"; else echo "  · 将自动新建"; fi; fi',
+    `--preview=${previewScript}`,
     '--preview-window=right:45%:wrap',
   ], {
     input: targetInput,
@@ -754,7 +758,7 @@ function selectTargetThenScope() {
 
   const rawTargets = targetResult.stdout.trim().split('\n')
     .map(l => l.trim().split(/\s+/)[0])
-  const expandedTargets = rawTargets.includes('all') ? ALL_SKILL_TARGETS : rawTargets
+  const expandedTargets = rawTargets.includes('all') ? SKILL_TARGETS : rawTargets
 
   // Step 2: scope (user/project) — skip if all selected targets are user-only
   const allUserOnly = expandedTargets.every(t => USER_ONLY_TARGETS.has(t))
@@ -1258,7 +1262,7 @@ try {
             '--header=  从哪里卸载  ·  tab 多选  ·  enter 确认  ·  esc 取消',
             '--layout=reverse', '--border=rounded',
             '--color=header:italic:dim,prompt:cyan,pointer:cyan,hl:cyan,hl+:cyan:bold',
-            '--preview=t=$(echo {} | awk \'{print $1}\'); if [ "$t" = "all" ]; then echo ""; echo "  从所有平台卸载:"; echo ""; for p in claude cursor codex openclaw hermes opencode; do printf "  ~/.%s/skills/\\n" "$p"; done; else echo ""; printf "  ~/.%s/skills/\\n" "$t"; fi',
+            `--preview=t=$(echo {} | awk '{print $1}'); if [ "$t" = "all" ]; then echo ""; echo "  从所有平台卸载:"; echo ""; ${TARGET_DIRS.map(({ disp }) => `echo "  ${disp}/";`).join(' ')} else case "$t" in ${TARGET_DIRS.map(({ name, disp }) => `${name}) echo ""; echo "  ${disp}/";;`).join(' ')} esac; fi`,
             '--preview-window=right:45%:wrap',
           ], {
             input: targetChoices2.map(c => c.name).join('\n') + '\nall      — all targets',
@@ -1349,14 +1353,14 @@ try {
     // When only --skill is given and no --target, use the combined selector.
     if (targetArg) {
       const scope = scopeArg ?? 'user'
-      const selectedTargets = targetArg === 'all' ? ['claude', 'cursor', 'codex', 'openclaw', 'hermes', 'opencode'] : [targetArg]
+      const selectedTargets = targetArg === 'all' ? SKILL_TARGETS : [targetArg]
       const targets = resolveTargets(selectedTargets, scope)
       console.log('')
       skillSummary = await installSkills(skillItems, targets, forceFlag)
       console.log('')
     } else {
       if (!process.stdout.isTTY) {
-        console.error(chalk.red('  ✗ Interactive target selection requires a TTY. Use --target claude|cursor|codex|openclaw|hermes|all.'))
+        console.error(chalk.red(`  ✗ Interactive target selection requires a TTY. Use --target ${SKILL_TARGETS.join('|')}|all.`))
         process.exit(1)
       }
       const selectedST = selectTargetThenScope()

@@ -1,6 +1,6 @@
 # harveyz-skill
 
-Harvey 的个人 Claude Code / Cursor / Codex 技能管理器，当前版本 **v0.6.2**。
+Harvey 的个人 Claude Code / Cursor / Codex / OpenClaw / Hermes / OpenCode / Pi 技能管理器，当前版本 **v0.6.2**。
 
 通过 `hskill` 命令将技能安装到 `~/.claude/skills/`，按 bundle 分组管理。
 
