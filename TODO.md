@@ -23,6 +23,13 @@ extract-url 目前用集中式 SQLite（`url-index.db`）维护所有文章的�
 
 ---
 
+### 为 manage-dir 添加文档 formatter 维护机制
+**优先级**: P1 | **日期**: 2026-08-01
+
+`manage-dir` skill 目前缺少针对每份文档的 formatter 维护机制。在实际使用过程中会沉淀大量方法论，包括对文档本身的定义方式——例如「Explanation」这类分类标签不够直观地表达出人管理视角与 Agent 方法论视角之间的侧重差异。这类定义应放进对应文档的 formatter 中管理，而非停留在笼统的分类标签上。
+
+---
+
 ## mermaid-diagram — 渲染样式增强
 
 ### [ ] CSS 注入提升 Mermaid 渲染质量
