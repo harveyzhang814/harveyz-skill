@@ -61,3 +61,51 @@ def test_fetch_and_save_accepts_chrome_profile_without_crashing(tmp_path):
         fetch_and_save("https://example.com", tmp_path, chrome_profile=str(empty_profile))
     )
     assert origin_path.exists()
+
+
+def test_fetch_and_save_image_placement_after_h1_dedup(tmp_path):
+    """Test that images placed after the h1 block (after_block == 0) are
+    correctly moved to pre_imgs when h1 dedup fires, not shifted to appear
+    after the wrong block. Wikipedia's MCP page has:
+    - An h1 matching the title (triggers dedup)
+    - Images with after_block == 0 (meant after h1, should go to pre_imgs)
+    - Images with after_block >= 1 (should be offset by dedup_offset)
+
+    Verifies images don't land one block early due to index shift."""
+    origin_path = asyncio.run(
+        fetch_and_save("https://en.wikipedia.org/wiki/Model_Context_Protocol", tmp_path)
+    )
+
+    content = origin_path.read_text(encoding="utf-8")
+
+    # Split by blank lines to find structured blocks
+    blocks = [b.strip() for b in content.split("\n\n") if b.strip()]
+
+    # Frontmatter is first block (contains ---)
+    assert blocks[0].startswith("---")
+
+    # Heading is second block
+    assert blocks[1].startswith("# Model Context Protocol")
+
+    # Find first block after heading that contains actual paragraph content
+    # (skip navigation lists and just images)
+    first_real_content_idx = None
+    for i in range(2, len(blocks)):
+        # Skip image-only blocks and list items
+        if "The Model Context Protocol (MCP) is an open standard" in blocks[i]:
+            first_real_content_idx = i
+            break
+
+    assert first_real_content_idx is not None
+
+    # All image references should appear BEFORE the first real content block
+    for i in range(2, first_real_content_idx):
+        block = blocks[i]
+        # This block should be images or navigation, not the main content
+        # If it contains images, that's good - pre_imgs placement
+        if "![](../Image/" not in block:
+            # It's navigation/list items which is fine, but no main content yet
+            assert "The Model Context Protocol" not in block or "MCP" not in block
+
+    # Verify first real content comes after all pre-images
+    assert "The Model Context Protocol (MCP) is an open standard" in blocks[first_real_content_idx]

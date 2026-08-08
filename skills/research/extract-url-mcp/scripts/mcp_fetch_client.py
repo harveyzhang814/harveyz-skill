@@ -84,11 +84,21 @@ async def fetch_and_save(url: str, output_dir: Path, chrome_profile: Optional[st
     # Drop a leading h1 block that just repeats the title we already use
     # as the document heading (fetch_article's generic JS extracts the
     # title from the page's own h1 but also walks that h1 into blocks).
+    # image_blocks[].after_block indices are computed by fetch_article's
+    # JS against the ORIGINAL (undeduped) blocks list, so once we drop
+    # blocks[0], every remaining block's local index is shifted by one
+    # relative to those indices — dedup_offset corrects for that.
+    dedup_offset = 0
     if blocks and blocks[0]["tag"] == "h1" and blocks[0]["content"] == title:
         blocks = blocks[1:]
+        dedup_offset = 1
 
     image_blocks = payload.get("image_blocks", [])
     pre_imgs = [f'![](../Image/{img["filename"]})' for img in image_blocks if img["after_block"] == -1]
+    if dedup_offset:
+        # after_block == 0 meant "right after the h1" — that h1 is gone
+        # now, so those images belong at the very start of the body instead.
+        pre_imgs += [f'![](../Image/{img["filename"]})' for img in image_blocks if img["after_block"] == 0]
 
     body_units = []
     if pre_imgs:
@@ -97,7 +107,7 @@ async def fetch_and_save(url: str, output_dir: Path, chrome_profile: Optional[st
     for i, block in enumerate(blocks):
         parts = [_format_block(block)]
         for img in image_blocks:
-            if img["after_block"] == i:
+            if img["after_block"] == i + dedup_offset:
                 parts.append(f'![](../Image/{img["filename"]})')
         body_units.append("\n".join(parts))
 
@@ -113,8 +123,8 @@ async def fetch_and_save(url: str, output_dir: Path, chrome_profile: Optional[st
 source_url: {url}
 fetch_date: {fetch_date}
 origin_title: "{title}"
-author: {payload.get("author", "")}
-publish_date: {payload.get("publish_date", "")}
+author: "{payload.get("author", "")}"
+publish_date: "{payload.get("publish_date", "")}"
 ---
 
 # {title}
