@@ -1,11 +1,14 @@
 """Site-specific HTML extraction: URL routing, thin-content detection, and
 the in-browser extraction scripts ported from extract-url's
-playwright_web.py / playwright_web_wechat.py / playwright_web_arxiv.py.
+playwright_web.py / playwright_web_wechat.py / playwright_web_arxiv.py /
+playwright_xcom.py.
 
-X.com/Twitter is deliberately excluded — it needs a headed-mode-first,
-different-JS-on-headless-fallback browser lifecycle that conflicts with
-the warm persistent-context model this server uses everywhere else. See
-docs/superpowers/specs/2026-08-08-browser-fetch-mcp-article-extraction-design.md.
+X.com/Twitter's two extraction scripts (EXTRACT_JS_XCOM_HEADED /
+EXTRACT_JS_XCOM_HEADLESS) live here, but the browser lifecycle that picks
+between them — a one-off launch instead of the warm persistent context the
+other three sites share — lives in server.py, since it needs a different
+lifecycle than everything else this module's dispatch_site() routes to.
+See docs/superpowers/specs/2026-08-08-browser-fetch-mcp-xcom-extraction-design.md.
 """
 import re
 from datetime import datetime, timedelta, timezone
@@ -15,14 +18,11 @@ _XCOM_HOSTS = {"x.com", "www.x.com", "twitter.com", "www.twitter.com"}
 
 
 def dispatch_site(url: str) -> str:
-    """Return "generic", "wechat", or "arxiv" for the given URL's site.
-
-    Raises ValueError for x.com/twitter.com — not supported yet.
-    """
+    """Return "generic", "wechat", "arxiv", or "xcom" for the given URL's site."""
     parsed = urlparse(url)
     hostname = parsed.hostname or ""
     if hostname in _XCOM_HOSTS:
-        raise ValueError(f"X.com not supported yet: {url}")
+        return "xcom"
     if hostname == "mp.weixin.qq.com":
         return "wechat"
     if hostname == "arxiv.org" and "/html/" in (parsed.path or ""):
@@ -245,3 +245,394 @@ EXTRACT_JS = {
     "wechat": _EXTRACT_JS_WECHAT,
     "arxiv": _EXTRACT_JS_ARXIV,
 }
+
+# Ported verbatim from extract-url/scripts/playwright_xcom.py
+# (_EXTRACT_JS_HEADED). JS used in headed mode: SPAN threshold 3, CODE
+# handler, PRE preserves whitespace, plus querySelectorAll fallback to
+# catch Draft.js atomic code blocks.
+EXTRACT_JS_XCOM_HEADED = r"""() => {
+        const article = document.querySelector('article[data-testid="tweet"]');
+        if (!article) return {error: 'No article found'};
+
+        // X Notes: rich text body lives outside the tweet wrapper — use it as content root
+        const richTextView = document.querySelector('[data-testid="twitterArticleRichTextView"]');
+        const contentRoot = richTextView || article;
+
+        // Title: explicit title element first, then H1 inside rich text view
+        const titleEl = article.querySelector('[data-testid="twitter-article-title"]')
+            || (richTextView ? richTextView.querySelector('h1') : null);
+        const title = titleEl ? titleEl.innerText.replace(/\s+/g, ' ').trim() : 'Untitled';
+
+        // Author and date always from the outer tweet wrapper (not the notes body)
+        const timeEl = article.querySelector('time');
+        const publishDate = timeEl ? timeEl.getAttribute('datetime') : '';
+
+        const authorEl = article.querySelector('[data-testid="User-Name"]');
+        let author = '';
+        if (authorEl) {
+            const authorText = authorEl.innerText.replace(/\s+/g, ' ').trim();
+            author = authorText.split('@')[0].trim();
+        }
+
+        // Skip nodes that are inside a nested embedded tweet article (quoted tweets)
+        function insideNestedTweet(node) {
+            let el = node.parentElement;
+            while (el && el !== contentRoot) {
+                if (el.tagName === 'ARTICLE' && el.getAttribute('data-testid') === 'tweet') return true;
+                el = el.parentElement;
+            }
+            return false;
+        }
+
+        // X Articles/Notes render each paragraph as a Draft.js block div whose
+        // children are per-style-run spans (a new sibling span starts wherever
+        // bold toggles on/off). Without merging these runs, every bold word
+        // becomes its own top-level paragraph and the bold styling is lost.
+        function isDraftParagraphBlock(node) {
+            return node.tagName === 'DIV' && node.classList
+                && node.classList.contains('public-DraftStyleDefault-block');
+        }
+
+        function isBoldRun(span) {
+            // Inline style only (X marks bold runs with style="font-weight: bold"
+            // directly on the run) — NOT computed style, which would also pick up
+            // ambient bold from a heading ancestor and false-positive every run.
+            const w = span.style && span.style.fontWeight;
+            return w === 'bold' || parseInt(w) >= 600;
+        }
+
+        function paragraphToInlineMarkdown(blockDiv) {
+            let out = '';
+            for (const run of blockDiv.children) {
+                const text = (run.textContent || '').replace(/\s+/g, ' ');
+                if (!text) continue;
+                const trimmed = text.trim();
+                if (isBoldRun(run) && trimmed) {
+                    const lead = text.slice(0, text.indexOf(trimmed));
+                    const trail = text.slice(text.indexOf(trimmed) + trimmed.length);
+                    out += lead + '**' + trimmed + '**' + trail;
+                } else {
+                    out += text;
+                }
+            }
+            return out.trim();
+        }
+
+        function isInsideProcessedParagraph(node, processed) {
+            let el = node.parentElement;
+            while (el && el !== contentRoot) {
+                if (processed.has(el)) return true;
+                el = el.parentElement;
+            }
+            return false;
+        }
+
+        const skipTags = new Set(['SCRIPT','STYLE','NAV','FOOTER','HEADER','ASIDE']);
+        const contentUnits = [];
+        const processedParagraphs = new Set();
+        let lastText = '';
+
+        const walker = document.createTreeWalker(contentRoot, NodeFilter.SHOW_ELEMENT);
+        let node;
+        while (node = walker.nextNode()) {
+            if (skipTags.has(node.tagName.toUpperCase())) continue;
+            if (insideNestedTweet(node)) continue;
+            if (isInsideProcessedParagraph(node, processedParagraphs)) continue;
+            const tag = node.tagName.toUpperCase();
+            const tid = node.getAttribute('data-testid') || '';
+
+            if (isDraftParagraphBlock(node)) {
+                const md = paragraphToInlineMarkdown(node);
+                if (md && md.length > 5) {
+                    contentUnits.push({type: 'text', tag: 'p', content: md});
+                    lastText = md;
+                }
+                processedParagraphs.add(node);
+                continue;
+            }
+
+            if (tag === 'DIV' && tid === 'tweetPhoto') {
+                const img = node.querySelector('img');
+                if (img && img.src && !img.src.includes('data:') && !img.src.includes('/profile_images/')) {
+                    contentUnits.push({type: 'image', src: img.src, alt: img.alt || ''});
+                }
+            } else if (tag === 'IMG' && richTextView) {
+                // X Notes inline images not wrapped in tweetPhoto divs (tweetPhoto imgs already captured above)
+                if (!node.closest('div[data-testid="tweetPhoto"]')
+                        && node.src && !node.src.includes('data:') && !node.src.includes('/profile_images/')
+                        && !node.src.includes('/emoji/') && node.width > 50) {
+                    contentUnits.push({type: 'image', src: node.src, alt: node.alt || ''});
+                }
+            } else if (tag === 'SPAN' && tid === '') {
+                let directText = '';
+                for (const cn of node.childNodes) {
+                    if (cn.nodeType === Node.TEXT_NODE) {
+                        directText += (cn.textContent || '').replace(/\s+/g, ' ').trim() + ' ';
+                    }
+                }
+                directText = directText.trim();
+                let hasLiAncestor = false;
+                let ancestor = node.parentElement;
+                while (ancestor && ancestor.tagName) {
+                    if (['LI','OL','UL'].includes(ancestor.tagName.toUpperCase())) {
+                        hasLiAncestor = true;
+                        break;
+                    }
+                    ancestor = ancestor.parentElement;
+                }
+                if (hasLiAncestor) continue;
+                const isNoise = (
+                    directText.length < 3 ||
+                    /^[@#]?[\d.]+[KMB]?$/i.test(directText) ||
+                    directText.startsWith('@')
+                );
+                const isSubset = lastText.length > 10 && (lastText.includes(directText) || directText.includes(lastText));
+                if (!isNoise && !isSubset && directText.length >= 3) {
+                    contentUnits.push({type: 'text', tag: 'span', content: directText});
+                    lastText = directText;
+                }
+            } else if (tag === 'CODE') {
+                // Standalone <code> not inside <pre> → inline code snippet
+                let insidePre = false;
+                let p = node.parentElement;
+                while (p) { if (p.tagName === 'PRE') { insidePre = true; break; } p = p.parentElement; }
+                if (!insidePre) {
+                    const t = node.innerText.trim();
+                    if (t && !lastText.includes(t)) {
+                        contentUnits.push({type: 'text', tag: 'code', content: t});
+                        lastText = t;
+                    }
+                }
+            } else if (tag === 'PRE') {
+                // Preserve whitespace in code blocks — do NOT collapse
+                const t = node.innerText;
+                if (t && t.trim().length > 5) {
+                    contentUnits.push({type: 'text', tag: 'pre', content: t});
+                    lastText = t.trim();
+                }
+            } else if (['H2','H3','P','LI','BLOCKQUOTE'].includes(tag)) {
+                // Mark processed so a nested Draft.js paragraph div (headings/
+                // blockquotes wrap one internally) isn't ALSO captured below,
+                // which would duplicate this element's text as an extra block.
+                processedParagraphs.add(node);
+                const t = node.innerText.replace(/\s+/g, ' ').trim();
+                if (t && t.length > 5) {
+                    contentUnits.push({type: 'text', tag: tag.toLowerCase(), content: t});
+                    lastText = t;
+                }
+            }
+        }
+
+        // Collect code block keys already captured via tree walker
+        const capturedCodeTexts = new Set(
+            contentUnits.filter(u => u.tag === 'pre' || u.tag === 'code')
+                        .map(u => u.content.trim().substring(0, 50))
+        );
+
+        // Direct fallback: query code.language-text (Draft.js atomic render)
+        // These are NOT visited reliably by the tree walker due to lazy rendering timing
+        contentRoot.querySelectorAll('code.language-text, pre').forEach(el => {
+            const t = el.innerText;
+            if (t && t.trim().length > 5) {
+                const key = t.trim().substring(0, 50);
+                if (!capturedCodeTexts.has(key)) {
+                    capturedCodeTexts.add(key);
+                    const tag = el.tagName === 'PRE' ? 'pre' : 'pre'; // treat both as pre
+                    contentUnits.push({type: 'text', tag, content: t});
+                }
+            }
+        });
+
+        const blocks = [];
+        const imageBlocks = [];
+        for (let i = 0; i < contentUnits.length; i++) {
+            const unit = contentUnits[i];
+            if (unit.type === 'text') {
+                blocks.push({
+                    type: ['H2','H3'].includes(unit.tag.toUpperCase()) ? 'heading' : 'block',
+                    tag: unit.tag,
+                    content: unit.content,
+                    blockIndex: blocks.length
+                });
+            } else if (unit.type === 'image') {
+                imageBlocks.push({src: unit.src, alt: unit.alt, afterBlock: blocks.length - 1});
+            }
+        }
+
+        return {title, author, publishDate, blocks, imageBlocks,
+                totalTextBlocks: blocks.length, totalImages: imageBlocks.length};
+}"""
+
+# Ported verbatim from extract-url/scripts/playwright_xcom.py
+# (_EXTRACT_JS_HEADLESS). JS used in headless fallback: exact HEAD
+# version — SPAN threshold 30, no CODE handler, PRE folds whitespace,
+# no querySelectorAll patch.
+EXTRACT_JS_XCOM_HEADLESS = r"""() => {
+        const article = document.querySelector('article[data-testid="tweet"]');
+        if (!article) return {error: 'No article found'};
+
+        // X Notes: rich text body lives outside the tweet wrapper — use it as content root
+        const richTextView = document.querySelector('[data-testid="twitterArticleRichTextView"]');
+        const contentRoot = richTextView || article;
+
+        const titleEl = article.querySelector('[data-testid="twitter-article-title"]')
+            || (richTextView ? richTextView.querySelector('h1') : null);
+        const title = titleEl ? titleEl.innerText.replace(/\s+/g, ' ').trim() : 'Untitled';
+
+        const timeEl = article.querySelector('time');
+        const publishDate = timeEl ? timeEl.getAttribute('datetime') : '';
+
+        const authorEl = article.querySelector('[data-testid="User-Name"]');
+        let author = '';
+        if (authorEl) {
+            const authorText = authorEl.innerText.replace(/\s+/g, ' ').trim();
+            author = authorText.split('@')[0].trim();
+        }
+
+        function insideNestedTweet(node) {
+            let el = node.parentElement;
+            while (el && el !== contentRoot) {
+                if (el.tagName === 'ARTICLE' && el.getAttribute('data-testid') === 'tweet') return true;
+                el = el.parentElement;
+            }
+            return false;
+        }
+
+        // X Articles/Notes render each paragraph as a Draft.js block div whose
+        // children are per-style-run spans (a new sibling span starts wherever
+        // bold toggles on/off). Without merging these runs, every bold word
+        // becomes its own top-level paragraph and the bold styling is lost.
+        function isDraftParagraphBlock(node) {
+            return node.tagName === 'DIV' && node.classList
+                && node.classList.contains('public-DraftStyleDefault-block');
+        }
+
+        function isBoldRun(span) {
+            // Inline style only (X marks bold runs with style="font-weight: bold"
+            // directly on the run) — NOT computed style, which would also pick up
+            // ambient bold from a heading ancestor and false-positive every run.
+            const w = span.style && span.style.fontWeight;
+            return w === 'bold' || parseInt(w) >= 600;
+        }
+
+        function paragraphToInlineMarkdown(blockDiv) {
+            let out = '';
+            for (const run of blockDiv.children) {
+                const text = (run.textContent || '').replace(/\s+/g, ' ');
+                if (!text) continue;
+                const trimmed = text.trim();
+                if (isBoldRun(run) && trimmed) {
+                    const lead = text.slice(0, text.indexOf(trimmed));
+                    const trail = text.slice(text.indexOf(trimmed) + trimmed.length);
+                    out += lead + '**' + trimmed + '**' + trail;
+                } else {
+                    out += text;
+                }
+            }
+            return out.trim();
+        }
+
+        function isInsideProcessedParagraph(node, processed) {
+            let el = node.parentElement;
+            while (el && el !== contentRoot) {
+                if (processed.has(el)) return true;
+                el = el.parentElement;
+            }
+            return false;
+        }
+
+        const skipTags = new Set(['SCRIPT','STYLE','NAV','FOOTER','HEADER','ASIDE']);
+        const contentUnits = [];
+        const processedParagraphs = new Set();
+        let lastText = '';
+
+        const walker = document.createTreeWalker(contentRoot, NodeFilter.SHOW_ELEMENT);
+        let node;
+        while (node = walker.nextNode()) {
+            if (skipTags.has(node.tagName.toUpperCase())) continue;
+            if (insideNestedTweet(node)) continue;
+            if (isInsideProcessedParagraph(node, processedParagraphs)) continue;
+            const tag = node.tagName.toUpperCase();
+            const tid = node.getAttribute('data-testid') || '';
+
+            if (isDraftParagraphBlock(node)) {
+                const md = paragraphToInlineMarkdown(node);
+                if (md && md.length > 5) {
+                    contentUnits.push({type: 'text', tag: 'p', content: md});
+                    lastText = md;
+                }
+                processedParagraphs.add(node);
+                continue;
+            }
+
+            if (tag === 'DIV' && tid === 'tweetPhoto') {
+                const img = node.querySelector('img');
+                if (img && img.src && !img.src.includes('data:') && !img.src.includes('/profile_images/')) {
+                    contentUnits.push({type: 'image', src: img.src, alt: img.alt || ''});
+                }
+            } else if (tag === 'IMG' && richTextView) {
+                if (!node.closest('div[data-testid="tweetPhoto"]')
+                        && node.src && !node.src.includes('data:') && !node.src.includes('/profile_images/')
+                        && !node.src.includes('/emoji/') && node.width > 50) {
+                    contentUnits.push({type: 'image', src: node.src, alt: node.alt || ''});
+                }
+            } else if (tag === 'SPAN' && tid === '') {
+                let directText = '';
+                for (const cn of node.childNodes) {
+                    if (cn.nodeType === Node.TEXT_NODE) {
+                        directText += (cn.textContent || '').replace(/\s+/g, ' ').trim() + ' ';
+                    }
+                }
+                directText = directText.trim();
+                let hasLiAncestor = false;
+                let ancestor = node.parentElement;
+                while (ancestor && ancestor.tagName) {
+                    if (['LI','OL','UL'].includes(ancestor.tagName.toUpperCase())) {
+                        hasLiAncestor = true;
+                        break;
+                    }
+                    ancestor = ancestor.parentElement;
+                }
+                if (hasLiAncestor) continue;
+                const isNoise = (
+                    directText.length < 30 ||
+                    /^[@#]?[\d.]+[KMB]?$/i.test(directText) ||
+                    directText.startsWith('@')
+                );
+                const isSubset = lastText.length > 10 && (lastText.includes(directText) || directText.includes(lastText));
+                if (!isNoise && !isSubset && directText.length >= 30) {
+                    contentUnits.push({type: 'text', tag: 'span', content: directText});
+                    lastText = directText;
+                }
+            } else if (['H2','H3','P','LI','BLOCKQUOTE','PRE'].includes(tag)) {
+                // Mark processed so a nested Draft.js paragraph div (headings/
+                // blockquotes wrap one internally) isn't ALSO captured below,
+                // which would duplicate this element's text as an extra block.
+                processedParagraphs.add(node);
+                const t = node.innerText.replace(/\s+/g, ' ').trim();
+                if (t && t.length > 5) {
+                    contentUnits.push({type: 'text', tag: tag.toLowerCase(), content: t});
+                    lastText = t;
+                }
+            }
+        }
+
+        const blocks = [];
+        const imageBlocks = [];
+        for (let i = 0; i < contentUnits.length; i++) {
+            const unit = contentUnits[i];
+            if (unit.type === 'text') {
+                blocks.push({
+                    type: ['H2','H3'].includes(unit.tag.toUpperCase()) ? 'heading' : 'block',
+                    tag: unit.tag,
+                    content: unit.content,
+                    blockIndex: blocks.length
+                });
+            } else if (unit.type === 'image') {
+                imageBlocks.push({src: unit.src, alt: unit.alt, afterBlock: blocks.length - 1});
+            }
+        }
+
+        return {title, author, publishDate, blocks, imageBlocks,
+                totalTextBlocks: blocks.length, totalImages: imageBlocks.length};
+}"""
