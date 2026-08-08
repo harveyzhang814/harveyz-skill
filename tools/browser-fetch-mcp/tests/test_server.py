@@ -19,9 +19,9 @@ def _server_params(data_dir: Path) -> StdioServerParameters:
 
 async def _call_fetch_page(session, **kwargs):
     result = await session.call_tool("fetch_page", kwargs)
-    if result.is_error:
+    if result.isError:
         return result, None
-    payload = result.structured_content or json.loads(result.content[0].text)
+    payload = result.structuredContent or json.loads(result.content[0].text)
     return result, payload
 
 
@@ -56,4 +56,4 @@ async def test_fetch_page_use_auth_requires_chrome_profile(tmp_path):
         async with ClientSession(read, write) as session:
             await session.initialize()
             result, _ = await _call_fetch_page(session, url="https://example.com", use_auth=True)
-            assert result.is_error is True
+            assert result.isError is True
