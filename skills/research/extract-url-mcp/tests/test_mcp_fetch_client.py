@@ -1,6 +1,6 @@
-"""Stage 1 validation test: real network, real browser-fetch-mcp subprocess,
-real MCP stdio protocol — no mocks. This is the point of Stage 1: proving
-the chain works end to end, not just that the code compiles.
+"""Stage 3 validation test: real network, real browser-fetch-mcp subprocess,
+real MCP stdio protocol, real fetch_article (site-aware extraction with
+image download) — no mocks.
 
 Run: python3 -m pytest skills/research/extract-url-mcp/tests/ -v
 (ambient system Python — matches how mcp_fetch_client.py itself runs)
@@ -18,21 +18,21 @@ def test_fetch_and_save_writes_real_content(tmp_path):
     origin_path = asyncio.run(fetch_and_save("https://example.com", tmp_path))
 
     assert origin_path.exists()
-    # Stage 2 needs a parallel Translation/ dir alongside Origin/, so the
-    # article gets its own hash8 directory rather than a flat filename.
     assert origin_path.name == "article.md"
     assert origin_path.parent.name == "Origin"
     content = origin_path.read_text(encoding="utf-8")
 
     assert "source_url: https://example.com" in content
     assert 'origin_title: "Example Domain"' in content
+    assert "author:" in content
+    assert "publish_date:" in content
     assert "# Example Domain" in content
     assert "This domain is for use in documentation examples" in content
     # title dedup: the heading should not repeat as a body block
     assert content.count("Example Domain") == 2  # frontmatter + heading only
 
 
-def test_fetch_and_save_extracts_multiple_blocks(tmp_path):
+def test_fetch_and_save_extracts_multiple_blocks_and_downloads_images(tmp_path):
     origin_path = asyncio.run(
         fetch_and_save("https://en.wikipedia.org/wiki/Model_Context_Protocol", tmp_path)
     )
@@ -42,3 +42,22 @@ def test_fetch_and_save_extracts_multiple_blocks(tmp_path):
     # frontmatter block + heading + at least a few real paragraphs
     assert len(paragraphs) >= 5
     assert "Model Context Protocol" in content
+
+    # fetch_article downloads real images for this page (7 as of writing) —
+    # confirm at least one landed next to Origin/, and the body references it.
+    article_dir = origin_path.parent.parent
+    image_dir = article_dir / "Image"
+    assert image_dir.exists()
+    assert len(list(image_dir.iterdir())) > 0
+    assert "![](../Image/" in content
+
+
+def test_fetch_and_save_accepts_chrome_profile_without_crashing(tmp_path):
+    """Doesn't assert on retry content (needs real auth cookies, out of
+    scope for an automated test) — just confirms chrome_profile is
+    correctly forwarded to fetch_article and the call completes."""
+    empty_profile = tmp_path / "EmptyProfile"
+    origin_path = asyncio.run(
+        fetch_and_save("https://example.com", tmp_path, chrome_profile=str(empty_profile))
+    )
+    assert origin_path.exists()
