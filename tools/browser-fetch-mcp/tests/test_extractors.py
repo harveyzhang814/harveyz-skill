@@ -31,9 +31,8 @@ def test_dispatch_site_routes_by_hostname(url, expected_site):
         "https://www.twitter.com/someuser/status/123",
     ],
 )
-def test_dispatch_site_rejects_x_dot_com(url):
-    with pytest.raises(ValueError, match="X.com not supported"):
-        dispatch_site(url)
+def test_dispatch_site_routes_x_dot_com_to_xcom(url):
+    assert dispatch_site(url) == "xcom"
 
 
 def test_dispatch_site_rejects_only_exact_hostname_not_substring():

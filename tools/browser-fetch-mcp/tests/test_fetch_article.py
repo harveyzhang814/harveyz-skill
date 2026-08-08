@@ -62,7 +62,7 @@ async def test_fetch_article_arxiv_real_network(tmp_path):
     assert len(payload["blocks"]) > 5
 
 
-async def test_fetch_article_x_dot_com_is_rejected(tmp_path):
+async def test_fetch_article_x_dot_com_without_chrome_profile_is_rejected(tmp_path):
     output_dir = tmp_path / "out"
     async with stdio_client(_server_params(tmp_path)) as (read, write):
         async with ClientSession(read, write) as session:
