@@ -117,6 +117,9 @@ _EXTRACT_JS_WECHAT = r"""() => {
     const authorEl = document.querySelector('#js_name');
     const author    = authorEl ? authorEl.innerText.replace(/\s+/g, ' ').trim() : '';
 
+    // #js_content is server-rendered but sits behind visibility:hidden until
+    // WeChat's client-side unlock script runs (never happens here), so we
+    // read via textContent below instead of innerText.
     const main = document.querySelector('#js_content')
               || document.querySelector('main')
               || document.querySelector('article')
@@ -129,6 +132,9 @@ _EXTRACT_JS_WECHAT = r"""() => {
         const tag = node.tagName.toUpperCase();
 
         if (tag === 'IMG') {
+            // Real URL lives in data-src (lazy-load); src attribute is
+            // usually absent, so the src *property* would otherwise resolve
+            // to the page's base URI instead of falling through.
             const src = node.getAttribute('data-src') || node.src || '';
             if (src && !src.startsWith('data:') && src.startsWith('http')) {
                 imageBlocks.push({src, alt: node.alt || '', afterBlock: contentUnits.length - 1});
@@ -212,6 +218,9 @@ _EXTRACT_JS_ARXIV = r"""() => {
             continue;
         }
 
+        // Skip content inside an already-captured table (but not the table
+        // node itself — closest('table') matches self too) to avoid
+        // duplicating cell text as loose <p>/<li> blocks.
         const ownerTable = node.closest ? node.closest('table') : null;
         if (ownerTable && ownerTable !== node && tableSlots.has(ownerTable)) continue;
 
