@@ -4,6 +4,8 @@ migrated: false
 
 # browser-fetch-mcp Phase A：设计
 
+> **实现后更新：** 本文原按 `mcp` 1.x 的 `FastMCP` 类撰写。最终评审发现 `pyproject.toml` 未设上限的 `mcp>=1.28.0` 在洁净安装下实际解析到 `mcp==2.0.0`，而该版本已将 `FastMCP` 更名为 `MCPServer`（API 形状不变：`.tool()` 装饰器、`.run(transport="stdio")`）。已实现代码以 `mcp>=2.0.0` + `MCPServer` 为准，下文提及 FastMCP 之处均指同一机制。
+
 ## 背景
 
 `skills/research/extract-url` 的 `playwright_web.py` / `playwright_xcom.py` 和 `skills/research/probe-session` 的 `probe.py`，各自独立实现了同一套逻辑：从 Chrome Profile 复制解密 cookie（`pycookiecheat`），注入 Playwright headless context，抓取需要登录态才能访问的页面。两个 skill 是这个问题域下真实存在、当前就重复的两个消费者——不是预测性需求。

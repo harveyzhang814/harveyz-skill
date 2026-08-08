@@ -1,4 +1,4 @@
-"""FastMCP server exposing fetch_page: a warm-context headless browser
+"""MCP server exposing fetch_page: a warm-context headless browser
 fetch tool. Auth (Chrome cookie injection) is wired in Task 4."""
 import hashlib
 import os

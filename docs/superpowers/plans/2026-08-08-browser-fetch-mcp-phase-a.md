@@ -2,18 +2,20 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
+> **Post-implementation note:** this plan was written against `mcp` 1.x's `FastMCP` class. During final review, a test bug (`command="python3"` resolving to system Python instead of the venv) was found to have masked the real dependency resolution: `pyproject.toml`'s unbounded `mcp>=1.28.0` floor resolves to `mcp==2.0.0` in a clean install, and `mcp` 2.0 renamed `FastMCP` to `MCPServer` (same API shape — `.tool()` decorator, `.run(transport="stdio")`). The shipped code targets `mcp>=2.0.0` + `MCPServer`; code blocks below are left as originally dispatched (historical record) except where noted inline.
+
 **Goal:** Build a standalone, installable MCP server (`tools/browser-fetch-mcp/`) that exposes one tool, `fetch_page`, which fetches a URL through a warm (process-lifetime) headless Playwright context, optionally injecting cookies decrypted from a local Chrome profile for authenticated fetches.
 
-**Architecture:** A FastMCP server (`playwright.async_api`, required — the sync API cannot run inside FastMCP's event loop) keeps one persistent Playwright browser context per identity (`__anon__` for anonymous fetches, or a hash of the Chrome profile path for authenticated fetches), reusing it across tool calls instead of launching a fresh browser per call. Cookie extraction (Chrome's encrypted SQLite cookie DB → plaintext) is a separate, independently-testable pure function that the server calls before each authenticated fetch.
+**Architecture:** An MCP server (`mcp.server.MCPServer`, formerly `FastMCP` — renamed in `mcp` 2.0, same API) using `playwright.async_api` (required — the sync API cannot run inside the server's event loop) keeps one persistent Playwright browser context per identity (`__anon__` for anonymous fetches, or a hash of the Chrome profile path for authenticated fetches), reusing it across tool calls instead of launching a fresh browser per call. Cookie extraction (Chrome's encrypted SQLite cookie DB → plaintext) is a separate, independently-testable pure function that the server calls before each authenticated fetch.
 
-**Tech Stack:** Python 3.11+, `mcp` (FastMCP) SDK, `playwright` (async API), `pycookiecheat`, `pytest` + `pytest-asyncio` (`asyncio_mode = "auto"`), packaged with `hatchling` following the `tools/hub` / `tools/sync-agent` convention already in this repo.
+**Tech Stack:** Python 3.11+, `mcp>=2.0.0` (`MCPServer`) SDK, `playwright` (async API), `pycookiecheat`, `pytest` + `pytest-asyncio` (`asyncio_mode = "auto"`), packaged with `hatchling` following the `tools/hub` / `tools/sync-agent` convention already in this repo.
 
 ## Global Constraints
 
 - Package lives at `tools/browser-fetch-mcp/`, following the exact structure of `tools/hub/` and `tools/sync-agent/` (`pyproject.toml`, `tool.json`, `<name>.sh` wrapper, `<name>/` source, `tests/`).
 - Do NOT modify `skills/research/extract-url/` or `skills/research/probe-session/` — Phase A ships the server standalone, no consumer migration (deferred to Phase B).
 - Do NOT register this server in any platform's MCP client config (`~/.claude.json` `mcpServers`, etc.) — deferred to Phase B.
-- Must use `playwright.async_api`, never `playwright.sync_api` — verified in the feasibility experiment that sync API raises inside FastMCP's event loop.
+- Must use `playwright.async_api`, never `playwright.sync_api` — verified in the feasibility experiment that sync API raises inside the MCP server's event loop.
 - `fetch_page` return shape is exactly `{html: str, title: str, status: int, cookies_injected: int}` — do not add fields (e.g. no `elapsed_seconds`); tests measure timing from the client side instead.
 - `use_auth=True` with `chrome_profile=None` must raise (not silently fall back to anonymous) — see spec ambiguity fix in `docs/superpowers/specs/2026-08-08-browser-fetch-mcp-phase-a-design.md`.
 - Never touch the user's real Chrome profile directory as a Playwright `launch_persistent_context` target — only read its `Cookies` file (via a copied temp file, matching `docs/explanation/chrome-profile-cookie-injection.md`'s existing security pattern). The server's own persistent contexts live under `BROWSER_FETCH_MCP_DATA_DIR` (default `~/.hskill/browser-fetch-mcp/contexts`), never inside the real Chrome profile.
@@ -41,7 +43,7 @@ name = "browser-fetch-mcp"
 version = "0.1.0"
 requires-python = ">=3.11"
 dependencies = [
-    "mcp>=1.28.0",
+    "mcp>=2.0.0",
     "playwright>=1.45",
     "pycookiecheat>=0.7",
 ]
