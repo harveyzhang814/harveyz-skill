@@ -18,6 +18,10 @@ def test_fetch_and_save_writes_real_content(tmp_path):
     origin_path = asyncio.run(fetch_and_save("https://example.com", tmp_path))
 
     assert origin_path.exists()
+    # Stage 2 needs a parallel Translation/ dir alongside Origin/, so the
+    # article gets its own hash8 directory rather than a flat filename.
+    assert origin_path.name == "article.md"
+    assert origin_path.parent.name == "Origin"
     content = origin_path.read_text(encoding="utf-8")
 
     assert "source_url: https://example.com" in content

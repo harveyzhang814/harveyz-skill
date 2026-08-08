@@ -132,9 +132,9 @@ async def fetch_and_save(url: str, output_dir: Path) -> Path:
     if blocks and blocks[0][0] == "h1" and blocks[0][1] == title:
         blocks = blocks[1:]
 
-    output_dir = Path(output_dir)
-    output_dir.mkdir(parents=True, exist_ok=True)
-    origin_path = output_dir / f"{_hash8(url)}.md"
+    article_dir = Path(output_dir) / _hash8(url) / "Origin"
+    article_dir.mkdir(parents=True, exist_ok=True)
+    origin_path = article_dir / "article.md"
 
     fetch_date = datetime.now(timezone(timedelta(hours=8))).strftime("%Y-%m-%d")
     body = "\n\n".join(_format_block(tag, text) for tag, text in blocks)
