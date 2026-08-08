@@ -2,6 +2,7 @@
 site-aware extraction for generic/WeChat/arXiv URLs). Both share the same
 warm persistent-context mechanism; X.com is not supported by fetch_article
 yet — see docs/superpowers/specs/2026-08-08-browser-fetch-mcp-article-extraction-design.md."""
+import asyncio
 import hashlib
 import os
 from pathlib import Path
@@ -135,7 +136,8 @@ async def fetch_article(
     page = await ctx.new_page()
     try:
         await page.goto(url, wait_until="domcontentloaded", timeout=30000)
-        original_html = await page.content()
+        if site == "wechat":
+            original_html = await page.content()
         result = await page.evaluate(js)
     finally:
         await page.close()
@@ -160,19 +162,23 @@ async def fetch_article(
         auth_page = await auth_ctx.new_page()
         try:
             await auth_page.goto(url, wait_until="domcontentloaded", timeout=30000)
+            if site == "wechat":
+                retry_html = await auth_page.content()
             retry_result = await auth_page.evaluate(js)
         finally:
             await auth_page.close()
 
         if len(retry_result.get("blocks", [])) > len(result.get("blocks", [])):
             result = retry_result
+            if site == "wechat":
+                original_html = retry_html
 
     if site == "wechat":
         publish_date = extract_wechat_publish_date(original_html)
     else:
         publish_date = (result.get("publishDate") or "")[:10]
 
-    image_blocks = download_images(result.get("imageBlocks", []), Path(output_dir))
+    image_blocks = await asyncio.to_thread(download_images, result.get("imageBlocks", []), Path(output_dir))
 
     return {
         "title": result.get("title", "Untitled"),
