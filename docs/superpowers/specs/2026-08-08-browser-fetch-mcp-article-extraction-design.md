@@ -20,7 +20,7 @@ migrated: false
 ## 范围
 
 **做：**
-- `browser-fetch-mcp` 新增工具 `fetch_article(url, output_dir, use_auth=False, chrome_profile=None)`，返回结构化抽取内容（非原始 HTML）。
+- `browser-fetch-mcp` 新增工具 `fetch_article(url, output_dir, chrome_profile=None)`，返回结构化抽取内容（非原始 HTML）。
 - 逐字迁移 `playwright_web.py` / `playwright_web_wechat.py` / `playwright_web_arxiv.py` 三份 `_EXTRACT_JS`，改为在 `fetch_page` 现有 warm context 导航过的**活页面**上执行（不复刻原脚本"存 HTML 文件→`set_content()`重建 DOM"的两段式做法——这是一处刻意的简化，已与用户确认接受相应的行为差异）。
 - 按 URL 做站点分发（Python 侧模式匹配，不是 subagent prompt 里的 LLM 判断）。
 - 迁移"内容偏薄自动用 cookie 重抓"的兜底机制。
@@ -38,7 +38,7 @@ migrated: false
 `fetch_article` 与现有 `fetch_page` 并列，共享同一套 warm persistent context 机制（`_get_context()`）：
 
 ```
-调用方 → fetch_article(url, output_dir, use_auth, chrome_profile)
+调用方 → fetch_article(url, output_dir, chrome_profile)
            │
            ├─ 站点分发：按 URL 判断 generic / wechat / arxiv / (xcom → 报错)
            ├─ 复用 fetch_page 的抓取路径：_get_context() → page.goto(url)
