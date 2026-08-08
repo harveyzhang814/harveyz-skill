@@ -57,6 +57,7 @@ methodology: diataxis
 | [explanation/how-to-read-papers.md](explanation/how-to-read-papers.md) | Keshav 三遍阅读法原文（中文），论文分析 Skill 方法论的来源 |
 | [explanation/chrome-profile-cookie-injection.md](explanation/chrome-profile-cookie-injection.md) | 通用机制：从 Chrome Profile 提取加密 cookie、pycookiecheat 解密、注入 Playwright context，含复用模板 |
 | [explanation/xcom-playwright-auth.md](explanation/xcom-playwright-auth.md) | X.com 应用：auth cookie 识别、Profile 扫描、wait_for_selector 隐式鉴权验证、双路径选择 |
+| [explanation/mcp-browser-fetch-experiment.md](explanation/mcp-browser-fetch-experiment.md) | 常驻 MCP server + Playwright persistent context 替代 cookie 复制的可行性实验：性能数据、cookie 落盘条件、FastMCP async 限制、跨平台约束、未解决问题 |
 | [explanation/hub-architecture.md](explanation/hub-architecture.md) | hub 架构设计原理：core/ 解耦、SQLite + PROJECTS.md 双存储、从 p-launch + todo-tool 演进路径 |
 | [explanation/sync-agent-architecture.md](explanation/sync-agent-architecture.md) | sync-agent 架构：tool/skill 分工、config/state 分离原因、setup 幂等性、Syncthing REST 集成 |
 | [explanation/cognitive-signature-philosophy.md](explanation/cognitive-signature-philosophy.md) | extract-cognition 背后的哲学：隐含作者、法证 vs 教学两种目的、为何先学发生器、warrant 即地基、防鸡汤锁、该学/该防、无基线不归因 |
