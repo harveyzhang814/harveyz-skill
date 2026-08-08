@@ -6,6 +6,7 @@ see docs/superpowers/specs/2026-08-08-browser-fetch-mcp-xcom-extraction-design.m
 import asyncio
 import hashlib
 import os
+import sys
 from pathlib import Path
 from typing import Optional
 from urllib.parse import urlparse
@@ -207,7 +208,12 @@ async def fetch_article(
         if not chrome_profile:
             raise ValueError("chrome_profile is required for x.com/Twitter URLs")
 
-        cookies_dict = extract_cookies("https://x.com", chrome_profile)
+        cookies_dict = await asyncio.to_thread(extract_cookies, "https://x.com", chrome_profile)
+        if not {"auth_token", "ct0", "twid"} & cookies_dict.keys():
+            raise ValueError(
+                f"No x.com session cookies in {chrome_profile} — "
+                "log into x.com in that Chrome profile first"
+            )
         pw_cookies = [
             {"name": k, "value": v, "domain": ".x.com", "path": "/", "secure": True}
             for k, v in cookies_dict.items()
@@ -215,7 +221,12 @@ async def fetch_article(
 
         try:
             result = await _xcom_scrape(url, pw_cookies, headless=False)
-        except Exception:
+        except Exception as e:
+            print(
+                f"[browser-fetch-mcp] headed x.com scrape failed ({e}); "
+                f"falling back to headless (lower fidelity)",
+                file=sys.stderr,
+            )
             try:
                 result = await _xcom_scrape(url, pw_cookies, headless=True)
             except Exception as e:
