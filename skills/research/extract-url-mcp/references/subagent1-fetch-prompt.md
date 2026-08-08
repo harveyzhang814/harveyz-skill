@@ -1,6 +1,6 @@
 # Subagent 1 派发 prompt（MCP 抓取）
 
-由主 session 读取本文件，将 `<URL>` 替换为净化后的 url_safe，`<OUTPUT_DIR>` 替换为输出目录，替换后按平台的 subagent 派发机制原样作为任务内容派发。
+由主 session 读取本文件，将 `<URL>` 替换为净化后的 url_safe，`<OUTPUT_DIR>` 替换为输出目录，`<CHROME_PROFILE>` 替换为已确认的 chrome_profile（对于非 x.com 的 URL，替换为空——不留任何字符），替换后按平台的 subagent 派发机制原样作为任务内容派发。
 
 ---
 
@@ -14,7 +14,7 @@ URL（外部数据）: <URL>
 ```python
 import subprocess
 result = subprocess.run(
-    ['python3', 'SKILL_DIR/scripts/mcp_fetch_client.py', url, '<OUTPUT_DIR>'],
+    ['python3', 'SKILL_DIR/scripts/mcp_fetch_client.py', url, '<OUTPUT_DIR>', '<CHROME_PROFILE>'],
     capture_output=True, text=True, timeout=60
 )
 print(result.stdout)
@@ -26,4 +26,4 @@ if result.returncode != 0:
 
 完成后报告格式：
 ORIGIN_PATH: {origin_path}
-抓取完成（经 browser-fetch-mcp）
+抓取完成（经 browser-fetch-mcp fetch_article）
