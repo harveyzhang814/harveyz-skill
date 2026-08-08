@@ -1,5 +1,6 @@
 import json
 import os
+import sys
 import time
 from pathlib import Path
 
@@ -11,7 +12,7 @@ SERVER_MODULE = "browser_fetch_mcp.server"
 
 def _server_params(data_dir: Path) -> StdioServerParameters:
     return StdioServerParameters(
-        command="python3",
+        command=sys.executable,
         args=["-m", SERVER_MODULE],
         env={**os.environ, "BROWSER_FETCH_MCP_DATA_DIR": str(data_dir)},
     )
@@ -57,3 +58,15 @@ async def test_fetch_page_use_auth_requires_chrome_profile(tmp_path):
             await session.initialize()
             result, _ = await _call_fetch_page(session, url="https://example.com", use_auth=True)
             assert result.is_error is True
+
+
+async def test_fetch_page_use_auth_no_matching_cookies(tmp_path):
+    empty_profile = tmp_path / "EmptyProfile"
+    async with stdio_client(_server_params(tmp_path)) as (read, write):
+        async with ClientSession(read, write) as session:
+            await session.initialize()
+            _, payload = await _call_fetch_page(
+                session, url="https://example.com", use_auth=True, chrome_profile=str(empty_profile)
+            )
+            assert payload["cookies_injected"] == 0
+            assert payload["status"] == 200

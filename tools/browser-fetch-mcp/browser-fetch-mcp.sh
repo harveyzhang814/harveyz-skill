@@ -9,6 +9,7 @@ if [ -d "${SCRIPT_DIR}/browser_fetch_mcp" ] && [ -f "${SCRIPT_DIR}/pyproject.tom
   if [ ! -x "${DEV_VENV}/bin/browser-fetch-mcp" ]; then
     python3 -m venv "${DEV_VENV}"
     "${DEV_VENV}/bin/pip" install -q -e "${SCRIPT_DIR}"
+    "${DEV_VENV}/bin/python3" -m playwright install chromium
   fi
   exec "${DEV_VENV}/bin/browser-fetch-mcp" "$@"
 fi
@@ -28,6 +29,7 @@ CURRENT_HASH=$(_hash_source)
 if [ ! -x "${VENV_DIR}/bin/browser-fetch-mcp" ] || [ "$(cat "${HASH_FILE}" 2>/dev/null)" != "${CURRENT_HASH}" ]; then
   python3 -m venv "${VENV_DIR}"
   "${VENV_DIR}/bin/pip" install -q --upgrade "${INSTALL_DIR}"
+  "${VENV_DIR}/bin/python3" -m playwright install chromium
   echo "${CURRENT_HASH}" > "${HASH_FILE}"
 fi
 

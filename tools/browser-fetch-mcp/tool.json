@@ -4,5 +4,5 @@
   "description": "Shared MCP server for authenticated headless browser fetches (warm Playwright context, Chrome cookie injection)",
   "extraPaths": ["browser_fetch_mcp", "pyproject.toml"],
   "uninstallPaths": ["~/.hskill/tools/browser-fetch-mcp/venv", "~/.hskill/tools/browser-fetch-mcp"],
-  "configPaths": ["~/.hskill/tools/browser-fetch-mcp"]
+  "configPaths": ["~/.hskill/browser-fetch-mcp"]
 }

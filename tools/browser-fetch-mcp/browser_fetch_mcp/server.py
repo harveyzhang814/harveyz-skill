@@ -6,12 +6,12 @@ from pathlib import Path
 from typing import Optional
 from urllib.parse import urlparse
 
-from mcp.server.fastmcp import FastMCP
+from mcp.server import MCPServer
 from playwright.async_api import async_playwright, BrowserContext
 
 from browser_fetch_mcp.cookies import extract_cookies
 
-mcp = FastMCP("browser-fetch-mcp")
+mcp = MCPServer("browser-fetch-mcp")
 
 ANON_KEY = "__anon__"
 
@@ -23,9 +23,10 @@ def _data_dir() -> Path:
     base = (
         Path(override)
         if override
-        else Path.home() / ".hskill" / "tools" / "browser-fetch-mcp" / "contexts"
+        else Path.home() / ".hskill" / "browser-fetch-mcp" / "contexts"
     )
-    base.mkdir(parents=True, exist_ok=True)
+    base.mkdir(parents=True, exist_ok=True, mode=0o700)
+    base.chmod(0o700)
     return base
 
 
@@ -34,7 +35,8 @@ async def _get_context(key: str) -> BrowserContext:
         if _state["playwright"] is None:
             _state["playwright"] = await async_playwright().start()
         profile_dir = _data_dir() / key
-        profile_dir.mkdir(parents=True, exist_ok=True)
+        profile_dir.mkdir(parents=True, exist_ok=True, mode=0o700)
+        profile_dir.chmod(0o700)
         _state["contexts"][key] = await _state["playwright"].chromium.launch_persistent_context(
             str(profile_dir), headless=True
         )
@@ -64,14 +66,9 @@ async def fetch_page(url: str, use_auth: bool = False, chrome_profile: Optional[
     if use_auth:
         cookies_dict = extract_cookies(url, chrome_profile)
         if cookies_dict:
-            netloc_parts = urlparse(url).netloc.split(".")
-            domain = (
-                "." + ".".join(netloc_parts[-2:])
-                if len(netloc_parts) >= 2
-                else urlparse(url).netloc
-            )
+            domain = urlparse(url).hostname
             pw_cookies = [
-                {"name": k, "value": v, "domain": domain, "path": "/", "secure": True}
+                {"name": k, "value": v, "domain": domain, "path": "/", "secure": url.startswith("https")}
                 for k, v in cookies_dict.items()
             ]
             await ctx.add_cookies(pw_cookies)

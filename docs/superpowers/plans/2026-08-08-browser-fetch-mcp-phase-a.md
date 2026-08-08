@@ -16,7 +16,7 @@
 - Must use `playwright.async_api`, never `playwright.sync_api` — verified in the feasibility experiment that sync API raises inside FastMCP's event loop.
 - `fetch_page` return shape is exactly `{html: str, title: str, status: int, cookies_injected: int}` — do not add fields (e.g. no `elapsed_seconds`); tests measure timing from the client side instead.
 - `use_auth=True` with `chrome_profile=None` must raise (not silently fall back to anonymous) — see spec ambiguity fix in `docs/superpowers/specs/2026-08-08-browser-fetch-mcp-phase-a-design.md`.
-- Never touch the user's real Chrome profile directory as a Playwright `launch_persistent_context` target — only read its `Cookies` file (via a copied temp file, matching `docs/explanation/chrome-profile-cookie-injection.md`'s existing security pattern). The server's own persistent contexts live under `BROWSER_FETCH_MCP_DATA_DIR` (default `~/.hskill/tools/browser-fetch-mcp/contexts`), never inside the real Chrome profile.
+- Never touch the user's real Chrome profile directory as a Playwright `launch_persistent_context` target — only read its `Cookies` file (via a copied temp file, matching `docs/explanation/chrome-profile-cookie-injection.md`'s existing security pattern). The server's own persistent contexts live under `BROWSER_FETCH_MCP_DATA_DIR` (default `~/.hskill/browser-fetch-mcp/contexts`), never inside the real Chrome profile.
 
 ---
 
