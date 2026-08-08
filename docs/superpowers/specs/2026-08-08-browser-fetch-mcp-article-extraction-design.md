@@ -55,10 +55,11 @@ migrated: false
 async def fetch_article(
     url: str,
     output_dir: str,
-    use_auth: bool = False,
     chrome_profile: Optional[str] = None,
 ) -> dict
 ```
+
+（没有 `use_auth` 参数——薄内容重试完全由 `chrome_profile` 是否有值决定，`use_auth` 在这个工具里不对应任何实际行为分支，加了反而混淆语义，故不设。）
 
 返回：
 
