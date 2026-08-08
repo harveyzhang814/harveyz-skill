@@ -64,48 +64,47 @@ def test_fetch_and_save_accepts_chrome_profile_without_crashing(tmp_path):
 
 
 def test_fetch_and_save_image_placement_after_h1_dedup(tmp_path):
-    """Test that images placed after the h1 block (after_block == 0) are
-    correctly moved to pre_imgs when h1 dedup fires, not shifted to appear
-    after the wrong block. Wikipedia's MCP page has:
-    - An h1 matching the title (triggers dedup)
-    - Images with after_block == 0 (meant after h1, should go to pre_imgs)
-    - Images with after_block >= 1 (should be offset by dedup_offset)
+    """Regression test: verify images placed after the h1 block (after_block==0)
+    are moved to pre_imgs when h1 dedup fires, not wrongly appended to the
+    intro paragraph. Under the bug, dedup_offset was missing, so after_block
+    indices were off by one — images meant for pre_imgs got glued onto the
+    real article content instead, appearing in the same body unit.
 
-    Verifies images don't land one block early due to index shift."""
+    This test specifically checks that the intro paragraph body unit contains
+    NO image references (images should be in earlier pre_imgs units instead)."""
     origin_path = asyncio.run(
         fetch_and_save("https://en.wikipedia.org/wiki/Model_Context_Protocol", tmp_path)
     )
 
     content = origin_path.read_text(encoding="utf-8")
+    body_units = content.split("\n\n")
 
-    # Split by blank lines to find structured blocks
-    blocks = [b.strip() for b in content.split("\n\n") if b.strip()]
-
-    # Frontmatter is first block (contains ---)
-    assert blocks[0].startswith("---")
-
-    # Heading is second block
-    assert blocks[1].startswith("# Model Context Protocol")
-
-    # Find first block after heading that contains actual paragraph content
-    # (skip navigation lists and just images)
-    first_real_content_idx = None
-    for i in range(2, len(blocks)):
-        # Skip image-only blocks and list items
-        if "The Model Context Protocol (MCP) is an open standard" in blocks[i]:
-            first_real_content_idx = i
+    # Find the body unit containing the real intro paragraph.
+    # Exact phrase: "The Model Context Protocol (MCP) is an open standard..."
+    # unique to the main article content, not nav lists.
+    intro_idx = None
+    for i, unit in enumerate(body_units):
+        if (
+            "The Model Context Protocol" in unit
+            and "Anthropic" in unit
+            and "open standard" in unit
+        ):
+            intro_idx = i
             break
 
-    assert first_real_content_idx is not None
+    assert intro_idx is not None, "Intro paragraph not found in output"
 
-    # All image references should appear BEFORE the first real content block
-    for i in range(2, first_real_content_idx):
-        block = blocks[i]
-        # This block should be images or navigation, not the main content
-        # If it contains images, that's good - pre_imgs placement
-        if "![](../Image/" not in block:
-            # It's navigation/list items which is fine, but no main content yet
-            assert "The Model Context Protocol" not in block or "MCP" not in block
+    # Critical assertion: the intro paragraph itself must NOT contain images.
+    # Under the bug, images with after_block==0 would be wrongly placed INTO
+    # this very unit (concatenated with paragraph text), breaking the boundary
+    # between pre-images and real content. Correct behavior: images stay in
+    # earlier units (the pre_imgs section), not in this unit.
+    assert (
+        "![](../Image/" not in body_units[intro_idx]
+    ), "Images wrongly placed in intro paragraph unit — dedup_offset bug detected"
 
-    # Verify first real content comes after all pre-images
-    assert "The Model Context Protocol (MCP) is an open standard" in blocks[first_real_content_idx]
+    # Sanity check: images should exist somewhere in earlier units
+    # (i.e., correctly attached to nav/heading content before article body).
+    assert any(
+        "![](../Image/" in unit for unit in body_units[:intro_idx]
+    ), "No images found in pre-content units (unexpected)"
