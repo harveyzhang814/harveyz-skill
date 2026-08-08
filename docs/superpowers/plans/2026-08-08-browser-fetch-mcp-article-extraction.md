@@ -365,7 +365,9 @@ def test_extract_js_dict_has_all_three_sites():
 
 - [ ] **Step 4: Run the tests**
 
-Run (from `tools/browser-fetch-mcp/`): `python3 -m pip install -q -e ".[dev]" && python3 -m pytest tests/test_extractors.py -v`. The `pip install -e ".[dev]"` is idempotent — safe to run every time; it installs this package plus `pytest`/`pytest-asyncio` into whatever Python is on `PATH`. This task's tests are pure Python and don't need Playwright/Chromium installed.
+Run (from `tools/browser-fetch-mcp/`): `[ -x .venv/bin/python3 ] || python3 -m venv .venv; .venv/bin/pip install -q -e ".[dev]"; .venv/bin/python3 -m pytest tests/test_extractors.py -v`.
+
+Do **not** run tests with the ambient system `python3`/`pytest` — this repo's system Python has an old `mcp==1.28.1` installed globally (no `MCPServer` class), which makes every test that imports `browser_fetch_mcp.server` fail with `ImportError: cannot import name 'MCPServer' from 'mcp.server'`. Always use `.venv/bin/python3`, which installs this package's actual declared `mcp>=2.0.0` requirement in an isolated environment. The venv bootstrap + `pip install -e ".[dev]"` line is idempotent — safe to run every time. This task's tests are pure Python and don't need Playwright/Chromium installed.
 Expected: all tests PASS. None of these tests touch a browser or the network.
 
 - [ ] **Step 5: Commit**
@@ -543,7 +545,7 @@ def test_download_images_failed_download_still_returns_entry(tmp_path):
 
 - [ ] **Step 3: Run the tests**
 
-Run (from `tools/browser-fetch-mcp/`): `python3 -m pip install -q -e ".[dev]" && python3 -m pytest tests/test_images.py -v` (needs real network access for `test_download_images_real_network`; the `pip install` line is idempotent, safe even if Task 1 already ran it).
+Run (from `tools/browser-fetch-mcp/`): `[ -x .venv/bin/python3 ] || python3 -m venv .venv; .venv/bin/pip install -q -e ".[dev]"; .venv/bin/python3 -m pytest tests/test_images.py -v` (needs real network access for `test_download_images_real_network`). Use `.venv/bin/python3`, not ambient system `python3` — see Task 1's note on why.
 Expected: all tests PASS.
 
 - [ ] **Step 4: Commit**
@@ -882,12 +884,12 @@ async def test_extract_js_arxiv_converts_data_table_but_skips_equation_table(tmp
 
 - [ ] **Step 4: Run the tests**
 
-Run (from `tools/browser-fetch-mcp/`): `python3 -m pip install -q -e ".[dev]" && python3 -m playwright install chromium && python3 -m pytest tests/test_fetch_article.py -v` (needs real network access).
+Run (from `tools/browser-fetch-mcp/`): `[ -x .venv/bin/python3 ] || python3 -m venv .venv; .venv/bin/pip install -q -e ".[dev]"; .venv/bin/python3 -m playwright install chromium; .venv/bin/python3 -m pytest tests/test_fetch_article.py -v` (needs real network access). Use `.venv/bin/python3`, not ambient system `python3` — see Task 1's note on why.
 Expected: all tests PASS.
 
 - [ ] **Step 5: Run the full test suite for the package**
 
-Run (from `tools/browser-fetch-mcp/`): `python3 -m pytest -v`.
+Run (from `tools/browser-fetch-mcp/`): `.venv/bin/python3 -m pytest -v`.
 Expected: all tests (Tasks 1-3 plus the existing `test_cookies.py`/`test_server.py`) PASS.
 
 - [ ] **Step 6: Commit**
