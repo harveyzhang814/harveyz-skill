@@ -35,12 +35,14 @@ needs_xcom_auth = hostname in ("x.com", "www.x.com", "twitter.com", "www.twitter
 若 `needs_xcom_auth` 为真：
 
 1. 运行 `python3 SkillDir/scripts/detect_xcom_chrome_profile.py`，把完整输出（对比表 + `RECOMMENDED_PROFILE:` 那行）原样展示给用户。
-2. 向用户提问确认：使用推荐的 profile？换一个路径？还是不带登录态匿名抓取（x.com 没有登录态大概率会抓取失败）？
-3. 等用户明确回答后，把确认结果记为 `chrome_profile`（用户选择匿名则为空字符串 `""`）。
+2. 向用户提问：使用推荐的 profile？或输入一个替代的 profile 路径？注意：x.com 抓取需要登录态，没有匿名抓取选项——必须提供有效的 Chrome profile 路径。
+3. 等用户明确回答后：
+   - 若用户提供了有效的 profile 路径（推荐的或自己输入的），记为 `chrome_profile`，继续派发 Subagent 1。
+   - 若用户选择不提供 profile（例如没有找到合适的账户），报告给用户"x.com 抓取需要登录态，无法继续"，然后停止流程——不派发 Subagent 1。
 
-**不允许**：探测完不询问用户、直接把探测到的 profile 传给 Subagent 1——这一步必须有用户明确确认。
+**不允许**：探测完不询问用户、直接把探测到的 profile 传给 Subagent 1——这一步必须有用户明确确认，且只有确认了有效的 profile 才能派发。
 
-若 `needs_xcom_auth` 为假，`chrome_profile` 直接设为空字符串 `""`，不运行探测脚本、不询问用户。
+若 `needs_xcom_auth` 为假，`chrome_profile` 直接设为空（不留任何字符），不运行探测脚本、不询问用户。
 
 ### 步骤 3：派发 Subagent 1（MCP 抓取）
 

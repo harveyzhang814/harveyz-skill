@@ -62,6 +62,7 @@ def test_profile_with_auth_cookies_is_recommended(tmp_path):
     assert "auth_token" in output
     assert "looks logged in" in output
     assert f"RECOMMENDED_PROFILE: {default_dir}" in output
+    assert "some_other_cookie" not in output
 
 
 def test_profile_with_unrelated_cookies_only_is_not_recommended(tmp_path):
