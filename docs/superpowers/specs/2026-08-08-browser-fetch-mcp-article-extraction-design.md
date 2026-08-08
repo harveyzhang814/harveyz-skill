@@ -115,11 +115,11 @@ def _is_thin(result: dict) -> bool:
 
 ## 错误处理
 
-- URL scheme 非 http/https → 抛 `ValueError`（复用 `fetch_page` 现有校验风格）。
-- `use_auth=True` 但 `chrome_profile` 为空 → 抛 `ValueError`（复用 `fetch_page` 现有约束）。
+- URL scheme 非 http/https → 抛 `ValueError`（`fetch_page` 目前实际上没有这层校验，这是 `fetch_article` 自己新增的检查，对齐 `extract-url` 四个脚本都有的"Security: validate URL scheme FIRST"防护，不依赖 `fetch_page` 现状）。
 - 命中 x.com/twitter.com → 抛 `ValueError`，明确提示暂不支持。
-- 站点抽取 JS 返回 `{error: ...}`（例如通用站点找不到 `<article>`/`<main>`）→ 原样抛出为 `RuntimeError`。
 - 单张图片下载失败 → 记录、跳过，不影响整体调用成功。
+
+（通用/微信/arXiv 三份抽取 JS 都以 `document.body` 兜底选取内容根节点，结构上不会返回 `{error: ...}`——这个返回形态只存在于 X.com 脚本里，本轮不涉及，故不设相应的 `RuntimeError` 处理。）
 
 ## 测试策略
 
