@@ -4,9 +4,12 @@ import hashlib
 import os
 from pathlib import Path
 from typing import Optional
+from urllib.parse import urlparse
 
 from mcp.server.fastmcp import FastMCP
 from playwright.async_api import async_playwright, BrowserContext
+
+from browser_fetch_mcp.cookies import extract_cookies
 
 mcp = FastMCP("browser-fetch-mcp")
 
@@ -38,14 +41,42 @@ async def _get_context(key: str) -> BrowserContext:
     return _state["contexts"][key]
 
 
+def _profile_key(chrome_profile: str) -> str:
+    return hashlib.sha256(chrome_profile.encode("utf-8")).hexdigest()[:16]
+
+
 @mcp.tool()
 async def fetch_page(url: str, use_auth: bool = False, chrome_profile: Optional[str] = None) -> dict:
-    """Fetch a URL with a warm headless-browser context.
+    """Fetch a URL with a warm headless-browser context, optionally
+    injecting cookies decrypted from a local Chrome profile.
 
-    use_auth/chrome_profile are accepted here for interface stability but
-    not yet implemented — Task 4 adds cookie injection.
+    Raises ValueError if use_auth=True and chrome_profile is not given —
+    this never silently degrades to an anonymous fetch, so callers can't
+    mistake an anonymous result for an authenticated one.
     """
-    ctx = await _get_context(ANON_KEY)
+    if use_auth and not chrome_profile:
+        raise ValueError("chrome_profile is required when use_auth=True")
+
+    key = _profile_key(chrome_profile) if use_auth else ANON_KEY
+    ctx = await _get_context(key)
+
+    cookies_injected = 0
+    if use_auth:
+        cookies_dict = extract_cookies(url, chrome_profile)
+        if cookies_dict:
+            netloc_parts = urlparse(url).netloc.split(".")
+            domain = (
+                "." + ".".join(netloc_parts[-2:])
+                if len(netloc_parts) >= 2
+                else urlparse(url).netloc
+            )
+            pw_cookies = [
+                {"name": k, "value": v, "domain": domain, "path": "/", "secure": True}
+                for k, v in cookies_dict.items()
+            ]
+            await ctx.add_cookies(pw_cookies)
+            cookies_injected = len(pw_cookies)
+
     page = await ctx.new_page()
     try:
         response = await page.goto(url, wait_until="domcontentloaded", timeout=30000)
@@ -59,7 +90,7 @@ async def fetch_page(url: str, use_auth: bool = False, chrome_profile: Optional[
         "html": html,
         "title": title,
         "status": status,
-        "cookies_injected": 0,
+        "cookies_injected": cookies_injected,
     }
 
 

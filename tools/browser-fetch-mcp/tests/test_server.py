@@ -49,3 +49,11 @@ async def test_fetch_page_warm_reuse_is_faster(tmp_path):
             second_call = time.monotonic() - start
 
             assert second_call < first_call / 2
+
+
+async def test_fetch_page_use_auth_requires_chrome_profile(tmp_path):
+    async with stdio_client(_server_params(tmp_path)) as (read, write):
+        async with ClientSession(read, write) as session:
+            await session.initialize()
+            result, _ = await _call_fetch_page(session, url="https://example.com", use_auth=True)
+            assert result.is_error is True
