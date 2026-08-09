@@ -287,8 +287,8 @@
     {
       "path": "coding/handoff",
       "bundle": "coding",
-      "contentHash": "e478355ba21b7a5e",
-      "contentVersion": "1.0.0"
+      "contentHash": "e853463d770ce355",
+      "contentVersion": "1.1.0"
     }
   ],
   "hooks": [
