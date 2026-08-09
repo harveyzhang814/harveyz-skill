@@ -3,6 +3,7 @@
 > 关联文档：
 > - [[qm-overview]]（QM 项目整体调研：产品目标、哲学与功能模块分解）
 > - [[qm-memory-layer]]（记忆层深入分析）
+> - [[qm-skills-layer]]（技能层深入分析——E 组的另一半，技能最终物化进这里的沙箱）
 >
 > 调研对象：`yc-software/qm` 的 `src/sandbox/`、`src/workspace/`、`src/files/`、`src/processes/`、`src/tools/`
 > 本地路径：`~/Repositories/qm`
@@ -463,4 +464,4 @@ SECURITY.md 自己说了：「它是防手滑和注入的减速带，不是沙�
 
 ---
 
-> 相关：[[qm-overview]]（整体架构与其余模块） · [[qm-memory-layer]]（记忆层）
+> 相关：[[qm-overview]]（整体架构与其余模块） · [[qm-memory-layer]]（记忆层） · [[qm-skills-layer]]（技能层）

@@ -3,6 +3,7 @@
 > 关联文档：
 > - [[qm-overview]]（QM 项目整体调研：产品目标、哲学与功能模块分解）
 > - [[qm-execution-layer]]（执行环境层深入分析——记忆之外，agent 状态的另一个家）
+> - [[qm-skills-layer]]（技能层深入分析——同样遵循「索引进 prompt，正文按需读」的成本模型）
 >
 > 调研对象：`yc-software/qm` 的 `src/memory/`
 > 本地路径：`~/Repositories/qm`
