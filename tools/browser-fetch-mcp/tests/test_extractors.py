@@ -3,8 +3,8 @@ import pytest
 from browser_fetch_mcp.extractors import (
     EXTRACT_JS,
     dispatch_site,
-    extract_wechat_publish_date,
     is_thin,
+    wechat_publish_date_from_ct,
 )
 
 
@@ -56,14 +56,15 @@ def test_is_thin_true_below_char_threshold_even_with_many_blocks():
     assert is_thin(result) is True
 
 
-def test_extract_wechat_publish_date_parses_ct_variable():
-    html = '<html><head><script>var ct = "1719763200";</script></head></html>'
+def test_wechat_publish_date_from_ct_converts_unix_timestamp():
     # 1719763200 -> 2024-07-01 in UTC+8
-    assert extract_wechat_publish_date(html) == "2024-07-01"
+    assert wechat_publish_date_from_ct("1719763200") == "2024-07-01"
+    assert wechat_publish_date_from_ct(1719763200) == "2024-07-01"
 
 
-def test_extract_wechat_publish_date_missing_returns_empty():
-    assert extract_wechat_publish_date("<html></html>") == ""
+def test_wechat_publish_date_from_ct_missing_returns_empty():
+    assert wechat_publish_date_from_ct(None) == ""
+    assert wechat_publish_date_from_ct("") == ""
 
 
 def test_extract_js_dict_has_all_three_sites():
