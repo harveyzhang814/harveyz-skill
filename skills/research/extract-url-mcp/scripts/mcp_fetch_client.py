@@ -22,6 +22,7 @@ names its own installed SDK exposes.
 """
 import asyncio
 import hashlib
+import os
 import sys
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -58,7 +59,9 @@ def _hash8(url: str) -> str:
 
 
 async def fetch_and_save(url: str, output_dir: Path, chrome_profile: Optional[str] = None) -> Path:
-    server_params = StdioServerParameters(command=str(BROWSER_FETCH_MCP_SH), args=[])
+    server_params = StdioServerParameters(
+        command=str(BROWSER_FETCH_MCP_SH), args=[], env=dict(os.environ)
+    )
 
     article_dir = Path(output_dir) / _hash8(url)
     tool_args = {"url": url, "output_dir": str(article_dir)}

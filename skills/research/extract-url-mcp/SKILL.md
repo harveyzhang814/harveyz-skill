@@ -5,7 +5,7 @@ description: "Stage 4 validation build — NOT for real use. Fetches a URL throu
 user_invocable: true
 ---
 
-# extract-url-mcp（Stage 3，验证性构建）
+# extract-url-mcp（Stage 4，验证性构建）
 
 这是 [browser-fetch-mcp](../../../tools/browser-fetch-mcp/) 的验证性消费者，不是给 extract-url 用的真实替代品。做"抓取（MCP，经 fetch_article 做站点感知抽取）→ 打标 + 翻译 → 存文件"两阶段流程，跟 extract-url 的 Subagent 1/2 结构对齐，但做了简化（无固定词表、无 URL 去重、不写真实 Obsidian Vault）。不接受真实产品使用，只用于验证 MCP 抓取链路能否支撑一个完整的两阶段 skill 流程。
 

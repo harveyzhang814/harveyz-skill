@@ -22,9 +22,9 @@ def _server_params(data_dir: Path) -> StdioServerParameters:
 
 async def _call_fetch_article(session, **kwargs):
     result = await session.call_tool("fetch_article", kwargs)
-    if result.isError:
+    if result.is_error:
         return result, None
-    payload = result.structuredContent or json.loads(result.content[0].text)
+    payload = result.structured_content or json.loads(result.content[0].text)
     return result, payload
 
 
@@ -72,7 +72,7 @@ async def test_fetch_article_x_dot_com_without_chrome_profile_is_rejected(tmp_pa
                 url="https://x.com/someuser/status/123",
                 output_dir=str(output_dir),
             )
-    assert result.isError is True
+    assert result.is_error is True
 
 
 async def test_fetch_article_rejects_file_scheme(tmp_path):
@@ -85,7 +85,7 @@ async def test_fetch_article_rejects_file_scheme(tmp_path):
                 url="file:///etc/passwd",
                 output_dir=str(output_dir),
             )
-    assert result.isError is True
+    assert result.is_error is True
 
 
 async def test_fetch_article_thin_retry_triggers_with_chrome_profile_no_matching_cookies(tmp_path):
@@ -192,7 +192,7 @@ async def _set_default_chrome_profile(session, profile_dir: Path):
     result = await session.call_tool(
         "set_default_chrome_profile", {"profile_path": str(profile_dir)}
     )
-    assert result.isError is not True
+    assert result.is_error is not True
 
 
 async def test_fetch_article_x_dot_com_falls_back_to_persisted_default(tmp_path):
@@ -213,7 +213,7 @@ async def test_fetch_article_x_dot_com_falls_back_to_persisted_default(tmp_path)
                 url="https://x.com/someuser/status/123",
                 output_dir=str(output_dir),
             )
-    assert result.isError is True
+    assert result.is_error is True
     assert "No x.com session cookies" in result.content[0].text
     assert "is required" not in result.content[0].text
 
@@ -237,7 +237,7 @@ async def test_fetch_article_explicit_chrome_profile_wins_over_configured_defaul
                 output_dir=str(output_dir),
                 chrome_profile=str(explicit_profile),
             )
-    assert result.isError is True
+    assert result.is_error is True
     assert f"No x.com session cookies in {explicit_profile}" in result.content[0].text
 
 

@@ -23,7 +23,6 @@ isError/structuredContent), same as mcp_fetch_client.py.
 import asyncio
 import json
 import os
-import sys
 from pathlib import Path
 
 from mcp import ClientSession, StdioServerParameters

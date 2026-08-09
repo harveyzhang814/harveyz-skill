@@ -9,9 +9,20 @@ import asyncio
 import sys
 from pathlib import Path
 
+import pytest
+
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
 
 from mcp_fetch_client import fetch_and_save  # noqa: E402
+
+
+@pytest.fixture(autouse=True)
+def isolated_data_dir(tmp_path, monkeypatch):
+    """fetch_and_save spawns browser-fetch-mcp with env=dict(os.environ), so the
+    server subprocess inherits this. Point it at a per-test data dir so tests
+    never read or write the real ~/.hskill/browser-fetch-mcp/ state (fetch_article
+    consults the persisted default chrome_profile)."""
+    monkeypatch.setenv("BROWSER_FETCH_MCP_DATA_DIR", str(tmp_path / "data"))
 
 
 def test_fetch_and_save_writes_real_content(tmp_path):

@@ -20,9 +20,9 @@ def _server_params(data_dir: Path) -> StdioServerParameters:
 
 async def _call_fetch_page(session, **kwargs):
     result = await session.call_tool("fetch_page", kwargs)
-    if result.isError:
+    if result.is_error:
         return result, None
-    payload = result.structuredContent or json.loads(result.content[0].text)
+    payload = result.structured_content or json.loads(result.content[0].text)
     return result, payload
 
 
@@ -57,7 +57,7 @@ async def test_fetch_page_use_auth_requires_chrome_profile(tmp_path):
         async with ClientSession(read, write) as session:
             await session.initialize()
             result, _ = await _call_fetch_page(session, url="https://example.com", use_auth=True)
-            assert result.isError is True
+            assert result.is_error is True
 
 
 async def test_fetch_page_use_auth_no_matching_cookies(tmp_path):
@@ -77,7 +77,7 @@ async def test_get_default_chrome_profile_returns_none_initially(tmp_path):
         async with ClientSession(read, write) as session:
             await session.initialize()
             result = await session.call_tool("get_default_chrome_profile", {})
-            payload = result.structuredContent or json.loads(result.content[0].text)
+            payload = result.structured_content or json.loads(result.content[0].text)
             assert payload["profile_path"] is None
 
 
@@ -90,10 +90,10 @@ async def test_set_default_chrome_profile_then_get_round_trips(tmp_path):
             set_result = await session.call_tool(
                 "set_default_chrome_profile", {"profile_path": str(profile_dir)}
             )
-            assert set_result.isError is not True
+            assert set_result.is_error is not True
 
             get_result = await session.call_tool("get_default_chrome_profile", {})
-            payload = get_result.structuredContent or json.loads(get_result.content[0].text)
+            payload = get_result.structured_content or json.loads(get_result.content[0].text)
             assert payload["profile_path"] == str(profile_dir)
 
 
@@ -104,7 +104,7 @@ async def test_set_default_chrome_profile_rejects_nonexistent_path(tmp_path):
             result = await session.call_tool(
                 "set_default_chrome_profile", {"profile_path": str(tmp_path / "DoesNotExist")}
             )
-            assert result.isError is True
+            assert result.is_error is True
 
 
 async def test_list_chrome_profiles_via_mcp_protocol(tmp_path, monkeypatch):
@@ -120,7 +120,7 @@ async def test_list_chrome_profiles_via_mcp_protocol(tmp_path, monkeypatch):
                 "list_chrome_profiles",
                 {"host_keys": [".x.com"], "cookie_names": ["auth_token"]},
             )
-            payload = result.structuredContent or json.loads(result.content[0].text)
+            payload = result.structured_content or json.loads(result.content[0].text)
             assert len(payload["profiles"]) == 1
             assert payload["profiles"][0]["profile_path"] == str(default_dir)
             assert payload["profiles"][0]["looks_logged_in"] is False

@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import Optional
 from urllib.parse import urlparse
 
-from mcp.server import FastMCP
+from mcp.server import MCPServer
 from playwright.async_api import async_playwright, BrowserContext
 
 from browser_fetch_mcp.cookies import extract_cookies
@@ -27,7 +27,7 @@ from browser_fetch_mcp.images import download_images
 from browser_fetch_mcp.profiles import list_chrome_profiles as _list_chrome_profiles
 from browser_fetch_mcp import config
 
-mcp = FastMCP("browser-fetch-mcp")
+mcp = MCPServer("browser-fetch-mcp")
 
 ANON_KEY = "__anon__"
 
