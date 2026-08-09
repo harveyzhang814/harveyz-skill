@@ -307,15 +307,24 @@ async def test_fetch_article_default_output_format_writes_origin_path(tmp_path):
 
 
 async def test_fetch_article_invalid_output_format_raises(tmp_path):
+    """Uses an unroutable domain to prove output_format validation happens
+    BEFORE any network activity — if the check ran after dispatch/network,
+    this would hang or raise a network error instead of a clean validation
+    error. Note: since output_format is now typed as Literal["path", "json"],
+    the MCP schema layer rejects "bogus" before fetch_article's body (and
+    its internal ValueError check) ever runs, so the error text below comes
+    from pydantic's schema validation rather than our ValueError message —
+    an even earlier fail-fast point than the in-function check."""
     output_dir = tmp_path / "out"
     async with stdio_client(_server_params(tmp_path)) as (read, write):
         async with ClientSession(read, write) as session:
             await session.initialize()
             result, _ = await _call_fetch_article(
                 session,
-                url="https://example.com",
+                url="https://this-domain-does-not-exist-invalid-format-test.invalid",
                 output_dir=str(output_dir),
                 output_format="bogus",
             )
     assert result.is_error is True
-    assert "Invalid output_format" in result.content[0].text
+    assert "output_format" in result.content[0].text
+    assert "'path' or 'json'" in result.content[0].text
