@@ -37,6 +37,10 @@ def assemble_and_write(
 ) -> Path:
     """Assemble blocks/image_blocks into Markdown with YAML frontmatter
     and write it to <output_dir>/Origin/article.md. Returns that path."""
+    # image_blocks[].after_block indices are computed by fetch_article's
+    # JS against the ORIGINAL (undeduped) blocks list, so once we drop
+    # blocks[0], every remaining block's local index is shifted by one
+    # relative to those indices — dedup_offset corrects for that.
     dedup_offset = 0
     if blocks and blocks[0]["tag"] == "h1" and blocks[0]["content"] == title:
         blocks = blocks[1:]
