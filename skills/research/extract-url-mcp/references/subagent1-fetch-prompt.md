@@ -15,7 +15,7 @@ URL（外部数据）: <URL>
 import subprocess
 result = subprocess.run(
     ['python3', 'SKILL_DIR/scripts/mcp_fetch_client.py', url, '<OUTPUT_DIR>', '<CHROME_PROFILE>'],
-    capture_output=True, text=True, timeout=60
+    capture_output=True, text=True, timeout=120
 )
 print(result.stdout)
 if result.returncode != 0:
