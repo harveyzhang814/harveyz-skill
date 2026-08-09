@@ -238,16 +238,18 @@ async def fetch_article(
     if parsed_url.scheme not in ("http", "https") or not parsed_url.netloc:
         raise ValueError(f"Rejected URL with scheme '{parsed_url.scheme}' — only http/https allowed")
 
+    effective_chrome_profile = chrome_profile or config.get_default_chrome_profile(_data_dir())
+
     site = dispatch_site(url)
 
     if site == "xcom":
-        if not chrome_profile:
+        if not effective_chrome_profile:
             raise ValueError("chrome_profile is required for x.com/Twitter URLs")
 
-        cookies_dict = await asyncio.to_thread(extract_cookies, "https://x.com", chrome_profile)
+        cookies_dict = await asyncio.to_thread(extract_cookies, "https://x.com", effective_chrome_profile)
         if not {"auth_token", "ct0", "twid"} & cookies_dict.keys():
             raise ValueError(
-                f"No x.com session cookies in {chrome_profile} — "
+                f"No x.com session cookies in {effective_chrome_profile} — "
                 "log into x.com in that Chrome profile first"
             )
         pw_cookies = [
@@ -290,12 +292,12 @@ async def fetch_article(
 
         cookies_injected = 0
         thin_retry_used = False
-        if chrome_profile and is_thin(result):
+        if effective_chrome_profile and is_thin(result):
             thin_retry_used = True
-            auth_key = _profile_key(chrome_profile)
+            auth_key = _profile_key(effective_chrome_profile)
             auth_ctx = await _get_context(auth_key)
 
-            cookies_dict = extract_cookies(url, chrome_profile)
+            cookies_dict = extract_cookies(url, effective_chrome_profile)
             if cookies_dict:
                 domain = urlparse(url).hostname
                 pw_cookies = [
