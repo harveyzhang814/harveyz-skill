@@ -24,6 +24,7 @@ from browser_fetch_mcp.extractors import (
     is_thin,
 )
 from browser_fetch_mcp.images import download_images
+from browser_fetch_mcp.profiles import list_chrome_profiles as _list_chrome_profiles
 from browser_fetch_mcp import config
 
 mcp = FastMCP("browser-fetch-mcp")
@@ -191,6 +192,17 @@ async def set_default_chrome_profile(profile_path: str) -> dict:
         )
     config.set_default_chrome_profile(_data_dir(), profile_path)
     return {"ok": True}
+
+
+@mcp.tool()
+async def list_chrome_profiles(host_keys: list[str], cookie_names: list[str]) -> dict:
+    """List local Chrome profiles and, for each, which of cookie_names
+    exist for the given host_keys (existence-only, never decrypted).
+    Returns {"profiles": [{"profile_path", "account_email",
+    "matched_cookie_names", "looks_logged_in"}, ...]}. Callers decide
+    which profile to recommend/use — this tool never picks one."""
+    profiles = await asyncio.to_thread(_list_chrome_profiles, host_keys, cookie_names)
+    return {"profiles": profiles}
 
 
 @mcp.tool()
