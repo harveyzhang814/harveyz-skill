@@ -7,7 +7,7 @@ from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
 from playwright.async_api import async_playwright
 
-from browser_fetch_mcp.extractors import EXTRACT_JS, extract_wechat_publish_date
+from browser_fetch_mcp.extractors import EXTRACT_JS, wechat_publish_date_from_ct
 
 SERVER_MODULE = "browser_fetch_mcp.server"
 
@@ -155,7 +155,7 @@ async def test_extract_js_wechat_reads_hidden_content_via_fixture(tmp_path):
     assert len(result["imageBlocks"]) == 1
     assert result["imageBlocks"][0]["src"] == "https://mmbiz.qpic.cn/test/640?wx_fmt=png"
 
-    publish_date = extract_wechat_publish_date(_WECHAT_FIXTURE_HTML)
+    publish_date = wechat_publish_date_from_ct(result["ct"])
     assert publish_date == "2024-07-01"
 
 

@@ -10,7 +10,6 @@ other three sites share — lives in server.py, since it needs a different
 lifecycle than everything else this module's dispatch_site() routes to.
 See docs/superpowers/specs/2026-08-08-browser-fetch-mcp-xcom-extraction-design.md.
 """
-import re
 from datetime import datetime, timedelta, timezone
 from urllib.parse import urlparse
 
@@ -38,18 +37,20 @@ def is_thin(result: dict) -> bool:
     return len(blocks) < 20 or total_chars < 3000
 
 
-_CT_RE = re.compile(r'var\s+ct\s*=\s*["\'](\d+)["\']')
-
-
-def extract_wechat_publish_date(html: str) -> str:
-    """WeChat sets the publish date client-side from `var ct = "<unix ts>"`;
-    it's never in the DOM (not even hidden), so pull it from raw HTML text."""
-    match = _CT_RE.search(html)
-    if not match:
+def wechat_publish_date_from_ct(ct) -> str:
+    """Convert WeChat's `window.ct` (unix timestamp) to YYYY-MM-DD in
+    UTC+8. WeChat sets this client-side from `var ct = "<unix ts>"` at the
+    top level of a <script> tag, which `var` leaks onto `window` — verified
+    against real mp.weixin.qq.com articles, so EXTRACT_JS_WECHAT reads it
+    directly via `window.ct` instead of the caller re-parsing raw HTML."""
+    if not ct:
         return ""
-    return datetime.fromtimestamp(
-        int(match.group(1)), tz=timezone(timedelta(hours=8))
-    ).strftime("%Y-%m-%d")
+    try:
+        return datetime.fromtimestamp(
+            int(ct), tz=timezone(timedelta(hours=8))
+        ).strftime("%Y-%m-%d")
+    except (TypeError, ValueError):
+        return ""
 
 
 # Ported verbatim from extract-url/scripts/playwright_web.py (_EXTRACT_JS).
@@ -147,7 +148,10 @@ _EXTRACT_JS_WECHAT = r"""() => {
         }
     }
 
-    return {title, author, blocks: contentUnits, imageBlocks};
+    // var ct at the top level of a <script> tag leaks onto window (verified
+    // against real mp.weixin.qq.com articles) — read it directly instead of
+    // the caller re-parsing raw HTML for it.
+    return {title, author, blocks: contentUnits, imageBlocks, ct: window.ct || null};
 }"""
 
 # Ported verbatim from extract-url/scripts/playwright_web_arxiv.py (_EXTRACT_JS).
