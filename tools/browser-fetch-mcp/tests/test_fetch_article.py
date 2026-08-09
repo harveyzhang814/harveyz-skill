@@ -37,6 +37,7 @@ async def test_fetch_article_generic_real_network(tmp_path):
                 session,
                 url="https://en.wikipedia.org/wiki/Model_Context_Protocol",
                 output_dir=str(output_dir),
+                output_format="json",
             )
     assert payload["site"] == "generic"
     assert len(payload["blocks"]) > 5
@@ -57,6 +58,7 @@ async def test_fetch_article_arxiv_real_network(tmp_path):
                 session,
                 url="https://arxiv.org/html/2608.06020",
                 output_dir=str(output_dir),
+                output_format="json",
             )
     assert payload["site"] == "arxiv"
     assert len(payload["blocks"]) > 5
@@ -277,3 +279,43 @@ async def test_fetch_article_non_thin_result_ignores_configured_default(tmp_path
             )
     assert payload["thin_retry_used"] is False
     assert payload["cookies_injected"] == 0
+
+
+async def test_fetch_article_default_output_format_writes_origin_path(tmp_path):
+    """output_format defaults to 'path' — fetch_article must assemble and
+    write Origin/article.md itself and return a slim metadata dict with
+    no blocks/image_blocks keys."""
+    output_dir = tmp_path / "out"
+    async with stdio_client(_server_params(tmp_path)) as (read, write):
+        async with ClientSession(read, write) as session:
+            await session.initialize()
+            _, payload = await _call_fetch_article(
+                session,
+                url="https://example.com",
+                output_dir=str(output_dir),
+            )
+    assert "blocks" not in payload
+    assert "image_blocks" not in payload
+    origin_path = Path(payload["origin_path"])
+    assert origin_path.exists()
+    assert origin_path.name == "article.md"
+    assert origin_path.parent.name == "Origin"
+    content = origin_path.read_text(encoding="utf-8")
+    assert "source_url: https://example.com" in content
+    assert 'origin_title: "Example Domain"' in content
+    assert "# Example Domain" in content
+
+
+async def test_fetch_article_invalid_output_format_raises(tmp_path):
+    output_dir = tmp_path / "out"
+    async with stdio_client(_server_params(tmp_path)) as (read, write):
+        async with ClientSession(read, write) as session:
+            await session.initialize()
+            result, _ = await _call_fetch_article(
+                session,
+                url="https://example.com",
+                output_dir=str(output_dir),
+                output_format="bogus",
+            )
+    assert result.is_error is True
+    assert "Invalid output_format" in result.content[0].text
