@@ -1,6 +1,6 @@
 ---
 name: handoff
-description: Use when handing a task across sessions — writing a self-contained handoff doc for a fresh session to pick up (author), sanity-checking an inbound handoff before starting (verify), or accepting completed work against the criteria agreed at handoff time (accept). Triggers on "写交接/交接文档/handoff", "接手这个任务", "验收". 通用 skill，项目特殊约定读 .hskill/handoff/config.md。
+description: Use when handing a task across sessions — writing a self-contained handoff doc for a fresh session to pick up (author), sanity-checking an inbound handoff before starting (verify), or accepting completed work against the criteria agreed at handoff time (accept). Triggers on phrases like "write a handoff", "hand this off", "pick up this task", "sign off on this work". Generic skill — project-specific conventions are read from .hskill/handoff/config.md.
 version: "1.0.0"
 user_invocable: true
 ---
