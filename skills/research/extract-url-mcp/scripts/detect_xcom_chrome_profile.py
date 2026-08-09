@@ -1,11 +1,9 @@
 #!/usr/bin/env python3
 """
-Detect which Chrome profile(s) are logged into X.com (Twitter), by
-checking for the presence of X's known auth cookie names — no
-decryption, just existence checks via a copy of the Cookies sqlite db.
-
-Written from scratch — does not import extract-url's
-detect_chrome_profile.py.
+Detect which Chrome profile(s) are logged into X.com (Twitter), via
+browser-fetch-mcp's list_chrome_profiles MCP tool — no direct sqlite
+access here anymore; the cookie-scanning logic now lives in
+tools/browser-fetch-mcp/browser_fetch_mcp/profiles.py.
 
 Usage: python3 detect_xcom_chrome_profile.py
 Prints a human-readable comparison table, then one line:
@@ -16,94 +14,65 @@ or, if no profile has any of the known auth cookies:
 This script only reports candidates — it never picks one automatically
 for a caller. Detection and use MUST stay separated: whoever calls this
 script must show the result to a human and get explicit confirmation
-before using any profile path for an authenticated fetch. This mirrors
-extract-url's own detect_chrome_profile.py, which is documented as
-"agent must not call this proactively / must not auto-detect and then
-silently use the result" — same constraint, restated here since this is
-a separate, from-scratch script.
+before persisting a profile via chrome_profile_config.py.
 
-EXTRACT_URL_MCP_CHROME_BASE env var overrides the Chrome profiles
-directory (for tests — never points at a real Chrome install by default).
+NOTE ON mcp SDK VERSION: see mcp_fetch_client.py's docstring — this
+script runs under the ambient system Python (mcp 1.28.1, camelCase
+isError/structuredContent), same as mcp_fetch_client.py.
 """
+import asyncio
 import json
 import os
-import shutil
-import sqlite3
-import tempfile
+import sys
 from pathlib import Path
 
-CHROME_BASE = Path(
-    os.environ.get("EXTRACT_URL_MCP_CHROME_BASE")
-    or (Path.home() / "Library" / "Application Support" / "Google" / "Chrome")
+from mcp import ClientSession, StdioServerParameters
+from mcp.client.stdio import stdio_client
+
+BROWSER_FETCH_MCP_SH = (
+    Path(__file__).resolve().parents[4] / "tools" / "browser-fetch-mcp" / "browser-fetch-mcp.sh"
 )
-XCOM_HOSTS = (".twitter.com", ".x.com")
-AUTH_COOKIES = {"auth_token", "ct0", "twid"}
+
+HOST_KEYS = [".x.com", ".twitter.com"]
+COOKIE_NAMES = ["auth_token", "ct0", "twid"]
 
 
-def _profile_email(profile_dir: Path) -> str:
-    prefs = profile_dir / "Preferences"
-    try:
-        data = json.loads(prefs.read_text(errors="ignore"))
-        accounts = data.get("account_info", [])
-        if accounts:
-            return accounts[0].get("email", "")
-        return data.get("user_name", "")
-    except Exception:
-        return ""
-
-
-def _xcom_cookie_names(profile_dir: Path) -> set:
-    """Cookie names found for x.com/twitter.com in this profile — existence
-    only, never decrypted."""
-    cookies_db = profile_dir / "Cookies"
-    if not cookies_db.exists():
-        return set()
-
-    fd, tmp_path = tempfile.mkstemp(suffix=".db")
-    os.close(fd)
-    try:
-        shutil.copy2(cookies_db, tmp_path)
-        conn = sqlite3.connect(tmp_path)
-        try:
-            cur = conn.cursor()
-            placeholders = ",".join("?" * len(XCOM_HOSTS))
-            cur.execute(
-                f"SELECT name FROM cookies WHERE host_key IN ({placeholders})",
-                XCOM_HOSTS,
+async def _list_profiles() -> list[dict]:
+    server_params = StdioServerParameters(
+        command=str(BROWSER_FETCH_MCP_SH), args=[], env=dict(os.environ)
+    )
+    async with stdio_client(server_params) as (read, write):
+        async with ClientSession(read, write) as session:
+            await session.initialize()
+            result = await session.call_tool(
+                "list_chrome_profiles", {"host_keys": HOST_KEYS, "cookie_names": COOKIE_NAMES}
             )
-            return {row[0] for row in cur.fetchall()}
-        finally:
-            conn.close()
-    except Exception:
-        return set()
-    finally:
-        os.unlink(tmp_path)
+            if result.isError:
+                raise RuntimeError(f"list_chrome_profiles failed: {result.content[0].text}")
+            payload = result.structuredContent or json.loads(result.content[0].text)
+            return payload["profiles"]
 
 
 def main():
-    if not CHROME_BASE.exists():
-        print(f"Chrome directory not found: {CHROME_BASE}")
+    profiles = asyncio.run(_list_profiles())
+
+    if not profiles:
+        print("No Chrome profiles found.")
         print("RECOMMENDED_PROFILE: (none found)")
         return
 
-    profiles = sorted(
-        (d for d in CHROME_BASE.iterdir() if d.is_dir() and (d.name == "Default" or d.name.startswith("Profile"))),
-        key=lambda d: (d.name != "Default", d.name),
-    )
-
-    print(f"{'Profile':<12} {'Account':<38} {'X.com cookies found'}")
-    print("-" * 80)
+    print(f"{'Profile':<50} {'Account':<38} {'X.com cookies found'}")
+    print("-" * 110)
 
     recommended = None
-    for profile_dir in profiles:
-        email = _profile_email(profile_dir) or "(not logged into Google)"
-        cookie_names = _xcom_cookie_names(profile_dir)
-        has_auth = bool(AUTH_COOKIES & cookie_names)
-        status = ", ".join(sorted(cookie_names)) if cookie_names else "(no X.com cookies)"
-        marker = " <-- looks logged in" if has_auth else ""
-        print(f"{profile_dir.name:<12} {email:<38} {status}{marker}")
-        if has_auth and recommended is None:
-            recommended = profile_dir
+    for p in profiles:
+        email = p["account_email"] or "(not logged into Google)"
+        names = p["matched_cookie_names"]
+        status = ", ".join(names) if names else "(no X.com cookies)"
+        marker = " <-- looks logged in" if p["looks_logged_in"] else ""
+        print(f"{p['profile_path']:<50} {email:<38} {status}{marker}")
+        if p["looks_logged_in"] and recommended is None:
+            recommended = p["profile_path"]
 
     print()
     if recommended:

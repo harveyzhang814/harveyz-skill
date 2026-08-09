@@ -1,7 +1,7 @@
 ---
 name: extract-url-mcp
-version: "0.3.0"
-description: "Stage 3 validation build — NOT for real use. Fetches a URL through browser-fetch-mcp's fetch_article (site-aware extraction: generic/wechat/arxiv/xcom, with image download), tags, translates, and saves origin + translation. Proves the MCP-based fetch path works end to end inside a two-subagent flow shaped like extract-url."
+version: "0.4.0"
+description: "Stage 4 validation build — NOT for real use. Fetches a URL through browser-fetch-mcp's fetch_article (site-aware extraction: generic/wechat/arxiv/xcom, with image download and a persisted default chrome_profile), tags, translates, and saves origin + translation. Proves the MCP-based fetch path — including MCP-side chrome-profile detection and persistence — works end to end inside a two-subagent flow shaped like extract-url."
 user_invocable: true
 ---
 
@@ -24,29 +24,22 @@ import re
 url_safe = re.sub(r'[\x00-\x1f\x7f]', '', url).strip()[:2048]
 ```
 
-### 步骤 2：判断是否需要询问 chrome_profile（仅 x.com/twitter.com）
+### 步骤 2：确认默认 chrome_profile（首次使用时设置一次，之后不再询问）
 
-```python
-from urllib.parse import urlparse
-hostname = urlparse(url_safe).hostname or ""
-needs_xcom_auth = hostname in ("x.com", "www.x.com", "twitter.com", "www.twitter.com")
-```
+运行 `python3 SkillDir/scripts/chrome_profile_config.py get`。
 
-若 `needs_xcom_auth` 为真：
+- 若输出 `CONFIGURED: <path>`：已经配置过默认 profile，跳过下面的检测和提问，直接进入步骤 3。
+- 若输出 `NOT_CONFIGURED`（不论当前 URL 是什么网站，只要还没配置过就会命中这一分支）：
+  1. 运行 `python3 SkillDir/scripts/detect_xcom_chrome_profile.py`，把完整输出（对比表 + `RECOMMENDED_PROFILE:` 那行）原样展示给用户。
+  2. 向用户提问：把推荐的 profile 设为以后的默认值？或输入一个替代路径？也可以选择这次先不设置。
+  3. 若用户提供了 profile 路径（推荐的或自己输入的）：运行 `python3 SkillDir/scripts/chrome_profile_config.py set <path>` 持久化。此后所有网站的抓取都不会再触发这个设置流程。
+  4. 若用户选择不设置：不持久化任何值，本次继续（x.com 的 URL 会在 Subagent 1 里因为 browser-fetch-mcp 的 `fetch_article` 报错而失败——x.com 没有匿名抓取选项；非 x.com 的 URL 正常匿名抓取，不受影响）。
 
-1. 运行 `python3 SkillDir/scripts/detect_xcom_chrome_profile.py`，把完整输出（对比表 + `RECOMMENDED_PROFILE:` 那行）原样展示给用户。
-2. 向用户提问：使用推荐的 profile？或输入一个替代的 profile 路径？注意：x.com 抓取需要登录态，没有匿名抓取选项——必须提供有效的 Chrome profile 路径。
-3. 等用户明确回答后：
-   - 若用户提供了有效的 profile 路径（推荐的或自己输入的），记为 `chrome_profile`，继续派发 Subagent 1。
-   - 若用户选择不提供 profile（例如没有找到合适的账户），报告给用户"x.com 抓取需要登录态，无法继续"，然后停止流程——不派发 Subagent 1。
-
-**不允许**：探测完不询问用户、直接把探测到的 profile 传给 Subagent 1——这一步必须有用户明确确认，且只有确认了有效的 profile 才能派发。
-
-若 `needs_xcom_auth` 为假，`chrome_profile` 直接设为空（不留任何字符），不运行探测脚本、不询问用户。
+**不允许**：跳过展示直接把探测到的 profile 设为默认值——必须等用户明确回答，且只有用户确认后才能调用 `chrome_profile_config.py set`。
 
 ### 步骤 3：派发 Subagent 1（MCP 抓取）
 
-读取 `references/subagent1-fetch-prompt.md`，将其中 `<URL>` 替换为 url_safe，`<OUTPUT_DIR>` 替换为一个输出目录（没有正式的 VAULT_PATH 配置流程，调用方直接指定一个测试目录，不写真实 Obsidian Vault），`<CHROME_PROFILE>` 替换为上一步确定的 chrome_profile，按当前平台的 subagent 派发机制派发。
+读取 `references/subagent1-fetch-prompt.md`，将其中 `<URL>` 替换为 url_safe，`<OUTPUT_DIR>` 替换为一个输出目录（没有正式的 VAULT_PATH 配置流程，调用方直接指定一个测试目录，不写真实 Obsidian Vault），`<CHROME_PROFILE>` 替换为空（不留任何字符）——browser-fetch-mcp 的 `fetch_article` 会自己解析已持久化的默认 chrome_profile，不需要这里显式传值，按当前平台的 subagent 派发机制派发。
 
 ### 步骤 4：等待 Subagent 1 完成
 
@@ -67,4 +60,5 @@ needs_xcom_auth = hostname in ("x.com", "www.x.com", "twitter.com", "www.twitter
 | `references/subagent1-fetch-prompt.md` | Subagent 1（MCP 抓取）派发 prompt 模板 |
 | `references/subagent2-tag-translate-prompt.md` | Subagent 2（打标 + 翻译）派发 prompt 模板 |
 | `scripts/mcp_fetch_client.py` | 核心脚本：真实 MCP client，调用 browser-fetch-mcp 的 `fetch_article` |
-| `scripts/detect_xcom_chrome_profile.py` | 检测哪个 Chrome profile 登录了 x.com（只查 cookie 存在性，不解密），仅供用户确认用，不自动使用检测结果 |
+| `scripts/detect_xcom_chrome_profile.py` | 通过 browser-fetch-mcp 的 `list_chrome_profiles` MCP 工具检测哪些 Chrome profile 登录了 x.com，仅供用户确认用，不自动使用检测结果 |
+| `scripts/chrome_profile_config.py` | 读写 browser-fetch-mcp 持久化的默认 chrome_profile（`get`/`set` 子命令） |
