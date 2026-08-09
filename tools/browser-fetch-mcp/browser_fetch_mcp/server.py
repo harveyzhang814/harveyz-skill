@@ -8,7 +8,7 @@ import hashlib
 import os
 import sys
 from pathlib import Path
-from typing import Optional
+from typing import Literal, Optional
 from urllib.parse import urlparse
 
 from mcp.server import MCPServer
@@ -210,7 +210,7 @@ async def fetch_article(
     url: str,
     output_dir: str,
     chrome_profile: Optional[str] = None,
-    output_format: str = "path",
+    output_format: Literal["path", "json"] = "path",
 ) -> dict:
     """Fetch a URL and extract structured article content: title, author,
     publish_date, text/heading/list/table blocks, and downloaded images.
