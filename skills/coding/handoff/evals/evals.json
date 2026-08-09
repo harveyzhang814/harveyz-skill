@@ -1,0 +1,26 @@
+{
+  "skill_name": "handoff",
+  "evals": [
+    {
+      "id": 0,
+      "name": "author-high-to-low-model",
+      "prompt": "我刚把一个功能模块的重构方案定完了，设计规格已经写好放在仓库里。想把具体实现交给另一个能力较弱的模型 session 去做，帮我写一份交接文档，让它只读这一份就能照着实现，别自由发挥。",
+      "expected_output": "在 config 输出目录（默认 docs/commute/）下生成 YYYY-MM-DD-*-handoff.md；抬头(状态字段+接手方须知)+9节；若项目有 .hskill/handoff/config.md 则 §6/§8 注入其工作流/验证约定；author 收尾跑完整性门禁。",
+      "files": []
+    },
+    {
+      "id": 1,
+      "name": "author-cross-device-continuation",
+      "prompt": "今天先干到这，明天换台电脑接着做这个第三方 SDK 的集成。帮我留一份交接，别让明天的自己丢上下文。",
+      "expected_output": "config 输出目录下生成 handoff.md，9节齐全、状态=待执行、背景写清当前进度、验收合同引用成功判据。",
+      "files": []
+    },
+    {
+      "id": 2,
+      "name": "accept-catches-failing-criterion",
+      "prompt": "接手的 session 说 slugify 那个小任务做完了，交接文档和产物都在 evals/fixtures/accept/ 下（handoff-slugify.md 和 slugify.js）。帮我验收一下，看能不能收。",
+      "expected_output": "accept phase：读 §9 验收合同，按 §2 逐条实跑(node slugify.js)，发现判据2(去标点)未达标；状态置『打回』而非『已验收』，§9 追加验收记录点名失败判据。",
+      "files": ["evals/fixtures/accept/handoff-slugify.md", "evals/fixtures/accept/slugify.js"]
+    }
+  ]
+}

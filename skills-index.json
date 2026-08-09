@@ -283,6 +283,12 @@
       "installScope": "global",
       "contentHash": "3762c7b6488a5f90",
       "contentVersion": "1.1.1"
+    },
+    {
+      "path": "coding/handoff",
+      "bundle": "coding",
+      "contentHash": "e478355ba21b7a5e",
+      "contentVersion": "1.0.0"
     }
   ],
   "hooks": [

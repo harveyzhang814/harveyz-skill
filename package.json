@@ -53,6 +53,7 @@
     "skills/meta/release-project/",
     "skills/meta/sync-hotfix/",
     "skills/meta/sync-agent/",
+    "skills/coding/handoff/",
     "tools/hub/",
     "tools/sync-agent/",
     "hooks/check-similar-branch/"
