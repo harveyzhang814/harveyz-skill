@@ -1,6 +1,8 @@
 # QM 项目整体调研：产品目标、哲学与功能模块
 
-> 关联文档：[[qm-memory-layer]]（记忆层的逐文件深入分析）
+> 关联文档：
+> - [[qm-memory-layer]]（记忆层的逐文件深入分析）
+> - [[qm-execution-layer]]（执行环境层深入分析，不含 skills）
 >
 > 调研对象：`yc-software/qm`（YC 出品的开源多人 agent harness）
 > 本地路径：`~/Repositories/qm`
@@ -213,6 +215,8 @@ AGENTS.md 里最锋利的几条：
 
 从这个清单能反推目标用户画像：**用 Slack + Google Workspace + Linear + GitHub 的创业公司**。
 
+> 除 `skills/` 外，这一组已单独深入分析，见 [[qm-execution-layer]]——能力协商式的 Sandbox 接口、四个后端、三层文件模型、用 shell 长出所有能力、路由与迁移、进程生命周期的三层真相。
+
 #### F. 凭证与外部服务
 
 `credentials/`（keychain、resident auth、secret drop、device flow 迁移）+ `connectors/`（OAuth、connector client、browser session、consent link、background exec broker）+ `model/`（model gateway、模型目录、自定义 provider、模型凭证）。
@@ -255,7 +259,8 @@ AGENTS.md 是写给 coding agent 看的操作手册（`CLAUDE.md` 是它的 syml
 ## 五、后续可深入的方向
 
 - [[qm-memory-layer]] —— 记忆层（已完成）
+- [[qm-execution-layer]] —— 执行环境层，不含 skills（已完成）
+- `skills/` 完整生命周期：从 git pack 到沙箱物化到跨 scope 共享（E 组剩下的一半）
 - `resolution/` + `audience-floor` —— 记忆读到了，但在有外部人的房间里，哪些能说？记忆层的输出端约束
 - `security/security-screener` + provenance —— 外部数据进模型前的筛查，与记忆的 provenance 规则是同一套 trust 思路在两个位置的实现
 - 纵切面：一条 Slack 消息从进来到回复送出，中间经过哪些模块、哪些 gate
-- `skills/` 完整生命周期：从 git pack 到沙箱物化到跨 scope 共享
