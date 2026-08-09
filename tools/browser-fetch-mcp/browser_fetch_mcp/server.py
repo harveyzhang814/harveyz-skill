@@ -8,7 +8,7 @@ import hashlib
 import os
 import sys
 from pathlib import Path
-from typing import Optional
+from typing import Literal, Optional
 from urllib.parse import urlparse
 
 from mcp.server import MCPServer
@@ -25,7 +25,7 @@ from browser_fetch_mcp.extractors import (
 )
 from browser_fetch_mcp.images import download_images
 from browser_fetch_mcp.profiles import list_chrome_profiles as _list_chrome_profiles
-from browser_fetch_mcp import config
+from browser_fetch_mcp import config, markdown
 
 mcp = MCPServer("browser-fetch-mcp")
 
@@ -210,6 +210,7 @@ async def fetch_article(
     url: str,
     output_dir: str,
     chrome_profile: Optional[str] = None,
+    output_format: Literal["path", "json"] = "path",
 ) -> dict:
     """Fetch a URL and extract structured article content: title, author,
     publish_date, text/heading/list/table blocks, and downloaded images.
@@ -229,6 +230,17 @@ async def fetch_article(
     has more blocks. chrome_profile is optional — omit it to skip the
     retry and always return the anonymous result as-is.
 
+    output_format controls the return shape:
+    - "path" (default): assembles the article into Markdown, writes it to
+      <output_dir>/Origin/article.md, and returns {"origin_path", "title",
+      "author", "publish_date", "site", "cookies_injected",
+      "thin_retry_used"} — no blocks/image_blocks, keeping the payload out
+      of the caller's context.
+    - "json": returns the raw structured data instead — {"title", "author",
+      "publish_date", "blocks", "image_blocks", "site", "cookies_injected",
+      "thin_retry_used"} — no file is written.
+    Raises ValueError for any other value.
+
     Raises ValueError if url's scheme isn't http/https — fetch_page has
     no such check today, but fetch_article adds one since it's a new
     tool that navigates to caller-supplied URLs (matches the "Security:
@@ -237,6 +249,9 @@ async def fetch_article(
     parsed_url = urlparse(url)
     if parsed_url.scheme not in ("http", "https") or not parsed_url.netloc:
         raise ValueError(f"Rejected URL with scheme '{parsed_url.scheme}' — only http/https allowed")
+
+    if output_format not in ("path", "json"):
+        raise ValueError(f"Invalid output_format: {output_format!r} (expected 'path' or 'json')")
 
     effective_chrome_profile = chrome_profile or config.get_default_chrome_profile(_data_dir())
 
@@ -328,12 +343,30 @@ async def fetch_article(
 
     image_blocks = await asyncio.to_thread(download_images, result.get("imageBlocks", []), Path(output_dir))
 
+    title = result.get("title", "Untitled")
+    author = result.get("author", "")
+    blocks = [{"tag": b["tag"], "content": b["content"]} for b in result.get("blocks", [])]
+
+    if output_format == "json":
+        return {
+            "title": title,
+            "author": author,
+            "publish_date": publish_date,
+            "blocks": blocks,
+            "image_blocks": image_blocks,
+            "site": site,
+            "cookies_injected": cookies_injected,
+            "thin_retry_used": thin_retry_used,
+        }
+
+    origin_path = markdown.assemble_and_write(
+        Path(output_dir), url, title, author, publish_date, blocks, image_blocks
+    )
     return {
-        "title": result.get("title", "Untitled"),
-        "author": result.get("author", ""),
+        "origin_path": str(origin_path),
+        "title": title,
+        "author": author,
         "publish_date": publish_date,
-        "blocks": [{"tag": b["tag"], "content": b["content"]} for b in result.get("blocks", [])],
-        "image_blocks": image_blocks,
         "site": site,
         "cookies_injected": cookies_injected,
         "thin_retry_used": thin_retry_used,

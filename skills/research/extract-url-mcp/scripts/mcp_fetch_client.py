@@ -1,10 +1,9 @@
 #!/usr/bin/env python3
-"""
-Stage 3 fetch script for extract-url-mcp: calls browser-fetch-mcp's
-fetch_article (site-aware extraction: generic/wechat/arxiv/xcom) instead
-of doing HTML parsing itself. fetch_article already handles content
-extraction, site dispatch, and image downloading — this script only
-formats the structured result into a Markdown Origin file.
+"""Stage 3 fetch script for extract-url-mcp: calls browser-fetch-mcp's
+fetch_article (site-aware extraction: generic/wechat/arxiv/xcom), which
+already assembles the Markdown Origin file itself (output_format defaults
+to "path") and returns its path — this script's only remaining job is
+computing the per-URL article directory and printing that path.
 
 Written from scratch — does not import or reuse extract-url's scripts.
 
@@ -24,7 +23,6 @@ import asyncio
 import hashlib
 import os
 import sys
-from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Optional
 
@@ -34,24 +32,6 @@ from mcp.client.stdio import stdio_client
 BROWSER_FETCH_MCP_SH = (
     Path(__file__).resolve().parents[4] / "tools" / "browser-fetch-mcp" / "browser-fetch-mcp.sh"
 )
-
-
-def _format_block(block: dict) -> str:
-    tag = block["tag"]
-    content = block["content"]
-    if tag in ("h1", "h2", "h3"):
-        return f"{'#' * int(tag[1])} {content}"
-    if tag == "li":
-        return f"- {content}"
-    if tag == "blockquote":
-        return f"> {content}"
-    if tag == "table":
-        return content
-    if tag == "pre":
-        return f"```\n{content}\n```"
-    if tag == "code":
-        return f"`{content}`"
-    return content
 
 
 def _hash8(url: str) -> str:
@@ -81,61 +61,7 @@ async def fetch_and_save(url: str, output_dir: Path, chrome_profile: Optional[st
 
                 payload = json.loads(result.content[0].text)
 
-    title = payload.get("title") or "Untitled"
-    blocks = payload.get("blocks", [])
-
-    # Drop a leading h1 block that just repeats the title we already use
-    # as the document heading (fetch_article's generic JS extracts the
-    # title from the page's own h1 but also walks that h1 into blocks).
-    # image_blocks[].after_block indices are computed by fetch_article's
-    # JS against the ORIGINAL (undeduped) blocks list, so once we drop
-    # blocks[0], every remaining block's local index is shifted by one
-    # relative to those indices — dedup_offset corrects for that.
-    dedup_offset = 0
-    if blocks and blocks[0]["tag"] == "h1" and blocks[0]["content"] == title:
-        blocks = blocks[1:]
-        dedup_offset = 1
-
-    image_blocks = payload.get("image_blocks", [])
-    pre_imgs = [f'![](../Image/{img["filename"]})' for img in image_blocks if img["after_block"] == -1]
-    if dedup_offset:
-        # after_block == 0 meant "right after the h1" — that h1 is gone
-        # now, so those images belong at the very start of the body instead.
-        pre_imgs += [f'![](../Image/{img["filename"]})' for img in image_blocks if img["after_block"] == 0]
-
-    body_units = []
-    if pre_imgs:
-        body_units.append("\n".join(pre_imgs))
-
-    for i, block in enumerate(blocks):
-        parts = [_format_block(block)]
-        for img in image_blocks:
-            if img["after_block"] == i + dedup_offset:
-                parts.append(f'![](../Image/{img["filename"]})')
-        body_units.append("\n".join(parts))
-
-    body = "\n\n".join(body_units)
-
-    origin_dir = article_dir / "Origin"
-    origin_dir.mkdir(parents=True, exist_ok=True)
-    origin_path = origin_dir / "article.md"
-
-    fetch_date = datetime.now(timezone(timedelta(hours=8))).strftime("%Y-%m-%d")
-
-    content = f"""---
-source_url: {url}
-fetch_date: {fetch_date}
-origin_title: "{title}"
-author: "{payload.get("author", "")}"
-publish_date: "{payload.get("publish_date", "")}"
----
-
-# {title}
-
-{body}
-"""
-    origin_path.write_text(content, encoding="utf-8")
-    return origin_path
+    return Path(payload["origin_path"])
 
 
 def main():
