@@ -286,7 +286,9 @@
     },
     {
       "path": "coding/handoff",
-      "bundle": "coding"
+      "bundle": "coding",
+      "contentHash": "e478355ba21b7a5e",
+      "contentVersion": "1.0.0"
     }
   ],
   "hooks": [
