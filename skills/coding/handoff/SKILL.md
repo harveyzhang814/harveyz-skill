@@ -1,13 +1,13 @@
 ---
 name: handoff
 description: Use when handing a task across sessions — writing a self-contained handoff doc for a fresh session to pick up (author), sanity-checking an inbound handoff before starting (verify), or accepting completed work against the criteria agreed at handoff time (accept). Triggers on phrases like "write a handoff", "hand this off", "pick up this task", "sign off on this work". Generic skill — project-specific conventions are read from .hskill/handoff/config.md.
-version: "1.0.0"
+version: "1.1.0"
 user_invocable: true
 ---
 
 # 跨 session 任务交接（handoff）
 
-产出并驱动一份自包含交接文档：接手 session 只读这一份文件即可续做，完成后由原 session 按约定判据验收。文档直接整份喂给新 session，不做可粘贴 prompt。
+产出并驱动一份自包含交接文档：接手 session 只读这一份文件即可续做，完成后由原 session 按约定判据验收。文档直接整份喂给新 session，不做可粘贴 prompt。文档内容跟着这次交接的实际目的走——不是无论目的是什么都写一份详实清单，缺了会让接手方出问题的信息才写，其余不写。
 
 ## Phase 触发判定（先做这一步）
 
@@ -24,10 +24,11 @@ user_invocable: true
    - 不存在 → **问用户一次**："本项目有无特殊交接约定（输出路径/分支工作流/验证工具）？"
      - 有 → 按 `references/config-schema.md` 引导生成 `.hskill/handoff/config.md`。
      - 无 → 用通用默认（`output_dir=docs/commute/`），以后不再问。
-2. **汇集上下文**：以**当前对话**为真相源。涉及代码时读 `git status` / `git diff` 给 §1 现状、§7 受影响文件兜底，并作为门禁的现实校验（纯规划交接可跳过）；spec/plan 作为权威指针。**不把 memory 写进文档**——memory 可能陈旧、且接手方访问不到你的 memory 目录；若某条 memory 是承载性背景，把**核实过的事实**内联进去，别留 `[[memory]]` 死链。现状一律以 git/仓库为准，不以 memory 为准。
-3. **起草**：读 `assets/handoff-template.md`，逐节填充。指针式引用权威依据，只内联接手方开工必需的硬核，不重抄 spec 全文。写到 `<output_dir>/YYYY-MM-DD-<topic>-handoff.md`，状态置 `待执行`。
-4. **跑完整性门禁**（见下），不过不放行。
-5. **交付**：告知用户文档路径，说明下个 session 直接整份喂入即可。
+2. **判断目的**：从当前对话判断这次交接是为了什么——不套预设分类，一句自然语言判断即可（例如"接手方续做同一个实现任务"或"把讨论结论作为背景传给接手方去开展新话题"）。这句话会写进文档开头的"交接目的"，且始终存在，不可省略。
+3. **汇集上下文**：以**当前对话**为真相源。涉及代码时读 `git status` / `git diff` 核对现状、排查受影响文件（若这两类内容按第 4 步判定为必要），并作为门禁的现实校验（纯规划交接可跳过）；spec/plan 作为权威指针。**不把 memory 写进文档**——memory 可能陈旧、且接手方访问不到你的 memory 目录；若某条 memory 是承载性背景，把**核实过的事实**内联进去，别留 `[[memory]]` 死链。现状一律以 git/仓库为准，不以 memory 为准。
+4. **起草**：读 `assets/handoff-template.md`，按其中的候选内容清单逐类过必要性测试——"不写这条信息，接手方会不会出问题"，答案是"会"才写出对应章节，答案是"不会"整节跳过，不留空标题。**交接目的**和**最小验收锚点**这两项任何情况下都必须写。指针式引用权威依据，只内联接手方开工必需的硬核，不重抄 spec 全文。写到 `<output_dir>/YYYY-MM-DD-<topic>-handoff.md`，状态置 `待执行`。
+5. **跑完整性门禁**（见下），不过不放行。
+6. **交付**：告知用户文档路径，说明下个 session 直接整份喂入即可。
 
 ## 完整性门禁（author 收尾硬动作）
 
