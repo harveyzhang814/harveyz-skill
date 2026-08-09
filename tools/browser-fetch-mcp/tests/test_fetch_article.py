@@ -22,9 +22,9 @@ def _server_params(data_dir: Path) -> StdioServerParameters:
 
 async def _call_fetch_article(session, **kwargs):
     result = await session.call_tool("fetch_article", kwargs)
-    if result.is_error:
+    if result.isError:
         return result, None
-    payload = result.structured_content or json.loads(result.content[0].text)
+    payload = result.structuredContent or json.loads(result.content[0].text)
     return result, payload
 
 
@@ -72,7 +72,7 @@ async def test_fetch_article_x_dot_com_without_chrome_profile_is_rejected(tmp_pa
                 url="https://x.com/someuser/status/123",
                 output_dir=str(output_dir),
             )
-    assert result.is_error is True
+    assert result.isError is True
 
 
 async def test_fetch_article_rejects_file_scheme(tmp_path):
@@ -85,7 +85,7 @@ async def test_fetch_article_rejects_file_scheme(tmp_path):
                 url="file:///etc/passwd",
                 output_dir=str(output_dir),
             )
-    assert result.is_error is True
+    assert result.isError is True
 
 
 async def test_fetch_article_thin_retry_triggers_with_chrome_profile_no_matching_cookies(tmp_path):

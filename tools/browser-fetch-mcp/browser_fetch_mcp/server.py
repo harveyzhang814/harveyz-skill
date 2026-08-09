@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import Optional
 from urllib.parse import urlparse
 
-from mcp.server import MCPServer
+from mcp.server import FastMCP
 from playwright.async_api import async_playwright, BrowserContext
 
 from browser_fetch_mcp.cookies import extract_cookies
@@ -24,8 +24,9 @@ from browser_fetch_mcp.extractors import (
     is_thin,
 )
 from browser_fetch_mcp.images import download_images
+from browser_fetch_mcp import config
 
-mcp = MCPServer("browser-fetch-mcp")
+mcp = FastMCP("browser-fetch-mcp")
 
 ANON_KEY = "__anon__"
 
@@ -167,6 +168,29 @@ async def fetch_page(url: str, use_auth: bool = False, chrome_profile: Optional[
         "status": status,
         "cookies_injected": cookies_injected,
     }
+
+
+@mcp.tool()
+async def get_default_chrome_profile() -> dict:
+    """Read the persisted default Chrome profile, set via
+    set_default_chrome_profile. Returns {"profile_path": None} if no
+    default has ever been configured."""
+    return {"profile_path": config.get_default_chrome_profile(_data_dir())}
+
+
+@mcp.tool()
+async def set_default_chrome_profile(profile_path: str) -> dict:
+    """Persist profile_path as the default Chrome profile fetch_article
+    uses whenever a caller omits chrome_profile. Raises ValueError if
+    profile_path does not exist or is not a directory — never silently
+    accepts a bad path."""
+    path = Path(profile_path)
+    if not path.is_dir():
+        raise ValueError(
+            f"chrome_profile path does not exist or is not a directory: {profile_path}"
+        )
+    config.set_default_chrome_profile(_data_dir(), profile_path)
+    return {"ok": True}
 
 
 @mcp.tool()
