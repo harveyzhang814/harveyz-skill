@@ -24,6 +24,8 @@ from browser_fetch_mcp.extractors import (
     is_thin,
 )
 from browser_fetch_mcp.images import download_images
+from browser_fetch_mcp.profiles import list_chrome_profiles as _list_chrome_profiles
+from browser_fetch_mcp import config
 
 mcp = MCPServer("browser-fetch-mcp")
 
@@ -170,6 +172,40 @@ async def fetch_page(url: str, use_auth: bool = False, chrome_profile: Optional[
 
 
 @mcp.tool()
+async def get_default_chrome_profile() -> dict:
+    """Read the persisted default Chrome profile, set via
+    set_default_chrome_profile. Returns {"profile_path": None} if no
+    default has ever been configured."""
+    return {"profile_path": config.get_default_chrome_profile(_data_dir())}
+
+
+@mcp.tool()
+async def set_default_chrome_profile(profile_path: str) -> dict:
+    """Persist profile_path as the default Chrome profile fetch_article
+    uses whenever a caller omits chrome_profile. Raises ValueError if
+    profile_path does not exist or is not a directory — never silently
+    accepts a bad path."""
+    path = Path(profile_path)
+    if not path.is_dir():
+        raise ValueError(
+            f"chrome_profile path does not exist or is not a directory: {profile_path}"
+        )
+    config.set_default_chrome_profile(_data_dir(), profile_path)
+    return {"ok": True}
+
+
+@mcp.tool()
+async def list_chrome_profiles(host_keys: list[str], cookie_names: list[str]) -> dict:
+    """List local Chrome profiles and, for each, which of cookie_names
+    exist for the given host_keys (existence-only, never decrypted).
+    Returns {"profiles": [{"profile_path", "account_email",
+    "matched_cookie_names", "looks_logged_in"}, ...]}. Callers decide
+    which profile to recommend/use — this tool never picks one."""
+    profiles = await asyncio.to_thread(_list_chrome_profiles, host_keys, cookie_names)
+    return {"profiles": profiles}
+
+
+@mcp.tool()
 async def fetch_article(
     url: str,
     output_dir: str,
@@ -202,16 +238,18 @@ async def fetch_article(
     if parsed_url.scheme not in ("http", "https") or not parsed_url.netloc:
         raise ValueError(f"Rejected URL with scheme '{parsed_url.scheme}' — only http/https allowed")
 
+    effective_chrome_profile = chrome_profile or config.get_default_chrome_profile(_data_dir())
+
     site = dispatch_site(url)
 
     if site == "xcom":
-        if not chrome_profile:
+        if not effective_chrome_profile:
             raise ValueError("chrome_profile is required for x.com/Twitter URLs")
 
-        cookies_dict = await asyncio.to_thread(extract_cookies, "https://x.com", chrome_profile)
+        cookies_dict = await asyncio.to_thread(extract_cookies, "https://x.com", effective_chrome_profile)
         if not {"auth_token", "ct0", "twid"} & cookies_dict.keys():
             raise ValueError(
-                f"No x.com session cookies in {chrome_profile} — "
+                f"No x.com session cookies in {effective_chrome_profile} — "
                 "log into x.com in that Chrome profile first"
             )
         pw_cookies = [
@@ -254,12 +292,12 @@ async def fetch_article(
 
         cookies_injected = 0
         thin_retry_used = False
-        if chrome_profile and is_thin(result):
+        if effective_chrome_profile and is_thin(result):
             thin_retry_used = True
-            auth_key = _profile_key(chrome_profile)
+            auth_key = _profile_key(effective_chrome_profile)
             auth_ctx = await _get_context(auth_key)
 
-            cookies_dict = extract_cookies(url, chrome_profile)
+            cookies_dict = extract_cookies(url, effective_chrome_profile)
             if cookies_dict:
                 domain = urlparse(url).hostname
                 pw_cookies = [

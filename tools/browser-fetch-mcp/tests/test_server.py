@@ -70,3 +70,57 @@ async def test_fetch_page_use_auth_no_matching_cookies(tmp_path):
             )
             assert payload["cookies_injected"] == 0
             assert payload["status"] == 200
+
+
+async def test_get_default_chrome_profile_returns_none_initially(tmp_path):
+    async with stdio_client(_server_params(tmp_path)) as (read, write):
+        async with ClientSession(read, write) as session:
+            await session.initialize()
+            result = await session.call_tool("get_default_chrome_profile", {})
+            payload = result.structured_content or json.loads(result.content[0].text)
+            assert payload["profile_path"] is None
+
+
+async def test_set_default_chrome_profile_then_get_round_trips(tmp_path):
+    profile_dir = tmp_path / "SomeChromeProfile"
+    profile_dir.mkdir()
+    async with stdio_client(_server_params(tmp_path)) as (read, write):
+        async with ClientSession(read, write) as session:
+            await session.initialize()
+            set_result = await session.call_tool(
+                "set_default_chrome_profile", {"profile_path": str(profile_dir)}
+            )
+            assert set_result.is_error is not True
+
+            get_result = await session.call_tool("get_default_chrome_profile", {})
+            payload = get_result.structured_content or json.loads(get_result.content[0].text)
+            assert payload["profile_path"] == str(profile_dir)
+
+
+async def test_set_default_chrome_profile_rejects_nonexistent_path(tmp_path):
+    async with stdio_client(_server_params(tmp_path)) as (read, write):
+        async with ClientSession(read, write) as session:
+            await session.initialize()
+            result = await session.call_tool(
+                "set_default_chrome_profile", {"profile_path": str(tmp_path / "DoesNotExist")}
+            )
+            assert result.is_error is True
+
+
+async def test_list_chrome_profiles_via_mcp_protocol(tmp_path, monkeypatch):
+    chrome_base = tmp_path / "Chrome"
+    default_dir = chrome_base / "Default"
+    default_dir.mkdir(parents=True)
+    monkeypatch.setenv("BROWSER_FETCH_MCP_CHROME_BASE", str(chrome_base))
+
+    async with stdio_client(_server_params(tmp_path)) as (read, write):
+        async with ClientSession(read, write) as session:
+            await session.initialize()
+            result = await session.call_tool(
+                "list_chrome_profiles",
+                {"host_keys": [".x.com"], "cookie_names": ["auth_token"]},
+            )
+            payload = result.structured_content or json.loads(result.content[0].text)
+            assert len(payload["profiles"]) == 1
+            assert payload["profiles"][0]["profile_path"] == str(default_dir)
+            assert payload["profiles"][0]["looks_logged_in"] is False

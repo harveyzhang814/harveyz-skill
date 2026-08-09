@@ -186,3 +186,94 @@ async def test_extract_js_arxiv_converts_data_table_but_skips_equation_table(tmp
     assert "Accuracy" in table_blocks[0]["content"]
     assert "0.95" in table_blocks[0]["content"]
     assert "x = y + z" not in "".join(b["content"] for b in result["blocks"])
+
+
+async def _set_default_chrome_profile(session, profile_dir: Path):
+    result = await session.call_tool(
+        "set_default_chrome_profile", {"profile_path": str(profile_dir)}
+    )
+    assert result.is_error is not True
+
+
+async def test_fetch_article_x_dot_com_falls_back_to_persisted_default(tmp_path):
+    """No chrome_profile passed, but a default is configured — fetch_article
+    must get PAST the 'chrome_profile is required' check and reach the
+    auth-cookie check instead (which then fails for this empty profile,
+    proving resolution happened rather than an early required-param error)."""
+    default_profile = tmp_path / "DefaultProfile"
+    default_profile.mkdir()
+    output_dir = tmp_path / "out"
+    async with stdio_client(_server_params(tmp_path)) as (read, write):
+        async with ClientSession(read, write) as session:
+            await session.initialize()
+            await _set_default_chrome_profile(session, default_profile)
+
+            result, _ = await _call_fetch_article(
+                session,
+                url="https://x.com/someuser/status/123",
+                output_dir=str(output_dir),
+            )
+    assert result.is_error is True
+    assert "No x.com session cookies" in result.content[0].text
+    assert "is required" not in result.content[0].text
+
+
+async def test_fetch_article_explicit_chrome_profile_wins_over_configured_default(tmp_path):
+    """An explicitly-passed chrome_profile must be used as-is, never
+    overridden by a configured default."""
+    default_profile = tmp_path / "DefaultProfile"
+    default_profile.mkdir()
+    explicit_profile = tmp_path / "ExplicitProfile"
+    explicit_profile.mkdir()
+    output_dir = tmp_path / "out"
+    async with stdio_client(_server_params(tmp_path)) as (read, write):
+        async with ClientSession(read, write) as session:
+            await session.initialize()
+            await _set_default_chrome_profile(session, default_profile)
+
+            result, _ = await _call_fetch_article(
+                session,
+                url="https://x.com/someuser/status/123",
+                output_dir=str(output_dir),
+                chrome_profile=str(explicit_profile),
+            )
+    assert result.is_error is True
+    assert f"No x.com session cookies in {explicit_profile}" in result.content[0].text
+
+
+async def test_fetch_article_thin_retry_uses_persisted_default_when_omitted(tmp_path):
+    default_profile = tmp_path / "DefaultProfile"
+    default_profile.mkdir()
+    output_dir = tmp_path / "out"
+    async with stdio_client(_server_params(tmp_path)) as (read, write):
+        async with ClientSession(read, write) as session:
+            await session.initialize()
+            await _set_default_chrome_profile(session, default_profile)
+
+            _, payload = await _call_fetch_article(
+                session,
+                url="https://example.com",
+                output_dir=str(output_dir),
+            )
+    assert payload["thin_retry_used"] is True
+    assert payload["cookies_injected"] == 0
+
+
+async def test_fetch_article_non_thin_result_ignores_configured_default(tmp_path):
+    """A configured default must NOT force cookie use on content that
+    isn't thin — the per-site opportunistic-retry policy is unchanged."""
+    default_profile = tmp_path / "DefaultProfile"
+    default_profile.mkdir()
+    output_dir = tmp_path / "out"
+    async with stdio_client(_server_params(tmp_path)) as (read, write):
+        async with ClientSession(read, write) as session:
+            await session.initialize()
+            await _set_default_chrome_profile(session, default_profile)
+
+            _, payload = await _call_fetch_article(
+                session,
+                url="https://en.wikipedia.org/wiki/Model_Context_Protocol",
+                output_dir=str(output_dir),
+            )
+    assert payload["thin_retry_used"] is False
+    assert payload["cookies_injected"] == 0
