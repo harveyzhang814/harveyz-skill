@@ -6,6 +6,7 @@
 > - [[qm-skills-layer]]（技能层深入分析——注册表、Pack 导入、物化、权限）
 > - [[qm-resolution-layer]]（解析层深入分析——`Resolution` 对象、分层配置、audience floor、prompt 协议）
 > - [[qm-turn-slice]]（纵切面——一条 Slack 消息从进入到回复送出，十九道闸门）
+> - [[qm-harness-layer]]（Harness 层——四适配器一套接口、tape 事件溯源、上下文压缩、冷启动重放）
 >
 > 调研对象：`yc-software/qm`（YC 出品的开源多人 agent harness）
 > 本地路径：`~/Repositories/qm`
@@ -268,7 +269,7 @@ AGENTS.md 是写给 coding agent 看的操作手册（`CLAUDE.md` 是它的 syml
 - [[qm-skills-layer]] —— 技能层，E 组剩下的一半（已完成）
 - [[qm-resolution-layer]] —— 解析层：`Resolution` 对象、四种收紧代数、audience floor、prompt 协议（已完成）
 - [[qm-turn-slice]] —— 纵切面：一条 Slack 消息从进来到回复送出，十九道闸门（已完成）
-- `harness/` —— 四个 adapter 一套接口，加 `tape-fold`（回合记录规整）与 `context-compaction`（上下文压缩，与记忆层互补）。**下一篇建议**
-- `security/security-screener` + `classify/` + provenance —— 三档 posture 的实际实现；纵切面第 3.2 节只讲了它在时序里的位置，没展开分类器本身
+- [[qm-harness-layer]] —— Harness 层：四适配器、tape 事件溯源、上下文压缩、冷启动重放（已完成）
+- `security/security-screener` + `classify/` + provenance —— 三档 posture 的实际实现；纵切面第 3.2 节只讲了它在时序里的位置，没展开分类器本身。**下一篇建议**
 - `cron/` + `monitors/` + `wake/` + `runs/` —— 自主工作；`liveActor` 与「autonomous 轮」概念的源头
 - 综述：把六篇里散落的「可迁移做法」按问题（而非按模块）收敛成一份清单

@@ -6,6 +6,7 @@
 > - [[qm-execution-layer]]（执行环境层——本文第 5 步的展开）
 > - [[qm-memory-layer]]（记忆层——本文第 4 步与第 8 步的展开）
 > - [[qm-skills-layer]]（技能层——本文第 4 步注入的技能索引）
+> - [[qm-harness-layer]]（Harness 层——本文第 3 步「模型循环」的展开）
 >
 > 调研对象：`yc-software/qm` 的 turn 全链路
 > 本地路径：`~/Repositories/qm`
@@ -440,7 +441,9 @@ AckGate 超时先 ack 会打日志说「在确认持久化之前 ack 了」；�
 ## 九、张力与风险
 
 **1. 隔离判定后消息仍进 tape。**
-`securityTainted: true` 的用户消息被写进会话历史。后续轮次读历史时会看到这条内容——标记在，但内容也在。是否所有读取路径都尊重这个标记，我没有逐条追。
+`securityTainted: true` 的用户消息被写进会话历史。
+
+> **已解答**（见 [[qm-harness-layer]] 第 5.2 节）：`forModelContext` 默认会过滤掉 `securityTainted` 的条目，只有显式传 `includeSecurityTainted` 才带上。**内容留在 tape 里可审计，但默认不喂回模型。** 当时说「没有逐条追」的疑问到此闭合。
 
 **2. Fail-open 的覆盖面。**
 SECURITY.md 自承：「Command and background-process output, opaque or multimodal results, raw webhook payloads, and replay remediation across a shadow-to-enforcement cutover are not all covered.」筛查的是「支持的、带来源标注的外部文本」，不是全部入模内容。
