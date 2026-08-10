@@ -53,14 +53,31 @@ def wechat_publish_date_from_ct(ct) -> str:
         return ""
 
 
-# Ported verbatim from extract-url/scripts/playwright_web.py (_EXTRACT_JS).
+# Ported verbatim from extract-url/scripts/playwright_web.py (_EXTRACT_JS),
+# plus a textOf() fallback (see comment below) added for sites whose
+# sections stay visibility:hidden in our headless context.
 _EXTRACT_JS_GENERIC = r"""() => {
     const skipTags = new Set(['SCRIPT','STYLE','NAV','FOOTER','HEADER','ASIDE','BUTTON','FORM']);
     const contentUnits = [];
     const imageBlocks  = [];
 
+    // Some sites (e.g. Webflow pages using GSAP/ScrollTrigger reveal
+    // animations) render their whole article under a section that carries
+    // inline visibility:hidden until a scroll/load animation flips it —
+    // an animation that never runs in our headless context. innerText
+    // returns "" for any element under a visibility:hidden ancestor in
+    // Chromium (same root cause as WECHAT's #js_content below), so fall
+    // back to textContent only when innerText comes back empty — this
+    // leaves already-working sites (innerText non-empty) untouched.
+    function textOf(el) {
+        if (!el) return '';
+        const t = el.innerText.replace(/\s+/g, ' ').trim();
+        if (t) return t;
+        return (el.textContent || '').replace(/\s+/g, ' ').trim();
+    }
+
     const titleEl   = document.querySelector('h1') || document.querySelector('title');
-    const title     = titleEl ? titleEl.innerText.replace(/\s+/g, ' ').trim() : 'Untitled';
+    const title     = titleEl ? textOf(titleEl) : 'Untitled';
 
     const dateMeta  = document.querySelector('meta[property="article:published_time"]')
                    || document.querySelector('meta[name="date"]')
@@ -72,7 +89,7 @@ _EXTRACT_JS_GENERIC = r"""() => {
     const authorMeta = document.querySelector('meta[name="author"]')
                     || document.querySelector('[rel="author"]');
     const author = authorMeta
-        ? (authorMeta.getAttribute('content') || authorMeta.innerText || '').trim()
+        ? (authorMeta.getAttribute('content') || textOf(authorMeta))
         : '';
 
     const main   = document.querySelector('main') || document.querySelector('article') || document.body;
@@ -88,7 +105,7 @@ _EXTRACT_JS_GENERIC = r"""() => {
                 imageBlocks.push({src, alt: node.alt || '', afterBlock: contentUnits.length - 1});
             }
         } else if (['H1','H2','H3','P','LI','BLOCKQUOTE','PRE','CODE'].includes(tag)) {
-            const t = node.innerText.replace(/\s+/g, ' ').trim();
+            const t = textOf(node);
             if (t && t.length > 10) {
                 contentUnits.push({tag: tag.toLowerCase(), content: t});
             }
