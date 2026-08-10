@@ -51,9 +51,9 @@ tags:
 
 --- 阶段 3：写文件 ---
 
-5. 计算 Translation 文件路径：`<ORIGIN_PATH>` 所在目录的上一级（`ArticleDir`）下的 `Translation/article.md`（与 `Origin/article.md` 并列）。
+5. 计算 Translation 文件路径：与 `<ORIGIN_PATH>` 同文件名，只把路径中的 `Origin` 目录段替换成 `Translation`（例如 `<ArticleDir>/Origin/Example Domain.md` → `<ArticleDir>/Translation/Example Domain.md`）——不要重新从标题生成文件名，沿用 Subagent 1 已经选定的文件名，确保 Origin/Translation 两侧文件名始终一致。
 
-6. 写入 Translation 文件，frontmatter 对齐以下字段：
+6. 确定中文标题：若原标题非中文，翻译标题；若已是中文，沿用原标题。写入 Translation 文件，frontmatter 对齐以下字段，正文为 `# {中文标题}\n\n{翻译后的正文}`：
 
 ```yaml
 ---
@@ -67,10 +67,12 @@ candidate_tags:
 description: "一句话摘要"
 ---
 
-# {中文标题（若原标题非中文，翻译标题；若已是中文，沿用原标题）}
+# {中文标题}
 
 {翻译后的正文}
 ```
+
+写入后，计算 `char_count`：frontmatter 结束的 `---` 之后、整个正文部分（含 `# {中文标题}` 标题行）的字符数。
 
 --- 阶段 4：记录去重索引 + 兜底移位 ---
 
@@ -88,10 +90,24 @@ result = subprocess.run(
     capture_output=True, text=True, timeout=60
 )
 print(result.stdout)
-if result.returncode != 0:
-    raise RuntimeError(result.stderr)
 ```
 
+若 `result.returncode != 0`：**不要**抛异常中断任务——跳到下方失败报告格式，把 `result.stderr` 的完整内容原样带回。
+
 8. 完成后报告格式：
+
+**成功时**（阶段 3-4 全部完成）：
+```
+RESULT: OK
+TITLE: {中文标题}
 TRANSLATION_PATH: {translation_path}
+CHAR_COUNT: {char_count}
 打标+翻译完成（tags: {逗号分隔的 tags 列表}，candidate_tags: {逗号分隔的 candidate_tags 列表}）
+```
+
+**失败时**（阶段 2-4 任一步骤失败——例如翻译因版权顾虑不适合逐句进行、写文件出错、或步骤 7 返回非零 returncode）：
+```
+RESULT: FAILED
+ORIGIN_PATH: <ORIGIN_PATH>
+ERROR: {失败原因的完整内容}
+```

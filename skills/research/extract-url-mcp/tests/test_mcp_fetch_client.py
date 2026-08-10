@@ -34,9 +34,9 @@ def isolated_data_dir(isolated_vault_config, tmp_path, monkeypatch):
 def test_fetch_and_save_writes_real_content(tmp_path):
     origin_path = asyncio.run(fetch_and_save("https://example.com"))
 
-    assert origin_path == tmp_path / "vault" / get_url_hash("https://example.com") / "Origin" / "article.md"
+    assert origin_path == tmp_path / "vault" / get_url_hash("https://example.com") / "Origin" / "Example Domain.md"
     assert origin_path.exists()
-    assert origin_path.name == "article.md"
+    assert origin_path.name == "Example Domain.md"
     assert origin_path.parent.name == "Origin"
     content = origin_path.read_text(encoding="utf-8")
 
@@ -136,3 +136,5 @@ def test_fetch_and_report_returns_diagnostics(tmp_path):
     assert payload["block_count"] < 20
     assert payload["char_count"] < 3000
     assert payload["thin_retry_used"] is False
+    assert isinstance(payload["code_block_count"], int)
+    assert payload["image_count"] == 0

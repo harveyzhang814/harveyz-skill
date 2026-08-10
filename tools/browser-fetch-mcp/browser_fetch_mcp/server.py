@@ -232,17 +232,19 @@ async def fetch_article(
 
     output_format controls the return shape:
     - "path" (default): assembles the article into Markdown, writes it to
-      <output_dir>/Origin/article.md, and returns {"origin_path", "title",
+      <output_dir>/Origin/<sanitized title>.md, and returns {"origin_path", "title",
       "author", "publish_date", "site", "cookies_injected",
-      "thin_retry_used", "block_count", "char_count", "content_thin"} — no
-      blocks/image_blocks, keeping the payload out of the caller's context.
+      "thin_retry_used", "block_count", "char_count", "code_block_count",
+      "image_count", "content_thin"} — no blocks/image_blocks, keeping the
+      payload out of the caller's context.
     - "json": returns the raw structured data instead — {"title", "author",
       "publish_date", "blocks", "image_blocks", "site", "cookies_injected",
-      "thin_retry_used", "block_count", "char_count", "content_thin"} — no
-      file is written.
-    block_count/char_count/content_thin are lightweight diagnostics (an int
-    count and a bool, never the extracted content itself) so a caller can
-    detect thin/failed extraction without pulling blocks into its context.
+      "thin_retry_used", "block_count", "char_count", "code_block_count",
+      "image_count", "content_thin"} — no file is written.
+    block_count/char_count/code_block_count/image_count/content_thin are
+    lightweight diagnostics (ints and a bool, never the extracted content
+    itself) so a caller can report stats or detect thin/failed extraction
+    without pulling blocks into its context.
     Raises ValueError for any other value.
 
     Raises ValueError if url's scheme isn't http/https — fetch_page has
@@ -346,6 +348,8 @@ async def fetch_article(
     blocks = [{"tag": b["tag"], "content": b["content"]} for b in result.get("blocks", [])]
     block_count = len(blocks)
     char_count = sum(len(b["content"]) for b in blocks)
+    code_block_count = sum(1 for b in blocks if b["tag"] == "pre")
+    image_count = len(image_blocks)
     content_thin = is_thin(result)
 
     if output_format == "json":
@@ -360,6 +364,8 @@ async def fetch_article(
             "thin_retry_used": thin_retry_used,
             "block_count": block_count,
             "char_count": char_count,
+            "code_block_count": code_block_count,
+            "image_count": image_count,
             "content_thin": content_thin,
         }
 
@@ -376,6 +382,8 @@ async def fetch_article(
         "thin_retry_used": thin_retry_used,
         "block_count": block_count,
         "char_count": char_count,
+        "code_block_count": code_block_count,
+        "image_count": image_count,
         "content_thin": content_thin,
     }
 

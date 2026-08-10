@@ -8,6 +8,14 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 
+def sanitize_filename(name: str) -> str:
+    """Strip filesystem-unsafe characters from a title so it can be used
+    as a filename — ported from extract-url's article_utils.py."""
+    for ch in ["\\", "/", "*", "?", "<", ">", "|", ":", '"']:
+        name = name.replace(ch, "")
+    return name.lstrip(".")
+
+
 def _format_block(block: dict) -> str:
     tag = block["tag"]
     content = block["content"]
@@ -36,7 +44,8 @@ def assemble_and_write(
     image_blocks: list[dict],
 ) -> Path:
     """Assemble blocks/image_blocks into Markdown with YAML frontmatter
-    and write it to <output_dir>/Origin/article.md. Returns that path."""
+    and write it to <output_dir>/Origin/<sanitized title>.md, matching
+    extract-url's title-based filename convention. Returns that path."""
     # image_blocks[].after_block indices are computed by fetch_article's
     # JS against the ORIGINAL (undeduped) blocks list, so once we drop
     # blocks[0], every remaining block's local index is shifted by one
@@ -67,7 +76,7 @@ def assemble_and_write(
 
     origin_dir = Path(output_dir) / "Origin"
     origin_dir.mkdir(parents=True, exist_ok=True)
-    origin_path = origin_dir / "article.md"
+    origin_path = origin_dir / f"{sanitize_filename(title)}.md"
 
     fetch_date = datetime.now(timezone(timedelta(hours=8))).strftime("%Y-%m-%d")
 
