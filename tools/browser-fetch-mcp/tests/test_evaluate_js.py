@@ -43,6 +43,7 @@ async def test_evaluate_js_rejects_invalid_scheme(tmp_path):
                 session, url="ftp://example.com", js_code="() => document.title"
             )
     assert result.is_error is True
+    assert "ftp" in result.content[0].text
 
 
 async def test_evaluate_js_with_chrome_profile_no_matching_cookies(tmp_path):

@@ -79,7 +79,21 @@ def main():
     url = sys.argv[1]
     output_dir = Path(sys.argv[2])
     chrome_profile = sys.argv[3] if len(sys.argv) > 3 and sys.argv[3] else None
-    payload = asyncio.run(fetch_and_report(url, output_dir, chrome_profile))
+    try:
+        payload = asyncio.run(fetch_and_report(url, output_dir, chrome_profile))
+    except BaseException as e:
+        # anyio's TaskGroup (used internally by mcp's stdio_client/ClientSession)
+        # wraps exceptions raised inside it in a BaseExceptionGroup, so a bare
+        # str(e) on the outer exception can be an unhelpful wrapper — walk
+        # into exception groups to find the actual leaf error message. Print
+        # the bare message only (no "ERROR:" prefix) — subagent1-fetch-prompt.md
+        # already adds that prefix itself when composing its own report from
+        # this stderr output.
+        leaf = e
+        while isinstance(leaf, BaseExceptionGroup) and leaf.exceptions:
+            leaf = leaf.exceptions[0]
+        print(str(leaf), file=sys.stderr)
+        sys.exit(1)
     print(f"ORIGIN_PATH: {payload['origin_path']}")
     print(f"SITE: {payload['site']}")
     print(f"BLOCK_COUNT: {payload['block_count']}")
