@@ -5,6 +5,7 @@
 > - [[qm-memory-layer]]（记忆层深入分析）
 > - [[qm-skills-layer]]（技能层深入分析——E 组的另一半，技能最终物化进这里的沙箱）
 > - [[qm-resolution-layer]]（解析层深入分析——`provision()` 收到的 `layers` 由它算出）
+> - [[qm-turn-slice]]（纵切面——沙箱 provision 与命令闸在 turn 时序里的位置）
 >
 > 调研对象：`yc-software/qm` 的 `src/sandbox/`、`src/workspace/`、`src/files/`、`src/processes/`、`src/tools/`
 > 本地路径：`~/Repositories/qm`

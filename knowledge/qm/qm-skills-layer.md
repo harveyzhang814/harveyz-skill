@@ -5,6 +5,7 @@
 > - [[qm-execution-layer]]（执行环境层——技能最终物化进的那台"电脑"）
 > - [[qm-memory-layer]]（记忆层）
 > - [[qm-resolution-layer]]（解析层——技能可见 scope 的顺序由它算出）
+> - [[qm-turn-slice]]（纵切面——技能索引与懒加载在 turn 时序里的位置）
 >
 > 调研对象：`yc-software/qm` 的 `src/skills/`
 > 本地路径：`~/Repositories/qm`

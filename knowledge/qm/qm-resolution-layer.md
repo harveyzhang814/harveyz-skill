@@ -5,6 +5,7 @@
 > - [[qm-memory-layer]]（记忆层——recall 范围由本层的 `resolution.layers` 决定）
 > - [[qm-execution-layer]]（执行环境层——沙箱的层结构由本层的 `resolution.layers` 决定）
 > - [[qm-skills-layer]]（技能层——可见技能的 scope 顺序由本层的 `resolution` 决定）
+> - [[qm-turn-slice]]（纵切面——`resolve()` 在 turn 时序里的位置与前后闸门）
 >
 > 调研对象：`yc-software/qm` 的 `src/resolution/`
 > 本地路径：`~/Repositories/qm`
