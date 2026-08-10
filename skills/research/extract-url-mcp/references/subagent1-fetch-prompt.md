@@ -18,12 +18,24 @@ result = subprocess.run(
     capture_output=True, text=True, timeout=120
 )
 print(result.stdout)
-if result.returncode != 0:
-    raise RuntimeError(result.stderr)
+print(result.stderr)
 ```
 
-从脚本标准输出中提取 `ORIGIN_PATH:` 开头的行，取其值作为 origin_path。
+若 `result.returncode == 0`：从 `result.stdout` 里逐行提取 `ORIGIN_PATH`/`SITE`/`BLOCK_COUNT`/`CHAR_COUNT`/`CONTENT_THIN`/`THIN_RETRY_USED`（每行格式 `KEY: value`）。完成后报告格式：
 
-完成后报告格式：
+```
+RESULT: OK
 ORIGIN_PATH: {origin_path}
-抓取完成（经 browser-fetch-mcp fetch_article）
+SITE: {site}
+BLOCK_COUNT: {block_count}
+CHAR_COUNT: {char_count}
+CONTENT_THIN: {content_thin}
+THIN_RETRY_USED: {thin_retry_used}
+```
+
+若 `result.returncode != 0`：**不要**抛异常中断任务——把 `result.stderr` 的完整内容原样带回，完成后报告格式：
+
+```
+RESULT: FAILED
+ERROR: {result.stderr 的完整内容}
+```
