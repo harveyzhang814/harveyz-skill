@@ -162,6 +162,39 @@ async def test_extract_js_wechat_reads_hidden_content_via_fixture(tmp_path):
     assert publish_date == "2024-07-01"
 
 
+_GENERIC_HIDDEN_SECTION_FIXTURE_HTML = """\
+<!DOCTYPE html>
+<html>
+<head><title>Generic Hidden Section Test</title></head>
+<body>
+  <main id="main">
+    <section style="translate: none; opacity: 0; visibility: hidden;">
+      <h1>Generic Hidden Section Test</h1>
+      <p>First paragraph with sufficient content to be captured despite the ancestor section staying hidden.</p>
+      <p>Second paragraph providing additional body text for the content extraction verification test here.</p>
+    </section>
+  </main>
+</body>
+</html>
+"""
+
+
+async def test_extract_js_generic_reads_content_under_visibility_hidden_ancestor(tmp_path):
+    """Some sites (e.g. Webflow pages using GSAP/ScrollTrigger reveal
+    animations) leave their whole article under a section with inline
+    visibility:hidden because the reveal animation never runs headless.
+    innerText returns "" for anything under a visibility:hidden ancestor
+    in Chromium, so _EXTRACT_JS_GENERIC must fall back to textContent —
+    same root cause as the WECHAT #js_content case above."""
+    result = await _evaluate_extraction(
+        "generic", _GENERIC_HIDDEN_SECTION_FIXTURE_HTML, tmp_path
+    )
+    assert result["title"] == "Generic Hidden Section Test"
+    assert len(result["blocks"]) == 3  # h1 + 2 paragraphs
+    assert "First paragraph" in result["blocks"][1]["content"]
+    assert "Second paragraph" in result["blocks"][2]["content"]
+
+
 _ARXIV_FIXTURE_HTML = """\
 <!DOCTYPE html>
 <html>
