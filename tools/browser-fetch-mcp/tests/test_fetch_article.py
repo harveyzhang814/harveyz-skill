@@ -44,6 +44,9 @@ async def test_fetch_article_generic_real_network(tmp_path):
     assert "Model Context Protocol" in payload["title"]
     assert payload["thin_retry_used"] is False
     assert payload["cookies_injected"] == 0
+    assert payload["block_count"] > 5
+    assert payload["char_count"] > 0
+    assert payload["content_thin"] is False
 
 
 async def test_fetch_article_arxiv_real_network(tmp_path):
@@ -328,3 +331,22 @@ async def test_fetch_article_invalid_output_format_raises(tmp_path):
     assert result.is_error is True
     assert "output_format" in result.content[0].text
     assert "'path' or 'json'" in result.content[0].text
+
+
+async def test_fetch_article_generic_thin_content_reports_content_thin_true(tmp_path):
+    """example.com's body is a single short paragraph — well under is_thin's
+    20-block/3000-char thresholds, so this deterministically exercises the
+    content_thin=True path without needing auth or a flaky real-world page."""
+    output_dir = tmp_path / "out"
+    async with stdio_client(_server_params(tmp_path)) as (read, write):
+        async with ClientSession(read, write) as session:
+            await session.initialize()
+            _, payload = await _call_fetch_article(
+                session,
+                url="https://example.com",
+                output_dir=str(output_dir),
+                output_format="json",
+            )
+    assert payload["content_thin"] is True
+    assert payload["block_count"] < 20
+    assert payload["char_count"] < 3000

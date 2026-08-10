@@ -234,11 +234,15 @@ async def fetch_article(
     - "path" (default): assembles the article into Markdown, writes it to
       <output_dir>/Origin/article.md, and returns {"origin_path", "title",
       "author", "publish_date", "site", "cookies_injected",
-      "thin_retry_used"} — no blocks/image_blocks, keeping the payload out
-      of the caller's context.
+      "thin_retry_used", "block_count", "char_count", "content_thin"} — no
+      blocks/image_blocks, keeping the payload out of the caller's context.
     - "json": returns the raw structured data instead — {"title", "author",
       "publish_date", "blocks", "image_blocks", "site", "cookies_injected",
-      "thin_retry_used"} — no file is written.
+      "thin_retry_used", "block_count", "char_count", "content_thin"} — no
+      file is written.
+    block_count/char_count/content_thin are lightweight diagnostics (an int
+    count and a bool, never the extracted content itself) so a caller can
+    detect thin/failed extraction without pulling blocks into its context.
     Raises ValueError for any other value.
 
     Raises ValueError if url's scheme isn't http/https — fetch_page has
@@ -340,6 +344,9 @@ async def fetch_article(
     title = result.get("title", "Untitled")
     author = result.get("author", "")
     blocks = [{"tag": b["tag"], "content": b["content"]} for b in result.get("blocks", [])]
+    block_count = len(blocks)
+    char_count = sum(len(b["content"]) for b in blocks)
+    content_thin = is_thin(result)
 
     if output_format == "json":
         return {
@@ -351,6 +358,9 @@ async def fetch_article(
             "site": site,
             "cookies_injected": cookies_injected,
             "thin_retry_used": thin_retry_used,
+            "block_count": block_count,
+            "char_count": char_count,
+            "content_thin": content_thin,
         }
 
     origin_path = markdown.assemble_and_write(
@@ -364,6 +374,9 @@ async def fetch_article(
         "site": site,
         "cookies_injected": cookies_injected,
         "thin_retry_used": thin_retry_used,
+        "block_count": block_count,
+        "char_count": char_count,
+        "content_thin": content_thin,
     }
 
 
