@@ -232,7 +232,7 @@ async def fetch_article(
 
     output_format controls the return shape:
     - "path" (default): assembles the article into Markdown, writes it to
-      <output_dir>/Origin/article.md, and returns {"origin_path", "title",
+      <output_dir>/Origin/<sanitized title>.md, and returns {"origin_path", "title",
       "author", "publish_date", "site", "cookies_injected",
       "thin_retry_used", "block_count", "char_count", "code_block_count",
       "image_count", "content_thin"} — no blocks/image_blocks, keeping the

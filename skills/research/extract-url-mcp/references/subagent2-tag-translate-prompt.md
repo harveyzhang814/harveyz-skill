@@ -51,7 +51,7 @@ tags:
 
 --- 阶段 3：写文件 ---
 
-5. 计算 Translation 文件路径：`<ORIGIN_PATH>` 所在目录的上一级（`ArticleDir`）下的 `Translation/article.md`（与 `Origin/article.md` 并列）。
+5. 计算 Translation 文件路径：与 `<ORIGIN_PATH>` 同文件名，只把路径中的 `Origin` 目录段替换成 `Translation`（例如 `<ArticleDir>/Origin/Example Domain.md` → `<ArticleDir>/Translation/Example Domain.md`）——不要重新从标题生成文件名，沿用 Subagent 1 已经选定的文件名，确保 Origin/Translation 两侧文件名始终一致。
 
 6. 确定中文标题：若原标题非中文，翻译标题；若已是中文，沿用原标题。写入 Translation 文件，frontmatter 对齐以下字段，正文为 `# {中文标题}\n\n{翻译后的正文}`：
 

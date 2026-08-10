@@ -41,6 +41,4 @@ def test_get_article_paths_layout(isolated_vault_config):
     paths = get_article_paths(url)
     url_hash = get_url_hash(url)
     assert paths["article_dir"] == Path("/fake/vault") / url_hash
-    assert paths["origin_path"] == Path("/fake/vault") / url_hash / "Origin" / "article.md"
-    assert paths["translation_path"] == Path("/fake/vault") / url_hash / "Translation" / "article.md"
     assert paths["meta_path"] == Path("/fake/vault") / url_hash / "meta.json"

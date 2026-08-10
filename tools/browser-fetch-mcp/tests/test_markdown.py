@@ -2,7 +2,7 @@
 logic, no MCP protocol, no browser, no network."""
 from pathlib import Path
 
-from browser_fetch_mcp.markdown import assemble_and_write, _format_block
+from browser_fetch_mcp.markdown import assemble_and_write, sanitize_filename, _format_block
 
 
 def test_writes_frontmatter_and_heading(tmp_path):
@@ -15,7 +15,7 @@ def test_writes_frontmatter_and_heading(tmp_path):
         blocks=[{"tag": "p", "content": "Some body text."}],
         image_blocks=[],
     )
-    assert origin_path == tmp_path / "Origin" / "article.md"
+    assert origin_path == tmp_path / "Origin" / "Example Domain.md"
     content = origin_path.read_text(encoding="utf-8")
     assert "source_url: https://example.com" in content
     assert 'origin_title: "Example Domain"' in content
@@ -99,6 +99,11 @@ def test_image_placed_after_matching_block_index(tmp_path):
     body_units = content.split("\n\n")
     first_unit = next(u for u in body_units if "First paragraph." in u)
     assert "![](../Image/img_1.jpg)" in first_unit
+
+
+def test_sanitize_filename_strips_unsafe_characters():
+    assert sanitize_filename('Title: "A/B" <Test>?*|\\') == "Title AB Test"
+    assert sanitize_filename("...leading dots") == "leading dots"
 
 
 def test_block_tag_formatting():

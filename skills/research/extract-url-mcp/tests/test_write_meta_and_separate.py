@@ -24,7 +24,7 @@ def valid_vault_config(isolated_vault_config, tmp_path, monkeypatch):
 
 def test_run_writes_meta_json_and_moves_candidate_tags(tmp_path, monkeypatch):
     url = "https://example.com/article"
-    article_path = vault_config.get_article_paths(url)["translation_path"]
+    article_path = vault_config.get_article_paths(url)["article_dir"] / "Translation" / "Example Domain.md"
     article_path.parent.mkdir(parents=True)
     article_path.write_text(
         "---\n"

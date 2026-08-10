@@ -34,12 +34,16 @@ def get_url_hash(url: str) -> str:
 
 
 def get_article_paths(url: str) -> dict:
+    """origin_path/translation_path aren't included here — their filename
+    is derived from the article's title (sanitize_filename(title) + ".md",
+    matching extract-url's convention), which isn't known until after
+    fetch_article extracts it. Callers get the real origin_path from
+    fetch_article's response, and derive translation_path from it (same
+    filename, Origin -> Translation)."""
     vault_path = get_vault_path()
     url_hash = get_url_hash(url)
     article_dir = Path(vault_path) / url_hash
     return {
         "article_dir": article_dir,
-        "origin_path": article_dir / "Origin" / "article.md",
-        "translation_path": article_dir / "Translation" / "article.md",
         "meta_path": article_dir / "meta.json",
     }
