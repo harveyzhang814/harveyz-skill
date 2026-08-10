@@ -13,7 +13,7 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
 
-from mcp_fetch_client import fetch_and_save  # noqa: E402
+from mcp_fetch_client import fetch_and_report, fetch_and_save  # noqa: E402
 
 
 @pytest.fixture(autouse=True)
@@ -119,3 +119,13 @@ def test_fetch_and_save_image_placement_after_h1_dedup(tmp_path):
     assert any(
         "![](../Image/" in unit for unit in body_units[:intro_idx]
     ), "No images found in pre-content units (unexpected)"
+
+
+def test_fetch_and_report_returns_diagnostics(tmp_path):
+    payload = asyncio.run(fetch_and_report("https://example.com", tmp_path))
+    assert payload["origin_path"].exists()
+    assert payload["site"] == "generic"
+    assert payload["content_thin"] is True
+    assert payload["block_count"] < 20
+    assert payload["char_count"] < 3000
+    assert payload["thin_retry_used"] is False

@@ -234,11 +234,15 @@ async def fetch_article(
     - "path" (default): assembles the article into Markdown, writes it to
       <output_dir>/Origin/article.md, and returns {"origin_path", "title",
       "author", "publish_date", "site", "cookies_injected",
-      "thin_retry_used"} — no blocks/image_blocks, keeping the payload out
-      of the caller's context.
+      "thin_retry_used", "block_count", "char_count", "content_thin"} — no
+      blocks/image_blocks, keeping the payload out of the caller's context.
     - "json": returns the raw structured data instead — {"title", "author",
       "publish_date", "blocks", "image_blocks", "site", "cookies_injected",
-      "thin_retry_used"} — no file is written.
+      "thin_retry_used", "block_count", "char_count", "content_thin"} — no
+      file is written.
+    block_count/char_count/content_thin are lightweight diagnostics (an int
+    count and a bool, never the extracted content itself) so a caller can
+    detect thin/failed extraction without pulling blocks into its context.
     Raises ValueError for any other value.
 
     Raises ValueError if url's scheme isn't http/https — fetch_page has
@@ -340,6 +344,9 @@ async def fetch_article(
     title = result.get("title", "Untitled")
     author = result.get("author", "")
     blocks = [{"tag": b["tag"], "content": b["content"]} for b in result.get("blocks", [])]
+    block_count = len(blocks)
+    char_count = sum(len(b["content"]) for b in blocks)
+    content_thin = is_thin(result)
 
     if output_format == "json":
         return {
@@ -351,6 +358,9 @@ async def fetch_article(
             "site": site,
             "cookies_injected": cookies_injected,
             "thin_retry_used": thin_retry_used,
+            "block_count": block_count,
+            "char_count": char_count,
+            "content_thin": content_thin,
         }
 
     origin_path = markdown.assemble_and_write(
@@ -364,7 +374,53 @@ async def fetch_article(
         "site": site,
         "cookies_injected": cookies_injected,
         "thin_retry_used": thin_retry_used,
+        "block_count": block_count,
+        "char_count": char_count,
+        "content_thin": content_thin,
     }
+
+
+@mcp.tool()
+async def evaluate_js(
+    url: str,
+    js_code: str,
+    chrome_profile: Optional[str] = None,
+) -> dict:
+    """Navigate to url and execute js_code via page.evaluate(), returning
+    its result. Debug-only tool for the self-optimization workflow to
+    iterate candidate extraction logic against a real page — writes no
+    files, downloads no images, and has no thin-content retry. If
+    chrome_profile is given, injects cookies decrypted from that Chrome
+    profile before navigating; omit it for an anonymous fetch.
+
+    Raises ValueError if url's scheme isn't http/https (same guard as
+    fetch_article).
+    """
+    parsed_url = urlparse(url)
+    if parsed_url.scheme not in ("http", "https") or not parsed_url.netloc:
+        raise ValueError(f"Rejected URL with scheme '{parsed_url.scheme}' — only http/https allowed")
+
+    if chrome_profile:
+        ctx = await _get_context(_profile_key(chrome_profile))
+        cookies_dict = extract_cookies(url, chrome_profile)
+        if cookies_dict:
+            domain = parsed_url.hostname
+            pw_cookies = [
+                {"name": k, "value": v, "domain": domain, "path": "/", "secure": url.startswith("https")}
+                for k, v in cookies_dict.items()
+            ]
+            await ctx.add_cookies(pw_cookies)
+    else:
+        ctx = await _get_context(ANON_KEY)
+
+    page = await ctx.new_page()
+    try:
+        await page.goto(url, wait_until="domcontentloaded", timeout=30000)
+        result = await page.evaluate(js_code)
+    finally:
+        await page.close()
+
+    return {"result": result}
 
 
 def main():

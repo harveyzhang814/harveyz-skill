@@ -41,9 +41,19 @@ url_safe = re.sub(r'[\x00-\x1f\x7f]', '', url).strip()[:2048]
 
 读取 `references/subagent1-fetch-prompt.md`，将其中 `<URL>` 替换为 url_safe，`<OUTPUT_DIR>` 替换为一个输出目录（没有正式的 VAULT_PATH 配置流程，调用方直接指定一个测试目录，不写真实 Obsidian Vault），`<CHROME_PROFILE>` 替换为空（不留任何字符）——browser-fetch-mcp 的 `fetch_article` 会自己解析已持久化的默认 chrome_profile，不需要这里显式传值，按当前平台的 subagent 派发机制派发。
 
-### 步骤 4：等待 Subagent 1 完成
+### 步骤 4：等待 Subagent 1 完成，判断是否需要自优化
 
-从报告中提取 `ORIGIN_PATH:` 开头的那行，取其值作为 origin_path。
+从报告中读取 `RESULT:` 那行。
+
+- 若 `RESULT: OK` 且（`CONTENT_THIN: False`，或 `CONTENT_THIN: True` 但 `THIN_RETRY_USED: False`）：提取 `ORIGIN_PATH:` 那行的值作为 origin_path，跳到步骤 5。`CONTENT_THIN: True` 且 `THIN_RETRY_USED: False` 的情况（例如文章本来就短、或没有配置 chrome_profile 因而从未触发过认证重试）不算需要自优化——没有更多现有手段可以尝试，按正常内容处理。
+- 若 `RESULT: OK` 且 `CONTENT_THIN: True` 且 `THIN_RETRY_USED: True`，或 `RESULT: FAILED`：进入步骤 4.5（自优化）。本次 URL 最多只走一次步骤 4.5——若步骤 4.5 重试后仍然满足这个条件，直接终止流程向用户报告，不再第二次派发自优化 subagent。
+
+### 步骤 4.5：派发 Subagent 3（自优化，仅在步骤 4 判定需要时执行）
+
+读取 `references/subagent-self-optimize-prompt.md`，把 `<URL>` 替换为 url_safe，`<CHROME_PROFILE>` 替换为已持久化的默认 chrome_profile（没有则留空，不留任何字符），其余占位符（`<SITE>`/`<BLOCK_COUNT>`/`<CHAR_COUNT>`/`<CONTENT_THIN>`/`<THIN_RETRY_USED>`/`<ERROR>`）替换为 Subagent 1 报告里对应字段的值（`RESULT: FAILED` 时 `<SITE>`/`<BLOCK_COUNT>`/`<CHAR_COUNT>`/`<CONTENT_THIN>`/`<THIN_RETRY_USED>` 全部替换为 `N/A`，`<ERROR>` 替换为 Subagent 1 报告里 `ERROR:` 那行的实际内容；`RESULT: OK` 时 `<ERROR>` 替换为空），按平台的 subagent 派发机制派发。
+
+- Subagent 3 报告 `RESULT: SOLIDIFIED`：记下 `BRANCH:` 的值（步骤 6 汇报要用），重新派发 Subagent 1（同一个 url_safe、同一个 `<OUTPUT_DIR>`），回到步骤 4 重新判断一次——若此次判断仍然需要自优化，直接终止并向用户报告，不再进入步骤 4.5。
+- Subagent 3 报告 `RESULT: GAVE_UP`，或重试后 Subagent 1 仍然满足步骤 4 的自优化触发条件：向用户报告失败（带上 Subagent 1 最新的诊断信息，以及 Subagent 3 报告里的 `ATTEMPTS`/`DIAGNOSIS`，如果有），流程终止，不再派发 Subagent 2。
 
 ### 步骤 5：派发 Subagent 2（打标 + 翻译）
 
@@ -51,7 +61,7 @@ url_safe = re.sub(r'[\x00-\x1f\x7f]', '', url).strip()[:2048]
 
 ### 步骤 6：向用户报告
 
-从 Subagent 2 报告中提取 `TRANSLATION_PATH:`，向用户报告 origin_path 和 translation_path。
+从 Subagent 2 报告中提取 `TRANSLATION_PATH:`，向用户报告 origin_path 和 translation_path。若本次运行中步骤 4.5 曾经出现过 `RESULT: SOLIDIFIED`，额外报告一行：本次抓取新增了未合并分支 `<BRANCH>`，需要用户决定后续（合并/PR/保留）。
 
 ## 参考文件
 
@@ -59,6 +69,8 @@ url_safe = re.sub(r'[\x00-\x1f\x7f]', '', url).strip()[:2048]
 |------|------|
 | `references/subagent1-fetch-prompt.md` | Subagent 1（MCP 抓取）派发 prompt 模板 |
 | `references/subagent2-tag-translate-prompt.md` | Subagent 2（打标 + 翻译）派发 prompt 模板 |
-| `scripts/mcp_fetch_client.py` | 核心脚本：真实 MCP client，调用 browser-fetch-mcp 的 `fetch_article` |
+| `references/subagent-self-optimize-prompt.md` | Subagent 3（自优化，抓取失败/过薄时触发）派发 prompt 模板 |
+| `scripts/mcp_fetch_client.py` | 核心脚本：真实 MCP client，调用 browser-fetch-mcp 的 `fetch_article`，`fetch_and_report` 额外返回诊断字段 |
+| `scripts/mcp_debug_client.py` | 自优化 subagent 用的调试客户端，包装 browser-fetch-mcp 的 `fetch_page`/`evaluate_js` |
 | `scripts/detect_xcom_chrome_profile.py` | 通过 browser-fetch-mcp 的 `list_chrome_profiles` MCP 工具检测哪些 Chrome profile 登录了 x.com，仅供用户确认用，不自动使用检测结果 |
 | `scripts/chrome_profile_config.py` | 读写 browser-fetch-mcp 持久化的默认 chrome_profile（`get`/`set` 子命令） |
