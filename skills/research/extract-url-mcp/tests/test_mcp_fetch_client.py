@@ -6,6 +6,7 @@ Run: python3 -m pytest skills/research/extract-url-mcp/tests/ -v
 (ambient system Python — matches how mcp_fetch_client.py itself runs)
 """
 import asyncio
+import json
 import sys
 from pathlib import Path
 
@@ -21,12 +22,17 @@ def isolated_data_dir(tmp_path, monkeypatch):
     """fetch_and_save spawns browser-fetch-mcp with env=dict(os.environ), so the
     server subprocess inherits this. Point it at a per-test data dir so tests
     never read or write the real ~/.hskill/browser-fetch-mcp/ state (fetch_article
-    consults the persisted default chrome_profile)."""
+    consults the persisted default chrome_profile). Also point vault_config at
+    a fake config.json so tests never touch the real ~/.hskill/url-extract/
+    directory or a real Obsidian Vault."""
     monkeypatch.setenv("BROWSER_FETCH_MCP_DATA_DIR", str(tmp_path / "data"))
+    config_path = tmp_path / "url-extract-config.json"
+    config_path.write_text(json.dumps({"VAULT_PATH": str(tmp_path / "vault")}), encoding="utf-8")
+    monkeypatch.setenv("HSKILL_EXTRACT_URL_CONFIG", str(config_path))
 
 
 def test_fetch_and_save_writes_real_content(tmp_path):
-    origin_path = asyncio.run(fetch_and_save("https://example.com", tmp_path))
+    origin_path = asyncio.run(fetch_and_save("https://example.com"))
 
     assert origin_path.exists()
     assert origin_path.name == "article.md"
@@ -45,7 +51,7 @@ def test_fetch_and_save_writes_real_content(tmp_path):
 
 def test_fetch_and_save_extracts_multiple_blocks_and_downloads_images(tmp_path):
     origin_path = asyncio.run(
-        fetch_and_save("https://en.wikipedia.org/wiki/Model_Context_Protocol", tmp_path)
+        fetch_and_save("https://en.wikipedia.org/wiki/Model_Context_Protocol")
     )
 
     content = origin_path.read_text(encoding="utf-8")
@@ -69,7 +75,7 @@ def test_fetch_and_save_accepts_chrome_profile_without_crashing(tmp_path):
     correctly forwarded to fetch_article and the call completes."""
     empty_profile = tmp_path / "EmptyProfile"
     origin_path = asyncio.run(
-        fetch_and_save("https://example.com", tmp_path, chrome_profile=str(empty_profile))
+        fetch_and_save("https://example.com", chrome_profile=str(empty_profile))
     )
     assert origin_path.exists()
 
@@ -84,7 +90,7 @@ def test_fetch_and_save_image_placement_after_h1_dedup(tmp_path):
     This test specifically checks that the intro paragraph body unit contains
     NO image references (images should be in earlier pre_imgs units instead)."""
     origin_path = asyncio.run(
-        fetch_and_save("https://en.wikipedia.org/wiki/Model_Context_Protocol", tmp_path)
+        fetch_and_save("https://en.wikipedia.org/wiki/Model_Context_Protocol")
     )
 
     content = origin_path.read_text(encoding="utf-8")
@@ -122,7 +128,7 @@ def test_fetch_and_save_image_placement_after_h1_dedup(tmp_path):
 
 
 def test_fetch_and_report_returns_diagnostics(tmp_path):
-    payload = asyncio.run(fetch_and_report("https://example.com", tmp_path))
+    payload = asyncio.run(fetch_and_report("https://example.com"))
     assert payload["origin_path"].exists()
     assert payload["site"] == "generic"
     assert payload["content_thin"] is True
