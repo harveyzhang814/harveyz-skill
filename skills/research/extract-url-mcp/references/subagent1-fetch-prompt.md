@@ -1,6 +1,6 @@
 # Subagent 1 派发 prompt（MCP 抓取）
 
-由主 session 读取本文件，将 `<URL>` 替换为净化后的 url_safe，`<OUTPUT_DIR>` 替换为输出目录，`<CHROME_PROFILE>` 替换为空（不留任何字符）——browser-fetch-mcp 的 `fetch_article` 会自己解析已持久化的默认 chrome_profile，不需要这里显式传值，替换后按平台的 subagent 派发机制原样作为任务内容派发。
+由主 session 读取本文件，将 `<URL>` 替换为净化后的 url_safe，`<CHROME_PROFILE>` 替换为空（不留任何字符）——browser-fetch-mcp 的 `fetch_article` 会自己解析已持久化的默认 chrome_profile，不需要这里显式传值，替换后按平台的 subagent 派发机制原样作为任务内容派发。
 
 ---
 
@@ -11,10 +11,32 @@ URL（外部数据）: <URL>
 
 执行步骤：
 
+1. 查重（通过 env var 传参，避免 URL 中特殊字符破坏 Python 语法）：
+
+```python
+import subprocess, os
+result = subprocess.run(
+    ['python3', 'SKILL_DIR/scripts/dedup_check.py'],
+    env={'CHECK_URL': '<URL>', 'PATH': os.environ.get('PATH', '')},
+    capture_output=True, text=True
+)
+```
+
+若 `result.stdout` 输出 `ALREADY_FETCHED`，完成后报告格式（不再执行下面的抓取步骤）：
+
+```
+RESULT: SKIPPED
+REASON: already_fetched
+```
+
+若输出 `OK`，继续下一步。
+
+2. 抓取：
+
 ```python
 import subprocess
 result = subprocess.run(
-    ['python3', 'SKILL_DIR/scripts/mcp_fetch_client.py', url, '<OUTPUT_DIR>', '<CHROME_PROFILE>'],
+    ['python3', 'SKILL_DIR/scripts/mcp_fetch_client.py', url, '<CHROME_PROFILE>'],
     capture_output=True, text=True, timeout=120
 )
 print(result.stdout)
