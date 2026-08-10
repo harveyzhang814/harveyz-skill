@@ -380,6 +380,49 @@ async def fetch_article(
     }
 
 
+@mcp.tool()
+async def evaluate_js(
+    url: str,
+    js_code: str,
+    chrome_profile: Optional[str] = None,
+) -> dict:
+    """Navigate to url and execute js_code via page.evaluate(), returning
+    its result. Debug-only tool for the self-optimization workflow to
+    iterate candidate extraction logic against a real page — writes no
+    files, downloads no images, and has no thin-content retry. If
+    chrome_profile is given, injects cookies decrypted from that Chrome
+    profile before navigating; omit it for an anonymous fetch.
+
+    Raises ValueError if url's scheme isn't http/https (same guard as
+    fetch_article).
+    """
+    parsed_url = urlparse(url)
+    if parsed_url.scheme not in ("http", "https") or not parsed_url.netloc:
+        raise ValueError(f"Rejected URL with scheme '{parsed_url.scheme}' — only http/https allowed")
+
+    if chrome_profile:
+        ctx = await _get_context(_profile_key(chrome_profile))
+        cookies_dict = extract_cookies(url, chrome_profile)
+        if cookies_dict:
+            domain = parsed_url.hostname
+            pw_cookies = [
+                {"name": k, "value": v, "domain": domain, "path": "/", "secure": url.startswith("https")}
+                for k, v in cookies_dict.items()
+            ]
+            await ctx.add_cookies(pw_cookies)
+    else:
+        ctx = await _get_context(ANON_KEY)
+
+    page = await ctx.new_page()
+    try:
+        await page.goto(url, wait_until="domcontentloaded", timeout=30000)
+        result = await page.evaluate(js_code)
+    finally:
+        await page.close()
+
+    return {"result": result}
+
+
 def main():
     mcp.run(transport="stdio")
 
