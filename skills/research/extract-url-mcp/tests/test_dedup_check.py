@@ -13,10 +13,9 @@ from vault_config import get_article_paths  # noqa: E402
 
 
 @pytest.fixture(autouse=True)
-def isolated_config(tmp_path, monkeypatch):
-    config_path = tmp_path / "config.json"
-    config_path.write_text(json.dumps({"VAULT_PATH": str(tmp_path / "vault")}), encoding="utf-8")
-    monkeypatch.setenv("HSKILL_EXTRACT_URL_CONFIG", str(config_path))
+def valid_vault_config(isolated_vault_config):
+    vault_path = isolated_vault_config.parent / "vault"
+    isolated_vault_config.write_text(json.dumps({"VAULT_PATH": str(vault_path)}), encoding="utf-8")
 
 
 def test_returns_false_when_no_meta_json():
@@ -47,3 +46,18 @@ def test_returns_false_when_meta_json_is_malformed():
     meta_path.parent.mkdir(parents=True, exist_ok=True)
     meta_path.write_text("not valid json{{{", encoding="utf-8")
     assert is_already_fetched(url) is False
+
+
+def test_main_prints_meta_path_when_already_fetched(monkeypatch, capsys):
+    url = "https://example.com/article"
+    meta_path = get_article_paths(url)["meta_path"]
+    meta_path.parent.mkdir(parents=True, exist_ok=True)
+    meta_path.write_text(json.dumps({"source_url": url}), encoding="utf-8")
+    monkeypatch.setenv("CHECK_URL", url)
+
+    from dedup_check import main
+    main()
+
+    captured = capsys.readouterr()
+    assert "ALREADY_FETCHED" in captured.out
+    assert f"META_PATH: {meta_path}" in captured.out

@@ -26,7 +26,12 @@ def is_already_fetched(url: str) -> bool:
 
 def main():
     url = os.environ["CHECK_URL"]
-    print("ALREADY_FETCHED" if is_already_fetched(url) else "OK")
+    if is_already_fetched(url):
+        meta_path = vault_config.get_article_paths(url)["meta_path"]
+        print("ALREADY_FETCHED")
+        print(f"META_PATH: {meta_path}")
+    else:
+        print("OK")
 
 
 if __name__ == "__main__":

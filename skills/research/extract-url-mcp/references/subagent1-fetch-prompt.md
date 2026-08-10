@@ -22,11 +22,12 @@ result = subprocess.run(
 )
 ```
 
-若 `result.stdout` 输出 `ALREADY_FETCHED`，完成后报告格式（不再执行下面的抓取步骤）：
+若 `result.stdout` 第一行是 `ALREADY_FETCHED`，从第二行提取 `META_PATH:` 的值，完成后报告格式（不再执行下面的抓取步骤）：
 
 ```
 RESULT: SKIPPED
 REASON: already_fetched
+META_PATH: {meta_path}
 ```
 
 若输出 `OK`，继续下一步。
@@ -36,7 +37,7 @@ REASON: already_fetched
 ```python
 import subprocess
 result = subprocess.run(
-    ['python3', 'SKILL_DIR/scripts/mcp_fetch_client.py', url, '<CHROME_PROFILE>'],
+    ['python3', 'SKILL_DIR/scripts/mcp_fetch_client.py', '<URL>', '<CHROME_PROFILE>'],
     capture_output=True, text=True, timeout=120
 )
 print(result.stdout)

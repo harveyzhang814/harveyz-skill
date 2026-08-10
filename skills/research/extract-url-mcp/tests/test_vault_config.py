@@ -13,25 +13,19 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
 from vault_config import get_article_paths, get_url_hash, get_vault_path  # noqa: E402
 
 
-@pytest.fixture(autouse=True)
-def isolated_config(tmp_path, monkeypatch):
-    monkeypatch.setenv("HSKILL_EXTRACT_URL_CONFIG", str(tmp_path / "config.json"))
-    return tmp_path / "config.json"
-
-
-def test_get_vault_path_raises_when_config_missing(isolated_config):
+def test_get_vault_path_raises_when_config_missing(isolated_vault_config):
     with pytest.raises(FileNotFoundError):
         get_vault_path()
 
 
-def test_get_vault_path_raises_when_vault_path_key_missing(isolated_config):
-    isolated_config.write_text(json.dumps({"CHROME_PROFILE": "/some/path"}), encoding="utf-8")
+def test_get_vault_path_raises_when_vault_path_key_missing(isolated_vault_config):
+    isolated_vault_config.write_text(json.dumps({"CHROME_PROFILE": "/some/path"}), encoding="utf-8")
     with pytest.raises(KeyError):
         get_vault_path()
 
 
-def test_get_vault_path_reads_configured_value(isolated_config):
-    isolated_config.write_text(json.dumps({"VAULT_PATH": "/fake/vault"}), encoding="utf-8")
+def test_get_vault_path_reads_configured_value(isolated_vault_config):
+    isolated_vault_config.write_text(json.dumps({"VAULT_PATH": "/fake/vault"}), encoding="utf-8")
     assert get_vault_path() == "/fake/vault"
 
 
@@ -41,8 +35,8 @@ def test_get_url_hash_matches_md5_first_8_chars():
     assert get_url_hash(url) == expected
 
 
-def test_get_article_paths_layout(isolated_config):
-    isolated_config.write_text(json.dumps({"VAULT_PATH": "/fake/vault"}), encoding="utf-8")
+def test_get_article_paths_layout(isolated_vault_config):
+    isolated_vault_config.write_text(json.dumps({"VAULT_PATH": "/fake/vault"}), encoding="utf-8")
     url = "https://example.com/article"
     paths = get_article_paths(url)
     url_hash = get_url_hash(url)

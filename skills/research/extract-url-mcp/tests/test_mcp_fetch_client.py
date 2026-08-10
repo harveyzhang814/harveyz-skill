@@ -15,25 +15,26 @@ import pytest
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
 
 from mcp_fetch_client import fetch_and_report, fetch_and_save  # noqa: E402
+from vault_config import get_url_hash  # noqa: E402
 
 
 @pytest.fixture(autouse=True)
-def isolated_data_dir(tmp_path, monkeypatch):
+def isolated_data_dir(isolated_vault_config, tmp_path, monkeypatch):
     """fetch_and_save spawns browser-fetch-mcp with env=dict(os.environ), so the
     server subprocess inherits this. Point it at a per-test data dir so tests
     never read or write the real ~/.hskill/browser-fetch-mcp/ state (fetch_article
-    consults the persisted default chrome_profile). Also point vault_config at
-    a fake config.json so tests never touch the real ~/.hskill/url-extract/
-    directory or a real Obsidian Vault."""
+    consults the persisted default chrome_profile). Also write a valid VAULT_PATH
+    into the conftest-provided shared config.json so tests never touch the real
+    ~/.hskill/url-extract/ directory or a real Obsidian Vault."""
     monkeypatch.setenv("BROWSER_FETCH_MCP_DATA_DIR", str(tmp_path / "data"))
-    config_path = tmp_path / "url-extract-config.json"
-    config_path.write_text(json.dumps({"VAULT_PATH": str(tmp_path / "vault")}), encoding="utf-8")
-    monkeypatch.setenv("HSKILL_EXTRACT_URL_CONFIG", str(config_path))
+    vault_path = isolated_vault_config.parent / "vault"
+    isolated_vault_config.write_text(json.dumps({"VAULT_PATH": str(vault_path)}), encoding="utf-8")
 
 
 def test_fetch_and_save_writes_real_content(tmp_path):
     origin_path = asyncio.run(fetch_and_save("https://example.com"))
 
+    assert origin_path == tmp_path / "vault" / get_url_hash("https://example.com") / "Origin" / "article.md"
     assert origin_path.exists()
     assert origin_path.name == "article.md"
     assert origin_path.parent.name == "Origin"

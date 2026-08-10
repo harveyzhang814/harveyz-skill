@@ -26,6 +26,14 @@ def run() -> Path:
         "FIXED_TAGS_PATH", str(Path.home() / ".hskill" / "url-extract" / "fixed_tags.txt")
     )
     meta_path = vault_config.get_article_paths(url)["meta_path"]
+    expected_article_dir = Path(article_path).resolve().parent.parent
+    if meta_path.parent.resolve() != expected_article_dir:
+        raise RuntimeError(
+            f"ARTICLE_URL doesn't hash to the directory containing ARTICLE_PATH "
+            f"({meta_path.parent} != {expected_article_dir}) — ARTICLE_URL must be "
+            f"byte-identical to the URL used to fetch this article, or dedup "
+            f"silently breaks and a stray meta.json gets written into the vault."
+        )
     article_meta.enforce_tag_separation(article_path, fixed_tags_path)
     article_meta.write_meta_json(url, meta_path, article_path)
     return meta_path

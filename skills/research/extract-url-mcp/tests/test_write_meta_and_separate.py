@@ -10,13 +10,13 @@ import yaml
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
 
 from write_meta_and_separate import run  # noqa: E402
+import vault_config  # noqa: E402
 
 
 @pytest.fixture(autouse=True)
-def isolated_config(tmp_path, monkeypatch):
-    config_path = tmp_path / "config.json"
-    config_path.write_text(json.dumps({"VAULT_PATH": str(tmp_path / "vault")}), encoding="utf-8")
-    monkeypatch.setenv("HSKILL_EXTRACT_URL_CONFIG", str(config_path))
+def valid_vault_config(isolated_vault_config, tmp_path, monkeypatch):
+    vault_path = isolated_vault_config.parent / "vault"
+    isolated_vault_config.write_text(json.dumps({"VAULT_PATH": str(vault_path)}), encoding="utf-8")
     fixed_tags_path = tmp_path / "fixed_tags.txt"
     fixed_tags_path.write_text("ai\n", encoding="utf-8")
     monkeypatch.setenv("FIXED_TAGS_PATH", str(fixed_tags_path))
@@ -24,7 +24,8 @@ def isolated_config(tmp_path, monkeypatch):
 
 def test_run_writes_meta_json_and_moves_candidate_tags(tmp_path, monkeypatch):
     url = "https://example.com/article"
-    article_path = tmp_path / "article.md"
+    article_path = vault_config.get_article_paths(url)["translation_path"]
+    article_path.parent.mkdir(parents=True)
     article_path.write_text(
         "---\n"
         "source_url: https://example.com/article\n"
@@ -49,3 +50,21 @@ def test_run_writes_meta_json_and_moves_candidate_tags(tmp_path, monkeypatch):
     fm = yaml.safe_load(content.split("---")[1])
     assert "ai" in fm["tags"]
     assert fm.get("candidate_tags") in ([], None)
+
+
+def test_run_raises_when_article_url_mismatches_article_path(tmp_path, monkeypatch):
+    """ARTICLE_URL must hash to the same <hash8> directory ARTICLE_PATH lives
+    in — a mismatch means dedup would silently write a stray meta.json
+    elsewhere in the vault. Must fail loudly instead."""
+    real_url = "https://example.com/real-article"
+    wrong_url = "https://example.com/a-totally-different-article"
+    article_path = tmp_path / "vault" / "somehash" / "Translation" / "article.md"
+    article_path.parent.mkdir(parents=True)
+    article_path.write_text(
+        "---\nsource_url: " + real_url + "\ntags: []\n---\n\nBody.\n", encoding="utf-8"
+    )
+    monkeypatch.setenv("ARTICLE_URL", wrong_url)
+    monkeypatch.setenv("ARTICLE_PATH", str(article_path))
+
+    with pytest.raises(RuntimeError):
+        run()
