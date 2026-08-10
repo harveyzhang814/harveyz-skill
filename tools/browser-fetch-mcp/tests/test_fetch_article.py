@@ -47,6 +47,8 @@ async def test_fetch_article_generic_real_network(tmp_path):
     assert payload["block_count"] > 5
     assert payload["char_count"] > 0
     assert payload["content_thin"] is False
+    assert isinstance(payload["code_block_count"], int)
+    assert payload["image_count"] > 0
 
 
 async def test_fetch_article_arxiv_real_network(tmp_path):

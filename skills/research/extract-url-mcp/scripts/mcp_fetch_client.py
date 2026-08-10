@@ -9,8 +9,9 @@ printing the result.
 Written from scratch — does not import or reuse extract-url's scripts.
 
 Usage: python3 mcp_fetch_client.py <url> [chrome_profile]
-Stdout on success: six lines — "ORIGIN_PATH: <path>", "SITE: <site>",
-"BLOCK_COUNT: <n>", "CHAR_COUNT: <n>", "CONTENT_THIN: <bool>",
+Stdout on success: eight lines — "ORIGIN_PATH: <path>", "TITLE: <title>",
+"SITE: <site>", "BLOCK_COUNT: <n>", "CHAR_COUNT: <n>",
+"CODE_BLOCK_COUNT: <n>", "IMAGE_COUNT: <n>", "CONTENT_THIN: <bool>",
 "THIN_RETRY_USED: <bool>".
 
 NOTE ON mcp SDK VERSION: this script runs under the ambient system
@@ -92,9 +93,12 @@ def main():
         print(str(leaf), file=sys.stderr)
         sys.exit(1)
     print(f"ORIGIN_PATH: {payload['origin_path']}")
+    print(f"TITLE: {payload['title']}")
     print(f"SITE: {payload['site']}")
     print(f"BLOCK_COUNT: {payload['block_count']}")
     print(f"CHAR_COUNT: {payload['char_count']}")
+    print(f"CODE_BLOCK_COUNT: {payload['code_block_count']}")
+    print(f"IMAGE_COUNT: {payload['image_count']}")
     print(f"CONTENT_THIN: {payload['content_thin']}")
     print(f"THIN_RETRY_USED: {payload['thin_retry_used']}")
 

@@ -1,6 +1,6 @@
 ---
 name: extract-url-mcp
-version: "0.5.0"
+version: "0.6.0"
 description: "Fetches a URL through browser-fetch-mcp's fetch_article (site-aware extraction: generic/wechat/arxiv/xcom, with image download and a persisted default chrome_profile), tags against extract-url's shared fixed-tag vocabulary, translates, and saves origin + translation into extract-url's real shared Obsidian Vault (VAULT_PATH) with cross-skill URL dedup. Not extract-url's full equivalent yet (no frontmatter auto-repair), but writes real vault content, not a validation-only test directory."
 user_invocable: true
 ---
@@ -63,24 +63,67 @@ result = subprocess.run(
 
 从报告中读取 `RESULT:` 那行。
 
-- 若 `RESULT: SKIPPED`：该 URL 已经抓取过（去重命中），向用户报告"已抓取，跳过"并附上 `META_PATH:` 所在的文章目录，流程终止，不再派发 Subagent 2 或 Subagent 3。
-- 若 `RESULT: OK` 且（`CONTENT_THIN: False`，或 `CONTENT_THIN: True` 但 `THIN_RETRY_USED: False`）：提取 `ORIGIN_PATH:` 那行的值作为 origin_path，跳到步骤 5。`CONTENT_THIN: True` 且 `THIN_RETRY_USED: False` 的情况（例如文章本来就短、或没有配置 chrome_profile 因而从未触发过认证重试）不算需要自优化——没有更多现有手段可以尝试，按正常内容处理。
-- 若 `RESULT: OK` 且 `CONTENT_THIN: True` 且 `THIN_RETRY_USED: True`，或 `RESULT: FAILED`：进入步骤 4.5（自优化）。本次 URL 最多只走一次步骤 4.5——若步骤 4.5 重试后仍然满足这个条件，直接终止流程向用户报告，不再第二次派发自优化 subagent。
+- 若 `RESULT: SKIPPED`：该 URL 已经抓取过（去重命中），提取 `META_PATH:` 那行的值记作 meta_path，向用户输出「已跳过」卡片（步骤 6 卡片格式，标题用 url_safe），流程终止，不再派发 Subagent 2 或 Subagent 3。
+- 若 `RESULT: OK` 且（`CONTENT_THIN: False`，或 `CONTENT_THIN: True` 但 `THIN_RETRY_USED: False`）：提取 `ORIGIN_PATH:`/`TITLE:`/`CODE_BLOCK_COUNT:`/`IMAGE_COUNT:` 那几行的值，分别记作 origin_path / title / code_block_count / image_count——步骤 6 的完成卡片要用，此后各步骤间一直带着这四个值。跳到步骤 5。`CONTENT_THIN: True` 且 `THIN_RETRY_USED: False` 的情况（例如文章本来就短、或没有配置 chrome_profile 因而从未触发过认证重试）不算需要自优化——没有更多现有手段可以尝试，按正常内容处理。
+- 若 `RESULT: OK` 且 `CONTENT_THIN: True` 且 `THIN_RETRY_USED: True`，或 `RESULT: FAILED`：`RESULT: OK` 时提取 `TITLE:` 那行的值记作 title（`RESULT: FAILED` 时没有 title，title 留空，卡片渲染时用 url_safe 代替）；进入步骤 4.5（自优化）。本次 URL 最多只走一次步骤 4.5——若步骤 4.5 重试后仍然满足这个条件，直接终止流程，向用户输出「失败」卡片，不再第二次派发自优化 subagent。
 
 ### 步骤 4.5：派发 Subagent 3（自优化，仅在步骤 4 判定需要时执行）
 
 读取 `references/subagent-self-optimize-prompt.md`，把 `<URL>` 替换为 url_safe，`<CHROME_PROFILE>` 替换为已持久化的默认 chrome_profile（没有则留空，不留任何字符），其余占位符（`<SITE>`/`<BLOCK_COUNT>`/`<CHAR_COUNT>`/`<CONTENT_THIN>`/`<THIN_RETRY_USED>`/`<ERROR>`）替换为 Subagent 1 报告里对应字段的值（`RESULT: FAILED` 时 `<SITE>`/`<BLOCK_COUNT>`/`<CHAR_COUNT>`/`<CONTENT_THIN>`/`<THIN_RETRY_USED>` 全部替换为 `N/A`，`<ERROR>` 替换为 Subagent 1 报告里 `ERROR:` 那行的实际内容；`RESULT: OK` 时 `<ERROR>` 替换为空），按平台的 subagent 派发机制派发。
 
-- Subagent 3 报告 `RESULT: SOLIDIFIED`：记下 `BRANCH:` 的值（步骤 6 汇报要用），重新派发 Subagent 1（同一个 url_safe），回到步骤 4 重新判断一次——若此次判断仍然需要自优化，直接终止并向用户报告，不再进入步骤 4.5。
-- Subagent 3 报告 `RESULT: GAVE_UP`，或重试后 Subagent 1 仍然满足步骤 4 的自优化触发条件：向用户报告失败（带上 Subagent 1 最新的诊断信息，以及 Subagent 3 报告里的 `ATTEMPTS`/`DIAGNOSIS`，如果有），流程终止，不再派发 Subagent 2。
+- Subagent 3 报告 `RESULT: SOLIDIFIED`：记下 `BRANCH:` 的值（步骤 6 汇报要用），重新派发 Subagent 1（同一个 url_safe），回到步骤 4 重新判断一次——若此次判断仍然需要自优化，直接终止并向用户输出「失败」卡片，不再进入步骤 4.5。
+- Subagent 3 报告 `RESULT: GAVE_UP`，或重试后 Subagent 1 仍然满足步骤 4 的自优化触发条件：向用户输出「失败」卡片（步骤 6 卡片格式，原因附上 Subagent 1 最新的诊断信息，以及 Subagent 3 报告里的 `ATTEMPTS`/`DIAGNOSIS`，如果有），流程终止，不再派发 Subagent 2。
 
 ### 步骤 5：派发 Subagent 2（打标 + 翻译）
 
 读取 `references/subagent2-tag-translate-prompt.md`，将其中 `<URL>` 替换为 url_safe，`<ORIGIN_PATH>` 替换为上一步的 origin_path，按当前平台的 subagent 派发机制派发。
 
-### 步骤 6：向用户报告
+### 步骤 6：向用户输出完成卡片
 
-从 Subagent 2 报告中提取 `TRANSLATION_PATH:`，向用户报告 origin_path 和 translation_path。若本次运行中步骤 4.5 曾经出现过 `RESULT: SOLIDIFIED`，额外报告一行：本次抓取新增了未合并分支 `<BRANCH>`，需要用户决定后续（合并/PR/保留）。
+从报告中读取 `RESULT:` 那行。
+
+**成功**（`RESULT: OK`）：提取 `TITLE:`/`TRANSLATION_PATH:`/`CHAR_COUNT:`。读取 translation_path 文件的 frontmatter，取 `description` 字段作为摘要。输出：
+
+```
+── 完成 ──────────────────────────────
+标题  《{TITLE}》
+路径  {translation_path}
+字符  {CHAR_COUNT}
+代码  {步骤 4 记下的 code_block_count} 段
+图片  {步骤 4 记下的 image_count} 张
+摘要  {description}
+──────────────────────────────────────
+```
+
+**部分完成**（`RESULT: FAILED`，即 Subagent 1 已成功但 Subagent 2 失败）：提取 `ORIGIN_PATH:`/`ERROR:`。输出：
+
+```
+── 部分完成 ───────────────────────────
+标题  《{步骤 4 记下的 title}》
+路径  {origin_path}（仅原文）
+原因  {ERROR}
+──────────────────────────────────────
+```
+
+**失败**（Subagent 1 抓取失败，或步骤 4.5 自优化后仍不满足条件）：
+
+```
+── 失败 ──────────────────────────────
+标题  《{title}》（未知则填 url_safe）
+原因  {诊断信息}
+──────────────────────────────────────
+```
+
+**已跳过**（步骤 4 `RESULT: SKIPPED`）：
+
+```
+── 已跳过 ────────────────────────────
+标题  {url_safe}
+原因  已抓取（dedup），META_PATH: {meta_path}
+──────────────────────────────────────
+```
+
+任意状态下，若本次运行中步骤 4.5 曾经出现过 `RESULT: SOLIDIFIED`，在卡片后额外报告一行：本次抓取新增了未合并分支 `<BRANCH>`，需要用户决定后续（合并/PR/保留）。
 
 ## 参考文件
 

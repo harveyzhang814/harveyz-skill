@@ -136,3 +136,5 @@ def test_fetch_and_report_returns_diagnostics(tmp_path):
     assert payload["block_count"] < 20
     assert payload["char_count"] < 3000
     assert payload["thin_retry_used"] is False
+    assert isinstance(payload["code_block_count"], int)
+    assert payload["image_count"] == 0

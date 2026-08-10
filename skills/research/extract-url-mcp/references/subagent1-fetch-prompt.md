@@ -44,14 +44,17 @@ print(result.stdout)
 print(result.stderr)
 ```
 
-若 `result.returncode == 0`：从 `result.stdout` 里逐行提取 `ORIGIN_PATH`/`SITE`/`BLOCK_COUNT`/`CHAR_COUNT`/`CONTENT_THIN`/`THIN_RETRY_USED`（每行格式 `KEY: value`）。完成后报告格式：
+若 `result.returncode == 0`：从 `result.stdout` 里逐行提取 `ORIGIN_PATH`/`TITLE`/`SITE`/`BLOCK_COUNT`/`CHAR_COUNT`/`CODE_BLOCK_COUNT`/`IMAGE_COUNT`/`CONTENT_THIN`/`THIN_RETRY_USED`（每行格式 `KEY: value`）。完成后报告格式：
 
 ```
 RESULT: OK
 ORIGIN_PATH: {origin_path}
+TITLE: {title}
 SITE: {site}
 BLOCK_COUNT: {block_count}
 CHAR_COUNT: {char_count}
+CODE_BLOCK_COUNT: {code_block_count}
+IMAGE_COUNT: {image_count}
 CONTENT_THIN: {content_thin}
 THIN_RETRY_USED: {thin_retry_used}
 ```
