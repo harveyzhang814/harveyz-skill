@@ -84,12 +84,12 @@ git checkout -b fix/<site-slug>-extraction
 - **命中候选 2/3（选择器级别的小差异）**：先检查这类"小差异"是不是已经在别的网站上出现过一次——搜索 `extractors.py` 里是否已经有类似的选择器/`textContent` tweak（例如另一个 `_EXTRACT_JS_<SITE>` 变体只是选择器或 innerText/textContent 不同）。
   - 若是**第一次**出现：为这个网站新增一个最小的 `_EXTRACT_JS_<SITE>` 变体（复制 `_EXTRACT_JS_GENERIC`，只改验证过的那一行），加进 `EXTRACT_JS` 字典，`dispatch_site()` 加一条路由。不动其他网站现有逻辑。
   - 若是**第二次**出现同类小差异：把这次和之前那次一起归纳成一个标准化机制（例如给 `_EXTRACT_JS_GENERIC` 增加一个通过 `page.evaluate(js, config)` 传入的轻量覆盖参数，`config` 里放 `mainSelector`/`useTextContent` 之类的字段，两个网站共用同一段参数化 JS，而不是各自维护一份几乎相同的完整脚本副本）。只动这两个网站相关的代码，不 touch 其他网站。
-- **命中候选 4（认证解决）**：确认现有的 `thin_retry`（`server.py` 里 `is_thin(result)` 触发的自动重试）本该覆盖这个场景但没生效——如果是 bug（例如这个网站被 `dispatch_site()` 错误分类导致没走到重试分支），修 bug；如果是新场景，按候选 2/3 同样的"是否第一次出现"逻辑处理。
+- **命中候选 4（认证解决）**：确认现有的 `thin_retry`（`extractors.py` 里定义的 `is_thin()`，被 `server.py` 里的重试逻辑调用触发的自动重试）本该覆盖这个场景但没生效——如果是 bug（例如这个网站被 `dispatch_site()` 错误分类导致没走到重试分支，或 `server.py` 里判断 `is_thin()` 的重试触发/编排逻辑本身有问题），修 bug（改动可能落在 `extractors.py` 和/或 `server.py`）；如果是新场景，按候选 2/3 同样的"是否第一次出现"逻辑处理。
 - **命中候选 5（全新专属脚本）**：参照 `_EXTRACT_JS_WECHAT`/`_EXTRACT_JS_ARXIV` 当初的模式新增一套完整脚本 + `dispatch_site()` 路由，不动其他网站。
 
 ### Step 4：补测试 + 回归验证
 
-为改动补测试，风格和位置参照 `tools/browser-fetch-mcp/tests/test_extractors.py`（dispatch/抽取逻辑单测）、`tools/browser-fetch-mcp/tests/test_fetch_article.py`（端到端，真实网络）现有模式。跑：
+为改动补测试，风格和位置参照 `tools/browser-fetch-mcp/tests/test_extractors.py`（dispatch/抽取逻辑单测）、`tools/browser-fetch-mcp/tests/test_fetch_article.py`（端到端，真实网络）、`tools/browser-fetch-mcp/tests/test_server.py`（`server.py` 里的重试/编排逻辑单测，命中候选 4 且改动落在 `server.py` 时参照这个）现有模式。跑：
 
 ```bash
 cd tools/browser-fetch-mcp && .venv/bin/pytest tests/ -q
@@ -99,8 +99,11 @@ cd tools/browser-fetch-mcp && .venv/bin/pytest tests/ -q
 
 ### Step 5：提交并停下
 
+把 Step 3/Step 4 里实际改动过的所有文件（可能包括 `extractors.py`、`server.py`，以及新增/修改的测试文件）都 `git add` 上，不要漏掉——用 `git status` 确认没有遗漏的改动，再提交：
+
 ```bash
-git add tools/browser-fetch-mcp/browser_fetch_mcp/extractors.py <改动/新增的测试文件路径>
+git status
+git add <Step 3/Step 4 实际改动的所有文件>
 git commit -m "fix(browser-fetch-mcp): <一句话说明固化的是哪个网站的什么方案>"
 ```
 
