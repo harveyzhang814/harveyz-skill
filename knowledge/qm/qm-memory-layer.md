@@ -4,6 +4,7 @@
 > - [[qm-overview]]（QM 项目整体调研：产品目标、哲学与功能模块分解）
 > - [[qm-execution-layer]]（执行环境层深入分析——记忆之外，agent 状态的另一个家）
 > - [[qm-skills-layer]]（技能层深入分析——同样遵循「索引进 prompt，正文按需读」的成本模型）
+> - [[qm-resolution-layer]]（解析层深入分析——本篇依赖的 `resolution.layers` 由它算出）
 >
 > 调研对象：`yc-software/qm` 的 `src/memory/`
 > 本地路径：`~/Repositories/qm`
@@ -135,6 +136,8 @@ turn 结束（异步，不阻塞回复）
 | `off` | 不注入 |
 | `writable` | 只注入自己能写的那一份 |
 | `visible`（默认） | 注入 writable + **所有 workspace layer 的 scope**（个人 / 频道 / org），去重 |
+
+> **补正**（来自 [[qm-resolution-layer]]）：这里的「所有 workspace layer 的 scope」是一个恒定结构——`[org, 当前会话 scope]`，**DM 时**再加上说话人的每个 team。频道会话里不挂 team 层，所以**频道里读不到团队记忆**。
 
 多份时每份加 `### <scopeId>` 标题（`orchestrator.ts:769`）。然后在 `orchestrator.ts:874` 拼成 prompt block：
 

@@ -4,6 +4,7 @@
 > - [[qm-overview]]（QM 项目整体调研：产品目标、哲学与功能模块分解）
 > - [[qm-memory-layer]]（记忆层深入分析）
 > - [[qm-skills-layer]]（技能层深入分析——E 组的另一半，技能最终物化进这里的沙箱）
+> - [[qm-resolution-layer]]（解析层深入分析——`provision()` 收到的 `layers` 由它算出）
 >
 > 调研对象：`yc-software/qm` 的 `src/sandbox/`、`src/workspace/`、`src/files/`、`src/processes/`、`src/tools/`
 > 本地路径：`~/Repositories/qm`
@@ -119,7 +120,9 @@ capabilitiesLostMovingTo(from, to): string[]
 
 ### 4.1 WorkspaceLayer：读写分层
 
-`provision(layers)` 收的是一组层，每层带 `mode: "rw" | "ro"` 和 `mountPath`。典型是：个人 scope 可写、org scope 只读挂在 `global/`。
+`provision(layers)` 收的是一组层，每层带 `mode: "rw" | "ro"` 和 `mountPath`。
+
+层结构不是「典型」而是**恒定**的（见 [[qm-resolution-layer]] 第 1.1 节）：org 恒为 `ro` 挂在 `global/`，当前会话 scope 恒为 `rw` 挂在根，**team 层只在 DM 会话里追加**（`ro`，挂在 `team-<tid>/`）。
 
 **只读层的物化很讲究**（`ro-layers.ts`）：
 

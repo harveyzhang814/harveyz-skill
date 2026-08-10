@@ -4,6 +4,7 @@
 > - [[qm-overview]]（QM 项目整体调研：产品目标、哲学与功能模块分解）
 > - [[qm-execution-layer]]（执行环境层——技能最终物化进的那台"电脑"）
 > - [[qm-memory-layer]]（记忆层）
+> - [[qm-resolution-layer]]（解析层——技能可见 scope 的顺序由它算出）
 >
 > 调研对象：`yc-software/qm` 的 `src/skills/`
 > 本地路径：`~/Repositories/qm`
@@ -93,6 +94,8 @@ visibleSkillScopes = [ 可写scope(个人或频道), ...团队ro层, org ]
 ```
 
 即 **个人/频道 > 团队 > 组织**。你可以在自己的 DM 里写一个同名 skill 覆盖公司版本，不需要改名、不需要卸载、不需要任何人批准。
+
+> **补正**（来自 [[qm-resolution-layer]]）：「团队」那一段来自 `resolution.layers` 里的非 org 只读层，而这些层**只在 DM 会话里存在**。所以频道会话里的实际解析顺序是「频道 > org」，看不到 team scope——与记忆层、沙箱层同因。
 
 而且这个事实**会告诉模型**——`skillsIndex()` 渲染 prompt 时：
 

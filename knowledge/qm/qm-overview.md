@@ -4,6 +4,7 @@
 > - [[qm-memory-layer]]（记忆层的逐文件深入分析）
 > - [[qm-execution-layer]]（执行环境层深入分析，不含 skills）
 > - [[qm-skills-layer]]（技能层深入分析——注册表、Pack 导入、物化、权限）
+> - [[qm-resolution-layer]]（解析层深入分析——`Resolution` 对象、分层配置、audience floor、prompt 协议）
 >
 > 调研对象：`yc-software/qm`（YC 出品的开源多人 agent harness）
 > 本地路径：`~/Repositories/qm`
@@ -188,7 +189,7 @@ AGENTS.md 里最锋利的几条：
 
 #### C. 上下文解析 —— 「这一轮该带什么进模型」
 
-`resolution/` 是最能体现产品复杂度的模块：
+`resolution/` 是最能体现产品复杂度的模块，**已单独深入分析，见 [[qm-resolution-layer]]**：
 
 - `resolution-service` — 把 (principal, conversation) 解析成一个 `Resolution`：scope、workspace layers、命令策略、安全策略
 - `config-store` — 分层作用域配置（org 设地板，窄 scope 只能收紧）
@@ -264,7 +265,8 @@ AGENTS.md 是写给 coding agent 看的操作手册（`CLAUDE.md` 是它的 syml
 - [[qm-memory-layer]] —— 记忆层（已完成）
 - [[qm-execution-layer]] —— 执行环境层，不含 skills（已完成）
 - [[qm-skills-layer]] —— 技能层，E 组剩下的一半（已完成）
+- [[qm-resolution-layer]] —— 解析层：`Resolution` 对象、四种收紧代数、audience floor、prompt 协议（已完成）
+- 纵切面：一条 Slack 消息从进来到回复送出，中间经过哪些模块、哪些 gate（**下一篇**）
 - `harness/` —— 四个 adapter 一套接口，加 `tape-fold`（回合记录规整）与 `context-compaction`（上下文压缩，与记忆层互补）
-- `resolution/` + `audience-floor` —— 记忆读到了，但在有外部人的房间里，哪些能说？记忆层的输出端约束
-- `security/security-screener` + provenance —— 外部数据进模型前的筛查，与记忆的 provenance 规则是同一套 trust 思路在两个位置的实现
-- 纵切面：一条 Slack 消息从进来到回复送出，中间经过哪些模块、哪些 gate
+- `security/security-screener` + `classify/` + provenance —— 三档 posture 的实际实现；与记忆的 provenance 规则是同一套 trust 思路在两个位置的落地
+- `cron/` + `monitors/` + `wake/` + `runs/` —— 自主工作；`liveActor` 与「autonomous 轮」概念的源头
