@@ -3,11 +3,12 @@
 fetch_article (site-aware extraction: generic/wechat/arxiv/xcom), which
 already assembles the Markdown Origin file itself (output_format defaults
 to "path") and returns its path — this script's only remaining job is
-computing the per-URL article directory and printing that path.
+resolving the shared-vault article directory (via vault_config) and
+printing the result.
 
 Written from scratch — does not import or reuse extract-url's scripts.
 
-Usage: python3 mcp_fetch_client.py <url> <output_dir> [chrome_profile]
+Usage: python3 mcp_fetch_client.py <url> [chrome_profile]
 Stdout on success: six lines — "ORIGIN_PATH: <path>", "SITE: <site>",
 "BLOCK_COUNT: <n>", "CHAR_COUNT: <n>", "CONTENT_THIN: <bool>",
 "THIN_RETRY_USED: <bool>".
@@ -22,7 +23,6 @@ SDK-version-independent: each side just needs to use the attribute
 names its own installed SDK exposes.
 """
 import asyncio
-import hashlib
 import os
 import sys
 from pathlib import Path
@@ -31,21 +31,19 @@ from typing import Optional
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
 
+import vault_config
+
 BROWSER_FETCH_MCP_SH = (
     Path(__file__).resolve().parents[4] / "tools" / "browser-fetch-mcp" / "browser-fetch-mcp.sh"
 )
 
 
-def _hash8(url: str) -> str:
-    return hashlib.md5(url.encode("utf-8")).hexdigest()[:8]
-
-
-async def fetch_and_report(url: str, output_dir: Path, chrome_profile: Optional[str] = None) -> dict:
+async def fetch_and_report(url: str, chrome_profile: Optional[str] = None) -> dict:
     server_params = StdioServerParameters(
         command=str(BROWSER_FETCH_MCP_SH), args=[], env=dict(os.environ)
     )
 
-    article_dir = Path(output_dir) / _hash8(url)
+    article_dir = vault_config.get_article_paths(url)["article_dir"]
     tool_args = {"url": url, "output_dir": str(article_dir), "output_format": "path"}
     if chrome_profile:
         tool_args["chrome_profile"] = chrome_profile
@@ -67,20 +65,19 @@ async def fetch_and_report(url: str, output_dir: Path, chrome_profile: Optional[
     return payload
 
 
-async def fetch_and_save(url: str, output_dir: Path, chrome_profile: Optional[str] = None) -> Path:
-    payload = await fetch_and_report(url, output_dir, chrome_profile)
+async def fetch_and_save(url: str, chrome_profile: Optional[str] = None) -> Path:
+    payload = await fetch_and_report(url, chrome_profile)
     return payload["origin_path"]
 
 
 def main():
-    if len(sys.argv) < 3:
-        print("Usage: mcp_fetch_client.py <url> <output_dir> [chrome_profile]", file=sys.stderr)
+    if len(sys.argv) < 2:
+        print("Usage: mcp_fetch_client.py <url> [chrome_profile]", file=sys.stderr)
         sys.exit(1)
     url = sys.argv[1]
-    output_dir = Path(sys.argv[2])
-    chrome_profile = sys.argv[3] if len(sys.argv) > 3 and sys.argv[3] else None
+    chrome_profile = sys.argv[2] if len(sys.argv) > 2 and sys.argv[2] else None
     try:
-        payload = asyncio.run(fetch_and_report(url, output_dir, chrome_profile))
+        payload = asyncio.run(fetch_and_report(url, chrome_profile))
     except BaseException as e:
         # anyio's TaskGroup (used internally by mcp's stdio_client/ClientSession)
         # wraps exceptions raised inside it in a BaseExceptionGroup, so a bare
