@@ -50,6 +50,48 @@ QM 的答案是**把 scope（作用域）提升为系统的第一等公民**，�
 
 这是产品哲学层面的取舍：不是「一个 agent 服务多人」，而是「**同一个 agent 内核，在 N 个隔离的身份下各活一份**」。个人 DM 里它是你的；频道里它是团队的；两者共享身份与配置，但数据面隔离。
 
+图的形状就是论点：上半部 `personal` 与 `channel` 两个 subgraph 左右对称、互不连线，代表数据面隔离；下方共享一个 agent 内核节点，代表控制面共享。
+
+```mermaid
+flowchart TB
+    subgraph PERSONAL["personal 作用域"]
+        P_MEM["memory"] --- P_FILES["files"]
+        P_KEY["keychain 视图"] --- P_PERM["permissions"]
+        P_CRON["crons"] --- P_WEB["web apps"]
+        P_SANDBOX["持久 sandbox"]
+    end
+
+    subgraph CHANNEL["channel 作用域"]
+        C_MEM["memory"] --- C_FILES["files"]
+        C_KEY["keychain 视图"] --- C_PERM["permissions"]
+        C_CRON["crons"] --- C_WEB["web apps"]
+        C_SANDBOX["持久 sandbox"]
+    end
+
+    PERSONAL ---|"共用"| KERNEL["同一个 agent 内核<br/>身份 / 配置"]
+    CHANNEL ---|"共用"| KERNEL
+    KERNEL -.->|"结构同构"| NOTE["另有 team / org / group<br/>三种 scope，未展开"]
+
+    style PERSONAL fill:#00205B,color:#fff,stroke:#1E4A9A
+    style CHANNEL fill:#003E96,color:#fff,stroke:#1A6AC4
+    style KERNEL fill:#0050B8,color:#fff,stroke:#1A6AC4
+    style NOTE fill:#004060,color:#fff,stroke:#1A5E80
+    style P_MEM fill:#0A2E7A,color:#fff,stroke:#1E4A9A
+    style P_FILES fill:#0A2E7A,color:#fff,stroke:#1E4A9A
+    style P_KEY fill:#0A2E7A,color:#fff,stroke:#1E4A9A
+    style P_PERM fill:#0A2E7A,color:#fff,stroke:#1E4A9A
+    style P_CRON fill:#0A2E7A,color:#fff,stroke:#1E4A9A
+    style P_WEB fill:#0A2E7A,color:#fff,stroke:#1E4A9A
+    style P_SANDBOX fill:#0A2E7A,color:#fff,stroke:#1E4A9A
+    style C_MEM fill:#2A6EAE,color:#fff,stroke:#3A8ACC
+    style C_FILES fill:#2A6EAE,color:#fff,stroke:#3A8ACC
+    style C_KEY fill:#2A6EAE,color:#fff,stroke:#3A8ACC
+    style C_PERM fill:#2A6EAE,color:#fff,stroke:#3A8ACC
+    style C_CRON fill:#2A6EAE,color:#fff,stroke:#3A8ACC
+    style C_WEB fill:#2A6EAE,color:#fff,stroke:#3A8ACC
+    style C_SANDBOX fill:#2A6EAE,color:#fff,stroke:#3A8ACC
+```
+
 ### 2.2 Agent 以「人」的身份行动，而不是以「服务账号」的身份
 
 > QM 的做法沿袭本地编码 agent（OpenCode、Codex、Claude Code）：agent 作为它服务的那个人行动，用那个人的凭证和权限，并且所有行为都被审计。
@@ -97,6 +139,63 @@ background · cron · guidance · share · stay_silent · finish_silently
 
 代码层面：`src/harness/` 下四个 adapter + 一个 `harness-router.ts`；每个 substrate（harness / session store / sandbox / memory）都在接口后面，生产实现通过**一个** `src/wiring.ts` 换进来。所以每个 store 都成对存在——`memory-session-store.ts` / `postgres-session-store.ts`，`local-sandbox.ts` / `aws-sandbox.ts` / `sprites-sandbox.ts`。
 
+四组接口族并列摆开，`wiring.ts` 是唯一把生产实现换进每个接口的注入点；`..|>` 是实现，`..>` 是依赖注入。
+
+```mermaid
+classDiagram
+    class Harness
+    class SessionStore
+    class Sandbox
+    class MemoryService
+    <<interface>> Harness
+    <<interface>> SessionStore
+    <<interface>> Sandbox
+    <<interface>> MemoryService
+
+    class createPiHarness
+    class createClaudeHarness
+    class createCodexHarness
+    class createOpenCodeHarness
+    class createHarnessRouter
+    createPiHarness ..|> Harness
+    createClaudeHarness ..|> Harness
+    createCodexHarness ..|> Harness
+    createOpenCodeHarness ..|> Harness
+    createHarnessRouter ..|> Harness
+
+    class createMemorySessionStore
+    class createPostgresSessionStore
+    createMemorySessionStore ..|> SessionStore
+    createPostgresSessionStore ..|> SessionStore
+
+    class createLocalSandbox
+    class createAwsSandbox
+    class createSpritesSandbox
+    createLocalSandbox ..|> Sandbox
+    createAwsSandbox ..|> Sandbox
+    createSpritesSandbox ..|> Sandbox
+
+    class createMemoryService
+    class createPostgresMemoryService
+    createMemoryService ..|> MemoryService
+    createPostgresMemoryService ..|> MemoryService
+
+    class wiring["wiring.ts"]
+    wiring : 唯一注入点
+    wiring ..> Harness : 生产实现换入
+    wiring ..> SessionStore : 生产实现换入
+    wiring ..> Sandbox : 生产实现换入
+    wiring ..> MemoryService : 生产实现换入
+
+    classDef interfaceStyle fill:#00205B,color:#fff,stroke:#1E4A9A
+    classDef implStyle fill:#0050B8,color:#fff,stroke:#1A6AC4
+    classDef wiringStyle fill:#004060,color:#fff,stroke:#1A5E80
+
+    cssClass "Harness,SessionStore,Sandbox,MemoryService" interfaceStyle
+    cssClass "createPiHarness,createClaudeHarness,createCodexHarness,createOpenCodeHarness,createHarnessRouter,createMemorySessionStore,createPostgresSessionStore,createLocalSandbox,createAwsSandbox,createSpritesSandbox,createMemoryService,createPostgresMemoryService" implStyle
+    cssClass "wiring" wiringStyle
+```
+
 ### 2.6 Durable by default —— 内存里不许留系统要读回的东西
 
 AGENTS.md 专门给这条开了一节，因为它是「反复犯的错误」：
@@ -115,6 +214,23 @@ AGENTS.md 专门给这条开了一节，因为它是「反复犯的错误」：
 配套两个 skill 双向维护边界：`update-qm`（上游 → fork，只 merge 不 rebase）、`upstream-pr`（fork → 上游，推送前扫描 diff / commit / 截图里有没有组织标识）。
 
 README 里还花了一整段解释**为什么必须用 plain clone 而不是 GitHub Fork**：公开仓库的 fork 无法变私有，且 fork 与源仓库共享同一个 object network，push 进去的 commit 能被 SHA 从公开侧拉到。
+
+两条边方向相反，各自的硬约束就是这套治理机制的闭环。
+
+```mermaid
+flowchart LR
+    UPSTREAM["上游仓库<br/>yc-software/qm"]
+    FORK["私有 fork<br/>plain clone"]
+    LAYERS["deploy/layers/{org}/<br/>唯一定制目录，之外逐字节等同上游"]
+
+    UPSTREAM -->|"update-qm 只 merge 不 rebase"| FORK
+    FORK -->|"upstream-pr 扫描组织标识后推送"| UPSTREAM
+    FORK -.->|"组织定制内容锁在"| LAYERS
+
+    style UPSTREAM fill:#00205B,color:#fff,stroke:#1E4A9A
+    style FORK fill:#003E96,color:#fff,stroke:#1A6AC4
+    style LAYERS fill:#2A6EAE,color:#fff,stroke:#3A8ACC
+```
 
 ### 2.8 工程纪律：简化优先、零注释、禁止自审
 
