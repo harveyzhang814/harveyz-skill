@@ -1,6 +1,6 @@
 ---
 name: clip-url
-version: "0.6.0"
+version: "0.7.0"
 description: "Fetches a URL through browser-fetch-mcp's fetch_article (site-aware extraction: generic/wechat/arxiv/xcom, with image download and a persisted default chrome_profile), tags against extract-url's shared fixed-tag vocabulary, translates, and saves origin + translation into extract-url's real shared Obsidian Vault (VAULT_PATH) with cross-skill URL dedup. Not extract-url's full equivalent yet (no frontmatter auto-repair), but writes real vault content, not a validation-only test directory."
 user_invocable: true
 ---
@@ -76,7 +76,7 @@ result = subprocess.run(
 
 ### 步骤 5：派发 Subagent 2（打标 + 翻译）
 
-读取 `references/subagent2-tag-translate-prompt.md`，将其中 `<URL>` 替换为 url_safe，`<ORIGIN_PATH>` 替换为上一步的 origin_path，按当前平台的 subagent 派发机制派发。
+读取 `references/subagent2-tag-translate-prompt.md`，将其中 `<URL>` 替换为 url_safe，`<ORIGIN_PATH>` 替换为上一步的 origin_path，`<CATEGORY>` 替换为调用方提供的分类标签（没有则留空，不留任何字符——人工直接调用本 skill 时通常没有，主要供未来批量/自动化调用方透传），`<FETCH_TYPE>` 替换为调用方提供的抓取类型（没有则留空，不留任何字符，Subagent 2 会按 `manual` 处理），按当前平台的 subagent 派发机制派发。
 
 ### 步骤 6：向用户输出完成卡片
 

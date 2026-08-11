@@ -8,6 +8,7 @@ is already generated cleanly server-side).
 Parameters via environment variables:
   ARTICLE_URL      - source URL
   ARTICLE_PATH     - path to the translated article .md file
+  ARTICLE_CATEGORY - (optional) category label to store in meta.json
   FIXED_TAGS_PATH  - (optional) override path for fixed_tags.txt
 Reads VAULT_PATH via vault_config (shared ~/.hskill/url-extract/config.json,
 or HSKILL_EXTRACT_URL_CONFIG override) to locate <hash8>/meta.json.
@@ -22,6 +23,7 @@ import vault_config
 def run() -> Path:
     url = os.environ["ARTICLE_URL"]
     article_path = os.environ["ARTICLE_PATH"]
+    category = os.environ.get("ARTICLE_CATEGORY", "")
     fixed_tags_path = os.environ.get(
         "FIXED_TAGS_PATH", str(Path.home() / ".hskill" / "url-extract" / "fixed_tags.txt")
     )
@@ -35,7 +37,7 @@ def run() -> Path:
             f"silently breaks and a stray meta.json gets written into the vault."
         )
     article_meta.enforce_tag_separation(article_path, fixed_tags_path)
-    article_meta.write_meta_json(url, meta_path, article_path)
+    article_meta.write_meta_json(url, meta_path, article_path, category)
     return meta_path
 
 
