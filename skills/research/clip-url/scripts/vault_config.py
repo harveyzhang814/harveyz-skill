@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Shared-vault path resolution for extract-url-mcp: reads the same
+"""Shared-vault path resolution for clip-url: reads the same
 ~/.hskill/url-extract/config.json that extract-url writes, so both
 skills' dedup index (meta.json) and article layout live in one place.
 

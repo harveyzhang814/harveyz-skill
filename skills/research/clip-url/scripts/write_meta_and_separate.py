@@ -2,7 +2,7 @@
 """CLI wrapper for Subagent 2: writes <hash8>/meta.json and moves any
 candidate_tags entries matching the shared fixed vocabulary into tags.
 Reimplemented from extract-url's scripts/validate_article.py, minus
-the frontmatter-repair step (not needed — extract-url-mcp's frontmatter
+the frontmatter-repair step (not needed — clip-url's frontmatter
 is already generated cleanly server-side).
 
 Parameters via environment variables:

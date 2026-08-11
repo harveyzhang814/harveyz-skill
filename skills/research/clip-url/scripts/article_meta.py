@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Dedup-record and tag-separation helpers for extract-url-mcp — the
+"""Dedup-record and tag-separation helpers for clip-url — the
 write side of dedup (write_meta_json) and the fixed-vocabulary tag
 matching (load_fixed_tags/enforce_tag_separation), reimplemented from
 extract-url's references/article_utils.py. Only the pieces this skill

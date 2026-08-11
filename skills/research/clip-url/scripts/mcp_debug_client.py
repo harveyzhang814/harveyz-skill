@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Debug MCP client for extract-url-mcp's self-optimization subagent: thin
+"""Debug MCP client for clip-url's self-optimization subagent: thin
 wrappers around browser-fetch-mcp's fetch_page and evaluate_js, used to
 iterate candidate extraction logic against a real page before solidifying
 a fix into browser-fetch-mcp/browser_fetch_mcp/extractors.py.

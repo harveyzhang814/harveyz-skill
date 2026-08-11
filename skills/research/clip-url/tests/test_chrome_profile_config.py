@@ -2,7 +2,7 @@
 subprocess, real MCP stdio protocol, BROWSER_FETCH_MCP_DATA_DIR pointed
 at an isolated tmp_path (never touches the real ~/.hskill config).
 
-Run: python3 -m pytest skills/research/extract-url-mcp/tests/ -v
+Run: python3 -m pytest skills/research/clip-url/tests/ -v
 """
 import os
 import subprocess
