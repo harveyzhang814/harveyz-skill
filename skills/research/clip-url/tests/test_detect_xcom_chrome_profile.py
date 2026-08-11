@@ -3,7 +3,7 @@ browser-fetch-mcp subprocess, real MCP stdio protocol, fixture Chrome
 profile dirs via BROWSER_FETCH_MCP_CHROME_BASE (never touches a real
 Chrome install).
 
-Run: python3 -m pytest skills/research/extract-url-mcp/tests/ -v
+Run: python3 -m pytest skills/research/clip-url/tests/ -v
 """
 import os
 import sqlite3

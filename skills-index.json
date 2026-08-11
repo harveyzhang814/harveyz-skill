@@ -17,7 +17,7 @@
     }
   ],
   "bundleMeta": {
-    "research": "研究工具（extract-url + learn-video + extract-vision + survey-skillrepo + learn-paper + extract-cognition + probe-session）",
+    "research": "研究工具（extract-url + learn-video + extract-vision + survey-skillrepo + learn-paper + extract-cognition + probe-session + clip-url）",
     "creative": "创意工具（capture-todo + capture-insight）",
     "coding": "程序工具（init-workflow + setup-debug + init-goal + question-me + capture-vocab + rephrase + explain-pm）",
     "writing": "写作工具（forge-doc + draw-diagram + manage-dir + migrate-spec）",
@@ -87,6 +87,13 @@
       "bundle": "research",
       "installScope": "project",
       "contentVersion": "1.0.0"
+    },
+    {
+      "path": "research/clip-url",
+      "bundle": "research",
+      "installScope": "project",
+      "contentHash": "9790665941b6d4e9",
+      "contentVersion": "0.6.0"
     },
     {
       "path": "creative/capture-todo",

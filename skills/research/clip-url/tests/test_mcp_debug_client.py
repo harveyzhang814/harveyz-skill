@@ -1,9 +1,9 @@
 """Real network, real browser-fetch-mcp subprocess tests for the debug MCP
-client used by extract-url-mcp's self-optimization subagent to iterate
+client used by clip-url's self-optimization subagent to iterate
 candidate extraction logic against a real page (fetch_page for static HTML
 inspection, evaluate_js for testing candidate extraction JS).
 
-Run: python3 -m pytest skills/research/extract-url-mcp/tests/ -v
+Run: python3 -m pytest skills/research/clip-url/tests/ -v
 (ambient system Python — matches how mcp_fetch_client.py itself runs)
 """
 import asyncio

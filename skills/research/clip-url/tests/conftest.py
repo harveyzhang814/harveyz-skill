@@ -1,4 +1,4 @@
-"""Shared test isolation for extract-url-mcp: points vault_config at a
+"""Shared test isolation for clip-url: points vault_config at a
 fake config.json under tmp_path for every test in this directory (autouse),
 so a test file that forgets to declare its own isolation still can't read
 or write the real ~/.hskill/url-extract/ directory or a real Obsidian

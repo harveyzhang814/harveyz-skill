@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Stage 3 fetch script for extract-url-mcp: calls browser-fetch-mcp's
+"""Stage 3 fetch script for clip-url: calls browser-fetch-mcp's
 fetch_article (site-aware extraction: generic/wechat/arxiv/xcom), which
 already assembles the Markdown Origin file itself (output_format defaults
 to "path") and returns its path — this script's only remaining job is

@@ -24,12 +24,12 @@ Subagent 1 的诊断信息：
 
 工作目录：仓库根目录。**不要新建 git worktree**，直接在当前 checkout 上切分支——紧接着主流程要在同一个工作目录里立刻重试抓取，用的就是这里改动后的代码。
 
-调用 browser-fetch-mcp 用这个已存在的调试客户端（不需要新建）：`skills/research/extract-url-mcp/scripts/mcp_debug_client.py`，提供 `call_fetch_page(url, use_auth=False, chrome_profile=None) -> dict` 和 `call_evaluate_js(url, js_code, chrome_profile=None) -> dict` 两个 async 函数（`call_fetch_page` 返回里 `payload["html"]` 是原始 HTML；`call_evaluate_js` 返回里 `payload["result"]` 是 `js_code` 求值结果）。用法示例：
+调用 browser-fetch-mcp 用这个已存在的调试客户端（不需要新建）：`skills/research/clip-url/scripts/mcp_debug_client.py`，提供 `call_fetch_page(url, use_auth=False, chrome_profile=None) -> dict` 和 `call_evaluate_js(url, js_code, chrome_profile=None) -> dict` 两个 async 函数（`call_fetch_page` 返回里 `payload["html"]` 是原始 HTML；`call_evaluate_js` 返回里 `payload["result"]` 是 `js_code` 求值结果）。用法示例：
 
 ```python
 import asyncio
 import sys
-sys.path.insert(0, "skills/research/extract-url-mcp/scripts")
+sys.path.insert(0, "skills/research/clip-url/scripts")
 from mcp_debug_client import call_fetch_page, call_evaluate_js
 
 html_payload = asyncio.run(call_fetch_page("<URL>"))

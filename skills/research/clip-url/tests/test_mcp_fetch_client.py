@@ -2,7 +2,7 @@
 real MCP stdio protocol, real fetch_article (site-aware extraction with
 image download) — no mocks.
 
-Run: python3 -m pytest skills/research/extract-url-mcp/tests/ -v
+Run: python3 -m pytest skills/research/clip-url/tests/ -v
 (ambient system Python — matches how mcp_fetch_client.py itself runs)
 """
 import asyncio
