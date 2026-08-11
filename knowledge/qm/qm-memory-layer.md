@@ -99,34 +99,61 @@ SELECT pg_advisory_xact_lock(hashtext('memory'), hashtext($1))
 
 > **不对称之处**：文件版的 `replaceIfRevision`（`memory-service.ts:143`）是**读-比-写，无锁**，两个并发调用可能都通过哈希校验。生产走 Postgres 所以无实害，但本地 / 内存形态存在 TOCTOU 窗口。
 
+两条泳道分别对应 `postgres-memory-service.ts` 与 `memory-service.ts` 的 `replaceIfRevision` 实现，时序自上而下。
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant A as 标签页 A
+    participant B as 标签页 B
+    participant PG as Postgres 版
+    participant FS as 文件版
+
+    Note over A,PG: Postgres pg_advisory_xact_lock 按 scope 串行化
+    A ->> PG: replaceIfRevision(scope, seq=5)
+    B ->> PG: replaceIfRevision(scope, seq=5) 排队等锁
+    Note over PG: A 先拿到锁，校验 head seq == 5，INSERT seq=6，COMMIT
+    PG -->> A: true
+    Note over PG: B 随后拿到锁，head seq 已是 6，不等于 5
+    PG -->> B: false, ROLLBACK
+
+    Note over A,FS: 文件版读-比-写，无锁，TOCTOU 窗口
+    A ->> FS: replaceIfRevision(scope, hash=H0)
+    B ->> FS: replaceIfRevision(scope, hash=H0) 同时进行
+    Note over FS: 两次调用都在对方写入前读到 revisionToken == H0
+    FS -->> A: true 写入
+    FS -->> B: true 写入，覆盖 A 的写入
+```
+
 ---
 
 ## 三、一条事实的完整生命周期
 
-```
-用户说话
-   |
-   v
-[turn 执行]  <-- recall: 把 notebook 注入 "## What you remember"
-   |
-   v
-turn 结束（异步，不阻塞回复）
-   |
-   v
-[BurstBuffer]  攒 180s 静默期 或 10 轮，凑成一个 burst
-   |
-   v
-[extractFacts]  一次 LLM oneShot，输出 `- fact` 列表 或 NONE
-   |
-   +--> capture 到 conversation 自己的 notebook
-   |
-   +--> ccCaptureToPersonal：如果是频道/群，抄送一份到发言人的个人 notebook
-   |                        并打上 `(said in #channel)` 标签
-   v
-[foldCapture]  净化 -> 去重 -> 追加 -> 超 300 条砍最老的
-   |
-   v
-累计 10 条后触发 [consolidation]  <-- LLM 输出 UPDATE/DELETE/ADD 动作脚本
+下图是 `per-turn` strategy 的默认路径；`NOFACT` 是 `extractFacts` 判空后的终止分支，其余两条边可以同时触发。
+
+```mermaid
+flowchart TD
+    SPEAK["用户说话"] --> TURN["turn 执行<br/>recall 把 notebook 注入<br/>What you remember"]
+    TURN --> ENDTURN["turn 结束<br/>异步 不阻塞回复"]
+    ENDTURN --> BURST["BurstBuffer<br/>攒 180s 静默期 或 10 轮<br/>凑成一个 burst"]
+    BURST --> EXTRACT["extractFacts<br/>一次 LLM oneShot"]
+    EXTRACT -->|"NONE"| NOFACT["不产出"]
+    EXTRACT -->|"fact 列表"| CAP["capture 到 conversation<br/>自己的 notebook"]
+    EXTRACT -->|"若为频道 / 群"| CC["ccCaptureToPersonal<br/>抄送到发言人个人 notebook<br/>打 said in #channel 标签"]
+    CAP --> FOLD["foldCapture<br/>净化 -> 去重 -> 追加<br/>超 300 条砍最老的"]
+    CC --> FOLD
+    FOLD --> CONSOL["累计 10 条后触发 consolidation<br/>LLM 输出 UPDATE / DELETE / ADD"]
+
+    style SPEAK fill:#00205B,color:#fff,stroke:#1E4A9A
+    style TURN fill:#0050B8,color:#fff,stroke:#1A6AC4
+    style ENDTURN fill:#0050B8,color:#fff,stroke:#1A6AC4
+    style BURST fill:#003E96,color:#fff,stroke:#1A6AC4
+    style EXTRACT fill:#003E96,color:#fff,stroke:#1A6AC4
+    style NOFACT fill:#2A6EAE,color:#fff,stroke:#3A8ACC
+    style CAP fill:#0A2E7A,color:#fff,stroke:#1E4A9A
+    style CC fill:#0A2E7A,color:#fff,stroke:#1E4A9A
+    style FOLD fill:#004060,color:#fff,stroke:#1A5E80
+    style CONSOL fill:#2E0078,color:#fff,stroke:#5A20A0
 ```
 
 ### 3.1 Recall —— 注入哪些笔记本
@@ -266,6 +293,30 @@ if (!trustedProvenance) {
 **任何来自模型或用户的文本，只要试图自己带上 `(2026-01-01)` 或 `(said in X)` 这两个系统语义标记，就会被改写掉。** `(said in X)` 变成 `[claimed source: X]` —— 保留信息，剥夺权威。
 
 这是把 provenance 做成了**系统专属命名空间**，一个非常干净的防注入设计。
+
+实线是「一定发生」，虚线是「满足触发条件才发生」；两条路径最终都要经过同一道 `foldCapture` 信任判定。
+
+```mermaid
+flowchart TD
+    FACTS["extractFacts 产出的事实"] --> OWN["capture 到本 scope 自己的 notebook<br/>author 未设置"]
+    FACTS -.->|"origin 为 channel / group"| ORIGIN{"ccTargetFor 判定<br/>满足触发条件?"}
+    ORIGIN -->|"否"| SKIP["不抄送"]
+    ORIGIN -->|"是"| TAG["打标签 said in source<br/>capture(target=说话人 personal, author=cc:origin)"]
+
+    OWN --> CHECK{"foldCapture:<br/>author 以 cc: 开头?"}
+    TAG --> CHECK
+    CHECK -->|"否 trustedProvenance=false"| SANI["开头 (日期) 降级为 on 日期:<br/>结尾 said in X 降级为 claimed source: X"]
+    CHECK -->|"是 trustedProvenance=true"| KEEP["(日期) 与 said in 原样保留"]
+
+    style FACTS fill:#00205B,color:#fff,stroke:#1E4A9A
+    style OWN fill:#0A2E7A,color:#fff,stroke:#1E4A9A
+    style ORIGIN fill:#003E96,color:#fff,stroke:#1A6AC4
+    style SKIP fill:#2A6EAE,color:#fff,stroke:#3A8ACC
+    style TAG fill:#0A2E7A,color:#fff,stroke:#1E4A9A
+    style CHECK fill:#004060,color:#fff,stroke:#1A5E80
+    style SANI fill:#7B1010,color:#fff,stroke:#B52020
+    style KEEP fill:#1A5E3A,color:#fff,stroke:#2A7E50
+```
 
 ### 5.2 标签在下游被一路尊重
 

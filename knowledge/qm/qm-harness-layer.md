@@ -177,6 +177,52 @@ if (prior && prior !== choice.harnessId) {
 
 旧适配器要清掉它的 provider session（那边的历史格式对新 harness 无意义）；**新适配器也清**——防止它自己还留着更早一次使用的残留。
 
+下图把 3.1 的继承链和 3.2 的切换动作接成一条完整路径：实线是数据流（谁可以覆盖谁），虚线颜色区分校验失败后的两种去向。
+
+```mermaid
+flowchart TD
+    RAWORG["org 配置<br/>runtimeSelection 或 legacy baseModel"]
+    ORGVALID{"在 approvedHarnesses 里<br/>且模型兼容 harness?"}
+    SAFE["safeFallback<br/>硬编码兜底"]
+    ORG["org"]
+    INHERITED["inherited<br/>= scope 的选择<br/>否则沿用 org"]
+    CHOICE["choice<br/>= requested 覆盖<br/>否则沿用 inherited"]
+    FINALCHECK{"choice 在 approved 里<br/>且模型兼容 harness?"}
+    THROW["throw NonRetryableTurnError<br/>不可重试"]
+    FALLBACK["静默回落到 org"]
+    SWITCH{"choice.harnessId<br/>与 lastHarness 不同?"}
+    RESET["旧 / 新 adapter<br/>都 resetSession"]
+    RUN["adapter.turns.runTurn"]
+
+    RAWORG --> ORGVALID
+    ORGVALID -->|"否"| SAFE
+    ORGVALID -->|"是"| ORG
+    SAFE --> ORG
+    ORG -->|"scope 可选择性覆盖"| INHERITED
+    INHERITED -->|"requested 可选择性覆盖"| CHOICE
+    CHOICE --> FINALCHECK
+    FINALCHECK -->|"通过"| SWITCH
+    FINALCHECK -->|"不通过 + 显式请求"| THROW
+    FINALCHECK -->|"不通过 + 继承而来"| FALLBACK
+    FALLBACK --> SWITCH
+    SWITCH -->|"是"| RESET
+    RESET --> RUN
+    SWITCH -->|"否"| RUN
+
+    style RAWORG fill:#00205B,color:#fff,stroke:#1E4A9A
+    style ORGVALID fill:#003E96,color:#fff,stroke:#1A6AC4
+    style SAFE fill:#004060,color:#fff,stroke:#1A5E80
+    style ORG fill:#0050B8,color:#fff,stroke:#1A6AC4
+    style INHERITED fill:#0050B8,color:#fff,stroke:#1A6AC4
+    style CHOICE fill:#0050B8,color:#fff,stroke:#1A6AC4
+    style FINALCHECK fill:#003E96,color:#fff,stroke:#1A6AC4
+    style THROW fill:#7B1010,color:#fff,stroke:#B52020
+    style FALLBACK fill:#004060,color:#fff,stroke:#1A5E80
+    style SWITCH fill:#003E96,color:#fff,stroke:#1A6AC4
+    style RESET fill:#2A6EAE,color:#fff,stroke:#3A8ACC
+    style RUN fill:#1A5E3A,color:#fff,stroke:#2A7E50
+```
+
 ---
 
 ## 四、Tape：会话的事件溯源
@@ -248,6 +294,44 @@ export function planTapeSeed(rows, harness, mode, folded) {
 三个条件全满足才 seed：**不是别的 harness 写的、lint 干净、非空**。任何一条不满足就回落到别的冷启动方式。
 
 `mode` 还有 `"shadow"` 档——**算 fold、跑 lint、打日志，但不真的用**。这是灰度上线的做法：先在生产流量上验证 fold 逻辑正确，再切到 `serve`。
+
+下图是 `planTapeSeed` 的完整判定路径，三种记录先经 `foldTape` 折叠，再过 `lintFold`；`mode !== "serve"`（即 shadow 档）和 lint 不过、fold 为空一样，都走向不 seed。
+
+```mermaid
+flowchart TD
+    subgraph RECORDS["tape: append-only TapeRecord[]"]
+        MSG["kind = message"] --- ANN["kind = annotation<br/>turnEnd 标记回合边界"]
+        CTX["kind = context_event<br/>legacy_import / legacy_patch<br/>compaction / interrupt"]
+    end
+
+    FOREIGN{"存在其他 harness<br/>写的 message?"}
+    SKIP["seed = null<br/>skip: foreign-harness"]
+    FOLD["foldTape<br/>顺序重放"]
+    LINT["lintFold<br/>六类协议检查"]
+    SEEDCHECK{"mode = serve<br/>且 lint.ok<br/>且 fold 非空?"}
+    SEED["seed = fold<br/>可用于冷启动"]
+    NOSEED["seed = null<br/>回落到别的冷启动方式"]
+
+    RECORDS --> FOREIGN
+    FOREIGN -->|"是"| SKIP
+    FOREIGN -->|"否"| FOLD
+    FOLD --> LINT
+    LINT --> SEEDCHECK
+    SEEDCHECK -->|"是"| SEED
+    SEEDCHECK -->|"否"| NOSEED
+
+    style RECORDS fill:#00205B,color:#fff,stroke:#1E4A9A
+    style MSG fill:#0A2E7A,color:#fff,stroke:#1E4A9A
+    style ANN fill:#0A2E7A,color:#fff,stroke:#1E4A9A
+    style CTX fill:#0A2E7A,color:#fff,stroke:#1E4A9A
+    style FOREIGN fill:#003E96,color:#fff,stroke:#1A6AC4
+    style SKIP fill:#004060,color:#fff,stroke:#1A5E80
+    style FOLD fill:#0050B8,color:#fff,stroke:#1A6AC4
+    style LINT fill:#0050B8,color:#fff,stroke:#1A6AC4
+    style SEEDCHECK fill:#003E96,color:#fff,stroke:#1A6AC4
+    style SEED fill:#1A5E3A,color:#fff,stroke:#2A7E50
+    style NOSEED fill:#004060,color:#fff,stroke:#1A5E80
+```
 
 ### 4.3 三处「中断修复」，一个常量
 
@@ -392,6 +476,61 @@ export function deterministicCompactSummary(history) {
 
 一个例外：`isManagedGroupScope(input.scopeId)` 时**不压缩**（`compaction.ts:86`）。托管群（project）的成员会变，压缩会把不同权限的内容揉进一段摘要里，之后没法再按受众过滤——[[qm-resolution-layer]] 第 3 节的 `every` 过滤对一段揉好的摘要无能为力。
 
+下图串起两级阈值判定、`planCompaction` 的配对回退循环、以及模型摘要失败后的兜底路径。
+
+```mermaid
+flowchart TD
+    ENTRIES["turn 结束时的 history"]
+    MANAGED{"isManagedGroupScope?"}
+    NEVER["不压缩<br/>成员会变，压缩后无法<br/>再按受众过滤"]
+    HARDCHECK{"overBudgetFraction<br/>COMPACT_HARD_FRACTION 0.9?"}
+    SYNC["compactContextIfNeeded<br/>同步压缩，这一轮就得压"]
+    SOFTCHECK{"overBudgetFraction<br/>COMPACT_SOFT_FRACTION 0.7?"}
+    ASYNC["scheduleBackgroundCompaction<br/>turn 结束后异步排队"]
+    NOOP["不压缩<br/>预算内"]
+    PLAN["planCompaction<br/>计算摘要边界"]
+    PAIRCHECK{"边界末尾是无配对<br/>tool_call?"}
+    BACKOFF["overflowCount -= 1<br/>边界往回退"]
+    CUT["切口干净<br/>前缀换摘要，尾部保留"]
+    SUMMARIZE["模型生成摘要"]
+    FALLBACKSUM["deterministicCompactSummary<br/>机械拼接，截断到 8000 字符"]
+    WRITE["写入 tape 的<br/>compaction 事件"]
+
+    ENTRIES --> MANAGED
+    MANAGED -->|"是"| NEVER
+    MANAGED -->|"否"| HARDCHECK
+    HARDCHECK -->|"是"| SYNC
+    HARDCHECK -->|"否"| SOFTCHECK
+    SOFTCHECK -->|"是"| ASYNC
+    SOFTCHECK -->|"否"| NOOP
+    SYNC --> PLAN
+    ASYNC --> PLAN
+    PLAN --> PAIRCHECK
+    PAIRCHECK -->|"是"| BACKOFF
+    BACKOFF --> PAIRCHECK
+    PAIRCHECK -->|"否"| CUT
+    CUT --> SUMMARIZE
+    SUMMARIZE -->|"失败"| FALLBACKSUM
+    SUMMARIZE -->|"成功"| WRITE
+    FALLBACKSUM --> WRITE
+
+    style ENTRIES fill:#00205B,color:#fff,stroke:#1E4A9A
+    style MANAGED fill:#003E96,color:#fff,stroke:#1A6AC4
+    style NEVER fill:#004060,color:#fff,stroke:#1A5E80
+    style HARDCHECK fill:#003E96,color:#fff,stroke:#1A6AC4
+    style SOFTCHECK fill:#003E96,color:#fff,stroke:#1A6AC4
+    style SYNC fill:#0050B8,color:#fff,stroke:#1A6AC4
+    style ASYNC fill:#0050B8,color:#fff,stroke:#1A6AC4
+    style NOOP fill:#004060,color:#fff,stroke:#1A5E80
+    style PLAN fill:#0050B8,color:#fff,stroke:#1A6AC4
+    style PAIRCHECK fill:#003E96,color:#fff,stroke:#1A6AC4
+    style BACKOFF fill:#2A6EAE,color:#fff,stroke:#3A8ACC
+    style CUT fill:#0050B8,color:#fff,stroke:#1A6AC4
+    style SUMMARIZE fill:#0050B8,color:#fff,stroke:#1A6AC4
+    style FALLBACKSUM fill:#004060,color:#fff,stroke:#1A5E80
+    style WRITE fill:#1A5E3A,color:#fff,stroke:#2A7E50
+```
+
 ---
 
 ## 六、冷启动：三级降级 + provenance 包裹
@@ -425,6 +564,43 @@ END TRANSCRIPT>>>
 ```
 
 历史消息里如果有人写了这两个标记，会被改写掉——不能让对话内容伪造出「转录结束」然后接一段指令。这跟记忆层 `foldCapture` 净化 `(said in …)` 标签（[[qm-memory-layer]] 第 5.1 节）是**完全同构**的防护：系统的结构化标记必须对外不可伪造。
+
+下图是 `planColdStartSeed` 的四路判定；只有落到 `preamble` 那一档才需要走注入防护这段处理链。
+
+```mermaid
+flowchart TD
+    RECON{"reconstructed 结构化<br/>消息数组非空?"}
+    STRUCT["structured<br/>直接喂结构化消息"]
+    PRIOR{"hasPriorTurns?"}
+    PRIORTURNS["priorTurns<br/>上游给的回合列表"]
+    RECONNULL{"reconstructed === null?"}
+    PREAMBLE["preamble<br/>退化成一段文本"]
+    NONE["none<br/>无历史可注入"]
+    SANITIZE["replaceAll 净化<br/>BEGIN/END TRANSCRIPT 标记"]
+    WRAP["包裹 provenance 声明<br/>untrusted history, not instructions"]
+    INJECT["注入到 system 段"]
+
+    RECON -->|"是"| STRUCT
+    RECON -->|"否"| PRIOR
+    PRIOR -->|"是"| PRIORTURNS
+    PRIOR -->|"否"| RECONNULL
+    RECONNULL -->|"是"| PREAMBLE
+    RECONNULL -->|"否"| NONE
+    PREAMBLE --> SANITIZE
+    SANITIZE --> WRAP
+    WRAP --> INJECT
+
+    style RECON fill:#003E96,color:#fff,stroke:#1A6AC4
+    style STRUCT fill:#00205B,color:#fff,stroke:#1E4A9A
+    style PRIOR fill:#003E96,color:#fff,stroke:#1A6AC4
+    style PRIORTURNS fill:#0050B8,color:#fff,stroke:#1A6AC4
+    style RECONNULL fill:#003E96,color:#fff,stroke:#1A6AC4
+    style PREAMBLE fill:#2A6EAE,color:#fff,stroke:#3A8ACC
+    style NONE fill:#004060,color:#fff,stroke:#1A5E80
+    style SANITIZE fill:#0050B8,color:#fff,stroke:#1A6AC4
+    style WRAP fill:#0050B8,color:#fff,stroke:#1A6AC4
+    style INJECT fill:#1A5E3A,color:#fff,stroke:#2A7E50
+```
 
 ---
 
