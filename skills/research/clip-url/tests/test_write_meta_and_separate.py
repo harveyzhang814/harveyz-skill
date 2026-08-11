@@ -50,6 +50,24 @@ def test_run_writes_meta_json_and_moves_candidate_tags(tmp_path, monkeypatch):
     fm = yaml.safe_load(content.split("---")[1])
     assert "ai" in fm["tags"]
     assert fm.get("candidate_tags") in ([], None)
+    assert meta["category"] == ""
+
+
+def test_run_stores_article_category_when_provided(tmp_path, monkeypatch):
+    url = "https://example.com/article"
+    article_path = vault_config.get_article_paths(url)["article_dir"] / "Translation" / "Example Domain.md"
+    article_path.parent.mkdir(parents=True)
+    article_path.write_text(
+        "---\nsource_url: https://example.com/article\ntags: []\n---\n\nBody.\n", encoding="utf-8"
+    )
+    monkeypatch.setenv("ARTICLE_URL", url)
+    monkeypatch.setenv("ARTICLE_PATH", str(article_path))
+    monkeypatch.setenv("ARTICLE_CATEGORY", "AI/Research")
+
+    meta_path = run()
+
+    meta = json.loads(meta_path.read_text(encoding="utf-8"))
+    assert meta["category"] == "AI/Research"
 
 
 def test_run_raises_when_article_url_mismatches_article_path(tmp_path, monkeypatch):
