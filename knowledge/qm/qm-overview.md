@@ -143,26 +143,80 @@ AGENTS.md 里最锋利的几条：
 
 ### 3.1 分层总览
 
-```
-+- 表面层 plugins/ ------------------------------------+
-|  portal(SSO 唯一公网入口) . web-ui . admin           |
-|  auth(内建邮件登录 IdP) . onboarding . chassis(共享) |
-|  + Slack（in-process 插件，core 启动并监管）         |
-+----------------------+-------------------------------+
-                       | 签名的 HTTP API
-+----------------------v-------------------------------+
-|  Headless Core (src/)                                |
-|  API . 身份 . 策略 . 调度器   <->   Agent Loop        |
-+-------+------------------------------+---------------+
-        |                              |
-   +----v-----+              +---------v----------+
-   | Postgres |              |  Per-scope Sandbox |
-   | 会话/记忆|              | 文件.工具.已登录服务|
-   | /队列    |              +--------------------+
-   +----------+
+```mermaid
+flowchart TB
+    subgraph SURFACE["表面层 plugins/"]
+        PORTAL["portal<br/>SSO 唯一公网入口"] --- WEBUI["web-ui"]
+        ADMIN["admin"] --- AUTHP["auth<br/>内建邮件登录 IdP"]
+        ONBOARD["onboarding"] --- CHASSIS["chassis<br/>共享底座"]
+        SLACK["Slack<br/>in-process 插件"]
+    end
+
+    subgraph CORE["Headless Core<br/>src/"]
+        API["API / 身份 / 策略 / 调度器"] <-->|"驱动"| LOOP["Agent Loop"]
+    end
+
+    SURFACE -->|"签名的 HTTP API"| CORE
+    CORE -.->|"启动并监管"| SLACK
+
+    CORE --> PG["Postgres<br/>会话 / 记忆 / 队列"]
+    CORE --> SANDBOX["Per-scope Sandbox<br/>每 scope 一份<br/>文件 / 工具 / 已登录服务"]
+
+    style SURFACE fill:#00205B,color:#fff,stroke:#1E4A9A
+    style CORE fill:#003E96,color:#fff,stroke:#1A6AC4
+    style PORTAL fill:#0A2E7A,color:#fff,stroke:#1E4A9A
+    style WEBUI fill:#0A2E7A,color:#fff,stroke:#1E4A9A
+    style ADMIN fill:#0A2E7A,color:#fff,stroke:#1E4A9A
+    style AUTHP fill:#0A2E7A,color:#fff,stroke:#1E4A9A
+    style ONBOARD fill:#0A2E7A,color:#fff,stroke:#1E4A9A
+    style CHASSIS fill:#0A2E7A,color:#fff,stroke:#1E4A9A
+    style SLACK fill:#0A2E7A,color:#fff,stroke:#1E4A9A
+    style API fill:#0050B8,color:#fff,stroke:#1A6AC4
+    style LOOP fill:#0050B8,color:#fff,stroke:#1A6AC4
+    style PG fill:#2A6EAE,color:#fff,stroke:#3A8ACC
+    style SANDBOX fill:#2A6EAE,color:#fff,stroke:#3A8ACC
 ```
 
-### 3.2 九组功能模块
+### 3.2 十组功能模块
+
+下图只画 A–J 十个组之间的关系，不下沉到组内的具体模块（那些在下面各组的表格里）。主链是一个回路——G 既是入口也是出口；实线是一次 turn 的必经路径，虚线是异步触发与横切支撑。
+
+```mermaid
+flowchart LR
+    G["G 触达与投递<br/>reach / delivery / surfaces"]
+    B["B 身份 / 授权 / 治理<br/>identity / acl / policy"]
+    C["C 上下文解析<br/>resolution/"]
+    A["A 回合执行内核<br/>orchestrator / harness / runs"]
+    E["E 执行环境<br/>sandbox / skills"]
+    D["D 记忆<br/>memory/"]
+    F["F 凭证与外部服务<br/>credentials / connectors"]
+    H["H 后台自动化<br/>cron / monitors / wake"]
+    I["I 应用发布<br/>deploy/"]
+    J["J 运维与打包<br/>cli / persistence / audit"]
+
+    G -->|"入口"| B
+    B -->|"授权通过"| C
+    C -->|"Resolution"| A
+    A -->|"驱动执行"| E
+    E -->|"结果投递"| G
+    D -->|"记忆注入"| C
+    F -->|"凭证注入"| E
+    H -.->|"自主唤醒"| A
+    E -->|"产出"| I
+    J -.->|"运维支撑"| A
+    J -.->|"运维支撑"| E
+
+    style G fill:#00205B,color:#fff,stroke:#1E4A9A
+    style B fill:#0050B8,color:#fff,stroke:#1A6AC4
+    style C fill:#0050B8,color:#fff,stroke:#1A6AC4
+    style A fill:#003E96,color:#fff,stroke:#1A6AC4
+    style E fill:#0050B8,color:#fff,stroke:#1A6AC4
+    style D fill:#004060,color:#fff,stroke:#1A5E80
+    style F fill:#004060,color:#fff,stroke:#1A5E80
+    style H fill:#2E0078,color:#fff,stroke:#5A20A0
+    style I fill:#1A5E3A,color:#fff,stroke:#2A7E50
+    style J fill:#004060,color:#fff,stroke:#1A5E80
+```
 
 #### A. 回合执行内核 —— 「一次对话怎么跑完」
 
