@@ -107,6 +107,46 @@ visibleSkillScopes = [ 可写scope(个人或频道), ...团队ro层, org ]
 
 Web 端的可见顺序略有不同（`app-skills.ts:220`）：个人 → 你是成员的频道/群 → 团队 → org。多了一步「你确实在那个房间里」的成员校验。
 
+三种上下文各自算出一份 `orderedScopes`，汇入同一个 `resolveFromIndex`；箭头方向即数据流向——三条上边是「输入」，下面两条是解析后的「输出」。
+
+```mermaid
+flowchart TD
+    subgraph DM["DM 会话 visibleSkillScopes"]
+        D1["可写 scope<br/>personal"] --> D2["team 只读层<br/>仅 DM 存在"] --> D3["org"]
+    end
+    subgraph CH["频道会话"]
+        C1["可写 scope<br/>channel"] --> C2["org<br/>看不到 team 层"]
+    end
+    subgraph WEB["Web 端 listVisibleSkills"]
+        W1["personal"] --> W2["你是成员的<br/>channel / group"] --> W3["team"] --> W4["org"]
+    end
+
+    DM --> RESOLVE
+    CH --> RESOLVE
+    WEB --> RESOLVE
+
+    RESOLVE["resolveFromIndex(index, name, orderedScopes)<br/>按顺序取第一个命中"] --> HIT["首个命中 -> skill"]
+    RESOLVE --> REST["其余命中 -> shadowed"]
+    HIT --> PROMPT["skillsIndex() 写入 prompt<br/>若有 shadowed 追加<br/>shadows a broader-scope skill of the same name"]
+
+    style DM fill:#00205B,color:#fff,stroke:#1E4A9A
+    style CH fill:#003E96,color:#fff,stroke:#1A6AC4
+    style WEB fill:#1E5C9E,color:#fff,stroke:#3A8ACC
+    style D1 fill:#0A2E7A,color:#fff,stroke:#1E4A9A
+    style D2 fill:#0A2E7A,color:#fff,stroke:#1E4A9A
+    style D3 fill:#0A2E7A,color:#fff,stroke:#1E4A9A
+    style C1 fill:#0050B8,color:#fff,stroke:#1A6AC4
+    style C2 fill:#0050B8,color:#fff,stroke:#1A6AC4
+    style W1 fill:#2A6EAE,color:#fff,stroke:#3A8ACC
+    style W2 fill:#2A6EAE,color:#fff,stroke:#3A8ACC
+    style W3 fill:#2A6EAE,color:#fff,stroke:#3A8ACC
+    style W4 fill:#2A6EAE,color:#fff,stroke:#3A8ACC
+    style RESOLVE fill:#004060,color:#fff,stroke:#1A5E80
+    style HIT fill:#1A5E3A,color:#fff,stroke:#2A7E50
+    style REST fill:#7B1010,color:#fff,stroke:#B52020
+    style PROMPT fill:#004060,color:#fff,stroke:#1A5E80
+```
+
 ---
 
 ## 三、状态机
@@ -123,6 +163,28 @@ create ──> draft
              │ promote(org)   ← 只有 published + 验签 + 管理员 + 活人
              v
         org 作用域的一份新副本
+```
+
+状态名直接取自源码 `SkillStatus`，转移标签对应 `SkillStore` 的同名方法：
+
+```mermaid
+stateDiagram-v2
+    direction TB
+    classDef archivedStyle fill:#7B1010,stroke:#B52020,color:#fff
+    classDef orgStyle fill:#1A5E3A,stroke:#2A7E50,color:#fff
+
+    state "org 作用域新副本 (published)" as OrgCopy
+
+    [*] --> draft : create()
+    draft --> reviewed : review(reviewer, grantCapabilities) 验签
+    reviewed --> draft : update() 非个人 scope 打回
+    reviewed --> published : publish() 需能力已全部授权
+    published --> draft : update() 非个人 scope 打回
+    published --> archived : archive()
+    published --> OrgCopy : promote(org) 需活人 管理员 验签
+
+    class archived archivedStyle
+    class OrgCopy orgStyle
 ```
 
 四条硬规则：
@@ -271,6 +333,36 @@ const scrub = (s, auth) => auth ? s.split(auth.secret).join("***").split(auth.va
 
 git 报错原文里可能带 token，返回给用户前先擦。
 
+这些防护不是并列清单，是 `fetch()` 里严格的先后顺序——箭头就是调用顺序，红色是拒绝出口：
+
+```mermaid
+flowchart TD
+    START["fetch(pack) / resolveRef(pack)"] --> REF["ref 格式校验<br/>SHA_RE 或 BRANCH_RE"]
+    REF -->|"格式非法"| R1["拒绝: invalid skill pack ref"]
+    REF --> URL["validateRepoUrl<br/>仅 https 且 URL 不带凭证"]
+    URL -->|"protocol 非 https 或带用户名密码"| R2["拒绝: credential-free https"]
+    URL --> DNS["DNS 解析 host<br/>lookup()"]
+    DNS -->|"解析出内网地址"| R3["拒绝: must resolve to<br/>public network address"]
+    DNS --> PIN["钉死解析结果<br/>http.curloptResolve host:port:ip<br/>followRedirects=false, proxy=''"]
+    PIN --> AUTH["opts.resolveAuth(pack)<br/>可选，取凭证"]
+    AUTH --> ENV["gitEnv 隔离<br/>清空 GIT_/SSH_ 环境变量<br/>HOME=临时目录<br/>GIT_ALLOW_PROTOCOL=https"]
+    ENV --> CLONE["git clone --no-checkout<br/>带 auth"]
+    CLONE --> CHECKOUT["git checkout --detach<br/>ref (auth=undefined)"]
+    CHECKOUT --> TREE["readTree 配额<br/>跳过 .git 与 symlink<br/>maxFiles 5000 / maxTotalBytes 32MB"]
+    TREE --> DONE["FetchedRepo { commit, files }"]
+
+    CLONE -.->|"git 调用失败"| SCRUB["scrub() 脱敏错误信息<br/>擦除 auth.secret / auth.value"]
+    CHECKOUT -.->|"git 调用失败"| SCRUB
+
+    style R1 fill:#7B1010,color:#fff,stroke:#B52020
+    style R2 fill:#7B1010,color:#fff,stroke:#B52020
+    style R3 fill:#7B1010,color:#fff,stroke:#B52020
+    style SCRUB fill:#7B1010,color:#fff,stroke:#B52020
+    style DONE fill:#1A5E3A,color:#fff,stroke:#2A7E50
+    style PIN fill:#004060,color:#fff,stroke:#1A5E80
+    style ENV fill:#004060,color:#fff,stroke:#1A5E80
+```
+
 ### 5.2 凭证的作用域校验
 
 `resolvePackAuth` 不是「拿到凭证就用」：
@@ -368,6 +460,34 @@ if (local && deps.ensureSkillTree) {
 命令文本里提到 `skills/<x>/` 就把那棵树铺下去，顺便 `recordUse` 打时间戳。
 
 **为什么这么设计**：prompt 里只放一行索引（name + description + 「去读 SKILL.md」），正文进盒子但不进 context，资产文件连盒子都先不进。三级递进的成本控制。跟记忆层「记忆是索引不是数据仓」是同一条哲学（见 [[qm-memory-layer]] 第十节）。
+
+两级各自的判定都是「算 hash、比对标记、一致则跳过」，形状相同但触发时机不同：
+
+```mermaid
+flowchart TD
+    TURN["每轮 provision 后"] --> IH["indexHash(resolved)"]
+    IH --> IM{"skills/.index 标记<br/>合法且 hash 与 names 一致?"}
+    IM -->|"是"| ISKIP["跳过写盘，直接返回"]
+    IM -->|"否"| IWRITE["按上次 names 清理陈旧路径<br/>写入各 SKILL.md 正文<br/>+ 新 .index 标记"]
+
+    ISKIP --> EXE["agent 调用 execute 执行命令"]
+    IWRITE --> EXE
+    EXE --> MATCH{"命令文本含<br/>skills/{name}/ ?"}
+    MATCH -->|"否"| NOOP["不物化该 skill 的资产"]
+    MATCH -->|"是"| ENSURE["ensureSkillTree(skillDir)"]
+    ENSURE --> TH["treeHash(resolution, bundles)"]
+    TH --> TM{"skills/{name}/.tree<br/>标记合法且 hash 一致?"}
+    TM -->|"是"| TSKIP["跳过写盘"]
+    TM -->|"否"| TWRITE["铺资产文件 + pack bundle<br/>写新 .tree 标记<br/>recordUse 打时间戳"]
+
+    style IM fill:#004060,color:#fff,stroke:#1A5E80
+    style TM fill:#004060,color:#fff,stroke:#1A5E80
+    style MATCH fill:#004060,color:#fff,stroke:#1A5E80
+    style IWRITE fill:#0050B8,color:#fff,stroke:#1A6AC4
+    style TWRITE fill:#0050B8,color:#fff,stroke:#1A6AC4
+    style ISKIP fill:#1A5E3A,color:#fff,stroke:#2A7E50
+    style TSKIP fill:#1A5E3A,color:#fff,stroke:#2A7E50
+```
 
 ### 6.2 标记文件与幂等
 

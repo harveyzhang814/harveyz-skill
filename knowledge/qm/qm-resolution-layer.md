@@ -71,6 +71,44 @@ interface Resolution {
 
 因为第 9 步的 egress floor 要跨人取交集——你必须先把每个人的配置加载好，才能算「所有人都被允许的 host」。`refreshSecurity` 的参数不是「我需要的 scope」，是「这屋子里所有人的 scope」。
 
+第 4 步是唯一有分支的步骤（DM 才追加 team 层），其余九步是严格顺序。
+
+```mermaid
+flowchart TD
+    S1["1. scopeFor(conversation, actor)<br/>-> scope"]
+    S2["2. liveConfigScopes =<br/>org + scope + personal(actor)<br/>+ audience 每人的 personal/team"]
+    S3["3. config.refreshSecurity(...)"]
+    S4["4. layers = org(ro, global)<br/>+ scope(rw, root)"]
+    D4{"isDm && actor.teamIds?"}
+    S4T["追加 team(ro, team-tid)<br/>每个 actor.teamIds"]
+    S5["5. systemPrompt = soul 拼接"]
+    S6["6. commandPolicy = composePolicy(orgPolicy, scopePolicy)"]
+    S7["7. securityPolicy = resolveSecurityPolicy(<br/>getSecurityPostureDurable(scope))"]
+    S8["8. approvalGrantModes = getApprovalGrantModesDurable(scope)"]
+    S9["9. egress = allowedHosts: audienceEgressFloor,<br/>deniedHosts: audienceDeniedFloor"]
+    S10["10. grantedHandles = acl.handlesForAudience(...)"]
+    RES["Resolution"]
+
+    S1 --> S2 --> S3 --> S4 --> D4
+    D4 -->|"是"| S4T --> S5
+    D4 -->|"否"| S5
+    S5 --> S6 --> S7 --> S8 --> S9 --> S10 --> RES
+
+    style S1 fill:#0A2E7A,color:#fff,stroke:#1E4A9A
+    style S2 fill:#0A2E7A,color:#fff,stroke:#1E4A9A
+    style S3 fill:#0A2E7A,color:#fff,stroke:#1E4A9A
+    style S4 fill:#0050B8,color:#fff,stroke:#1A6AC4
+    style D4 fill:#0050B8,color:#fff,stroke:#1A6AC4
+    style S4T fill:#0050B8,color:#fff,stroke:#1A6AC4
+    style S5 fill:#0050B8,color:#fff,stroke:#1A6AC4
+    style S6 fill:#0050B8,color:#fff,stroke:#1A6AC4
+    style S7 fill:#0050B8,color:#fff,stroke:#1A6AC4
+    style S8 fill:#0050B8,color:#fff,stroke:#1A6AC4
+    style S9 fill:#2A6EAE,color:#fff,stroke:#3A8ACC
+    style S10 fill:#2A6EAE,color:#fff,stroke:#3A8ACC
+    style RES fill:#00205B,color:#fff,stroke:#1E4A9A
+```
+
 ### 1.2 scope 从哪来（3 行）
 
 ```js
@@ -190,6 +228,43 @@ principalScopes(p) = { org, contextScope, personal(p), ...teams(p) }
 
 一个承包商加进项目频道，频道的 egress 立刻收缩到承包商也被允许的那些 host——不需要任何人手动改配置。
 
+绿色路径（允许）在跨人合并时取交集，红色路径（拒绝）取并集——两条路径的合并方向刚好相反：
+
+```mermaid
+flowchart TD
+    subgraph PA["Principal A"]
+        PA_SCOPES["principalScopes(A) =<br/>org + scope + personal(A)<br/>+ team(A)*"]
+    end
+    subgraph PB["Principal B"]
+        PB_SCOPES["principalScopes(B) =<br/>org + scope + personal(B)<br/>+ team(B)*"]
+    end
+
+    PA_SCOPES --> PA_ALLOW["principalEgressHosts(A)"]
+    PA_SCOPES --> PA_DENY["principalDeniedHosts(A)"]
+    PB_SCOPES --> PB_ALLOW["principalEgressHosts(B)"]
+    PB_SCOPES --> PB_DENY["principalDeniedHosts(B)"]
+
+    PA_ALLOW --> FLOOR_ALLOW["audienceEgressFloor<br/>交集"]
+    PB_ALLOW --> FLOOR_ALLOW
+    PA_DENY --> FLOOR_DENY["audienceDeniedFloor<br/>并集"]
+    PB_DENY --> FLOOR_DENY
+
+    FLOOR_ALLOW --> EGRESS["Resolution.egress"]
+    FLOOR_DENY --> EGRESS
+
+    style PA fill:#00205B,color:#fff,stroke:#1E4A9A
+    style PB fill:#003E96,color:#fff,stroke:#1A6AC4
+    style PA_SCOPES fill:#0A2E7A,color:#fff,stroke:#1E4A9A
+    style PB_SCOPES fill:#2A6EAE,color:#fff,stroke:#3A8ACC
+    style PA_ALLOW fill:#1A5E3A,color:#fff,stroke:#2A7E50
+    style PB_ALLOW fill:#1A5E3A,color:#fff,stroke:#2A7E50
+    style FLOOR_ALLOW fill:#1A5E3A,color:#fff,stroke:#2A7E50
+    style PA_DENY fill:#7B1010,color:#fff,stroke:#B52020
+    style PB_DENY fill:#7B1010,color:#fff,stroke:#B52020
+    style FLOOR_DENY fill:#7B1010,color:#fff,stroke:#B52020
+    style EGRESS fill:#0050B8,color:#fff,stroke:#1A6AC4
+```
+
 同一逻辑也用在历史过滤上（`context-filter.ts`）：
 
 ```js
@@ -238,6 +313,28 @@ async function memberOfSharedScope(deps, kind, ref, principalId, fullScope) {
 ```
 
 **目录不可靠时，用「会话参与史」兜底。** Slack 频道列表是异步同步的，新加入的人可能还没进目录；但如果他在这个 scope 里说过话，那他显然在场。
+
+```mermaid
+flowchart TD
+    START["memberOfSharedScope(kind, ref,<br/>principalId, fullScope)"]
+    CHECK{"sharedScopeMembership(...)"}
+    TRUE_R["返回 true<br/>确认是成员"]
+    FALSE_R["返回 false<br/>确认不是"]
+    FALLBACK["sessions.listByParticipant(principalId)<br/>.some(s.scopeId === fullScope)"]
+
+    START --> CHECK
+    CHECK -->|"true"| TRUE_R
+    CHECK -->|"false"| FALSE_R
+    CHECK -->|"undefined (未同步)"| FALLBACK
+    FALLBACK -->|"命中"| TRUE_R
+    FALLBACK -->|"未命中"| FALSE_R
+
+    style START fill:#0A2E7A,color:#fff,stroke:#1E4A9A
+    style CHECK fill:#0050B8,color:#fff,stroke:#1A6AC4
+    style FALLBACK fill:#004060,color:#fff,stroke:#1A5E80
+    style TRUE_R fill:#1A5E3A,color:#fff,stroke:#2A7E50
+    style FALSE_R fill:#7B1010,color:#fff,stroke:#B52020
+```
 
 ### 4.2 读 / 写 / 管，三套不同的规则
 

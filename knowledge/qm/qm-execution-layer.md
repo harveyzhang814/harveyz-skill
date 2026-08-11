@@ -75,6 +75,34 @@ capabilitiesLostMovingTo(from, to): string[]
 
 这个函数只有一个调用者：迁移器。它把「换后端」从一个运维动作变成了一次**明码标价的交易**。
 
+下图是能力协商机制本身的运行时视角（对应 2.1-2.3）：红色是失败终点，绿色是正常调用。
+
+```mermaid
+flowchart TB
+    PROFILE["每个后端: sandbox.profile: AgentComputerProfile<br/>backend / writablePersistence /<br/>processSessions / egressEnforcement"]
+    CALLER["调用方需要可选能力<br/>如 startProcess"]
+    GUARD{"supportsProcessSessions(sandbox)<br/>profile.processSessions === true<br/>且 5 个方法都是 function？"}
+    OK["调用 sandbox.startProcess(...)"]
+    ERR["throw CapabilityUnsupportedError"]
+    DIFF["capabilitiesLostMovingTo(from, to)<br/>比对 SANDBOX_CAPABILITIES<br/>+ ENFORCEMENT_RANK"]
+    LOST["返回会丢失的能力清单<br/>供迁移五道闸第5闸使用"]
+
+    PROFILE --> GUARD
+    CALLER --> GUARD
+    GUARD -->|"是"| OK
+    GUARD -->|"否"| ERR
+    PROFILE --> DIFF
+    DIFF --> LOST
+
+    style PROFILE fill:#00205B,color:#fff,stroke:#1E4A9A
+    style CALLER fill:#003E96,color:#fff,stroke:#1A6AC4
+    style GUARD fill:#0050B8,color:#fff,stroke:#1A6AC4
+    style OK fill:#1A5E3A,color:#fff,stroke:#2A7E50
+    style ERR fill:#7B1010,color:#fff,stroke:#B52020
+    style DIFF fill:#0050B8,color:#fff,stroke:#1A6AC4
+    style LOST fill:#2A6EAE,color:#fff,stroke:#3A8ACC
+```
+
 ---
 
 ## 三、四个后端
@@ -328,6 +356,60 @@ provision 两边 -> copyHome -> 写路由表 -> sleep(settleMs)
 
 整个操作包在 `advisoryLock.withLock("sandbox-migration:<scope>")` 里，跨实例互斥。
 
+下图是 `migrateScope` 的五道闸与闸后步骤：红色为拒绝终点，绿色为收尾。
+
+```mermaid
+flowchart TB
+    START["migrateScope(scopeId, to, reason?, opts?)"]
+    G1{"backends[to] 已构造？"}
+    R1["报错: 目标后端未在本部署构造"]
+    G2{"from === to？"}
+    R2["报错: scope is already on to"]
+    G3{"route?.pinned？"}
+    R3["报错: 先 unpin"]
+    G4{"hasLiveWork(scopeId)？"}
+    R4["报错: 有在跑的后台任务，先停掉"]
+    G5{"capabilitiesLostMovingTo(from, to)<br/>非空 且 !force？"}
+    R5["报错: 列出会丢失的能力<br/>带 force 才能继续"]
+    COPY["provision 两边<br/>copyHome<br/>routes.put(routeRow)"]
+    SETTLE["sleep(settleMs)"]
+    CHECK{"源上 find -newermt startedAtIso<br/>有新文件？"}
+    RESYNC["再 copyHome 一次<br/>routes.put<br/>resynced = true"]
+    PARK["两边 teardown（park）"]
+
+    START --> G1
+    G1 -->|"否"| R1
+    G1 -->|"是"| G2
+    G2 -->|"是"| R2
+    G2 -->|"否"| G3
+    G3 -->|"是"| R3
+    G3 -->|"否"| G4
+    G4 -->|"是"| R4
+    G4 -->|"否"| G5
+    G5 -->|"是"| R5
+    G5 -->|"否（含 force）"| COPY
+    COPY --> SETTLE --> CHECK
+    CHECK -->|"有"| RESYNC --> PARK
+    CHECK -->|"无"| PARK
+
+    style START fill:#00205B,color:#fff,stroke:#1E4A9A
+    style G1 fill:#0050B8,color:#fff,stroke:#1A6AC4
+    style G2 fill:#0050B8,color:#fff,stroke:#1A6AC4
+    style G3 fill:#0050B8,color:#fff,stroke:#1A6AC4
+    style G4 fill:#0050B8,color:#fff,stroke:#1A6AC4
+    style G5 fill:#0050B8,color:#fff,stroke:#1A6AC4
+    style R1 fill:#7B1010,color:#fff,stroke:#B52020
+    style R2 fill:#7B1010,color:#fff,stroke:#B52020
+    style R3 fill:#7B1010,color:#fff,stroke:#B52020
+    style R4 fill:#7B1010,color:#fff,stroke:#B52020
+    style R5 fill:#7B1010,color:#fff,stroke:#B52020
+    style COPY fill:#003E96,color:#fff,stroke:#1A6AC4
+    style SETTLE fill:#2A6EAE,color:#fff,stroke:#3A8ACC
+    style CHECK fill:#0050B8,color:#fff,stroke:#1A6AC4
+    style RESYNC fill:#2A6EAE,color:#fff,stroke:#3A8ACC
+    style PARK fill:#1A5E3A,color:#fff,stroke:#2A7E50
+```
+
 ---
 
 ## 七、进程生命周期：三层真相
@@ -353,6 +435,43 @@ provision 两边 -> copyHome -> 写路由表 -> sleep(settleMs)
 - `markStatus` 返回 false（别人已经改了）也 `continue`，防止重复计数
 
 **独立的第四层**：`reapDeepIdle`（只有 AWS 实现）——回收长时间空闲的整台机器，由 wiring 里的 sweeper 按分数间隔驱动。
+
+下图整合本节与 5.1 的细节，画出单个后台进程从启动到被判定 exited/reaped 的完整路径：绿色为正常终点，红色为升级失败。
+
+```mermaid
+flowchart TB
+    START["startProcess()<br/>写 .agent-proc/{id}/{cmd,env,cwd,started,boot}<br/>setsid 启动"]
+    RUN["running（ProcessRecord.status）"]
+    BOXEXIT["盒子里 code 文件已写"]
+    BOOTCHK{"下次 readProcess/listProcesses<br/>触发 REAP_SH：<br/>boot_id 与启动时的 boot 一致？"}
+    RECONCILE["reconcileProcesses()<br/>markStatus(exited)"]
+    TERM["signalProcess(TERM)<br/>awaitProcessExit(termGraceMs=5000)"]
+    KILL["signalProcess(KILL)<br/>awaitProcessExit(killGraceMs=2000)"]
+    REAPED["markStatus(reaped)"]
+    FAIL["throw Error('process survived TERM+KILL')<br/>sweep() 捕获后 continue，下一轮再试"]
+
+    START --> RUN
+    RUN -->|"命令退出 / 收到信号<br/>trap 写 code"| BOXEXIT
+    RUN -->|"读取时触发检查"| BOOTCHK
+    BOOTCHK -->|"否，写 code=137（REBOOT_RC）"| BOXEXIT
+    BOOTCHK -->|"是"| RUN
+    BOXEXIT --> RECONCILE
+    RUN -->|"registry.listExpired() 到期"| TERM
+    TERM -->|"termGraceMs 内退出"| REAPED
+    TERM -->|"未退出"| KILL
+    KILL -->|"killGraceMs 内退出"| REAPED
+    KILL -->|"仍未退出"| FAIL
+
+    style START fill:#00205B,color:#fff,stroke:#1E4A9A
+    style RUN fill:#003E96,color:#fff,stroke:#1A6AC4
+    style BOXEXIT fill:#0050B8,color:#fff,stroke:#1A6AC4
+    style BOOTCHK fill:#0050B8,color:#fff,stroke:#1A6AC4
+    style RECONCILE fill:#2A6EAE,color:#fff,stroke:#3A8ACC
+    style TERM fill:#0050B8,color:#fff,stroke:#1A6AC4
+    style KILL fill:#0050B8,color:#fff,stroke:#1A6AC4
+    style REAPED fill:#1A5E3A,color:#fff,stroke:#2A7E50
+    style FAIL fill:#7B1010,color:#fff,stroke:#B52020
+```
 
 ---
 
