@@ -32,3 +32,51 @@ test('hskill_list is registered and returns the real skill list as JSON', async 
     await server.close()
   }
 })
+
+test('hskill_status returns valid JSON', async () => {
+  const { client, server } = await connectedClient()
+  try {
+    const result = await client.callTool({ name: 'hskill_status', arguments: {} })
+    assert.equal(result.isError, undefined)
+    JSON.parse(result.content[0].text)
+  } finally {
+    await client.close()
+    await server.close()
+  }
+})
+
+test('hskill_outdated returns valid JSON', async () => {
+  const { client, server } = await connectedClient()
+  try {
+    const result = await client.callTool({ name: 'hskill_outdated', arguments: {} })
+    assert.equal(result.isError, undefined)
+    JSON.parse(result.content[0].text)
+  } finally {
+    await client.close()
+    await server.close()
+  }
+})
+
+test('hskill_info returns detail for a known skill', async () => {
+  const { client, server } = await connectedClient()
+  try {
+    const result = await client.callTool({ name: 'hskill_info', arguments: { name: 'survey-skillrepo' } })
+    assert.equal(result.isError, undefined)
+    const parsed = JSON.parse(result.content[0].text)
+    assert.equal(parsed.name, 'survey-skillrepo')
+  } finally {
+    await client.close()
+    await server.close()
+  }
+})
+
+test('hskill_info reports an MCP error for an unknown name', async () => {
+  const { client, server } = await connectedClient()
+  try {
+    const result = await client.callTool({ name: 'hskill_info', arguments: { name: 'does-not-exist' } })
+    assert.equal(result.isError, true)
+  } finally {
+    await client.close()
+    await server.close()
+  }
+})
