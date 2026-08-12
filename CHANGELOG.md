@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- `hskill mcp`：新增 MCP（Model Context Protocol）服务器子命令，以 stdio 方式暴露 8 个工具（`hskill_list`/`hskill_status`/`hskill_outdated`/`hskill_info`/`hskill_install`/`hskill_uninstall`/`hskill_hooks`/`hskill_update`），供 MCP 兼容的 agent host（Claude Code、Claude Desktop、Cursor 等）直接调用 hskill 的操作
+
 ## [0.25.1] - 2026-07-22
 
 ### Fixed

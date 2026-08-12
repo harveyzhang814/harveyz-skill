@@ -134,6 +134,40 @@ hskill hooks uninstall check-similar-branch --scope project    # 从当前项目
 
 ---
 
+## MCP Server
+
+`hskill mcp` 会启动一个基于 stdio 的 MCP（Model Context Protocol）服务器，让 MCP 兼容的 agent host（Claude Code、Claude Desktop、Cursor 等）可以直接调用 hskill 的操作，而不需要人工手动执行 CLI 命令。
+
+暴露的 8 个工具：
+
+| 工具 | 说明 |
+|------|------|
+| **hskill_list** | 列出所有可用的 skill 和 bundle |
+| **hskill_status** | 显示所有 skill、工具、hook 在各个 target 上的安装状态 |
+| **hskill_outdated** | 列出有可用更新的 skill 和工具 |
+| **hskill_info** | 显示指定 skill 或工具的安装详情 |
+| **hskill_install** | 安装一个 bundle、指定 skill 或 shell 工具 |
+| **hskill_uninstall** | 卸载指定的 skill 或 shell 工具 |
+| **hskill_hooks** | 查看、安装或卸载 hskill git hooks |
+| **hskill_update** | 将 hskill 自身更新到最新版本 |
+
+在 MCP host 的配置中注册（假设已通过 `npm install -g harveyz-skill` 全局安装）：
+
+```json
+{
+  "mcpServers": {
+    "hskill": {
+      "command": "hskill",
+      "args": ["mcp"]
+    }
+  }
+}
+```
+
+本地源码开发时，可将 `command` 换成 `node`，`args` 换成 `["bin/cli.js", "mcp"]`。
+
+---
+
 ## Skill 开发指南
 
 ### 目录结构

@@ -51,6 +51,7 @@ function printHelp() {
     hskill uninstall <tool> --yes      skip all confirmations (incl. config files)
     hskill uninstall <skill> --scope <s> --target <t>  uninstall a skill
     hskill update                  update hskill to the latest version
+    hskill mcp                     start an MCP server (stdio) exposing hskill's tools to MCP-capable agent hosts
     hskill version                 show version
     hskill --help                  show this help
 
@@ -137,6 +138,10 @@ if (args[0] === '--help' || args[0] === '-h') {
         {
           name: 'update',
           description: 'Update hskill to the latest version via npm',
+        },
+        {
+          name: 'mcp',
+          description: "Start an MCP server (stdio) exposing hskill's tools to MCP-capable agent hosts",
         },
         {
           name: 'version',
