@@ -51,6 +51,7 @@ function printHelp() {
     hskill uninstall <tool> --yes      skip all confirmations (incl. config files)
     hskill uninstall <skill> --scope <s> --target <t>  uninstall a skill
     hskill update                  update hskill to the latest version
+    hskill mcp                     start an MCP server (stdio) exposing hskill's tools to MCP-capable agent hosts
     hskill version                 show version
     hskill --help                  show this help
 
@@ -139,6 +140,10 @@ if (args[0] === '--help' || args[0] === '-h') {
           description: 'Update hskill to the latest version via npm',
         },
         {
+          name: 'mcp',
+          description: "Start an MCP server (stdio) exposing hskill's tools to MCP-capable agent hosts",
+        },
+        {
           name: 'version',
           description: 'Print version and exit',
         },
@@ -187,6 +192,20 @@ if (subcommand === 'update') {
     console.log('')
   }
   process.exit(0)
+}
+
+// ── MCP server ───────────────────────────────────────────────────────────────
+if (subcommand === 'mcp') {
+  const { startServer } = await import('../lib/mcp-server.js')
+  await startServer()
+  // StdioServerTransport keeps stdin/stdout open for JSON-RPC. bin/cli.js is a
+  // flat top-level script with no early-return mechanism (this is a real ES
+  // module, so a bare top-level `return` is a syntax error) — every other
+  // subcommand block ends itself with process.exit(), which we can't do here
+  // without killing the server we just started. Blocking on a promise that
+  // never resolves is what stops execution from falling through into the
+  // generic install-arg parsing near the end of this file.
+  await new Promise(() => {})
 }
 
 // ── List ─────────────────────────────────────────────────────────────────────
@@ -476,7 +495,9 @@ if (subcommand === 'info') {
 if (subcommand === 'uninstall') {
   const nameToRemove = args[1]
   if (!nameToRemove || nameToRemove.startsWith('--')) {
-    console.error(chalk.red('  ✗ Usage: hskill uninstall <tool-or-skill-name> [--yes] [--scope user|project] [--target claude|...]'))
+    const msg = 'Usage: hskill uninstall <tool-or-skill-name> [--yes] [--scope user|project] [--target claude|...]'
+    if (jsonFlag) process.stderr.write(JSON.stringify({ error: true, message: msg }) + '\n')
+    else console.error(chalk.red('  ✗ ' + msg))
     process.exit(1)
   }
 
@@ -492,13 +513,24 @@ if (subcommand === 'uninstall') {
   const isSkill = skillItems2.some(s => s.skillName === nameToRemove)
 
   if (!isTool && !isSkill) {
-    console.error(chalk.red(`  ✗ Unknown tool or skill: "${nameToRemove}"`))
+    const msg = `Unknown tool or skill: "${nameToRemove}"`
+    if (jsonFlag) process.stderr.write(JSON.stringify({ error: true, message: msg }) + '\n')
+    else console.error(chalk.red('  ✗ ' + msg))
     process.exit(1)
   }
 
   if (isTool) {
+    // uninstallTool logs unconditional chalk status lines via console.error;
+    // suppress them in --json mode so they don't pollute stderr JSON output.
+    const originalError = jsonFlag ? console.error : null
+    if (jsonFlag) console.error = () => {}
     const { removed, failed } = await uninstallTool(nameToRemove, { yes: yesFlag })
-    if (removed.length > 0) console.error(chalk.green.bold(`✔ ${nameToRemove} uninstalled`))
+    if (jsonFlag) {
+      console.error = originalError
+      console.log(JSON.stringify({ removed: removed.length > 0, failed: failed.length > 0 }, null, 2))
+    } else if (removed.length > 0) {
+      console.error(chalk.green.bold(`✔ ${nameToRemove} uninstalled`))
+    }
     process.exit(failed.length ? 1 : 0)
   }
 
@@ -511,12 +543,21 @@ if (subcommand === 'uninstall') {
 
   let anyRemoved = false
   let anyFailed  = false
+  // uninstallSkill logs unconditional chalk status lines via console.error;
+  // suppress them in --json mode so they don't pollute stderr JSON output.
+  const originalError2 = jsonFlag ? console.error : null
+  if (jsonFlag) console.error = () => {}
   for (const { dir } of targets) {
     const { removed, failed } = await uninstallSkill(nameToRemove, dir)
     if (removed.length) anyRemoved = true
     if (failed.length)  anyFailed  = true
   }
-  if (anyRemoved) console.error(chalk.green.bold(`✔ ${nameToRemove} uninstalled`))
+  if (jsonFlag) {
+    console.error = originalError2
+    console.log(JSON.stringify({ removed: anyRemoved, failed: anyFailed }, null, 2))
+  } else if (anyRemoved) {
+    console.error(chalk.green.bold(`✔ ${nameToRemove} uninstalled`))
+  }
   process.exit(anyFailed ? 1 : 0)
 }
 
@@ -635,11 +676,17 @@ if (subcommand === 'hooks') {
   if (hooksSubcmd === 'uninstall') {
     const nameToRemove = args[2]
     if (!nameToRemove || nameToRemove.startsWith('--')) {
-      console.error(chalk.red('  ✗ Usage: hskill hooks uninstall <name> [--scope user|project]'))
+      const msg = 'Usage: hskill hooks uninstall <name> [--scope user|project]'
+      if (hookJsonFlag) process.stderr.write(JSON.stringify({ error: true, message: msg }) + '\n')
+      else console.error(chalk.red('  ✗ ' + msg))
       process.exit(1)
     }
     const { removed } = await uninstallHook(nameToRemove, hookScopeArg, hookProjectArg)
-    if (!removed) console.log(chalk.dim(`  · ${nameToRemove} was not installed in ${hookScopeArg} scope`))
+    if (hookJsonFlag) {
+      console.log(JSON.stringify({ removed }, null, 2))
+    } else if (!removed) {
+      console.log(chalk.dim(`  · ${nameToRemove} was not installed in ${hookScopeArg} scope`))
+    }
     process.exit(0)
   }
 
