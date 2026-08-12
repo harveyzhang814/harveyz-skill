@@ -175,3 +175,18 @@ test('hskill_hooks install then uninstall round-trips in a mocked HOME', async (
     rmSync(mockHome, { recursive: true, force: true })
   }
 })
+
+test('hskill_update is registered with a description warning about irreversibility', async () => {
+  const { client, server } = await connectedClient()
+  try {
+    const { tools } = await client.listTools()
+    const updateTool = tools.find(t => t.name === 'hskill_update')
+    assert.ok(updateTool, 'expected hskill_update to be registered')
+    assert.match(updateTool.description, /irreversible/i)
+    // Deliberately not calling this tool: it runs a real `npm install -g`
+    // against the environment's actual global npm prefix.
+  } finally {
+    await client.close()
+    await server.close()
+  }
+})
