@@ -3,7 +3,7 @@ import fs from 'fs'
 import os from 'os'
 import path from 'path'
 import { fileURLToPath } from 'url'
-import { SKILL_TARGETS, USER_ONLY_TARGETS } from '../lib/targets.js'
+import { SKILL_TARGETS, USER_ONLY_TARGETS, userSkillDir } from '../lib/targets.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
@@ -89,7 +89,7 @@ function checkScope(targets, dirFn) {
 // 单平台视图：只展示 ctrl-t 当前所在平台的状态，不展示全平台矩阵
 if (platformKey && SKILL_TARGETS.includes(platformKey)) {
   const cwd = process.cwd()
-  const userDir    = path.join(home, `.${platformKey}`, 'skills')
+  const userDir    = userSkillDir(platformKey)
   const projectDir = path.join(cwd, `.${platformKey}`, 'skills')
   const [userDetail]    = checkScope([platformKey], () => userDir)
   const projectDetail   = USER_ONLY_TARGETS.has(platformKey) || cwd === home
@@ -119,7 +119,7 @@ const userTargets    = SKILL_TARGETS
 const projectTargets = SKILL_TARGETS.filter(t => !USER_ONLY_TARGETS.has(t))
 
 const cwd = process.cwd()
-const userDetails    = checkScope(userTargets,    t => path.join(home, `.${t}`, 'skills'))
+const userDetails    = checkScope(userTargets,    t => userSkillDir(t))
 const projectDetails = cwd === home
   ? projectTargets.map(t => ({ tool: t, version: '—', status: 'none' }))
   : checkScope(projectTargets, t => path.join(cwd, `.${t}`, 'skills'))

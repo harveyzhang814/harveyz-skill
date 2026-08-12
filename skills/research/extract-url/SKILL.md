@@ -1,6 +1,6 @@
 ---
 name: extract-url
-version: "2.7.1"
+version: "2.8.0"
 description: "Use when a user provides a URL and wants to save, archive, fetch, or translate content to the local Obsidian Vault — even with vague phrasing like 'save this article', 'translate and save', 'put this in obsidian', 'archive this'. Skip when user only wants a summary, pastes raw text without a URL, asks about a site's tech stack, or wants to extract/list URLs from a page without saving an article."
 user_invocable: true
 ---
@@ -18,6 +18,7 @@ user_invocable: true
 | Claude Code | `platforms/SKILL.claude.md` |
 | Codex | `platforms/SKILL.codex.md` |
 | Hermes | `platforms/SKILL.hermes.md` |
+| Pi | `platforms/SKILL.pi.md` |
 
 以下流程中凡标注「**补丁①**」「**补丁②**」处，均使用对应平台补丁中定义的工具调用替换。代码示例中的 `SKILL_DIR` 为抽象占位符，由**补丁③**注入；`VAULT_PATH` 和 `CHROME_PROFILE` 由 Python 脚本在运行时从 `~/.hskill/url-extract/config.json` 读取，无需注入。
 

@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.26.0] - 2026-08-12
+
+### Added
+- `hskill mcp`：新增 MCP（Model Context Protocol）服务器子命令，以 stdio 方式暴露 8 个工具（`hskill_list`/`hskill_status`/`hskill_outdated`/`hskill_info`/`hskill_install`/`hskill_uninstall`/`hskill_hooks`/`hskill_update`），供 MCP 兼容的 agent host（Claude Code、Claude Desktop、Cursor 等）直接调用 hskill 的操作
+
+### Changed
+- `publish-skill` 审计：修正 `pdf-math-translate` description 语言违规（改为英文），刷新 `capture-vocab`/`extract-url`/`pdf-math-translate` 三个 skill 的 contentHash 记录
+
 ## [0.25.1] - 2026-07-22
 
 ### Fixed
