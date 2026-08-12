@@ -476,7 +476,9 @@ if (subcommand === 'info') {
 if (subcommand === 'uninstall') {
   const nameToRemove = args[1]
   if (!nameToRemove || nameToRemove.startsWith('--')) {
-    console.error(chalk.red('  ✗ Usage: hskill uninstall <tool-or-skill-name> [--yes] [--scope user|project] [--target claude|...]'))
+    const msg = 'Usage: hskill uninstall <tool-or-skill-name> [--yes] [--scope user|project] [--target claude|...]'
+    if (jsonFlag) process.stderr.write(JSON.stringify({ error: true, message: msg }) + '\n')
+    else console.error(chalk.red('  ✗ ' + msg))
     process.exit(1)
   }
 
@@ -492,13 +494,22 @@ if (subcommand === 'uninstall') {
   const isSkill = skillItems2.some(s => s.skillName === nameToRemove)
 
   if (!isTool && !isSkill) {
-    console.error(chalk.red(`  ✗ Unknown tool or skill: "${nameToRemove}"`))
+    const msg = `Unknown tool or skill: "${nameToRemove}"`
+    if (jsonFlag) process.stderr.write(JSON.stringify({ error: true, message: msg }) + '\n')
+    else console.error(chalk.red('  ✗ ' + msg))
     process.exit(1)
   }
 
   if (isTool) {
+    const originalError = jsonFlag ? console.error : null
+    if (jsonFlag) console.error = () => {}
     const { removed, failed } = await uninstallTool(nameToRemove, { yes: yesFlag })
-    if (removed.length > 0) console.error(chalk.green.bold(`✔ ${nameToRemove} uninstalled`))
+    if (jsonFlag) {
+      console.error = originalError
+      console.log(JSON.stringify({ removed: removed.length > 0, failed: failed.length > 0 }))
+    } else if (removed.length > 0) {
+      console.error(chalk.green.bold(`✔ ${nameToRemove} uninstalled`))
+    }
     process.exit(failed.length ? 1 : 0)
   }
 
@@ -511,12 +522,19 @@ if (subcommand === 'uninstall') {
 
   let anyRemoved = false
   let anyFailed  = false
+  const originalError2 = jsonFlag ? console.error : null
+  if (jsonFlag) console.error = () => {}
   for (const { dir } of targets) {
     const { removed, failed } = await uninstallSkill(nameToRemove, dir)
     if (removed.length) anyRemoved = true
     if (failed.length)  anyFailed  = true
   }
-  if (anyRemoved) console.error(chalk.green.bold(`✔ ${nameToRemove} uninstalled`))
+  if (jsonFlag) {
+    console.error = originalError2
+    console.log(JSON.stringify({ removed: anyRemoved, failed: anyFailed }))
+  } else if (anyRemoved) {
+    console.error(chalk.green.bold(`✔ ${nameToRemove} uninstalled`))
+  }
   process.exit(anyFailed ? 1 : 0)
 }
 

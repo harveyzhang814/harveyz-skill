@@ -261,3 +261,43 @@ process.stdout.write(JSON.stringify(r))
   # zshrc must NOT have been patched (no confirm() in non-TTY)
   [ ! -f "${MOCK_HOME}/.zshrc" ] || ! grep -q "fake-zshrc-tool" "${MOCK_HOME}/.zshrc"
 }
+
+# ── uninstall --json ────────────────────────────────────────────────────────
+
+@test "uninstall --json: unknown name emits JSON error on stderr" {
+  local errfile="${TEST_DIR}/uninstall-unknown.txt"
+  HOME="${MOCK_HOME}" node "${CLI}" uninstall does-not-exist --json \
+    >/dev/null 2>"${errfile}" || true
+  local err
+  err="$(cat "${errfile}")"
+  echo "$err" | node -e "JSON.parse(require('fs').readFileSync('/dev/stdin','utf8'))"
+  [[ "$err" == *'"error":true'* ]]
+  [[ "$err" == *'"message"'* ]]
+}
+
+@test "uninstall --json: missing name emits JSON error on stderr" {
+  local errfile="${TEST_DIR}/uninstall-missing.txt"
+  HOME="${MOCK_HOME}" node "${CLI}" uninstall --json \
+    >/dev/null 2>"${errfile}" || true
+  local err
+  err="$(cat "${errfile}")"
+  echo "$err" | node -e "JSON.parse(require('fs').readFileSync('/dev/stdin','utf8'))"
+  [[ "$err" == *'"error":true'* ]]
+}
+
+@test "uninstall --json: removes installed skill and reports removed:true" {
+  HOME="${MOCK_HOME}" node "${CLI}" install --skill survey-skillrepo --target claude --scope user --force >/dev/null 2>&1
+  [ -d "${MOCK_HOME}/.claude/skills/survey-skillrepo" ]
+  run bash -c "HOME='${MOCK_HOME}' node '${CLI}' uninstall survey-skillrepo --scope user --target claude --json"
+  [ "$status" -eq 0 ]
+  echo "$output" | node -e "JSON.parse(require('fs').readFileSync('/dev/stdin','utf8'))"
+  [[ "$output" == *'"removed":true'* ]]
+  [ ! -d "${MOCK_HOME}/.claude/skills/survey-skillrepo" ]
+}
+
+@test "uninstall --json: skill not installed reports removed:false, exits 0" {
+  run bash -c "HOME='${MOCK_HOME}' node '${CLI}' uninstall survey-skillrepo --scope user --target claude --json"
+  [ "$status" -eq 0 ]
+  echo "$output" | node -e "JSON.parse(require('fs').readFileSync('/dev/stdin','utf8'))"
+  [[ "$output" == *'"removed":false'* ]]
+}
