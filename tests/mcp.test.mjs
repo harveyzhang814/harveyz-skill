@@ -105,3 +105,31 @@ test('hskill_install writes the skill to a mocked HOME', async () => {
     rmSync(mockHome, { recursive: true, force: true })
   }
 })
+
+test('hskill_uninstall removes a previously installed skill', async () => {
+  const mockHome = mkdtempSync(path.join(tmpdir(), 'hskill-mcp-test-'))
+  const originalHome = process.env.HOME
+  process.env.HOME = mockHome
+  const { client, server } = await connectedClient()
+  try {
+    await client.callTool({
+      name: 'hskill_install',
+      arguments: { skill: 'survey-skillrepo', target: 'claude', scope: 'user', force: true },
+    })
+    assert.ok(existsSync(path.join(mockHome, '.claude', 'skills', 'survey-skillrepo')))
+
+    const result = await client.callTool({
+      name: 'hskill_uninstall',
+      arguments: { name: 'survey-skillrepo', scope: 'user', target: 'claude' },
+    })
+    assert.equal(result.isError, undefined)
+    const parsed = JSON.parse(result.content[0].text)
+    assert.equal(parsed.removed, true)
+    assert.ok(!existsSync(path.join(mockHome, '.claude', 'skills', 'survey-skillrepo')))
+  } finally {
+    await client.close()
+    await server.close()
+    process.env.HOME = originalHome
+    rmSync(mockHome, { recursive: true, force: true })
+  }
+})
