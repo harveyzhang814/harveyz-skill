@@ -515,6 +515,8 @@ if (subcommand === 'uninstall') {
   }
 
   if (isTool) {
+    // uninstallTool logs unconditional chalk status lines via console.error;
+    // suppress them in --json mode so they don't pollute stderr JSON output.
     const originalError = jsonFlag ? console.error : null
     if (jsonFlag) console.error = () => {}
     const { removed, failed } = await uninstallTool(nameToRemove, { yes: yesFlag })
@@ -536,6 +538,8 @@ if (subcommand === 'uninstall') {
 
   let anyRemoved = false
   let anyFailed  = false
+  // uninstallSkill logs unconditional chalk status lines via console.error;
+  // suppress them in --json mode so they don't pollute stderr JSON output.
   const originalError2 = jsonFlag ? console.error : null
   if (jsonFlag) console.error = () => {}
   for (const { dir } of targets) {
@@ -668,7 +672,7 @@ if (subcommand === 'hooks') {
     const nameToRemove = args[2]
     if (!nameToRemove || nameToRemove.startsWith('--')) {
       const msg = 'Usage: hskill hooks uninstall <name> [--scope user|project]'
-      if (hookJsonFlag) process.stderr.write(JSON.stringify({ error: true, message: msg }, null, 2) + '\n')
+      if (hookJsonFlag) process.stderr.write(JSON.stringify({ error: true, message: msg }) + '\n')
       else console.error(chalk.red('  ✗ ' + msg))
       process.exit(1)
     }

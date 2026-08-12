@@ -135,7 +135,7 @@ teardown() {
   local err
   err="$(cat "${errfile}")"
   echo "$err" | node -e "JSON.parse(require('fs').readFileSync('/dev/stdin','utf8'))"
-  [[ "$err" == *'"error": true'* ]]
+  [[ "$err" == *'"error":true'* ]]
 }
 
 # ── version tracking ──────────────────────────────────────────────────────────

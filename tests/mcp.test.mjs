@@ -6,7 +6,7 @@ import path from 'node:path'
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js'
 import { Client } from '@modelcontextprotocol/sdk/client/index.js'
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js'
-import { createServer } from '../lib/mcp-server.js'
+import { createServer, toToolResult } from '../lib/mcp-server.js'
 
 async function connectedClient() {
   const server = createServer()
@@ -18,6 +18,38 @@ async function connectedClient() {
   ])
   return { client, server }
 }
+
+test('toToolResult: success (code 0) forwards stdout as-is', () => {
+  const result = toToolResult({ code: 0, stdout: '{"ok":true}', stderr: '' })
+  assert.equal(result.isError, undefined)
+  assert.equal(result.content[0].text, '{"ok":true}')
+})
+
+test('toToolResult: JSON error on stderr (compact)', () => {
+  const result = toToolResult({ code: 1, stdout: '', stderr: '{"error":true,"message":"boom"}\n' })
+  assert.equal(result.isError, true)
+  assert.equal(result.content[0].text, 'boom')
+})
+
+test('toToolResult: JSON error on stderr (pretty-printed)', () => {
+  const stderr = JSON.stringify({ error: true, message: 'boom' }, null, 2) + '\n'
+  const result = toToolResult({ code: 1, stdout: '', stderr })
+  assert.equal(result.isError, true)
+  assert.equal(result.content[0].text, 'boom')
+})
+
+test('toToolResult: non-JSON stderr falls back to raw text', () => {
+  const result = toToolResult({ code: 1, stdout: '', stderr: 'something crashed\n' })
+  assert.equal(result.isError, true)
+  assert.equal(result.content[0].text, 'something crashed')
+})
+
+test('toToolResult: code !== 0 with parseable JSON on stdout forwards it', () => {
+  const stdout = JSON.stringify({ removed: false, failed: true })
+  const result = toToolResult({ code: 1, stdout, stderr: '' })
+  assert.equal(result.isError, true)
+  assert.equal(result.content[0].text, stdout)
+})
 
 test('hskill_list is registered and returns the real skill list as JSON', async () => {
   const { client, server } = await connectedClient()
