@@ -506,7 +506,7 @@ if (subcommand === 'uninstall') {
     const { removed, failed } = await uninstallTool(nameToRemove, { yes: yesFlag })
     if (jsonFlag) {
       console.error = originalError
-      console.log(JSON.stringify({ removed: removed.length > 0, failed: failed.length > 0 }))
+      console.log(JSON.stringify({ removed: removed.length > 0, failed: failed.length > 0 }, null, 2))
     } else if (removed.length > 0) {
       console.error(chalk.green.bold(`✔ ${nameToRemove} uninstalled`))
     }
@@ -531,7 +531,7 @@ if (subcommand === 'uninstall') {
   }
   if (jsonFlag) {
     console.error = originalError2
-    console.log(JSON.stringify({ removed: anyRemoved, failed: anyFailed }))
+    console.log(JSON.stringify({ removed: anyRemoved, failed: anyFailed }, null, 2))
   } else if (anyRemoved) {
     console.error(chalk.green.bold(`✔ ${nameToRemove} uninstalled`))
   }

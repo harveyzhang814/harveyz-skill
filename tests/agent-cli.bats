@@ -291,7 +291,7 @@ process.stdout.write(JSON.stringify(r))
   run bash -c "HOME='${MOCK_HOME}' node '${CLI}' uninstall survey-skillrepo --scope user --target claude --json"
   [ "$status" -eq 0 ]
   echo "$output" | node -e "JSON.parse(require('fs').readFileSync('/dev/stdin','utf8'))"
-  [[ "$output" == *'"removed":true'* ]]
+  [[ "$output" == *'"removed": true'* ]]
   [ ! -d "${MOCK_HOME}/.claude/skills/survey-skillrepo" ]
 }
 
@@ -299,5 +299,5 @@ process.stdout.write(JSON.stringify(r))
   run bash -c "HOME='${MOCK_HOME}' node '${CLI}' uninstall survey-skillrepo --scope user --target claude --json"
   [ "$status" -eq 0 ]
   echo "$output" | node -e "JSON.parse(require('fs').readFileSync('/dev/stdin','utf8'))"
-  [[ "$output" == *'"removed":false'* ]]
+  [[ "$output" == *'"removed": false'* ]]
 }
