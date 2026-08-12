@@ -1,6 +1,6 @@
 ---
 name: clip-url
-version: "0.7.0"
+version: "0.7.1"
 description: "Fetches a URL through browser-fetch-mcp's fetch_article (site-aware extraction: generic/wechat/arxiv/xcom, with image download and a persisted default chrome_profile), tags against extract-url's shared fixed-tag vocabulary, translates, and saves origin + translation into extract-url's real shared Obsidian Vault (VAULT_PATH) with cross-skill URL dedup. Not extract-url's full equivalent yet (no frontmatter auto-repair), but writes real vault content, not a validation-only test directory."
 user_invocable: true
 ---
@@ -8,6 +8,8 @@ user_invocable: true
 # clip-url（Stage 4，验证性构建）
 
 这是 [browser-fetch-mcp](../../../tools/browser-fetch-mcp/) 的验证性消费者，跟 extract-url 的 Subagent 1/2 结构对齐，做"抓取（MCP，经 fetch_article 做站点感知抽取）→ 打标 + 翻译 → 存文件"两阶段流程。URL 去重和固定标签词表与 extract-url 共用同一份 `~/.hskill/url-extract/config.json`（`VAULT_PATH`）和 `fixed_tags.txt`，两边抓过的文章互相认得出"已抓取"。仍不是 extract-url 的完全等价替代（例如没有 `validate_article.py` 那样的 frontmatter 自动修复），只用于验证 MCP 抓取链路能否支撑一个完整的两阶段 skill 流程并逐步对齐生产行为。抓取产出的原文文件名与 extract-url 一致，按标题命名（`Origin/<标题>.md`，Translation 沿用同一文件名），两者共存于同一个 `<hash8>/` 目录下，去重判定只看 `meta.json` 的 `source_url`，不受文件名影响。
+
+**依赖**：本 skill 的 MCP 抓取脚本（`scripts/mcp_fetch_client.py` 等）依赖 `browser-fetch-mcp`。在本仓库 checkout 内直接运行时会自动找到 `tools/browser-fetch-mcp/browser-fetch-mcp.sh`；若这个 skill 是通过 `hskill install` 安装到别处运行的（`~/.claude/skills/`、`~/.pi/agent/skills/` 等），需要额外单独运行 `hskill install --tool browser-fetch-mcp` 装好 launcher（落到 `~/.local/bin/browser-fetch-mcp`），否则步骤 2/3 会报 `browser-fetch-mcp launcher not found`。
 
 ## 路径变量
 

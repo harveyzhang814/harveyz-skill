@@ -33,10 +33,9 @@ from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
 
 import vault_config
+from browser_fetch_mcp_locate import find_browser_fetch_mcp
 
-BROWSER_FETCH_MCP_SH = (
-    Path(__file__).resolve().parents[4] / "tools" / "browser-fetch-mcp" / "browser-fetch-mcp.sh"
-)
+BROWSER_FETCH_MCP_SH = find_browser_fetch_mcp()
 
 
 async def fetch_and_report(url: str, chrome_profile: Optional[str] = None) -> dict:

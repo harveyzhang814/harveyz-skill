@@ -23,14 +23,13 @@ isError/structuredContent), same as mcp_fetch_client.py.
 import asyncio
 import json
 import os
-from pathlib import Path
 
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
 
-BROWSER_FETCH_MCP_SH = (
-    Path(__file__).resolve().parents[4] / "tools" / "browser-fetch-mcp" / "browser-fetch-mcp.sh"
-)
+from browser_fetch_mcp_locate import find_browser_fetch_mcp
+
+BROWSER_FETCH_MCP_SH = find_browser_fetch_mcp()
 
 HOST_KEYS = [".x.com", ".twitter.com"]
 COOKIE_NAMES = ["auth_token", "ct0", "twid"]
