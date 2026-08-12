@@ -5,6 +5,7 @@ import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js'
 import { Client } from '@modelcontextprotocol/sdk/client/index.js'
+import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js'
 import { createServer } from '../lib/mcp-server.js'
 
 async function connectedClient() {
@@ -188,5 +189,21 @@ test('hskill_update is registered with a description warning about irreversibili
   } finally {
     await client.close()
     await server.close()
+  }
+})
+
+test('hskill mcp subcommand: spawns a real MCP server over stdio and serves hskill_list', async () => {
+  const cliPath = new URL('../bin/cli.js', import.meta.url).pathname
+  const transport = new StdioClientTransport({ command: process.execPath, args: [cliPath, 'mcp'] })
+  const client = new Client({ name: 'test-client', version: '1.0.0' })
+  await client.connect(transport)
+  try {
+    const { tools } = await client.listTools()
+    assert.ok(tools.some(t => t.name === 'hskill_list'))
+    const result = await client.callTool({ name: 'hskill_list', arguments: {} })
+    assert.equal(result.isError, undefined)
+    JSON.parse(result.content[0].text)
+  } finally {
+    await client.close()
   }
 })

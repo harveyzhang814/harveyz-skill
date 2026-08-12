@@ -189,6 +189,20 @@ if (subcommand === 'update') {
   process.exit(0)
 }
 
+// ── MCP server ───────────────────────────────────────────────────────────────
+if (subcommand === 'mcp') {
+  const { startServer } = await import('../lib/mcp-server.js')
+  await startServer()
+  // StdioServerTransport keeps stdin/stdout open for JSON-RPC. bin/cli.js is a
+  // flat top-level script with no early-return mechanism (this is a real ES
+  // module, so a bare top-level `return` is a syntax error) — every other
+  // subcommand block ends itself with process.exit(), which we can't do here
+  // without killing the server we just started. Blocking on a promise that
+  // never resolves is what stops execution from falling through into the
+  // generic install-arg parsing near the end of this file.
+  await new Promise(() => {})
+}
+
 // ── List ─────────────────────────────────────────────────────────────────────
 if (subcommand === 'list') {
   const { skills, tools = [] } = require('../skills-index.json')
