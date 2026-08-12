@@ -653,11 +653,17 @@ if (subcommand === 'hooks') {
   if (hooksSubcmd === 'uninstall') {
     const nameToRemove = args[2]
     if (!nameToRemove || nameToRemove.startsWith('--')) {
-      console.error(chalk.red('  ✗ Usage: hskill hooks uninstall <name> [--scope user|project]'))
+      const msg = 'Usage: hskill hooks uninstall <name> [--scope user|project]'
+      if (hookJsonFlag) process.stderr.write(JSON.stringify({ error: true, message: msg }, null, 2) + '\n')
+      else console.error(chalk.red('  ✗ ' + msg))
       process.exit(1)
     }
     const { removed } = await uninstallHook(nameToRemove, hookScopeArg, hookProjectArg)
-    if (!removed) console.log(chalk.dim(`  · ${nameToRemove} was not installed in ${hookScopeArg} scope`))
+    if (hookJsonFlag) {
+      console.log(JSON.stringify({ removed }, null, 2))
+    } else if (!removed) {
+      console.log(chalk.dim(`  · ${nameToRemove} was not installed in ${hookScopeArg} scope`))
+    }
     process.exit(0)
   }
 

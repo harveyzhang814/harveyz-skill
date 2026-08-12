@@ -113,6 +113,31 @@ teardown() {
   "
 }
 
+@test "hooks uninstall --json: removed:true when hook was installed" {
+  HOME="${MOCK_HOME}" node "${CLI}" hooks install --name "${HOOK_NAME}" --scope user >/dev/null 2>&1
+  run bash -c "HOME='${MOCK_HOME}' node '${CLI}' hooks uninstall '${HOOK_NAME}' --scope user --json 2>/dev/null"
+  [ "$status" -eq 0 ]
+  echo "$output" | node -e "JSON.parse(require('fs').readFileSync('/dev/stdin','utf8'))"
+  [[ "$output" == *'"removed": true'* ]]
+}
+
+@test "hooks uninstall --json: removed:false when hook was not installed" {
+  run bash -c "HOME='${MOCK_HOME}' node '${CLI}' hooks uninstall '${HOOK_NAME}' --scope user --json 2>/dev/null"
+  [ "$status" -eq 0 ]
+  echo "$output" | node -e "JSON.parse(require('fs').readFileSync('/dev/stdin','utf8'))"
+  [[ "$output" == *'"removed": false'* ]]
+}
+
+@test "hooks uninstall --json: missing name emits JSON error on stderr" {
+  local errfile="${TEST_DIR}/hooks-uninstall-missing.txt"
+  HOME="${MOCK_HOME}" node "${CLI}" hooks uninstall --json \
+    >/dev/null 2>"${errfile}" || true
+  local err
+  err="$(cat "${errfile}")"
+  echo "$err" | node -e "JSON.parse(require('fs').readFileSync('/dev/stdin','utf8'))"
+  [[ "$err" == *'"error": true'* ]]
+}
+
 # ── version tracking ──────────────────────────────────────────────────────────
 
 @test "hooks install: JSON output reason is 'up-to-date' when reinstalling same version" {
