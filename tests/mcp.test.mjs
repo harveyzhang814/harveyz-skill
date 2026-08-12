@@ -1,5 +1,8 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
+import { mkdtempSync, rmSync, existsSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import path from 'node:path'
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js'
 import { Client } from '@modelcontextprotocol/sdk/client/index.js'
 import { createServer } from '../lib/mcp-server.js'
@@ -78,5 +81,27 @@ test('hskill_info reports an MCP error for an unknown name', async () => {
   } finally {
     await client.close()
     await server.close()
+  }
+})
+
+test('hskill_install writes the skill to a mocked HOME', async () => {
+  const mockHome = mkdtempSync(path.join(tmpdir(), 'hskill-mcp-test-'))
+  const originalHome = process.env.HOME
+  process.env.HOME = mockHome
+  const { client, server } = await connectedClient()
+  try {
+    const result = await client.callTool({
+      name: 'hskill_install',
+      arguments: { skill: 'survey-skillrepo', target: 'claude', scope: 'user', force: true },
+    })
+    assert.equal(result.isError, undefined)
+    const parsed = JSON.parse(result.content[0].text)
+    assert.ok(parsed.skills, 'expected a "skills" key in hskill_install output')
+    assert.ok(existsSync(path.join(mockHome, '.claude', 'skills', 'survey-skillrepo', 'SKILL.md')))
+  } finally {
+    await client.close()
+    await server.close()
+    process.env.HOME = originalHome
+    rmSync(mockHome, { recursive: true, force: true })
   }
 })
