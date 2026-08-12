@@ -133,3 +133,45 @@ test('hskill_uninstall removes a previously installed skill', async () => {
     rmSync(mockHome, { recursive: true, force: true })
   }
 })
+
+test('hskill_hooks list returns valid JSON with a hooks array', async () => {
+  const { client, server } = await connectedClient()
+  try {
+    const result = await client.callTool({ name: 'hskill_hooks', arguments: { action: 'list' } })
+    assert.equal(result.isError, undefined)
+    const parsed = JSON.parse(result.content[0].text)
+    assert.ok(Array.isArray(parsed.hooks))
+  } finally {
+    await client.close()
+    await server.close()
+  }
+})
+
+test('hskill_hooks install then uninstall round-trips in a mocked HOME', async () => {
+  const mockHome = mkdtempSync(path.join(tmpdir(), 'hskill-mcp-test-'))
+  const originalHome = process.env.HOME
+  process.env.HOME = mockHome
+  const { client, server } = await connectedClient()
+  try {
+    const installResult = await client.callTool({
+      name: 'hskill_hooks',
+      arguments: { action: 'install', name: 'check-similar-branch', scope: 'user' },
+    })
+    assert.equal(installResult.isError, undefined)
+    const installed = JSON.parse(installResult.content[0].text)
+    assert.ok(installed.installed.includes('check-similar-branch'))
+
+    const uninstallResult = await client.callTool({
+      name: 'hskill_hooks',
+      arguments: { action: 'uninstall', name: 'check-similar-branch', scope: 'user' },
+    })
+    assert.equal(uninstallResult.isError, undefined)
+    const uninstalled = JSON.parse(uninstallResult.content[0].text)
+    assert.equal(uninstalled.removed, true)
+  } finally {
+    await client.close()
+    await server.close()
+    process.env.HOME = originalHome
+    rmSync(mockHome, { recursive: true, force: true })
+  }
+})
