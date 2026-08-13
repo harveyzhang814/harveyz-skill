@@ -7,6 +7,7 @@
 > - [[qm-skills-layer]]（技能层——可见技能的 scope 顺序由本层的 `resolution` 决定）
 > - [[qm-turn-slice]]（纵切面——`resolve()` 在 turn 时序里的位置与前后闸门）
 > - [[qm-harness-layer]]（Harness 层——`systemPrompt` 与 runtime 选择的下游消费者）
+> - [[qm-run-lifecycle]]（执行内核运行时——第五种收紧代数 `turn-origin` rank 合并；参与者时间窗与 audience floor 的对应）
 >
 > 调研对象：`yc-software/qm` 的 `src/resolution/`
 > 本地路径：`~/Repositories/qm`
@@ -523,6 +524,11 @@ async setSecurityPosture(id, posture) { await writeQueue(...); }
 
 **2.「收紧」不是一个操作，是四种代数。**
 姿态取 max、命令策略是单向 mode + 规则并集、审批模式是逻辑与、soul 是带层级声明的文本拼接。每种配置按它自己的语义选运算，而不是硬套一个通用的 merge。
+
+> **补记（调研 A 组时发现的第五个实例）**：`core/turn-origin.ts` 在合并类型化的 `TurnOrigin` 与遗留字段时，
+> 用的是 `rank = { direct: 0, human: 1, ambient: 2, automation: 3 }` **取更高者**——rank 顺序正是可信度递减，
+> 冲突时假定更不可信的来源。两边都是 `automation` 时，`screenData` 走的又是「拼接并各自标注来源」，
+> 与这里的 soul 文本算法一模一样。同一族代数出现在一个完全不相干的模块里，见 [[qm-run-lifecycle]] §12.1。
 
 **3. 最少权限者定上限。**
 egress 允许取交集、拒绝取并集、历史过滤用 `every`。房间的能力等于房间里最受限的那个人的能力。

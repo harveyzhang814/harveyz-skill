@@ -7,6 +7,7 @@
 > - [[qm-resolution-layer]]（解析层——systemPrompt 与 runtime 选择的输入）
 > - [[qm-execution-layer]]（执行环境层——`ToolContext` 的另一端）
 > - [[qm-skills-layer]]（技能层）
+> - [[qm-run-lifecycle]]（执行内核运行时——`INTERRUPTED_TOOL_RESULT` 的另一端 `resumeNote`；tape 与 entries 两条日志的接缝）
 >
 > 调研对象：`yc-software/qm` 的 `src/harness/`
 > 本地路径：`~/Repositories/qm`
@@ -348,6 +349,11 @@ export const INTERRUPTED_TOOL_RESULT =
 | `healDanglingCalls`（fold 时） | 给没有结果的 toolCall 补一条合成结果 |
 | `filterTapeForAudience`（受众过滤时） | 无权看的 toolResult **不删除，替换内容** |
 | `compactTranscript`（压缩时） | 给没有结果的 tool_call 补一行 |
+
+> **补记**：这个常量只负责把结果标成「未知」。真正告诉模型**该拿这个未知怎么办**的是另一端——
+> `core/turn-resume.ts` 的 `resumeNote()`，它在中断重入时注入一条系统注记，明确要求
+> 「在重做任何有副作用的事情之前，先确认实际发生了什么」，并区分「有工作记录」与「什么都没记录」两种措辞。
+> 见 [[qm-run-lifecycle]] §6。
 
 第二个尤其值得说。[[qm-resolution-layer]] 第 3 节讲过历史按受众过滤——但在 tape 里，直接删掉一条 toolResult 会让消息序列**协议非法**（留下悬空的 toolCall）。所以：
 

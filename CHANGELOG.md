@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.27.0] - 2026-08-13
+
+### Added
+- `clip-url`：新增 browser-fetch-mcp 前置可用性检测，抓取前先确认 MCP 可用，避免执行到中途才发现环境问题
+- `clip-url`：正文开头新增流程概览（路线图），列出各步骤编号，减少多步骤执行时的偏差
+
+### Changed
+- `clip-url`：优化 description 触发文案，定位为 extract-url 的通用替代品参与触发竞争，覆盖更多保存/归档/翻译存档场景
+
+### Fixed
+- `clip-url`：chrome_profile 询问从「可能每次任务都问」改为「只在首次使用本 skill 时问一次」，无论用户当时是否设置了值，都会记住已经问过
+
 ## [0.26.1] - 2026-08-13
 
 ### Fixed
