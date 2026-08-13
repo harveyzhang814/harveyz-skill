@@ -7,6 +7,7 @@
 > - [[qm-resolution-layer]]（解析层深入分析——`Resolution` 对象、分层配置、audience floor、prompt 协议）
 > - [[qm-turn-slice]]（纵切面——一条 Slack 消息从进入到回复送出，十九道闸门）
 > - [[qm-harness-layer]]（Harness 层——四适配器一套接口、tape 事件溯源、上下文压缩、冷启动重放）
+> - [[qm-run-lifecycle]]（执行内核运行时——蓝绿自我排空、两层租约、重试与回收、`routeWake` 并发策略、中断重入）
 >
 > 调研对象：`yc-software/qm`（YC 出品的开源多人 agent harness）
 > 本地路径：`~/Repositories/qm`
@@ -345,6 +346,12 @@ flowchart LR
 | `wake/` | 唤醒机制：什么事件该把 agent 叫起来、engaged registry、周期 sweep |
 | `tasks/` | 任务存储 |
 
+> 这一组已拆成三篇：
+> - [[qm-harness-layer]]（harness）——四适配器一套接口、tape 事件溯源、上下文压缩、冷启动重放
+> - [[qm-turn-slice]]（orchestrator 的编排主干）——一次 turn 的十九道闸门
+> - [[qm-run-lifecycle]]（runs / sessions / wake / tasks）——那条路径底下的失效模型：蓝绿自我排空、两层租约、
+>   两个重试计数器、`routeWake` 并发策略、中断重入、22 相延迟归因
+
 #### B. 身份、授权与治理 —— 「谁能做什么」
 
 | 模块 | 作用 |
@@ -440,6 +447,10 @@ AGENTS.md 是写给 coding agent 看的操作手册（`CLAUDE.md` 是它的 syml
 - [[qm-resolution-layer]] —— 解析层：`Resolution` 对象、四种收紧代数、audience floor、prompt 协议（已完成）
 - [[qm-turn-slice]] —— 纵切面：一条 Slack 消息从进来到回复送出，十九道闸门（已完成）
 - [[qm-harness-layer]] —— Harness 层：四适配器、tape 事件溯源、上下文压缩、冷启动重放（已完成）
-- `security/security-screener` + `classify/` + provenance —— 三档 posture 的实际实现；纵切面第 3.2 节只讲了它在时序里的位置，没展开分类器本身。**下一篇建议**
-- `cron/` + `monitors/` + `wake/` + `runs/` —— 自主工作；`liveActor` 与「autonomous 轮」概念的源头
-- 综述：把六篇里散落的「可迁移做法」按问题（而非按模块）收敛成一份清单
+- [[qm-run-lifecycle]] —— A 组运行时：`runs/` `sessions/` `wake/` `tasks/`，蓝绿自我排空、两层租约、两个重试计数器、中断重入（已完成）
+- **B 组** `identity/` `acl/` `directory/` `auth/` `admin/` `policy/` `security/` `classify/` `ratelimit/` —— 40 个文件，是未调研量里最大的一块，也是 scope 模型的执行侧。前八篇反复引用「授权」「posture」「audience floor 的上游」，但没有一篇真正打开过 `acl/` 与 `auth/`。**下一篇建议**（原计划的 `security-screener` + `classify/` + provenance 只是其中 5 个文件，建议扩成整组）
+- **F 组** `credentials/` `connectors/` `model/` —— 23 个文件；共享凭证的 purpose 语义、OAuth 与 connector、模型网关
+- **H 组** `cron/` + `monitors/` —— 自主工作；与本组 `wake/` 合看才完整
+- **I 组** `deploy/` `environments/` + **J 组** `persistence/` `idempotency/` `audit/` `onboarding/`
+- 分类遗漏：`util/`（13）、`surface-cache/`（6）、`deployment/`（5）、`projects/`（1）四个目录不在上面 A–J 任何一组里。注意 `deployment/` 与 I 组的 `deploy/` 不是同一个目录
+- 综述：把各篇散落的「可迁移做法」按问题（而非按模块）收敛成一份清单
