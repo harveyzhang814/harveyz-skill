@@ -10,6 +10,7 @@ Two supported layouts:
   ~/.local/bin/browser-fetch-mcp (see tools/browser-fetch-mcp/tool.json).
 """
 import shutil
+import sys
 from pathlib import Path
 
 
@@ -30,3 +31,18 @@ def find_browser_fetch_mcp() -> str:
         "browser-fetch-mcp launcher not found. Run clip-url from a harveyz-skill "
         "git checkout, or run `hskill install` and select the browser-fetch-mcp tool."
     )
+
+
+def main():
+    """CLI preflight check for SKILL.md: prints FOUND/NOT_FOUND instead of
+    letting the FileNotFoundError surface as a raw traceback from whichever
+    client script happens to import this module first."""
+    try:
+        print(f"FOUND: {find_browser_fetch_mcp()}")
+    except FileNotFoundError as e:
+        print(f"NOT_FOUND: {e}")
+        sys.exit(1)
+
+
+if __name__ == "__main__":
+    main()

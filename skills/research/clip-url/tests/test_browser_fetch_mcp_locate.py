@@ -8,7 +8,7 @@ import pytest
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
 
 import browser_fetch_mcp_locate  # noqa: E402
-from browser_fetch_mcp_locate import find_browser_fetch_mcp  # noqa: E402
+from browser_fetch_mcp_locate import find_browser_fetch_mcp, main  # noqa: E402
 
 
 def test_prefers_dev_mode_path_when_it_exists(monkeypatch, tmp_path):
@@ -52,3 +52,32 @@ def test_raises_actionable_error_when_nothing_found(monkeypatch, tmp_path):
 
     with pytest.raises(FileNotFoundError, match="hskill install"):
         find_browser_fetch_mcp()
+
+
+def test_main_prints_found_and_exits_zero(monkeypatch, tmp_path, capsys):
+    dev_sh = tmp_path / "tools" / "browser-fetch-mcp" / "browser-fetch-mcp.sh"
+    dev_sh.parent.mkdir(parents=True)
+    dev_sh.write_text("#!/usr/bin/env bash\n", encoding="utf-8")
+
+    fake_module_path = tmp_path / "skills" / "research" / "clip-url" / "scripts" / "browser_fetch_mcp_locate.py"
+    monkeypatch.setattr(browser_fetch_mcp_locate, "__file__", str(fake_module_path))
+
+    main()
+
+    captured = capsys.readouterr()
+    assert captured.out.strip() == f"FOUND: {dev_sh}"
+
+
+def test_main_prints_not_found_and_exits_one(monkeypatch, tmp_path, capsys):
+    fake_module_path = tmp_path / "skills" / "research" / "clip-url" / "scripts" / "browser_fetch_mcp_locate.py"
+    monkeypatch.setattr(browser_fetch_mcp_locate, "__file__", str(fake_module_path))
+    monkeypatch.setattr(browser_fetch_mcp_locate.shutil, "which", lambda name: None)
+    monkeypatch.setattr(browser_fetch_mcp_locate.Path, "home", classmethod(lambda cls: tmp_path / "empty-home"))
+
+    with pytest.raises(SystemExit) as exc_info:
+        main()
+
+    assert exc_info.value.code == 1
+    captured = capsys.readouterr()
+    assert captured.out.startswith("NOT_FOUND: ")
+    assert "hskill install" in captured.out

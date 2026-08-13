@@ -1,6 +1,6 @@
 ---
 name: clip-url
-version: "0.7.1"
+version: "0.7.2"
 description: "Fetches a URL through browser-fetch-mcp's fetch_article (site-aware extraction: generic/wechat/arxiv/xcom, with image download and a persisted default chrome_profile), tags against extract-url's shared fixed-tag vocabulary, translates, and saves origin + translation into extract-url's real shared Obsidian Vault (VAULT_PATH) with cross-skill URL dedup. Not extract-url's full equivalent yet (no frontmatter auto-repair), but writes real vault content, not a validation-only test directory."
 user_invocable: true
 ---
@@ -9,7 +9,7 @@ user_invocable: true
 
 这是 [browser-fetch-mcp](../../../tools/browser-fetch-mcp/) 的验证性消费者，跟 extract-url 的 Subagent 1/2 结构对齐，做"抓取（MCP，经 fetch_article 做站点感知抽取）→ 打标 + 翻译 → 存文件"两阶段流程。URL 去重和固定标签词表与 extract-url 共用同一份 `~/.hskill/url-extract/config.json`（`VAULT_PATH`）和 `fixed_tags.txt`，两边抓过的文章互相认得出"已抓取"。仍不是 extract-url 的完全等价替代（例如没有 `validate_article.py` 那样的 frontmatter 自动修复），只用于验证 MCP 抓取链路能否支撑一个完整的两阶段 skill 流程并逐步对齐生产行为。抓取产出的原文文件名与 extract-url 一致，按标题命名（`Origin/<标题>.md`，Translation 沿用同一文件名），两者共存于同一个 `<hash8>/` 目录下，去重判定只看 `meta.json` 的 `source_url`，不受文件名影响。
 
-**依赖**：本 skill 的 MCP 抓取脚本（`scripts/mcp_fetch_client.py` 等）依赖 `browser-fetch-mcp`。在本仓库 checkout 内直接运行时会自动找到 `tools/browser-fetch-mcp/browser-fetch-mcp.sh`；若这个 skill 是通过 `hskill install` 安装到别处运行的（`~/.claude/skills/`、`~/.pi/agent/skills/` 等），需要额外单独运行 `hskill install --tool browser-fetch-mcp` 装好 launcher（落到 `~/.local/bin/browser-fetch-mcp`），否则步骤 2/3 会报 `browser-fetch-mcp launcher not found`。
+**依赖**：本 skill 的 MCP 抓取脚本（`scripts/mcp_fetch_client.py` 等）依赖 `browser-fetch-mcp`。在本仓库 checkout 内直接运行时会自动找到 `tools/browser-fetch-mcp/browser-fetch-mcp.sh`；若这个 skill 是通过 `hskill install` 安装到别处运行的（`~/.claude/skills/`、`~/.pi/agent/skills/` 等），需要额外单独运行 `hskill install --tool browser-fetch-mcp` 装好 launcher（落到 `~/.local/bin/browser-fetch-mcp`）。步骤 1.5 会在流程一开始就检测这个依赖是否满足。
 
 ## 路径变量
 
@@ -25,6 +25,13 @@ SkillDir: skills/research/clip-url
 import re
 url_safe = re.sub(r'[\x00-\x1f\x7f]', '', url).strip()[:2048]
 ```
+
+### 步骤 1.5：确认 browser-fetch-mcp 可用
+
+运行 `python3 SkillDir/scripts/browser_fetch_mcp_locate.py`。
+
+- 若输出 `FOUND: <path>`：继续步骤 2。
+- 若输出 `NOT_FOUND: <error>`（exit code 1）：向用户报告"browser-fetch-mcp 未安装或未找到：{error}。若在本仓库 checkout 内运行，请确认 `tools/browser-fetch-mcp/browser-fetch-mcp.sh` 存在；若是通过 `hskill install` 安装的 skill 副本，请先运行 `hskill install --tool browser-fetch-mcp`"，流程终止，不再执行后续步骤。
 
 ### 步骤 2：确认默认 chrome_profile（首次使用时设置一次，之后不再询问）
 
@@ -134,6 +141,7 @@ result = subprocess.run(
 | `references/subagent1-fetch-prompt.md` | Subagent 1（MCP 抓取）派发 prompt 模板，含去重检查 |
 | `references/subagent2-tag-translate-prompt.md` | Subagent 2（两阶段打标 + 翻译）派发 prompt 模板 |
 | `references/subagent-self-optimize-prompt.md` | Subagent 3（自优化，抓取失败/过薄时触发）派发 prompt 模板 |
+| `scripts/browser_fetch_mcp_locate.py` | 步骤 1.5 前置检测：定位 browser-fetch-mcp launcher（dev-mode 优先，已安装模式兜底），也被下面几个 MCP client 脚本共用 |
 | `scripts/vault_config.py` | 读共享 `VAULT_PATH`（`~/.hskill/url-extract/config.json`），计算文章路径 |
 | `scripts/dedup_check.py` | URL 去重检查（读 `<hash8>/meta.json`） |
 | `scripts/article_meta.py` | 去重索引写入 + 固定词表兜底移位（纯函数库） |
