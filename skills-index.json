@@ -99,8 +99,8 @@
       "path": "research/clip-url",
       "bundle": "research",
       "installScope": "project",
-      "contentHash": "e0eb742e72d5f805",
-      "contentVersion": "0.7.4"
+      "contentHash": "46e5edd59daaa755",
+      "contentVersion": "0.7.5"
     },
     {
       "path": "creative/capture-todo",

@@ -1,6 +1,6 @@
 ---
 name: clip-url
-version: "0.7.4"
+version: "0.7.5"
 description: "Use this the instant a URL is shared with any intent to save, archive, clip, or translate-and-keep it in Obsidian — a bare link with no comment, \"save this\", \"archive this\", \"clip this\", \"add to obsidian\", \"存一下\", \"存到 vault/obsidian\", \"留个档\", \"翻译一下存\", \"帮我存/抓一下这个链接\", or a request to fetch a page via browser-fetch-mcp. Covers arXiv papers, WeChat/公众号 posts, X/Twitter threads, Hacker News links, blog posts, news articles, and general webpages — including sites needing special handling (login walls, images, JS-rendered content). Do not use for translate-or-summarize-only requests with no save intent, in-page actions like clicking buttons or filling forms, retagging or fixing metadata on an article already saved, links shared purely for reaction or jokes, or topic searches with no specific URL given."
 user_invocable: true
 ---
@@ -18,6 +18,17 @@ SkillDir: skills/research/clip-url
 ```
 
 ## 执行流程
+
+流程概览（各步骤的判断条件和细节以下方对应小节为准，这里只做路线图）：
+
+1. 净化 URL
+2. 确认默认 chrome_profile（只在第一次使用本 skill 时问一次）
+2.5. 确认共享配置存在（VAULT_PATH / 固定词表）
+3. 派发 Subagent 1：MCP 抓取
+4. 判断抓取结果，决定是否需要自优化
+4.5. 派发 Subagent 3：自优化（仅在步骤 4 判定需要时）
+5. 派发 Subagent 2：打标 + 翻译
+6. 向用户输出结果卡片
 
 ### 步骤 1：净化 URL
 
