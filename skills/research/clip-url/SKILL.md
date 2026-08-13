@@ -1,6 +1,6 @@
 ---
 name: clip-url
-version: "0.7.1"
+version: "0.7.2"
 description: "Fetches a URL through browser-fetch-mcp's fetch_article (site-aware extraction: generic/wechat/arxiv/xcom, with image download and a persisted default chrome_profile), tags against extract-url's shared fixed-tag vocabulary, translates, and saves origin + translation into extract-url's real shared Obsidian Vault (VAULT_PATH) with cross-skill URL dedup. Not extract-url's full equivalent yet (no frontmatter auto-repair), but writes real vault content, not a validation-only test directory."
 user_invocable: true
 ---
@@ -18,6 +18,17 @@ SkillDir: skills/research/clip-url
 ```
 
 ## 执行流程
+
+流程概览（各步骤的判断条件和细节以下方对应小节为准，这里只做路线图）：
+
+1. 净化 URL
+2. 确认默认 chrome_profile（首次用问一次）
+2.5. 确认共享配置存在（VAULT_PATH / 固定词表）
+3. 派发 Subagent 1：MCP 抓取
+4. 判断抓取结果，决定是否需要自优化
+4.5. 派发 Subagent 3：自优化（仅在步骤 4 判定需要时）
+5. 派发 Subagent 2：打标 + 翻译
+6. 向用户输出结果卡片
 
 ### 步骤 1：净化 URL
 
