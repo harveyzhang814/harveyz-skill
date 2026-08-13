@@ -7,6 +7,7 @@
 > - [[qm-resolution-layer]]（解析层深入分析——本篇依赖的 `resolution.layers` 由它算出）
 > - [[qm-turn-slice]]（纵切面——记忆抽取在 turn 时序里的位置，以及 `pausing` 时为何跳过）
 > - [[qm-harness-layer]]（Harness 层——上下文压缩与记忆是互补的两种「记不住怎么办」）
+> - [[qm-run-lifecycle]]（执行内核运行时——`replaceIfRevision` 与任务清单的 `transitionStatus` 是同一种乐观并发控制）
 >
 > 调研对象：`yc-software/qm` 的 `src/memory/`
 > 本地路径：`~/Repositories/qm`

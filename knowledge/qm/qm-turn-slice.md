@@ -7,6 +7,7 @@
 > - [[qm-memory-layer]]（记忆层——本文第 4 步与第 8 步的展开）
 > - [[qm-skills-layer]]（技能层——本文第 4 步注入的技能索引）
 > - [[qm-harness-layer]]（Harness 层——本文第 3 步「模型循环」的展开）
+> - [[qm-run-lifecycle]]（执行内核运行时——本文十九道闸门底下的失效模型：租约、重试、排空、回收、中断重入）
 >
 > 调研对象：`yc-software/qm` 的 turn 全链路
 > 本地路径：`~/Repositories/qm`

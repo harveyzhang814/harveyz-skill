@@ -7,6 +7,7 @@
 > - [[qm-resolution-layer]]（解析层——技能可见 scope 的顺序由它算出）
 > - [[qm-turn-slice]]（纵切面——技能索引与懒加载在 turn 时序里的位置）
 > - [[qm-harness-layer]]（Harness 层——技能索引进的那个 systemPrompt 由谁消费）
+> - [[qm-run-lifecycle]]（执行内核运行时——技能物化发生在 `GapPhase.skills_materialize` 相）
 >
 > 调研对象：`yc-software/qm` 的 `src/skills/`
 > 本地路径：`~/Repositories/qm`
