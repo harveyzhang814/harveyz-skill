@@ -44,3 +44,31 @@ def test_set_rejects_nonexistent_path(tmp_path):
     result = _run(["set", str(tmp_path / "DoesNotExist")], data_dir)
     assert result.returncode == 1
     assert result.stderr.strip() != ""
+
+
+def _run_prompted(args: list[str], data_dir: Path, clip_url_dir: Path) -> subprocess.CompletedProcess:
+    return subprocess.run(
+        [sys.executable, str(SCRIPT), *args],
+        env={
+            **os.environ,
+            "BROWSER_FETCH_MCP_DATA_DIR": str(data_dir),
+            "HSKILL_CLIP_URL_DATA_DIR": str(clip_url_dir),
+        },
+        capture_output=True, text=True, timeout=30,
+    )
+
+
+def test_prompted_reports_no_initially(tmp_path):
+    result = _run_prompted(["prompted"], tmp_path / "data", tmp_path / "clip-url")
+    assert result.returncode == 0, result.stderr
+    assert result.stdout.strip() == "NO"
+
+
+def test_mark_prompted_then_prompted_reports_yes(tmp_path):
+    clip_url_dir = tmp_path / "clip-url"
+    mark_result = _run_prompted(["mark-prompted"], tmp_path / "data", clip_url_dir)
+    assert mark_result.returncode == 0, mark_result.stderr
+    assert mark_result.stdout.strip() == "OK"
+
+    prompted_result = _run_prompted(["prompted"], tmp_path / "data", clip_url_dir)
+    assert prompted_result.stdout.strip() == "YES"

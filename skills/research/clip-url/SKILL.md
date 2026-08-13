@@ -1,6 +1,6 @@
 ---
 name: clip-url
-version: "0.7.2"
+version: "0.7.3"
 description: "Fetches a URL through browser-fetch-mcp's fetch_article (site-aware extraction: generic/wechat/arxiv/xcom, with image download and a persisted default chrome_profile), tags against extract-url's shared fixed-tag vocabulary, translates, and saves origin + translation into extract-url's real shared Obsidian Vault (VAULT_PATH) with cross-skill URL dedup. Not extract-url's full equivalent yet (no frontmatter auto-repair), but writes real vault content, not a validation-only test directory."
 user_invocable: true
 ---
@@ -26,24 +26,19 @@ import re
 url_safe = re.sub(r'[\x00-\x1f\x7f]', '', url).strip()[:2048]
 ```
 
-### 步骤 2：确认默认 chrome_profile（仅 x.com/twitter.com 的 URL 需要，首次命中时设置一次，之后不再询问）
+### 步骤 2：确认默认 chrome_profile（只在第一次使用本 skill 时问一次，之后不再询问）
 
-chrome_profile 只影响需要登录态才能抓取的网站（目前只有 x.com），非该类网站永远走匿名抓取，不受影响。先判断当前 URL 是否命中：
+运行 `python3 SkillDir/scripts/chrome_profile_config.py get`。
 
-```python
-from urllib.parse import urlparse
-host = (urlparse(url_safe).hostname or "").lower()
-needs_chrome_profile = host in ("x.com", "www.x.com", "twitter.com", "www.twitter.com")
-```
-
-- 若 `needs_chrome_profile` 为 False：跳过本步骤剩余部分，直接进入步骤 2.5。
-- 若为 True：运行 `python3 SkillDir/scripts/chrome_profile_config.py get`。
-  - 若输出 `CONFIGURED: <path>`：已经配置过默认 profile，跳过下面的检测和提问，直接进入步骤 2.5。
-  - 若输出 `NOT_CONFIGURED`：
+- 若输出 `CONFIGURED: <path>`：已经配置过默认 profile，跳过下面的检测和提问，直接进入步骤 2.5。
+- 若输出 `NOT_CONFIGURED`：运行 `python3 SkillDir/scripts/chrome_profile_config.py prompted`。
+  - 若输出 `YES`（之前已经问过一次，不管当时用户是设置了值还是选择不设置）：跳过检测和提问，直接进入步骤 2.5。
+  - 若输出 `NO`（第一次遇到这个状态，不论当前 URL 是什么网站都会命中）：
     1. 运行 `python3 SkillDir/scripts/detect_xcom_chrome_profile.py`，把完整输出（对比表 + `RECOMMENDED_PROFILE:` 那行）原样展示给用户。
-    2. 向用户提问：把推荐的 profile 设为以后的默认值？或输入一个替代路径？也可以选择这次先不设置。
-    3. 若用户提供了 profile 路径（推荐的或自己输入的）：运行 `python3 SkillDir/scripts/chrome_profile_config.py set <path>` 持久化。此后所有网站的抓取都不会再触发这个设置流程。
-    4. 若用户选择不设置：不持久化任何值，本次继续（会因为没有登录态导致 Subagent 1 里 `fetch_article` 报错失败——x.com 没有匿名抓取选项；下次再遇到 x.com/twitter.com 的 URL 会重新询问，非该类网站不受影响，不会再被打断）。
+    2. 向用户提问：把推荐的 profile 设为以后的默认值？或输入一个替代路径？也可以选择不设置。
+    3. 不论用户如何回答，运行 `python3 SkillDir/scripts/chrome_profile_config.py mark-prompted`，记录"已经问过一次"——此后所有网站的抓取都不会再触发这个设置流程（包括用户当时选择不设置的情况）。
+    4. 若用户提供了 profile 路径（推荐的或自己输入的）：运行 `python3 SkillDir/scripts/chrome_profile_config.py set <path>` 持久化。
+    5. 若用户选择不设置：不持久化 profile 值，本次继续（x.com 的 URL 会在 Subagent 1 里因为 `fetch_article` 报错而失败——x.com 没有匿名抓取选项；非 x.com 的 URL 正常匿名抓取，不受影响）。用户之后可随时手动运行 `chrome_profile_config.py set <path>` 补配置。
 
 **不允许**：跳过展示直接把探测到的 profile 设为默认值——必须等用户明确回答，且只有用户确认后才能调用 `chrome_profile_config.py set`。
 
@@ -149,4 +144,4 @@ result = subprocess.run(
 | `scripts/mcp_fetch_client.py` | 核心脚本：真实 MCP client，调用 browser-fetch-mcp 的 `fetch_article`，`fetch_and_report` 额外返回诊断字段 |
 | `scripts/mcp_debug_client.py` | 自优化 subagent 用的调试客户端，包装 browser-fetch-mcp 的 `fetch_page`/`evaluate_js` |
 | `scripts/detect_xcom_chrome_profile.py` | 通过 browser-fetch-mcp 的 `list_chrome_profiles` MCP 工具检测哪些 Chrome profile 登录了 x.com，仅供用户确认用，不自动使用检测结果 |
-| `scripts/chrome_profile_config.py` | 读写 browser-fetch-mcp 持久化的默认 chrome_profile（`get`/`set` 子命令） |
+| `scripts/chrome_profile_config.py` | 读写 browser-fetch-mcp 持久化的默认 chrome_profile（`get`/`set` 子命令），以及本地记录"是否已问过一次"的标记（`prompted`/`mark-prompted` 子命令） |
