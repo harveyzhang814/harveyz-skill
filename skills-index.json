@@ -1,6 +1,7 @@
 {
   "toolBundleMeta": {
-    "tools": "开发者 OS 工具（hub — 项目管理 + git 状态 + 任务跟踪；sync — Syncthing 守护进程管理）"
+    "tools": "开发者 OS 工具（hub — 项目管理 + git 状态 + 任务跟踪；sync — Syncthing 守护进程管理）",
+    "research-tools": "研究抓取后端（browser-fetch-mcp — clip-url/extract-url 共用的认证浏览器抓取 MCP server）"
   },
   "tools": [
     {
@@ -14,6 +15,11 @@
       "path": "tools/sync-agent",
       "bundle": "tools",
       "installScope": "global"
+    },
+    {
+      "name": "browser-fetch-mcp",
+      "path": "tools/browser-fetch-mcp",
+      "bundle": "research-tools"
     }
   ],
   "bundleMeta": {
@@ -93,8 +99,8 @@
       "path": "research/clip-url",
       "bundle": "research",
       "installScope": "project",
-      "contentHash": "23eae79c7c7f2908",
-      "contentVersion": "0.7.0"
+      "contentHash": "1e82b1ad9aa95552",
+      "contentVersion": "0.7.1"
     },
     {
       "path": "creative/capture-todo",

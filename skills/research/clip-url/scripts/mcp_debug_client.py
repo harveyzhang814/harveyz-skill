@@ -10,15 +10,14 @@ mcp 1.28.1 camelCase note as mcp_fetch_client.py).
 """
 import json
 import os
-from pathlib import Path
 from typing import Optional
 
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
 
-BROWSER_FETCH_MCP_SH = (
-    Path(__file__).resolve().parents[4] / "tools" / "browser-fetch-mcp" / "browser-fetch-mcp.sh"
-)
+from browser_fetch_mcp_locate import find_browser_fetch_mcp
+
+BROWSER_FETCH_MCP_SH = find_browser_fetch_mcp()
 
 
 async def _call_tool(tool_name: str, tool_args: dict) -> dict:
