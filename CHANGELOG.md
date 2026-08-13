@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.26.1] - 2026-08-13
+
+### Fixed
+- `clip-url`：MCP 抓取脚本此前写死仓库内相对路径来定位 `browser-fetch-mcp`，在任何非源码 checkout 的已安装环境下都会 `FileNotFoundError`；改为 dev-mode（仓库内）优先、已安装模式（`~/.local/bin/browser-fetch-mcp`）兜底的探测逻辑，并把 `browser-fetch-mcp` 注册进 `skills-index.json` 的 `tools[]`（新增 `research-tools` bundle），使其首次可通过 `hskill install --tool browser-fetch-mcp` 安装
+
 ## [0.26.0] - 2026-08-12
 
 ### Added
