@@ -8,6 +8,7 @@
 > - [[qm-turn-slice]]（纵切面——一条 Slack 消息从进入到回复送出，十九道闸门）
 > - [[qm-harness-layer]]（Harness 层——四适配器一套接口、tape 事件溯源、上下文压缩、冷启动重放）
 > - [[qm-run-lifecycle]]（执行内核运行时——蓝绿自我排空、两层租约、重试与回收、`routeWake` 并发策略、中断重入）
+> - [[qm-skill-adaptation]]（纵切面——同一个 skill 怎么在四个异构 harness 上都能用：末端补偿、能力表的真实身份、三层一致性测试、以及 QM 没做的那一半）
 >
 > 调研对象：`yc-software/qm`（YC 出品的开源多人 agent harness）
 > 本地路径：`~/Repositories/qm`
