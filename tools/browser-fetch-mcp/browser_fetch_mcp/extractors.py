@@ -10,7 +10,6 @@ other three sites share — lives in server.py, since it needs a different
 lifecycle than everything else this module's dispatch_site() routes to.
 See docs/superpowers/specs/2026-08-08-browser-fetch-mcp-xcom-extraction-design.md.
 """
-import re
 from datetime import datetime, timedelta, timezone
 from urllib.parse import urlparse
 
@@ -38,28 +37,47 @@ def is_thin(result: dict) -> bool:
     return len(blocks) < 20 or total_chars < 3000
 
 
-_CT_RE = re.compile(r'var\s+ct\s*=\s*["\'](\d+)["\']')
-
-
-def extract_wechat_publish_date(html: str) -> str:
-    """WeChat sets the publish date client-side from `var ct = "<unix ts>"`;
-    it's never in the DOM (not even hidden), so pull it from raw HTML text."""
-    match = _CT_RE.search(html)
-    if not match:
+def wechat_publish_date_from_ct(ct) -> str:
+    """Convert WeChat's `window.ct` (unix timestamp) to YYYY-MM-DD in
+    UTC+8. WeChat sets this client-side from `var ct = "<unix ts>"` at the
+    top level of a <script> tag, which `var` leaks onto `window` — verified
+    against real mp.weixin.qq.com articles, so EXTRACT_JS_WECHAT reads it
+    directly via `window.ct` instead of the caller re-parsing raw HTML."""
+    if not ct:
         return ""
-    return datetime.fromtimestamp(
-        int(match.group(1)), tz=timezone(timedelta(hours=8))
-    ).strftime("%Y-%m-%d")
+    try:
+        return datetime.fromtimestamp(
+            int(ct), tz=timezone(timedelta(hours=8))
+        ).strftime("%Y-%m-%d")
+    except (TypeError, ValueError):
+        return ""
 
 
-# Ported verbatim from extract-url/scripts/playwright_web.py (_EXTRACT_JS).
+# Ported verbatim from extract-url/scripts/playwright_web.py (_EXTRACT_JS),
+# plus a textOf() fallback (see comment below) added for sites whose
+# sections stay visibility:hidden in our headless context.
 _EXTRACT_JS_GENERIC = r"""() => {
     const skipTags = new Set(['SCRIPT','STYLE','NAV','FOOTER','HEADER','ASIDE','BUTTON','FORM']);
     const contentUnits = [];
     const imageBlocks  = [];
 
+    // Some sites (e.g. Webflow pages using GSAP/ScrollTrigger reveal
+    // animations) render their whole article under a section that carries
+    // inline visibility:hidden until a scroll/load animation flips it —
+    // an animation that never runs in our headless context. innerText
+    // returns "" for any element under a visibility:hidden ancestor in
+    // Chromium (same root cause as WECHAT's #js_content below), so fall
+    // back to textContent only when innerText comes back empty — this
+    // leaves already-working sites (innerText non-empty) untouched.
+    function textOf(el) {
+        if (!el) return '';
+        const t = el.innerText.replace(/\s+/g, ' ').trim();
+        if (t) return t;
+        return (el.textContent || '').replace(/\s+/g, ' ').trim();
+    }
+
     const titleEl   = document.querySelector('h1') || document.querySelector('title');
-    const title     = titleEl ? titleEl.innerText.replace(/\s+/g, ' ').trim() : 'Untitled';
+    const title     = titleEl ? textOf(titleEl) : 'Untitled';
 
     const dateMeta  = document.querySelector('meta[property="article:published_time"]')
                    || document.querySelector('meta[name="date"]')
@@ -71,7 +89,7 @@ _EXTRACT_JS_GENERIC = r"""() => {
     const authorMeta = document.querySelector('meta[name="author"]')
                     || document.querySelector('[rel="author"]');
     const author = authorMeta
-        ? (authorMeta.getAttribute('content') || authorMeta.innerText || '').trim()
+        ? (authorMeta.getAttribute('content') || textOf(authorMeta))
         : '';
 
     const main   = document.querySelector('main') || document.querySelector('article') || document.body;
@@ -87,7 +105,7 @@ _EXTRACT_JS_GENERIC = r"""() => {
                 imageBlocks.push({src, alt: node.alt || '', afterBlock: contentUnits.length - 1});
             }
         } else if (['H1','H2','H3','P','LI','BLOCKQUOTE','PRE','CODE'].includes(tag)) {
-            const t = node.innerText.replace(/\s+/g, ' ').trim();
+            const t = textOf(node);
             if (t && t.length > 10) {
                 contentUnits.push({tag: tag.toLowerCase(), content: t});
             }
@@ -147,7 +165,10 @@ _EXTRACT_JS_WECHAT = r"""() => {
         }
     }
 
-    return {title, author, blocks: contentUnits, imageBlocks};
+    // var ct at the top level of a <script> tag leaks onto window (verified
+    // against real mp.weixin.qq.com articles) — read it directly instead of
+    // the caller re-parsing raw HTML for it.
+    return {title, author, blocks: contentUnits, imageBlocks, ct: window.ct || null};
 }"""
 
 # Ported verbatim from extract-url/scripts/playwright_web_arxiv.py (_EXTRACT_JS).

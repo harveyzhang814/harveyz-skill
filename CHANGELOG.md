@@ -7,6 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.27.0] - 2026-08-13
+
+### Added
+- `clip-url`：新增 browser-fetch-mcp 前置可用性检测，抓取前先确认 MCP 可用，避免执行到中途才发现环境问题
+- `clip-url`：正文开头新增流程概览（路线图），列出各步骤编号，减少多步骤执行时的偏差
+
+### Changed
+- `clip-url`：优化 description 触发文案，定位为 extract-url 的通用替代品参与触发竞争，覆盖更多保存/归档/翻译存档场景
+
+### Fixed
+- `clip-url`：chrome_profile 询问从「可能每次任务都问」改为「只在首次使用本 skill 时问一次」，无论用户当时是否设置了值，都会记住已经问过
+
+## [0.26.1] - 2026-08-13
+
+### Fixed
+- `clip-url`：MCP 抓取脚本此前写死仓库内相对路径来定位 `browser-fetch-mcp`，在任何非源码 checkout 的已安装环境下都会 `FileNotFoundError`；改为 dev-mode（仓库内）优先、已安装模式（`~/.local/bin/browser-fetch-mcp`）兜底的探测逻辑，并把 `browser-fetch-mcp` 注册进 `skills-index.json` 的 `tools[]`（新增 `research-tools` bundle），使其首次可通过 `hskill install --tool browser-fetch-mcp` 安装
+
+## [0.26.0] - 2026-08-12
+
+### Added
+- `hskill mcp`：新增 MCP（Model Context Protocol）服务器子命令，以 stdio 方式暴露 8 个工具（`hskill_list`/`hskill_status`/`hskill_outdated`/`hskill_info`/`hskill_install`/`hskill_uninstall`/`hskill_hooks`/`hskill_update`），供 MCP 兼容的 agent host（Claude Code、Claude Desktop、Cursor 等）直接调用 hskill 的操作
+
+### Changed
+- `publish-skill` 审计：修正 `pdf-math-translate` description 语言违规（改为英文），刷新 `capture-vocab`/`extract-url`/`pdf-math-translate` 三个 skill 的 contentHash 记录
+
 ## [0.25.1] - 2026-07-22
 
 ### Fixed

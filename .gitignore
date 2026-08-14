@@ -86,6 +86,7 @@ __pycache__/
 .claude/*.local.md
 .claude/settings.local.json
 .claude/skills/
+.claude/worktrees/
 .claude/**/.DS_Store
 .claude/.DS_Store
 .gstack/

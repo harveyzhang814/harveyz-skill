@@ -1,6 +1,6 @@
 ---
 name: pdf-math-translate
-description: "PDFMathTranslate：翻译科学论文 PDF 为中文，导出 Markdown/Word。双语对照 + 纯翻译双版本输出。支持 Google/DeepL/OpenAI 等 24 种翻译服务。首次使用自动探测本机 CLI 路径与能力，写入 ~/.hskill/pdf-math-translate/config.md。用户 Harvey 的常用工具。"
+description: "PDFMathTranslate: translates scientific paper PDFs into Chinese, exporting to Markdown/Word. Produces both bilingual and translation-only outputs. Supports 24 translation services including Google/DeepL/OpenAI. On first use, auto-detects the local CLI path and capabilities and writes them to ~/.hskill/pdf-math-translate/config.md. One of Harvey's frequently used tools."
 user_invocable: true
 version: "2.0.0"
 author: Hermes Agent

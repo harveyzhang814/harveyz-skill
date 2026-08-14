@@ -1,6 +1,7 @@
 {
   "toolBundleMeta": {
-    "tools": "开发者 OS 工具（hub — 项目管理 + git 状态 + 任务跟踪；sync — Syncthing 守护进程管理）"
+    "tools": "开发者 OS 工具（hub — 项目管理 + git 状态 + 任务跟踪；sync — Syncthing 守护进程管理）",
+    "research-tools": "研究抓取后端（browser-fetch-mcp — clip-url/extract-url 共用的认证浏览器抓取 MCP server）"
   },
   "tools": [
     {
@@ -14,10 +15,15 @@
       "path": "tools/sync-agent",
       "bundle": "tools",
       "installScope": "global"
+    },
+    {
+      "name": "browser-fetch-mcp",
+      "path": "tools/browser-fetch-mcp",
+      "bundle": "research-tools"
     }
   ],
   "bundleMeta": {
-    "research": "研究工具（extract-url + learn-video + extract-vision + survey-skillrepo + learn-paper + extract-cognition + probe-session）",
+    "research": "研究工具（extract-url + learn-video + extract-vision + survey-skillrepo + learn-paper + extract-cognition + probe-session + clip-url）",
     "creative": "创意工具（capture-todo + capture-insight）",
     "coding": "程序工具（init-workflow + setup-debug + init-goal + question-me + capture-vocab + rephrase + explain-pm）",
     "writing": "写作工具（forge-doc + draw-diagram + manage-dir + migrate-spec）",
@@ -37,8 +43,8 @@
       "path": "research/extract-url",
       "bundle": "research",
       "installScope": "global",
-      "contentHash": "4b72bb5e655884d5",
-      "contentVersion": "2.7.1"
+      "contentHash": "23481acf2a35120c",
+      "contentVersion": "2.8.0"
     },
     {
       "path": "research/extract-vision",
@@ -86,7 +92,15 @@
       "path": "research/pdf-math-translate",
       "bundle": "research",
       "installScope": "project",
-      "contentVersion": "1.0.0"
+      "contentHash": "94dde69e6bc5429c",
+      "contentVersion": "2.0.0"
+    },
+    {
+      "path": "research/clip-url",
+      "bundle": "research",
+      "installScope": "project",
+      "contentHash": "46e5edd59daaa755",
+      "contentVersion": "0.7.5"
     },
     {
       "path": "creative/capture-todo",
@@ -134,8 +148,8 @@
       "path": "coding/capture-vocab",
       "bundle": "coding",
       "installScope": "project",
-      "contentHash": "5d78c9d9a91e7faa",
-      "contentVersion": "1.1.1"
+      "contentHash": "0ef9e2c82f9876f4",
+      "contentVersion": "1.1.2"
     },
     {
       "path": "coding/rephrase",
@@ -283,6 +297,12 @@
       "installScope": "global",
       "contentHash": "3762c7b6488a5f90",
       "contentVersion": "1.1.1"
+    },
+    {
+      "path": "coding/handoff",
+      "bundle": "coding",
+      "contentHash": "e853463d770ce355",
+      "contentVersion": "1.1.0"
     }
   ],
   "hooks": [

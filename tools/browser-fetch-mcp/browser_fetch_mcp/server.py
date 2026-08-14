@@ -8,7 +8,7 @@ import hashlib
 import os
 import sys
 from pathlib import Path
-from typing import Optional
+from typing import Literal, Optional
 from urllib.parse import urlparse
 
 from mcp.server import MCPServer
@@ -20,10 +20,12 @@ from browser_fetch_mcp.extractors import (
     EXTRACT_JS_XCOM_HEADED,
     EXTRACT_JS_XCOM_HEADLESS,
     dispatch_site,
-    extract_wechat_publish_date,
     is_thin,
+    wechat_publish_date_from_ct,
 )
 from browser_fetch_mcp.images import download_images
+from browser_fetch_mcp.profiles import list_chrome_profiles as _list_chrome_profiles
+from browser_fetch_mcp import config, markdown
 
 mcp = MCPServer("browser-fetch-mcp")
 
@@ -170,10 +172,45 @@ async def fetch_page(url: str, use_auth: bool = False, chrome_profile: Optional[
 
 
 @mcp.tool()
+async def get_default_chrome_profile() -> dict:
+    """Read the persisted default Chrome profile, set via
+    set_default_chrome_profile. Returns {"profile_path": None} if no
+    default has ever been configured."""
+    return {"profile_path": config.get_default_chrome_profile(_data_dir())}
+
+
+@mcp.tool()
+async def set_default_chrome_profile(profile_path: str) -> dict:
+    """Persist profile_path as the default Chrome profile fetch_article
+    uses whenever a caller omits chrome_profile. Raises ValueError if
+    profile_path does not exist or is not a directory — never silently
+    accepts a bad path."""
+    path = Path(profile_path)
+    if not path.is_dir():
+        raise ValueError(
+            f"chrome_profile path does not exist or is not a directory: {profile_path}"
+        )
+    config.set_default_chrome_profile(_data_dir(), profile_path)
+    return {"ok": True}
+
+
+@mcp.tool()
+async def list_chrome_profiles(host_keys: list[str], cookie_names: list[str]) -> dict:
+    """List local Chrome profiles and, for each, which of cookie_names
+    exist for the given host_keys (existence-only, never decrypted).
+    Returns {"profiles": [{"profile_path", "account_email",
+    "matched_cookie_names", "looks_logged_in"}, ...]}. Callers decide
+    which profile to recommend/use — this tool never picks one."""
+    profiles = await asyncio.to_thread(_list_chrome_profiles, host_keys, cookie_names)
+    return {"profiles": profiles}
+
+
+@mcp.tool()
 async def fetch_article(
     url: str,
     output_dir: str,
     chrome_profile: Optional[str] = None,
+    output_format: Literal["path", "json"] = "path",
 ) -> dict:
     """Fetch a URL and extract structured article content: title, author,
     publish_date, text/heading/list/table blocks, and downloaded images.
@@ -193,6 +230,23 @@ async def fetch_article(
     has more blocks. chrome_profile is optional — omit it to skip the
     retry and always return the anonymous result as-is.
 
+    output_format controls the return shape:
+    - "path" (default): assembles the article into Markdown, writes it to
+      <output_dir>/Origin/<sanitized title>.md, and returns {"origin_path", "title",
+      "author", "publish_date", "site", "cookies_injected",
+      "thin_retry_used", "block_count", "char_count", "code_block_count",
+      "image_count", "content_thin"} — no blocks/image_blocks, keeping the
+      payload out of the caller's context.
+    - "json": returns the raw structured data instead — {"title", "author",
+      "publish_date", "blocks", "image_blocks", "site", "cookies_injected",
+      "thin_retry_used", "block_count", "char_count", "code_block_count",
+      "image_count", "content_thin"} — no file is written.
+    block_count/char_count/code_block_count/image_count/content_thin are
+    lightweight diagnostics (ints and a bool, never the extracted content
+    itself) so a caller can report stats or detect thin/failed extraction
+    without pulling blocks into its context.
+    Raises ValueError for any other value.
+
     Raises ValueError if url's scheme isn't http/https — fetch_page has
     no such check today, but fetch_article adds one since it's a new
     tool that navigates to caller-supplied URLs (matches the "Security:
@@ -202,16 +256,21 @@ async def fetch_article(
     if parsed_url.scheme not in ("http", "https") or not parsed_url.netloc:
         raise ValueError(f"Rejected URL with scheme '{parsed_url.scheme}' — only http/https allowed")
 
+    if output_format not in ("path", "json"):
+        raise ValueError(f"Invalid output_format: {output_format!r} (expected 'path' or 'json')")
+
+    effective_chrome_profile = chrome_profile or config.get_default_chrome_profile(_data_dir())
+
     site = dispatch_site(url)
 
     if site == "xcom":
-        if not chrome_profile:
+        if not effective_chrome_profile:
             raise ValueError("chrome_profile is required for x.com/Twitter URLs")
 
-        cookies_dict = await asyncio.to_thread(extract_cookies, "https://x.com", chrome_profile)
+        cookies_dict = await asyncio.to_thread(extract_cookies, "https://x.com", effective_chrome_profile)
         if not {"auth_token", "ct0", "twid"} & cookies_dict.keys():
             raise ValueError(
-                f"No x.com session cookies in {chrome_profile} — "
+                f"No x.com session cookies in {effective_chrome_profile} — "
                 "log into x.com in that Chrome profile first"
             )
         pw_cookies = [
@@ -246,20 +305,18 @@ async def fetch_article(
         page = await ctx.new_page()
         try:
             await page.goto(url, wait_until="domcontentloaded", timeout=30000)
-            if site == "wechat":
-                original_html = await page.content()
             result = await page.evaluate(js)
         finally:
             await page.close()
 
         cookies_injected = 0
         thin_retry_used = False
-        if chrome_profile and is_thin(result):
+        if effective_chrome_profile and is_thin(result):
             thin_retry_used = True
-            auth_key = _profile_key(chrome_profile)
+            auth_key = _profile_key(effective_chrome_profile)
             auth_ctx = await _get_context(auth_key)
 
-            cookies_dict = extract_cookies(url, chrome_profile)
+            cookies_dict = extract_cookies(url, effective_chrome_profile)
             if cookies_dict:
                 domain = urlparse(url).hostname
                 pw_cookies = [
@@ -272,34 +329,106 @@ async def fetch_article(
             auth_page = await auth_ctx.new_page()
             try:
                 await auth_page.goto(url, wait_until="domcontentloaded", timeout=30000)
-                if site == "wechat":
-                    retry_html = await auth_page.content()
                 retry_result = await auth_page.evaluate(js)
             finally:
                 await auth_page.close()
 
             if len(retry_result.get("blocks", [])) > len(result.get("blocks", [])):
                 result = retry_result
-                if site == "wechat":
-                    original_html = retry_html
 
     if site == "wechat":
-        publish_date = extract_wechat_publish_date(original_html)
+        publish_date = wechat_publish_date_from_ct(result.get("ct"))
     else:
         publish_date = (result.get("publishDate") or "")[:10]
 
     image_blocks = await asyncio.to_thread(download_images, result.get("imageBlocks", []), Path(output_dir))
 
+    title = result.get("title", "Untitled")
+    author = result.get("author", "")
+    blocks = [{"tag": b["tag"], "content": b["content"]} for b in result.get("blocks", [])]
+    block_count = len(blocks)
+    char_count = sum(len(b["content"]) for b in blocks)
+    code_block_count = sum(1 for b in blocks if b["tag"] == "pre")
+    image_count = len(image_blocks)
+    content_thin = is_thin(result)
+
+    if output_format == "json":
+        return {
+            "title": title,
+            "author": author,
+            "publish_date": publish_date,
+            "blocks": blocks,
+            "image_blocks": image_blocks,
+            "site": site,
+            "cookies_injected": cookies_injected,
+            "thin_retry_used": thin_retry_used,
+            "block_count": block_count,
+            "char_count": char_count,
+            "code_block_count": code_block_count,
+            "image_count": image_count,
+            "content_thin": content_thin,
+        }
+
+    origin_path = markdown.assemble_and_write(
+        Path(output_dir), url, title, author, publish_date, blocks, image_blocks
+    )
     return {
-        "title": result.get("title", "Untitled"),
-        "author": result.get("author", ""),
+        "origin_path": str(origin_path),
+        "title": title,
+        "author": author,
         "publish_date": publish_date,
-        "blocks": [{"tag": b["tag"], "content": b["content"]} for b in result.get("blocks", [])],
-        "image_blocks": image_blocks,
         "site": site,
         "cookies_injected": cookies_injected,
         "thin_retry_used": thin_retry_used,
+        "block_count": block_count,
+        "char_count": char_count,
+        "code_block_count": code_block_count,
+        "image_count": image_count,
+        "content_thin": content_thin,
     }
+
+
+@mcp.tool()
+async def evaluate_js(
+    url: str,
+    js_code: str,
+    chrome_profile: Optional[str] = None,
+) -> dict:
+    """Navigate to url and execute js_code via page.evaluate(), returning
+    its result. Debug-only tool for the self-optimization workflow to
+    iterate candidate extraction logic against a real page — writes no
+    files, downloads no images, and has no thin-content retry. If
+    chrome_profile is given, injects cookies decrypted from that Chrome
+    profile before navigating; omit it for an anonymous fetch.
+
+    Raises ValueError if url's scheme isn't http/https (same guard as
+    fetch_article).
+    """
+    parsed_url = urlparse(url)
+    if parsed_url.scheme not in ("http", "https") or not parsed_url.netloc:
+        raise ValueError(f"Rejected URL with scheme '{parsed_url.scheme}' — only http/https allowed")
+
+    if chrome_profile:
+        ctx = await _get_context(_profile_key(chrome_profile))
+        cookies_dict = extract_cookies(url, chrome_profile)
+        if cookies_dict:
+            domain = parsed_url.hostname
+            pw_cookies = [
+                {"name": k, "value": v, "domain": domain, "path": "/", "secure": url.startswith("https")}
+                for k, v in cookies_dict.items()
+            ]
+            await ctx.add_cookies(pw_cookies)
+    else:
+        ctx = await _get_context(ANON_KEY)
+
+    page = await ctx.new_page()
+    try:
+        await page.goto(url, wait_until="domcontentloaded", timeout=30000)
+        result = await page.evaluate(js_code)
+    finally:
+        await page.close()
+
+    return {"result": result}
 
 
 def main():
