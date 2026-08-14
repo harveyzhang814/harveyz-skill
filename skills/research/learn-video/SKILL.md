@@ -1,6 +1,6 @@
 ---
 name: learn-video
-version: "1.6.0"
+version: "1.6.1"
 description: "Process a YouTube or Bilibili video using the vdl CLI: transcribe, generate article and summary. Triggers when the user provides a YouTube or Bilibili URL and wants to learn from, summarize, transcribe, or extract key points from the video — e.g. 'help me understand this talk', 'summarize this YouTube video', 'summarize this Bilibili video', 'get the transcript', 'process this video', 'summarize it'."
 user_invocable: true
 ---
@@ -20,7 +20,7 @@ which vdl
 若未找到，提示用户先安装：
 
 ```bash
-cd /Users/harveyzhang96/Projects/Video-Learner
+cd "$HOME/Projects/Video-Learner"
 npm link
 ```
 
@@ -77,11 +77,21 @@ npm link
 **必须后台启动，禁止前台阻塞调用。** 视频处理可能长达数小时（见「超长视频检测」），前台 Bash 调用会被运行环境的超时机制打断——任务本身在后端仍会继续跑，但 agent 拿到的是超时错误而不是真实结果，也就无法感知进度或在完成后向用户报告。
 
 ```bash
-cd /Users/harveyzhang96/Projects/Video-Learner && \
+cd "$HOME/Projects/Video-Learner" && \
 nohup vdl "<URL>" --focus "<FOCUS>" --mode <MODE> --lang <LANG> --json > <LOGFILE> 2>&1 &
 ```
 
-启动后立即读一次 `<LOGFILE>` 的第一行拿到 `task_id`（格式 `Task: <task_id>`，vdl 在真正开始跑步骤之前就会打印这一行）。
+启动和日志落盘之间可能有极短延迟，读取 `<LOGFILE>` 第一行拿 `task_id`（格式 `Task: <task_id>`，vdl 在真正开始跑步骤之前就会打印这一行）时不要只读一次就判定失败，读到空内容时短暂重试几次：
+
+```bash
+TASKLINE=""
+for i in 1 2 3 4 5 6 7 8 9 10; do
+  TASKLINE=$(sed -n '1p' "<LOGFILE>")
+  [ -n "$TASKLINE" ] && break
+  sleep 0.3
+done
+echo "$TASKLINE"
+```
 
 `vdl` 在输出被重定向到文件（非交互模式）时，每个步骤状态变化都会单独打一行日志：`[<step_display_name>] <status> (<Ns>)`；运行中的步骤还会有进度行 `[<step_display_name>] running (<Ns>) — <percent>% ...`。这些日志行就是后续「进度汇报」和「完成判定」的唯一依据。
 
@@ -149,7 +159,7 @@ nohup vdl rerun <task_id> <dag_step_name> --reset downstream > <LOGFILE> 2>&1 &
 `vdl` 主命令会自动启动服务；但 `vdl rerun`/`vdl status` 等子命令在服务不存在时**无法自启**。
 → 解决：先手动启动服务，再执行子命令：
 ```bash
-cd /Users/harveyzhang96/Projects/Video-Learner
+cd "$HOME/Projects/Video-Learner"
 npm run agent:serve &
 # 等服务就绪后再执行 rerun
 nohup vdl rerun <task_id> <step> --reset step > <LOGFILE> 2>&1 &
@@ -162,7 +172,7 @@ nohup vdl rerun <task_id> <step> --reset step > <LOGFILE> 2>&1 &
 任务模式创建后不能直接修改。若需要在已完成任务上补跑不同模式的步骤（如为 `transcript` 任务补下载音频），用 `--force` 以新模式重建，同样后台启动：
 
 ```bash
-cd /Users/harveyzhang96/Projects/Video-Learner && \
+cd "$HOME/Projects/Video-Learner" && \
 nohup vdl "<URL>" --focus "<FOCUS>" --mode audio --force --json > <LOGFILE> 2>&1 &
 ```
 
@@ -193,7 +203,7 @@ curl -s -X POST http://127.0.0.1:3000/api/tasks/<task_id>/steps/summary/run \
 首次运行成功时，产物路径已经在「进度汇报与完成判定」里从终态 JSON 拿到了，不需要再跑下面的命令。以下命令用于事后重新查询，或 `rerun`（不产出 JSON）成功后刷新结果：
 
 ```bash
-cd /Users/harveyzhang96/Projects/Video-Learner
+cd "$HOME/Projects/Video-Learner"
 
 # 摘要（TL;DR + Outline + Key Points + Action Items）
 vdl result <task_id> --type summary
