@@ -189,3 +189,59 @@ test('pi parse 是纯函数：同一输入两次调用 deepEqual', () => {
   const raw = piFixture('probe-anchor-native.jsonl')
   assert.deepEqual(parsePiJsonl(raw, { skillDir: PROBE_DIR }), parsePiJsonl(raw, { skillDir: PROBE_DIR }))
 })
+
+const HERMES_FIXTURES = path.join(here, 'fixtures/hermes')
+
+function hermesFixture(name) {
+  return fs.readFileSync(path.join(HERMES_FIXTURES, name), 'utf8')
+}
+
+test('空集合保险：hermes fixture 目录非空', () => {
+  const files = fs.readdirSync(HERMES_FIXTURES).filter(f => f.endsWith('.jsonl'))
+  assert.ok(files.length > 0, 'expected at least one hermes fixture')
+})
+
+// hermes 真实抓取（2026-08-15，HOME=jail + --safe-mode + --yolo，
+// MiniMax-M2.7 / minimax-cn）：hermes 的 trace 里没有 claude 的
+// system/result 事件类型，所以 sessionId/model/reply/turns/usage/visibleSkills/
+// isError 全部合法地是 null——不是解析失败，是这个格式本来就不带这些信息。
+// triggered 能算出 true，靠的正是本次修的 skill_view 判据。
+
+test('hermes: triggered 判据是 skill_view 工具且 args.name 匹配（真实抓取，证明 bugfix）', () => {
+  const r = parseClaudeCodeJsonl(hermesFixture('probe-anchor-native.jsonl'), { skillName: 'probe-anchor' })
+  assert.equal(r.triggered, true)
+})
+
+test('hermes: skillName 不匹配时 triggered 为 false（负向）', () => {
+  const r = parseClaudeCodeJsonl(hermesFixture('probe-anchor-native.jsonl'), { skillName: 'some-other-skill' })
+  assert.equal(r.triggered, false)
+})
+
+test('hermes: toolCalls 是 skill_view 与 read_file，按出现顺序编号', () => {
+  const r = parseClaudeCodeJsonl(hermesFixture('probe-anchor-native.jsonl'), { skillName: 'probe-anchor' })
+  assert.deepEqual(r.toolCalls.map(t => t.name), ['skill_view', 'read_file'])
+  assert.deepEqual(r.toolCalls.map(t => t.seq), [0, 1])
+  assert.equal(r.toolCalls[0].args.name, 'probe-anchor')
+  assert.ok(r.toolCalls[1].args.path.endsWith('references/token.md'))
+})
+
+test('hermes: sessionId/model/reply/turns/usage/visibleSkills/isError 真实均为 null——trace 无 system/result 事件', () => {
+  const r = parseClaudeCodeJsonl(hermesFixture('probe-anchor-native.jsonl'), { skillName: 'probe-anchor' })
+  assert.equal(r.sessionId, null)
+  assert.equal(r.model, null)
+  assert.equal(r.reply, null)
+  assert.equal(r.turns, null)
+  assert.equal(r.usage, null)
+  assert.equal(r.visibleSkills, null)
+  assert.equal(r.isError, null)
+})
+
+test('hermes: provider 恒为 null，与 claude/pi 解析器形状一致', () => {
+  const r = parseClaudeCodeJsonl(hermesFixture('probe-anchor-native.jsonl'), { skillName: 'probe-anchor' })
+  assert.equal(r.provider, null)
+})
+
+test('hermes parse 是纯函数：同一输入两次调用结果 deepEqual', () => {
+  const raw = hermesFixture('probe-anchor-native.jsonl')
+  assert.deepEqual(parseClaudeCodeJsonl(raw, { skillName: 'probe-anchor' }), parseClaudeCodeJsonl(raw, { skillName: 'probe-anchor' }))
+})

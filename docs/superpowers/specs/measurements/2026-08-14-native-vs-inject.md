@@ -144,3 +144,32 @@ pi 与 hermes 用当前用户已有凭证即可。
 已更新 `profiles.js` 与 `profile.test.mjs` 的 L1 断言。
 
 n=1，后续运行应监视一致性。
+
+## hermes 的 skill 加载判据不是 `Skill`/`args.skill`
+
+**2026-08-15**：`parse/claude-code-jsonl.js` 是 claude 与 hermes 共用的解析器（文件头注释已写明），
+但此前的 `triggered` 判据只认 claude 的写法，从未针对 hermes 实测过。真实抓取一次
+hermes 原生跑 `probe-anchor`（`HOME=<jail>`、`--safe-mode --yolo`，`MiniMax-M2.7` / `minimax-cn`，
+`sessions export --format trace` 导出）后发现：
+
+hermes 加载 skill 用的工具是 `skill_view`，参数是 `args.name`（不是 `Skill` / `args.skill`）：
+
+```json
+{ "name": "skill_view", "args": { "name": "probe-anchor" }, "ok": true, "seq": 0 },
+{ "name": "read_file", "args": { "path": ".../probe-anchor/references/token.md" }, "ok": true, "seq": 1 }
+```
+
+用的是 `read_file`，不是 claude 的 `Read` 也不是 pi 的 `read`——三平台三种工具名。
+
+同一次抓取还发现：这份 trace 里没有 claude 的 `system` / `result` 事件类型，只有
+`user` / `assistant`。因此 `sessionId` / `model` / `reply` / `turns` / `usage` /
+`visibleSkills` / `isError` 全部合法地解析为 `null`——这不是解析失败，是格式本身
+不携带这些信息，下游 `unavailable` 归因按预期工作。
+
+**已修复**：`triggered` 判据改为 OR 两条：claude 的 `Skill`/`args.skill`，
+hermes 的 `skill_view`/`args.name`。修复前 hermes 即使真实加载了 skill 也会被
+误判为 `triggered:false`（假阴性）。真实 fixture 见
+`tests/harness/fixtures/hermes/probe-anchor-native.jsonl`，测试见
+`tests/harness/parse.test.mjs` 的 hermes 段。
+
+n=1，后续运行应监视一致性。

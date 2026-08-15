@@ -32,7 +32,14 @@ export function parseClaudeCodeJsonl(raw, { skillName } = {}) {
   // 空集合是"不知道"，不是"没触发"：零个可解析事件说明这次运行本身没抓到东西，
   // 不能拿空数组算出一个自信的 false 来冒充"确实没触发"。
   const noEvents = events.length === 0
-  const triggered = noEvents ? null : toolCalls.some(t => t.name === 'Skill' && t.args?.skill === skillName)
+  // 这个解析器是 claude 与 hermes 共用的（见文件头注释），但两平台加载 skill 用的
+  // 工具名不一样：claude 是 `Skill` 工具 + `args.skill`，hermes 是 `skill_view` 工具 +
+  // `args.name`（2026-08-15 真实 E2E 抓取确认，此前只覆盖了 claude 的写法，导致
+  // hermes 真实触发了 skill 也被判成 triggered:false）。两条判据用 OR 合并。
+  const triggered = noEvents ? null : toolCalls.some(t =>
+    (t.name === 'Skill' && t.args?.skill === skillName) ||
+    (t.name === 'skill_view' && t.args?.name === skillName),
+  )
 
   const u = result?.usage
   const usage = u
