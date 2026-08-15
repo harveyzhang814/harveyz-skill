@@ -24,7 +24,7 @@ def test_empty_watchlist_produces_empty_report(tmp_path):
     data_dir = tmp_path / "data"
     result = subprocess.run(
         [sys.executable, str(SCRIPT)],
-        env={**os.environ, "HSKILL_WATCH_X_DATA_DIR": str(data_dir),
+        env={**os.environ, "HSKILL_SYNC_XTIMELINE_DATA_DIR": str(data_dir),
              "BROWSER_FETCH_MCP_DATA_DIR": str(tmp_path / "bfm-data")},
         capture_output=True, text=True, timeout=30,
     )
@@ -40,7 +40,7 @@ def test_pending_json_written_with_report_content(tmp_path):
     data_dir = tmp_path / "data"
     result = subprocess.run(
         [sys.executable, str(SCRIPT)],
-        env={**os.environ, "HSKILL_WATCH_X_DATA_DIR": str(data_dir),
+        env={**os.environ, "HSKILL_SYNC_XTIMELINE_DATA_DIR": str(data_dir),
              "BROWSER_FETCH_MCP_DATA_DIR": str(tmp_path / "bfm-data")},
         capture_output=True, text=True, timeout=30,
     )

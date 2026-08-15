@@ -15,7 +15,7 @@ def _run(report: dict, data_dir: Path) -> subprocess.CompletedProcess:
     return subprocess.run(
         [sys.executable, str(SCRIPT)],
         input=json.dumps(report),
-        env={**os.environ, "HSKILL_WATCH_X_DATA_DIR": str(data_dir)},
+        env={**os.environ, "HSKILL_SYNC_XTIMELINE_DATA_DIR": str(data_dir)},
         capture_output=True, text=True, timeout=10,
     )
 

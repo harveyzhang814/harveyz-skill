@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Stage 1 for watch-x: for every watched handle, call fetch_user_timeline
+"""Stage 1 for sync-xtimeline: for every watched handle, call fetch_user_timeline
 via mcp_timeline_client, diff against each handle's last_seen_tweet_id
 cursor (watchlist.compute_update), persist the updated cursor, and print
 a JSON report to stdout for the orchestrating skill to translate and hand
@@ -20,8 +20,8 @@ from mcp_timeline_client import fetch_timeline
 
 
 def _data_dir() -> Path:
-    env_dir = os.environ.get("HSKILL_WATCH_X_DATA_DIR")
-    return Path(env_dir) if env_dir else Path.home() / ".hskill" / "watch-x"
+    env_dir = os.environ.get("HSKILL_SYNC_XTIMELINE_DATA_DIR")
+    return Path(env_dir) if env_dir else Path.home() / ".hskill" / "sync-xtimeline"
 
 
 def _timeline_url(profile_url: str) -> str:

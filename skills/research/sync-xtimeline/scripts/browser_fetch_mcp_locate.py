@@ -1,9 +1,9 @@
-"""Locates the browser-fetch-mcp launcher for watch-x's MCP client scripts.
+"""Locates the browser-fetch-mcp launcher for sync-xtimeline's MCP client scripts.
 
 Two supported layouts:
 - Dev mode: this skill runs from inside a harveyz-skill git checkout, where
   tools/browser-fetch-mcp/browser-fetch-mcp.sh sits four directories above
-  scripts/ (skills/research/watch-x/scripts -> repo root).
+  scripts/ (skills/research/sync-xtimeline/scripts -> repo root).
 - Installed mode: this skill was installed via `hskill install` (to
   ~/.claude/skills, ~/.pi/agent/skills, etc.), and browser-fetch-mcp was
   separately installed as a tool — its launcher lands at
@@ -28,7 +28,7 @@ def find_browser_fetch_mcp() -> str:
         return str(installed_path)
 
     raise FileNotFoundError(
-        "browser-fetch-mcp launcher not found. Run watch-x from a harveyz-skill "
+        "browser-fetch-mcp launcher not found. Run sync-xtimeline from a harveyz-skill "
         "git checkout, or run `hskill install` and select the browser-fetch-mcp tool."
     )
 

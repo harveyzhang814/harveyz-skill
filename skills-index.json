@@ -110,7 +110,7 @@
       "contentVersion": "0.7.5"
     },
     {
-      "path": "research/watch-x",
+      "path": "research/sync-xtimeline",
       "bundle": "research",
       "installScope": "project"
     },
