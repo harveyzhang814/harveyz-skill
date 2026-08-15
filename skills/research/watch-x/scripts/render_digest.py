@@ -30,7 +30,9 @@ def render_digest(report: dict) -> str:
     for handle, tweets in report.get("new", {}).items():
         lines.append(f"## @{handle}")
         for t in tweets:
-            lines.append(f"- [{t['timestamp']}] {t['translated']}（[原文]({t['url']})）")
+            author_handle = t.get("author_handle", "")
+            attribution = f"（转推自 {author_handle}）" if author_handle and author_handle.lstrip("@") != handle else ""
+            lines.append(f"- [{t['timestamp']}] {t.get('translated') or t.get('text', '')}{attribution}（[原文]({t['url']})）")
         lines.append("")
 
     failures = report.get("failures", {})
@@ -50,10 +52,16 @@ def render_digest(report: dict) -> str:
     return "\n".join(lines).rstrip() + "\n"
 
 
+def _clear_pending() -> None:
+    pending_path = _data_dir() / "pending.json"
+    pending_path.unlink(missing_ok=True)
+
+
 def main():
     report = json.load(sys.stdin)
     if not has_content(report):
         print("EMPTY")
+        _clear_pending()
         return
 
     digests_dir = _data_dir() / "digests"
@@ -63,6 +71,7 @@ def main():
     digest_path = digests_dir / f"{timestamp}--digest.md"
     digest_path.write_text(render_digest(report), encoding="utf-8")
     print(f"WRITTEN: {digest_path}")
+    _clear_pending()
 
 
 if __name__ == "__main__":

@@ -5,8 +5,12 @@ real, logged-in X session (same scope as clip-url's xcom-adjacent tests).
 Run: python3 -m pytest skills/research/watch-x/tests/ -v
 """
 import asyncio
+import sys
+from pathlib import Path
 
 import pytest
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
 
 from mcp_timeline_client import fetch_timeline
 

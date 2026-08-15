@@ -4,6 +4,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
+
 from render_digest import has_content, render_digest
 
 SCRIPT = Path(__file__).resolve().parent.parent / "scripts" / "render_digest.py"
@@ -50,6 +52,53 @@ def test_render_digest_includes_translated_text_and_source_link():
     assert "hello world" not in md  # only translated text shown, not raw English
 
 
+def test_render_digest_falls_back_to_original_text_when_translated_missing():
+    report = {
+        "run_time": "2026-08-15T09:00:00+00:00",
+        "new": {
+            "alice": [
+                {"tweet_id": "3", "url": "https://x.com/alice/status/3",
+                 "text": "raw untranslated text", "timestamp": "2026-08-15T08:00:00Z"},
+            ]
+        },
+        "baselines": {}, "failures": {},
+    }
+    md = render_digest(report)  # must not raise KeyError
+    assert "raw untranslated text" in md
+
+
+def test_render_digest_marks_retweet_when_author_handle_differs():
+    report = {
+        "run_time": "2026-08-15T09:00:00+00:00",
+        "new": {
+            "alice": [
+                {"tweet_id": "4", "url": "https://x.com/otheruser/status/4",
+                 "text": "hi", "timestamp": "t", "translated": "你好",
+                 "author_handle": "@otheruser"},
+            ]
+        },
+        "baselines": {}, "failures": {},
+    }
+    md = render_digest(report)
+    assert "转推自 @otheruser" in md
+
+
+def test_render_digest_no_attribution_when_author_handle_matches():
+    report = {
+        "run_time": "2026-08-15T09:00:00+00:00",
+        "new": {
+            "alice": [
+                {"tweet_id": "5", "url": "https://x.com/alice/status/5",
+                 "text": "hi", "timestamp": "t", "translated": "你好",
+                 "author_handle": "@alice"},
+            ]
+        },
+        "baselines": {}, "failures": {},
+    }
+    md = render_digest(report)
+    assert "转推自" not in md
+
+
 def test_render_digest_includes_failures_and_baselines_sections():
     report = {
         "run_time": "2026-08-15T09:00:00+00:00",
@@ -86,3 +135,31 @@ def test_cli_nonempty_report_writes_timestamped_file(tmp_path):
     assert written_path.exists()
     assert written_path.name == "20260815T090000--digest.md"
     assert "@carol" in written_path.read_text(encoding="utf-8")
+
+
+def test_cli_empty_report_removes_pending_json(tmp_path):
+    data_dir = tmp_path / "data"
+    data_dir.mkdir(parents=True)
+    pending_path = data_dir / "pending.json"
+    pending_path.write_text("{}", encoding="utf-8")
+
+    report = {"run_time": "2026-08-15T09:00:00+00:00", "new": {}, "baselines": {}, "failures": {}}
+    result = _run(report, data_dir)
+    assert result.returncode == 0, result.stderr
+    assert not pending_path.exists()
+
+
+def test_cli_written_report_removes_pending_json(tmp_path):
+    data_dir = tmp_path / "data"
+    data_dir.mkdir(parents=True)
+    pending_path = data_dir / "pending.json"
+    pending_path.write_text("{}", encoding="utf-8")
+
+    report = {
+        "run_time": "2026-08-15T09:00:00+00:00",
+        "new": {}, "baselines": {"carol": 3}, "failures": {},
+    }
+    result = _run(report, data_dir)
+    assert result.returncode == 0, result.stderr
+    assert "WRITTEN:" in result.stdout
+    assert not pending_path.exists()

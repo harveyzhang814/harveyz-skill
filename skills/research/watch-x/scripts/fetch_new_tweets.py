@@ -9,12 +9,19 @@ Usage: python3 fetch_new_tweets.py [chrome_profile]
 """
 import asyncio
 import json
+import os
 import sys
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Optional
 
 import watchlist
 from mcp_timeline_client import fetch_timeline
+
+
+def _data_dir() -> Path:
+    env_dir = os.environ.get("HSKILL_WATCH_X_DATA_DIR")
+    return Path(env_dir) if env_dir else Path.home() / ".hskill" / "watch-x"
 
 
 async def run(chrome_profile: Optional[str]) -> dict:
@@ -27,18 +34,17 @@ async def run(chrome_profile: Optional[str]) -> dict:
         handle = entry["handle"]
         try:
             tweets = await fetch_timeline(entry["profile_url"], chrome_profile)
+            kind, data = watchlist.compute_update(entry, tweets)
+            if kind == "none":
+                continue
+            if kind == "baseline":
+                baselines[handle] = data["count"]
+            elif kind == "new":
+                new[handle] = data["tweets"]
+            watchlist.set_last_seen(handle, data["last_seen_tweet_id"])
         except Exception as e:
             failures[handle] = str(e)
             continue
-
-        kind, data = watchlist.compute_update(entry, tweets)
-        if kind == "none":
-            continue
-        if kind == "baseline":
-            baselines[handle] = data["count"]
-        elif kind == "new":
-            new[handle] = data["tweets"]
-        watchlist.set_last_seen(handle, data["last_seen_tweet_id"])
 
     return {
         "run_time": datetime.now(timezone.utc).isoformat(),
@@ -51,6 +57,11 @@ async def run(chrome_profile: Optional[str]) -> dict:
 def main():
     chrome_profile = sys.argv[1] if len(sys.argv) > 1 and sys.argv[1] else None
     report = asyncio.run(run(chrome_profile))
+
+    pending_path = _data_dir() / "pending.json"
+    pending_path.parent.mkdir(parents=True, exist_ok=True)
+    pending_path.write_text(json.dumps(report, ensure_ascii=False), encoding="utf-8")
+
     print(json.dumps(report, ensure_ascii=False))
 
 
