@@ -422,7 +422,19 @@ flowchart TD
 export async function readBody(req: IncomingMessage, maxBytes = Infinity): Promise<string>
 ```
 
-默认值是 `Infinity`，调用方必须主动传上限才有保护。portal 自己定义了一个有界版本（`index.ts:584`，64 KB），说明作者知道这件事。**我没有审计全部调用点**，所以不声称存在可利用的路径——但一个安全相关的默认值取「不保护」，与 [[qm-crosscutting]] §12-1 那条（把安全原语做小到没人想绕过）的精神相反：这里的默认形状是不安全的那个。
+默认值是 `Infinity`，调用方必须主动传上限才有保护。portal 自己定义了一个有界版本（`index.ts:584`，64 KB），说明作者知道这件事。
+
+> **补：调用点已在 [[qm-web-client]] 里普查完，结论要更新。** 四个插件三种处理：
+> `auth` 三处调用全部显式传 `MAX_FORM_BYTES`；`web-ui` 改名导入再本地包一层
+> （`readBody as readBodyCapped`，然后自己定义一个 1 MB 的 `readBody`），
+> 于是二十多处调用全部有界；**`admin` 有两处没传上限**
+> （`admin/src/index.ts:388` 和 `:434`）。
+> 所以确实存在一条真实的无界读取路径。它在 portal 后面且需要管理员身份，
+> 爆炸半径是「一个已认证的管理员能把 admin 进程撑爆」——严重性低，
+> 但这正是那个不安全默认本该挡住的东西。
+> **web-ui 的处理方式是三家里最好的：让不安全的那个函数在本文件里根本叫不出名字。**
+
+一个安全相关的默认值取「不保护」，与 [[qm-crosscutting]] §12-1 那条（把安全原语做小到没人想绕过）的精神相反：这里的默认形状是不安全的那个。
 
 **3. `PORTAL_IDENTITY_SECRET` 的降级只在 portal 之外可达。**
 
@@ -446,7 +458,7 @@ core 有一份（[[qm-assembly-layer]] §11-11），portal 有另一份（`index
 
 ## 八、存疑
 
-1. **`readBody` 的调用点我没有普查。** 只确认了 portal 有自己的有界版本。chassis 的那个默认值被谁用了、有没有暴露在公网路径上，没查。
+1. ~~`readBody` 的调用点我没有普查。~~ **已在 [[qm-web-client]] 里查完**，结论见 §7-2 的补注：`admin` 有两处真实无界。仍未查的是这两处在实际部署里能承受多大的载荷，以及 admin 进程有没有别的内存保护。
 
 2. **portal → admin 这一跳不签名，是我从 README 的 "no signing secret" 和 `adminProbe` 里没有 `signedHeaders` 推的**，与代码一致，但我没有抓包验证，也没有确认 6PN 在他们的实际部署里是否真的不可从外部达到。
 

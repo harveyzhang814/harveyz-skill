@@ -17,6 +17,7 @@
 > - [[qm-assembly-layer]]（装配层——出网策略在哪里被执行：Envoy + 第二个进程 + DNS 钉住）
 > - [[qm-synthesis]]（综述——本篇的「令牌是授权决策的缓存」是「待验证的授权」一章的主证）
 > - [[qm-surface-layer]]（表面层——本篇的**对面**：那里是 core 侧验签与 `canAdminister`，这里是签发侧）
+> - [[qm-web-client]]（Web 客户端——`user-scoped-routes` 的三分类表在那里被打开，本篇没覆盖）
 >
 > 调研对象：`yc-software/qm`（YC 出品的开源多人 agent harness）
 > 本地路径：`~/Repositories/qm`

@@ -17,6 +17,7 @@
 > - [[qm-assembly-layer]]（装配层——四个 harness 适配器在 `wiring.ts` 里的选择与模型 id 解析）
 > - [[qm-synthesis]]（综述——本篇的 `lastHarness` 是进程内状态那节的六个实例之一）
 > - [[qm-surface-layer]]（表面层——插件与 core 之间的签名协议，harness 不参与）
+> - [[qm-web-client]]（Web 客户端——同一个替换手法用在浏览器里：`streamFn` 被换成一次 HTTP）
 >
 > 调研对象：`yc-software/qm` 的 `src/harness/`
 > 本地路径：`~/Repositories/qm`

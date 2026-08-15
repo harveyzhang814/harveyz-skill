@@ -17,6 +17,7 @@
 > - [[qm-assembly-layer]]（装配层——十个 sweeper 的间隔、关停五阶段、`stopWithBackstop` 三层兜底）
 > - [[qm-synthesis]]（综述——本篇的持久化队列账单被收进「四层幂等」的代价段）
 > - [[qm-surface-layer]]（表面层——`durable: boolean` 那条链的另外两端）
+> - [[qm-web-client]]（Web 客户端——`runId`、SSE、信号、中断重入的浏览器一侧）
 >
 > 调研对象：`yc-software/qm`（YC 出品的开源多人 agent harness）
 > 本地路径：`~/Repositories/qm`

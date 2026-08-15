@@ -17,6 +17,7 @@
 > - [[qm-assembly-layer]]（装配层——`TurnRequest` 53 个字段的定义处，以及组件从哪来）
 > - [[qm-synthesis]]（综述——本篇「妥协要留痕」被收进「失败往哪边倒」一章的代价段）
 > - [[qm-surface-layer]]（表面层——十九道闸门之前，Web 侧的入站路径（Slack 侧不在其中））
+> - [[qm-web-client]]（Web 客户端——十九道闸门的另一个入口，多一道 `surface === "web"` 的行动者比对）
 >
 > 调研对象：`yc-software/qm` 的 turn 全链路
 > 本地路径：`~/Repositories/qm`

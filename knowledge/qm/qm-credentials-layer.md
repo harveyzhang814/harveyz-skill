@@ -17,6 +17,7 @@
 > - [[qm-assembly-layer]]（装配层——没有 `CONNECTOR_SECRET_KEY` 时整个 keychain 从 `BuiltApp` 消失）
 > - [[qm-synthesis]]（综述——本篇的借还协议与失败关闭判据分别进入第二章和第七章）
 > - [[qm-surface-layer]]（表面层——用途隔离的第四个实例：四个用途、四把密钥、四个 audience）
+> - [[qm-web-client]]（Web 客户端——OAuth 回调在服务端换码，令牌不进浏览器）
 >
 > 调研对象：`yc-software/qm`（YC 出品的开源多人 agent harness）
 > 本地路径：`~/Repositories/qm`

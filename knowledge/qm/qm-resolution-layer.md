@@ -17,6 +17,7 @@
 > - [[qm-assembly-layer]]（装配层——装机层的审批只有 `require_approval`/`deny`，收紧代数在配置层的落点）
 > - [[qm-synthesis]]（综述——本篇开的收紧代数序列最终收到九种，综述里是第一章）
 > - [[qm-surface-layer]]（表面层——`Resolution` 之前的一段：principal 是怎么被确定下来的）
+> - [[qm-web-client]]（Web 客户端——模型选择器只是偏好，在这一层的策略地板内被采纳）
 >
 > 调研对象：`yc-software/qm` 的 `src/resolution/`
 > 本地路径：`~/Repositories/qm`

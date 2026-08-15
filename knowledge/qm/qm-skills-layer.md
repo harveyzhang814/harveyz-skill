@@ -17,6 +17,7 @@
 > - [[qm-assembly-layer]]（装配层——`deployment/` 会往技能注册表种子，四层碰撞检查 + 舰队级锁）
 > - [[qm-synthesis]]（综述——本篇的内容哈希幂等是「用内容算身份」九次出现之一）
 > - [[qm-surface-layer]]（表面层——插件用的是另一套 `plugins/chassis` 词汇，不共享 core 的 util）
+> - [[qm-web-client]]（Web 客户端——斜杠命令只下发 name/description/scope，技能正文不进浏览器）
 >
 > 调研对象：`yc-software/qm` 的 `src/skills/`
 > 本地路径：`~/Repositories/qm`

@@ -12,6 +12,7 @@
 > - [[qm-credentials-layer]]（凭证与外部连接层——借还协议、OAuth 客户端、加密盒、常驻/临时凭证、模型清单）
 > - [[qm-synthesis]]（综述——十五篇的可迁移做法按问题收敛，不按模块）
 > - [[qm-surface-layer]]（表面层——`plugins/` 的信任边界：唯一公网入口、内建 IdP、没有权力的管理面）
+> - [[qm-web-client]]（Web 客户端——`plugins/web-ui`：换掉 streamFn 的接缝、路由三分类、只读是产品决定）
 >
 > 调研对象：`yc-software/qm`（YC 出品的开源多人 agent harness）
 > 本地路径：`~/Repositories/qm`
@@ -503,7 +504,11 @@ AGENTS.md 是写给 coding agent 看的操作手册（`CLAUDE.md` 是它的 syml
 
 **`src/` 已全部覆盖；`plugins/` 覆盖了信任边界的那一半。** 前十五篇按模块覆盖 A–J 十组 + 四个未分类目录 + 五个从未进入分组的顶层文件；第十六篇不覆盖新代码，按问题重排；第十七篇转向 `plugins/`。
 
-**仍未覆盖：** `plugins/web-ui`（26,595 行 React SPA）——现在是整个仓库最大的一块空白。另有 `cli/`（109 文件）、`scripts/`（46 个）、`skills-seed/`（79 文件）只在本篇的清单层面提过。
+- [[qm-web-client]] —— Web 客户端：`plugins/web-ui`（服务端 1948 行 + 桥 1381 行，源码共 18,772 行），把 Pi `Agent` 的 `streamFn` 换成一次 HTTP 并丢弃它拼好的上下文、core 侧路由的三分类与「未分类的写即最严」、进程内索引作为快路径、只读是产品决定（已完成）
+
+**`src/` 与 `plugins/` 的服务端部分至此全部读过。**
+
+**仍未覆盖：** `plugins/web-ui` 的 55 个前端组件（约 15,400 行 Lit）、`cli/`（109 文件）、`scripts/`（46 个）、`skills-seed/`（79 文件）。前端组件里唯一被标为值得一看的是那个 16 行的 markdown 净化器，见 [[qm-web-client]] §6-1。
 
 > 上面「阅读范围」一栏写的 `plugins/*/README.md` 是第一篇当时的范围。
 > 到 [[qm-surface-layer]] 为止，`plugins/` 里除 `web-ui` 外的源码已经逐文件读过。

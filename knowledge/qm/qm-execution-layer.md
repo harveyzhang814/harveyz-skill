@@ -17,6 +17,7 @@
 > - [[qm-assembly-layer]]（装配层——沙箱是三选一而非二选一；出网策略在第二个进程里被执行）
 > - [[qm-synthesis]]（综述——本篇的能力协商 profile 是全仓三处同构之一，见「这个能力可能不在」一章）
 > - [[qm-surface-layer]]（表面层——沙箱之外，人从哪里进来）
+> - [[qm-web-client]]（Web 客户端——真正的循环跑在这一层的沙箱里，浏览器一侧是影子）
 >
 > 调研对象：`yc-software/qm` 的 `src/sandbox/`、`src/workspace/`、`src/files/`、`src/processes/`、`src/tools/`
 > 本地路径：`~/Repositories/qm`

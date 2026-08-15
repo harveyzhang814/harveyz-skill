@@ -17,6 +17,7 @@
 > - [[qm-assembly-layer]]（装配层——`src/deployment/` 与 `src/deploy/` 名字接近而毫无关系）
 > - [[qm-synthesis]]（综述——本篇的「先建后拆／先存后杀」被统一进「哪一侧的丢失不可逆」一章）
 > - [[qm-surface-layer]]（表面层——`/d/*` 的公网入口，`x-as-principal` 进签名载荷的铸造侧）
+> - [[qm-web-client]]（Web 客户端——Deploys 视图与 `/app-edit` 的 iframe 场景）
 >
 > 调研对象：`yc-software/qm`（YC 出品的开源多人 agent harness）
 > 本地路径：`~/Repositories/qm`
