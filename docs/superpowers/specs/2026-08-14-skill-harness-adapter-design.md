@@ -26,17 +26,54 @@
 
 ---
 
-## 决策：框架驱动平台运行时，不走平台的 skill 安装机制
+## 决策：框架驱动平台运行时，native 为主、inject 为对照
 
-框架自己起各平台的 headless CLI，把 skill 正文 + 任务 prompt 作为一段文本注入，
-抓输出，做质量与过程双重评估。**不把 skill 装进任何平台的 skill 目录。**
+框架自己起各平台的 headless CLI，抓输出，做质量与过程双重评估。
+**不污染用户真实的 skill 目录** —— 但走的是各平台**原生的** skill 加载通道，
+skill 装在 jail 内的 skill 目录里（`<jail>/.claude/skills/`、`<jail>/.hermes/skills/`），
+或经平台的显式加载参数（pi `--skill <path>`）。jail 已经把「原生机制」与「污染用户环境」解耦了。
 
-理由：注入位置统一，则「平台/模型」是唯一变量，对照严格。若各平台走各自原生的 skill
-加载通道（`--skill` / `--skills` / skill 目录），就引入了「注入位置不同」这个混淆变量，
-出现差异时分不清是模型问题还是通道问题。
+两种模式并存，它们不是二选一，是**诊断对**：
 
-代价是不测平台的 skill 发现与触发机制（description 触发词是否有效）。这是有意放弃的——
-那是另一个问题，且依赖各平台的检索实现，不属于「指令健壮性」。
+| | native 触发成功 | native 未触发 |
+|---|---|---|
+| **inject 执行正确** | 该平台通过 | description 触发词问题，正文没问题 |
+| **inject 执行错误** | 正文有平台特有假设 | 两层都要改 |
+
+单跑任何一种模式都拿不到这张表。native 是被测对象（端到端：发现 → 触发 → 执行），
+inject 是拆解用的仪器（把触发环节短路，单独考察指令质量）。
+
+### 依据：2026-08-14 实测（3 平台 × 2 模式）
+
+完整记录与复现方法：[measurements/2026-08-14-native-vs-inject.md](measurements/2026-08-14-native-vs-inject.md)
+
+探针 skill 正文含两个 token：一个写在 SKILL.md 里（`BODY`），一个写在同目录
+`references/token.md` 里（`FILE`），要求模型两个都输出。`FILE` 直接测「路径锚点是否存在」。
+
+| 平台 | 模式 | 通道 | BODY | FILE |
+|---|---|---|---|---|
+| pi | native | `-ns --skill <dir>` | ✓ | ✓ |
+| pi | inject | `--append-system-prompt` | ✓ | **UNREACHABLE** |
+| pi | inject + 路径补偿 | 追加一行绝对路径 | ✓ | ✓ |
+| claude | native | jail `.claude/skills/` + `--setting-sources user` | ✓ | ✓ |
+| claude | inject | `--append-system-prompt` | ✓ | **UNREACHABLE** |
+| hermes | native | jail `.hermes/skills/` 自动发现 | ✓ | ✓ |
+| hermes | inject | 拼进 `-z` prompt | ✓ | **UNREACHABLE** |
+
+**三个平台无一例外：纯正文注入必然断锚。** 这不是概率问题——注入模式下模型压根没有
+「skill 根目录」这个信息，行为是确定性失败。
+
+本仓库 44 个 skill 中 **31 个（70%）在正文里引用了同目录的 `references/` `scripts/`
+`assets/` 等资源**，另有 13 处正文明说「skill 目录」、4 处说「同目录」。
+纯注入模式下这 31 个 skill 会在第一次读附属文件时断裂，且失败形态是模型编一个路径然后
+读失败——会被误记成「该平台执行失败」，实际是测试装置的伪影。
+
+**触发 gate 确实存在**：pi native 模式下换成不含触发词的 prompt（"what is 2+2"），
+skill 未被调用，模型直接答 `4`。说明 native 模式真的在测 description 匹配，
+inject 模式真的把这一环短路了。
+
+**补偿能救 inject**：在注入正文后追加一行 `This skill directory is: <绝对路径>`，
+pi 的 `FILE` 恢复正常。这正是 QM 末端补偿的形态，故 inject 模式统一带该补偿行。
 
 ### 依据：QM 的三条结论
 
@@ -62,7 +99,8 @@
 
 | 不做 | 理由 |
 |---|---|
-| 把 skill 装进平台 skill 目录后测触发 | 见上，另一个问题 |
+| 往用户真实 skill 目录写任何东西 | jail 内的 skill 目录已经能走原生通道，无需污染 |
+| 把 skill 装进平台 skill 目录后测触发 | ~~见上，另一个问题~~ **已推翻**，见「决策」——这是主模式 |
 | TUI / pty 自动化通道 | 六个平台无一缺 headless，pty 换不来新信息 |
 | 能力分派机制（缺能力自动 skip） | QM 无消费点；真需求浮现再长 |
 | 给平台注入工具（MCP / plugin bridge） | 只读输出，不需要 QM 那套 schema 翻译与回调桥 |
@@ -77,7 +115,8 @@
 ```
                     ┌─────────────────────────────────────┐
    skill + task ───▶│  Runner                             │
-                    │  组装 prompt · 分发 · 并行 · 收集     │
+                    │  组装矩阵 · 分发 · 并行 · 收集        │
+                    │  矩阵 = skill × platform × mode × n  │
                     └──────────────┬──────────────────────┘
                                    │
               ┌────────────────────┼────────────────────┐
@@ -86,9 +125,10 @@
         │ claude   │         │ pi       │         │ hermes   │
         │ adapter  │         │ adapter  │         │ adapter  │
         └────┬─────┘         └────┬─────┘         └────┬─────┘
-             │ jail               │ jail               │ jail
+             │ jail + install     │ jail + install     │ jail + install
              ▼                    ▼                    ▼
         [子进程]              [子进程]              [子进程]
+      native | inject       native | inject       native | inject
              │                    │                    │
              │ stdout             │ stdout             │ stdout(仅回复)
              │                    │                    │ + collect(): sessions export
@@ -120,14 +160,26 @@
 
 ```
 PlatformAdapter {
-  profile:       PlatformProfile        // 差异表的一行
-  jail(dir):     { env, args, cleanup } // 构造隔离环境
-  launch(input): RawRun                 // 起进程，拿 stdout/stderr/exitCode/durationMs
-  collect(ctx):  string | null          // 进程退出后的二次抽取；无需要则返回 null
-  parse(raw):    RunRecord              // 纯函数
-  compensation:  string                 // 该平台的差异声明
+  profile:          PlatformProfile        // 差异表的一行
+  jail(dir):        { env, args, cleanup } // 构造隔离环境
+  install(dir, sk): string[]               // native 模式：把 skill 放进 jail，返回追加 args
+  launch(input):    RawRun                 // 起进程，拿 stdout/stderr/exitCode/durationMs
+  collect(ctx):     string | null          // 进程退出后的二次抽取；无需要则返回 null
+  parse(raw):       RunRecord              // 纯函数
+  compensation:     string                 // 该平台的差异声明
 }
 ```
+
+**`install` 只在 `mode: "native"` 下调用**，且只写 jail 内部。三平台形态不同：
+
+| 平台 | install 做什么 | 返回的 args |
+|---|---|---|
+| claude | `cp -r <skill> <jail>/.claude/skills/` | `[]`（靠 `--setting-sources user` 发现） |
+| pi | 不复制 | `["--skill", <skill 绝对路径>]` |
+| hermes | `cp -r <skill> <jail>/.hermes/skills/` | `[]`（自动发现，实测无需 `-s`） |
+
+pi 的 `--skill` 是三者里最干净的：不落地、不依赖 HOME 重定向，`-ns --skill <path>`
+即可得到「恰好一个 skill」的环境。
 
 **`parse` 必须是纯函数** —— 不碰进程、不碰文件系统、不读环境变量。输入字符串，输出 `RunRecord`。
 这是本设计唯一的硬约束，理由是它让每个平台的解析逻辑都能用真实抓下来的样本做 fixture 单测：
@@ -142,7 +194,9 @@ opencode 的 `export <sessionID>` 是同一形状。claude / pi 的 `collect` �
 ```
 PlatformProfile {
   id                  // "claude" | "pi" | "hermes"
-  injection           // 注入方式："append-system-prompt" | "prompt-only"
+  skillChannel        // native 通道："skill-dir" | "explicit-flag"
+  builtinSkillFloor   // jail 后仍存在的内置 skill 数（claude 12，pi 0，hermes 0）
+  injection           // inject 模式的注入位："append-system-prompt" | "prompt-only"
   qualityChannel      // 质量输出来源："stdout-json" | "stdout-text"
   processChannel      // 过程数据来源："inline" | "collect" | "none"
   transcriptFormat    // "claude-code-jsonl" | "pi-json"
@@ -160,7 +214,9 @@ PlatformProfile {
 ### 3. Runner
 
 组装 prompt、按矩阵分发、并行执行、收集 `RunRecord`。
-矩阵维度：`skill × platform × repeat`。`repeat` 用于方差标定（见「分期 · 第二期」）。
+矩阵维度：`skill × platform × mode × repeat`。`mode` 是 `native` / `inject`（见「两种模式」），
+`repeat` 用于方差标定（见「分期 · 第二期」）。默认两种模式都跑；
+`--mode native` 可只跑主模式，用于日常回归。
 
 ### 4. Evaluator
 
@@ -193,26 +249,36 @@ env:
 
 args:
   -p
-  --bare                          # 跳过 hooks/LSP/plugin sync/auto-memory/CLAUDE.md 自动发现
-  --setting-sources <见下>         # 不加载 user/project/local 任何设置源
+  --setting-sources user           # native：让 jail 内 .claude/skills/ 可被发现
+                                   # inject：同样传 user（jail 内无 skills 目录即可）
   --permission-mode bypassPermissions
-  --output-format json            # 质量；stream-json 用于过程
-  --max-budget-usd 0.50           # 单次运行成本硬上限，默认值，可按 eval 覆盖
-  --append-system-prompt <skill 正文 + compensation>
-  --session-id <uuid>             # 确定性会话 id，便于定位产物
+  --output-format json             # 质量；stream-json 用于过程
+  --max-budget-usd 0.50            # 单次运行成本硬上限，默认值，可按 eval 覆盖
+  [--append-system-prompt <正文 + compensation>]   # 仅 inject 模式
+  --session-id <uuid>              # 确定性会话 id，便于定位产物
 ```
 
-**`--setting-sources` 的空值语义待实测。** help 只说明它接受 `user,project,local` 的
-逗号分隔列表，**未说明传空字符串是否等于「一个都不加载」**。第一期开工第一件事是实测：
-若空值不被接受，改用 `--settings` 指向 jail 内一份空 JSON，并在 L3 探针里验证效果。
-这一格在验证前不得当作已生效的隔离手段。
+**实测结论 1：`HOME` 重定向后认证必然失败。** jail 内即使复制了
+`~/.claude/.credentials.json` 也报 `Not logged in · Please run /login`。
+必须显式注入 `CLAUDE_CODE_OAUTH_TOKEN`（可从 keychain
+`security find-generic-password -s "Claude Code-credentials"` 的
+`claudeAiOauth.accessToken` 取），或提供 `ANTHROPIC_API_KEY`。
+QM 白名单里同时列这两个变量，正是这个原因。
 
-`--bare` 的官方说明包含「skip hooks, LSP, plugin sync, attribution, auto-memory,
-background prefetches, keychain reads, and CLAUDE.md auto-discovery」，且认证严格走
-`ANTHROPIC_API_KEY`，不读 OAuth 与 keychain —— 正对 jail 需求。
+**实测结论 2：`--setting-sources user` + `CLAUDE_CONFIG_DIR=<jail>/.claude`
+足以让 jail 内的 skill 被发现并按 description 触发。** 原方案里「传空值屏蔽全部设置源」
+的写法作废——我们要的恰恰是加载 jail 的 user 源。
 
-**注意**：`--bare` 的说明里明确「Skills still resolve via `/skill-name`」。
-配合 `CLAUDE_CONFIG_DIR` 指向空 jail，用户已装的 skill 不可见。这一点第一期必须验证（见「验收」）。
+**实测结论 3：jail 挡不住内置 skill。** 上述配置下模型仍能列出 12 个 Claude Code
+内置 skill（`dataviz` `update-config` `keybindings-help` `code-review` `simplify`
+`fewer-permission-prompts` `loop` `schedule` `claude-api` `run` `init` `security-review`）。
+**claude 上拿不到零 skill 基线**，`builtinSkillFloor = 12`。含义：claude 的触发测试
+是「在 13 个候选中选中目标」，另两个平台是「在 1 个候选中选中目标」——
+这是一个已知的不对称，报告里 claude 的触发失败必须先归因到这一格。
+
+**`--bare` 不用。** 它的说明含「keychain reads」被跳过且认证严格走 `ANTHROPIC_API_KEY`，
+与我们用 OAuth token 的路径冲突；且它跳过的东西（hooks/LSP/plugin sync/CLAUDE.md 发现）
+在空 jail 里本来就不存在。留作备选，不进第一期。
 
 ### pi
 
@@ -232,11 +298,16 @@ args:
   --offline                      # 禁用启动期网络操作
   --session-dir <jail>/sessions
   --mode json
-  --append-system-prompt <skill 正文 + compensation>
+  [--skill <skill 绝对路径>]      # native 模式
+  [--append-system-prompt <正文 + compensation>]   # inject 模式
   [-t <工具白名单>]               # 可选，用于收窄工具面做对照
 ```
 
 pi 的开关是三个平台里最齐全的，`-ns` 与 QM 关闭 pi 原生 skill 加载的做法逐字对应。
+
+**实测结论：`-ns` 不影响显式 `--skill`。** 二者组合得到「恰好一个 skill」的环境，
+`builtinSkillFloor = 0`，且**完全不需要 HOME 重定向**——pi 的 jail 因此是三者里最轻的。
+`--append-system-prompt` 接受文件路径或字面文本两种形式，传路径可绕开长参数问题。
 
 ### hermes
 
@@ -245,8 +316,11 @@ env:
   HOME=<jail>
   + 白名单四类 + 该平台凭证
 
+jail 内需按白名单复制三个文件：`.hermes/.env`、`.hermes/auth.json`、`.hermes/config.yaml`。
+
+```
 args (第一步 · 运行):
-  -z "<skill 正文 + compensation + 任务>"
+  -z "<任务>"                     # native；inject 模式为 "<正文 + compensation>\n---\n<任务>"
   --safe-mode                    # 隐含 --ignore-user-config + --ignore-rules
   --yolo                         # 免审批（headless 无 TTY）
   --usage-file <jail>/usage.json
@@ -256,8 +330,19 @@ args (第二步 · collect):
   hermes sessions export --format trace --session-id <id> -
 ```
 
-`--safe-mode` 的官方说明是「disable ALL customizations — user config, AGENTS.md/memory
-injection, plugins, and MCP servers」，是三个平台里最彻底的单一开关。
+**实测结论 1：hermes 的 jail 是三者里最干净的。** `HOME` 重定向 + 上述三个凭证文件后，
+`hermes skills list` 输出 `0 hub-installed, 0 builtin, 1 local` —— 恰好只有探针 skill，
+`builtinSkillFloor = 0`。
+
+**实测结论 2：jail 内的 skill 自动被发现并按 description 触发，无需 `-s`。**
+`--skills/-s` 是「preload」语义（按名字强制预载），native 模式不用它——用了就等于
+绕过触发环节，那是 inject 模式的活。
+
+**实测结论 3：`--safe-mode` 与 native 模式兼容，保留。** help 里 `--ignore-rules`
+（被 `--safe-mode` 隐含）写着「skip ... and preloaded skills」，字面读像会关掉被测 skill；
+实测 `--safe-mode` + jail 内 skill 仍正常发现、触发、执行。
+即 "preloaded skills" 只指 `-s` 的强制预载通道，不含目录发现。
+因此 `--safe-mode` 仍是三平台里最彻底的单一隔离开关。
 
 `--usage-file` **在运行失败时也会写**，所以成本会计不会因失败丢数据。
 
@@ -267,18 +352,37 @@ injection, plugins, and MCP servers」，是三个平台里最彻底的单一开
 
 ---
 
-## 注入格式
+## 两种模式
 
-三平台统一：
+### mode: native（主）
+
+skill 经平台原生通道加载（见 `install`），prompt 只含任务本身。
+测的是端到端：**发现 → description 触发 → 执行 → 附属资源读取**。
+
+compensation 仍然注入（走各平台的 system prompt 追加通道，hermes 拼进 `-z` 头部），
+因为它声明的是工具名等平台差异，与 skill 加载通道无关。
 
 ```
-<compensation>          ← 该平台的差异声明，可为空
-<SKILL.md 正文>          ← 去掉 YAML frontmatter
+prompt = <任务 prompt>
+system += <compensation>        ← 可为空
+```
+
+### mode: inject（对照）
+
+skill 正文当文本注入，短路触发环节。测的是**指令质量本身**。
+
+```
+<compensation>                  ← 该平台的差异声明，可为空
+This skill directory is: <绝对路径>   ← 路径补偿，实测必需，见「决策」
+<SKILL.md 正文>                  ← 去掉 YAML frontmatter
 ---
 <任务 prompt>
 ```
 
-claude / pi 走 `--append-system-prompt`（前两段）+ 位置参数（任务 prompt）。
+**路径补偿行不是可选的。** 缺了它三个平台一律断锚（实测 3/3），
+inject 组会因为测试装置的缺陷而全线失败，得到的差异全是伪影。
+
+claude / pi 走 `--append-system-prompt`（前三段）+ 位置参数（任务 prompt）。
 hermes 无 system prompt 追加通道，整体拼成一段走 `-z`。
 
 **这构成一个已知的不对称**：claude/pi 的 skill 正文在 system 位，hermes 在 user 位。
@@ -288,6 +392,18 @@ hermes 无 system prompt 追加通道，整体拼成一段走 `-z`。
 不为了对称而把 claude/pi 也降级成 prompt-only —— 那会同时损失两个平台的真实性，
 换来一个我们本来就能标注的变量。
 
+### 两模式的判读
+
+| native | inject | 结论 | 行动 |
+|---|---|---|---|
+| ✓ | ✓ | 该平台通过 | 无 |
+| ✗ 未触发 | ✓ | description 触发词对该平台无效 | 改 frontmatter description |
+| ✓ | ✗ | 正文有平台特有假设，但原生机制补上了 | 记录，低优先级 |
+| ✗ | ✗ | 正文本身有问题 | 改正文 |
+| ✗ 触发但执行错 | ✓ | 平台的 skill 加载机制有损耗（如截断、包装干扰） | 记录到差异表 |
+
+第 5 行需要 `RunRecord.triggered` 区分「未触发」与「触发了但做错」，见下。
+
 ---
 
 ## RunRecord
@@ -296,11 +412,13 @@ hermes 无 system prompt 追加通道，整体拼成一段走 `-z`。
 RunRecord {
   // 标识
   platform, skill, task, repeat, sessionId
+  mode: "native" | "inject"
 
   // 质量
   reply: string
 
   // 过程
+  triggered: boolean | null   // native 模式下 skill 是否真被调用；inject 恒为 null
   toolCalls: Array<{ name, args?, ok, seq }> | null
   turns: number | null
 
@@ -330,6 +448,18 @@ RunRecord {
 
 `stderr` 上限 16KB 且保留**尾部** —— 抄 QM 的 codex RPC 客户端：
 子进程退出码单独看没有诊断价值，要拼上 stderr 尾部才知道为什么死。
+
+**`triggered` 的判定按平台不同，由 `parse` 从轨迹里读，不靠猜：**
+
+| 平台 | 判据 |
+|---|---|
+| claude | stream-json 中出现 `Skill` 工具调用且参数含目标 skill 名 |
+| pi | 轨迹中出现该 skill 的加载/调用事件 |
+| hermes | `sessions export --format trace` 的 Claude Code JSONL 中同 claude |
+
+若某平台的轨迹里根本没有可判定的信号，`triggered` 填 `null` 并把
+`"triggered"` 计入 `unavailable` —— 不用「回复里有没有 skill 特征词」这类启发式凑数。
+该平台因此拿不到「两模式判读」表的第 2、5 行，报告里必须显式说明这个缺口。
 
 ---
 
@@ -422,6 +552,10 @@ tools/skill-harness/
     process.js        # 负向断言 + 工具分布
   report.js
   cli.js              # skill-harness run|dry-run|report
+  probe/
+    probe-anchor/     # 框架自身的冒烟 skill：正文 token + references/ token
+      SKILL.md
+      references/token.md
 
 tests/harness/
   fixtures/
@@ -432,6 +566,9 @@ tests/harness/
   profile.test.mjs    # L1 整表快照
   jail.test.mjs       # 隔离有效性负向断言
 ```
+
+`probe/probe-anchor/` 是框架的自检装置，不是被测 skill。它验证「skill 的附属文件在
+该平台该模式下读得到」——这个前提不成立时，任何跨平台结论都是伪影。
 
 产物落 `$HOME/.hskill/skill-harness/<run-id>/`（遵循本仓「skill 运行时数据写 `$HOME/.hskill/<name>/`」的约定），
 不写进项目目录。
@@ -448,6 +585,14 @@ tests/harness/
 assert.deepEqual(
   [claude, pi, hermes].map(a => a.profile.processChannel),
   ["inline", "inline", "collect"],
+);
+assert.deepEqual(
+  [claude, pi, hermes].map(a => a.profile.skillChannel),
+  ["skill-dir", "explicit-flag", "skill-dir"],
+);
+assert.deepEqual(
+  [claude, pi, hermes].map(a => a.profile.builtinSkillFloor),
+  [12, 0, 0],                      // 2026-08-14 实测；变了必须重新实测再改
 );
 assert.deepEqual(
   [claude, pi, hermes].map(a => a.compensation),
@@ -472,16 +617,32 @@ compensation 文本进快照，解决 QM 风险 5 那个「映射与说明文字
 
 ### L3 · jail 有效性负向断言
 
-抄 `fakeSandbox.unreached`：jail 内放置探针（一个会在被读取时留痕的假 skill 目录），
-运行后断言探针未被触碰。错误消息直接说明违反了什么约束：
+抄 `fakeSandbox.unreached`：**「不该被碰到的东西」本身就是断言。**
+
+native 模式下 jail 内**有意**放了被测 skill，所以探针不能放在 jail 里。改为对**宿主**取证，
+两条断言，都不需要往用户目录写任何东西：
+
+1. **宿主 skill 不可见**：读一遍用户真实 `~/.claude/skills/`、`~/.hermes/skills/`、
+   `~/.pi/agent/skills/` 的目录名清单，断言 `RunRecord.reply` 与 `toolCalls` 里
+   一个都没出现（`builtinSkillFloor` 里那 12 个内置名除外，它们进白名单）。
+2. **宿主配置不可见**：在 jail 的 `CLAUDE.md` / `AGENTS.md` 位置放一个唯一 token，
+   同时断言宿主的对应文件内容特征串不出现。
+
+错误消息直接说明违反了什么约束：
 
 ```
-"jail breach: <platform> read the host skill directory; the run's result is not attributable to the skill under test"
+"jail breach: <platform> saw host skill '<name>'; the run's result is not attributable to the skill under test"
 ```
+
+这条是第一期的核心验收项：jail 不成立，后面所有跨平台结论都可能是用户全局配置的假象。
 
 ### dry-run 模式
 
-`skill-harness dry-run` 把**将要注入各平台的完整 prompt** 原样输出，不起任何进程。
+`skill-harness dry-run` 把**将要发给各平台的完整 prompt + 完整 argv + jail 内文件清单**
+原样输出，不起任何进程。三平台 × 两模式 = 六份。凭证类环境变量打码。
+
+native 模式下 prompt 里没有 skill 正文，所以 dry-run 还要打印 `install` 会往 jail 写什么，
+否则这个模式在 dry-run 里近乎空白。
 
 这条把两件事彻底解耦：**「注入内容对不对」零成本、确定性、可进 `npm test`；
 「模型表现好不好」花钱、有方差、按需触发。** 没有这条分割线，
@@ -493,26 +654,36 @@ compensation 文本进快照，解决 QM 风险 5 那个「映射与说明文字
 
 ### 第一期 · 跑得起来
 
-范围：jail + 三个适配器 + dry-run + L1/L2/L3 测试。**不做任何评估。**
+范围：jail + `install` + 三个适配器 × 两种模式 + dry-run + L1/L2/L3 测试。**不做任何评估。**
 
 平台：**claude + pi + hermes**。选型理由是隔离能力，不是流行度 ——
-这三个的隔离开关最齐全（`--bare` + `--setting-sources` / `-ns -ne -np -nc -na` / `--safe-mode`），
-jail 能做扎实，后续所有结论才可信。
+2026-08-14 实测已确认三者都能在 jail 内走原生 skill 通道，且各自的隔离开关都够用
+（`--setting-sources user` + `CLAUDE_CONFIG_DIR` / `-ns --skill` / `--safe-mode` + `HOME`）。
+
+**第一期的 anchor probe 直接复用实测用的探针 skill**（正文一个 token、`references/` 里
+一个 token），把它作为框架自身的冒烟用例固化下来：任何平台任何模式下 `FILE=UNREACHABLE`
+都是框架 bug，不是被测 skill 的问题。
 
 验收：
 
-1. 同一个 skill + 任务，三平台各产出一份 `RunRecord`，`unavailable` 如实填写
-2. `dry-run` 输出三份完整 prompt，可人工核对
-3. **jail 探针未被触碰**（L3 断言通过）—— 这是第一期的核心验收项
-4. `npm test` 全绿，且 L2 fixture 数 > 0
+1. 同一个 skill + 任务，三平台 × 两模式各产出一份 `RunRecord`，`unavailable` 如实填写
+2. anchor probe 在 **native 模式下三平台全部 `FILE` 通过**；inject 模式下带补偿行也全部通过
+3. anchor probe 在 native 模式 + 非触发 prompt 下，三平台 `triggered` 均为 `false`
+4. `dry-run` 输出六份完整 prompt（3 平台 × 2 模式），可人工核对
+5. **jail 探针未被触碰**（L3 断言通过）；claude 的 `builtinSkillFloor = 12` 被 L1 快照钉住
+6. `npm test` 全绿，且 L2 fixture 数 > 0
 
 ### 第二期 · 看得出差异
 
 范围：过程评估（负向断言 + 工具分布）+ 方差标定 + 对比报告。
 
-方差标定：固定 skill 与任务，每个平台重复跑 **5 次**（3 个平台共 15 次），
-在负向断言的通过率与工具调用分布两个维度上量出**同平台基线方差**，
-再与**跨平台差异**比较。
+方差标定：固定 skill 与任务，每个平台**每种模式**重复跑 **5 次**（3 平台 × 2 模式 = 30 次），
+在负向断言的通过率与工具调用分布两个维度上量出**同平台同模式的基线方差**，
+再与**跨平台差异**、**跨模式差异**分别比较。
+
+跨模式差异必须单独量：它是测试装置引入的，不是被测对象的属性。
+若某平台的跨模式差异 ≥ 跨平台差异，说明该平台的两种模式在测两个不同的东西，
+报告中不得把它们的结果并列。
 
 **这个数决定第三期每个格子的采样预算。** 判据：
 
@@ -556,9 +727,9 @@ QM 用正则匹配 opencode 的启动横幅，上游改一次措辞启动就永�
 `sessions export` 依赖 SQLite session store 写入完成。进程退出与 store 落盘之间可能有窗口。
 **缓解**：collect 失败不算整个 run 失败，`toolCalls` 置 `null` 并进 `unavailable`，质量评估照常进行。
 
-**4. 注入位置不对称（hermes 在 user 位）。**
-见「注入格式」。**缓解**：`profile.injection` 记录，报告中 hermes 的系统性差异优先归因到这一格；
-第二期方差标定时对 hermes 单独看一遍。
+**4. inject 模式的注入位不对称（hermes 在 user 位）。**
+见「两种模式」。**缓解**：`profile.injection` 记录，报告中 hermes 的系统性差异优先归因到这一格；
+第二期方差标定时对 hermes 单独看一遍。native 模式不受此影响。
 
 **5. 跨平台差异可能被同平台方差淹没。**
 LLM 输出天然有方差。**缓解**：第二期先做不受方差影响的负向断言，
@@ -567,6 +738,26 @@ LLM 输出天然有方差。**缓解**：第二期先做不受方差影响的负
 **6. compensation 会随平台数与工具数增长而失控。**
 QM 的 `bridgeToolName` 是三行硬编码 if，三个工具三行；工具面扩大后会变成一长串。
 **缓解**：见「未决问题」。短期靠 L1 整表快照锁住，长期靠让 skill 正文逐步不再需要补偿。
+
+**7. claude 的触发测试与另两平台不可比（`builtinSkillFloor = 12`）。**
+实测：jail 后 claude 仍带 12 个内置 skill，pi 与 hermes 为 0。
+claude 的「触发」是 13 选 1，另两个是 1 选 1，难度不同量级。
+**缓解**：`builtinSkillFloor` 进 profile 并由报告渲染读出；claude 的 `triggered = false`
+必须先归因到这一格，不得直接判为 description 有问题。
+若日后需要可比性，为 pi/hermes 各塞入等量的诱饵 skill 拉平候选数——第一期不做。
+
+**8. inject 模式的正文可能被模型判为 prompt injection。**
+实测中出现过一次：claude 在工作目录名为 `jail-inject` 时拒绝执行注入的 skill 正文，
+明确理由是「这段文本不在我真实的 skill 列表里」。换中性目录名后不复现。
+**结论限定**：n=1，且被目录名混淆，不构成定律；但它说明注入的正文在 claude 上有被当作
+不可信内容的**方差风险**，而 native 模式结构上没有这个风险。
+**缓解**：jail 目录名一律中性（`mkdtemp` 前缀用 `skill-harness-`，不含 jail/inject/probe 等词）；
+把「拒绝执行」作为 `RunRecord` 的一个可识别失败类别，而不是混进普通质量失败。
+
+**9. OAuth token 经环境变量传给子进程。**
+claude 的 jail 必须注入 `CLAUDE_CODE_OAUTH_TOKEN`，该值会出现在子进程环境里。
+**缓解**：token 只在 `jail()` 构造 env 时从 keychain 现取，不落盘、不进 `RunRecord`、
+不进任何 artifact；`dry-run` 输出与报告渲染对该字段一律打码。
 
 ---
 
