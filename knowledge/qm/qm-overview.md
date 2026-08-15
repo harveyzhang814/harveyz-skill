@@ -504,11 +504,11 @@ AGENTS.md 是写给 coding agent 看的操作手册（`CLAUDE.md` 是它的 syml
 
 **`src/` 已全部覆盖；`plugins/` 覆盖了信任边界的那一半。** 前十五篇按模块覆盖 A–J 十组 + 四个未分类目录 + 五个从未进入分组的顶层文件；第十六篇不覆盖新代码，按问题重排；第十七篇转向 `plugins/`。
 
-- [[qm-web-client]] —— Web 客户端：`plugins/web-ui`（服务端 1948 行 + 桥 1381 行，源码共 18,772 行），把 Pi `Agent` 的 `streamFn` 换成一次 HTTP 并丢弃它拼好的上下文、core 侧路由的三分类与「未分类的写即最严」、进程内索引作为快路径、只读是产品决定（已完成）
+- [[qm-web-client]] —— Web 客户端：`plugins/web-ui`（服务端 1948 行 + 桥 1381 行，源码共 18,772 行），把 Pi `Agent` 的 `streamFn` 换成一次 HTTP 并丢弃它拼好的上下文、core 侧路由的三分类与「未分类的写即最严」、进程内索引作为快路径、只读是产品决定；§6 补了渲染不可信内容的三层防线——CSP 管能不能执行、DOMPurify 管长什么样、`sandbox` 指令管算不算同源（已完成）
 
 **`src/` 与 `plugins/` 的服务端部分至此全部读过。**
 
-**仍未覆盖：** `plugins/web-ui` 的 55 个前端组件（约 15,400 行 Lit）、`cli/`（109 文件）、`scripts/`（46 个）、`skills-seed/`（79 文件）。前端组件里唯一被标为值得一看的是那个 16 行的 markdown 净化器，见 [[qm-web-client]] §6-1。
+**仍未覆盖：** `plugins/web-ui` 的 55 个前端组件（约 15,400 行 Lit）、`cli/`（109 文件）、`scripts/`（46 个）、`skills-seed/`（79 文件）。原先标为值得一看的那个 16 行 markdown 净化器**已查完**（[[qm-web-client]] §6）：它是接线不是净化器，真正的第一层是 CSP；留下的缝是 `img-src https:` 允许的自动外带。
 
 > 上面「阅读范围」一栏写的 `plugins/*/README.md` 是第一篇当时的范围。
 > 到 [[qm-surface-layer]] 为止，`plugins/` 里除 `web-ui` 外的源码已经逐文件读过。
