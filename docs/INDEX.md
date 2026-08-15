@@ -37,6 +37,7 @@ methodology: diataxis
 | [reference/hub-reference.md](reference/hub-reference.md) | hub CLI 完整参考：projects/tasks/git 子命令、所有参数、JSON 输出格式、错误格式 |
 | [reference/todo-format-spec.md](reference/todo-format-spec.md) | TODO.md 文件结构、字段规范、todo_format.yaml 完整定义 |
 | [reference/todo-tool-reference.md](reference/todo-tool-reference.md) | todo-tool 数据模型（SQL）、CLI 接口、API 端点完整参考 |
+| [reference/reader-profile.md](reference/reader-profile.md) | 给 Harvey 写文档的校准基准：读者认知边界、直接用/需锚定的词表、C→B→A 展开梯度、三条反模式、交稿自检 |
 
 ## adr/ — 架构决策记录
 
