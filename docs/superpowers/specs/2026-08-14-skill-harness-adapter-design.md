@@ -215,8 +215,11 @@ PlatformProfile {
 
 组装 prompt、按矩阵分发、并行执行、收集 `RunRecord`。
 矩阵维度：`skill × platform × mode × repeat`。`mode` 是 `native` / `inject`（见「两种模式」），
-`repeat` 用于方差标定（见「分期 · 第二期」）。默认两种模式都跑；
-`--mode native` 可只跑主模式，用于日常回归。
+`repeat` 用于方差标定（见「分期 · 第二期」）。
+
+**矩阵不是笛卡尔积，要先过一遍选择器**（见「选择：跑哪些格子」）：
+默认全量 → `matrix.json` 声明剔除 → CLI 参数覆盖。
+被剔除的格子进 `not-run` / `declared-na`，不进执行队列，但必须出现在报告里。
 
 ### 4. Evaluator
 
@@ -406,6 +409,91 @@ hermes 无 system prompt 追加通道，整体拼成一段走 `-z`。
 
 ---
 
+## 选择：跑哪些格子
+
+全矩阵是 39 skill × 3 平台 × 2 模式 = 234 次真模型调用，日常不可能全跑；
+且有些 skill 本来就不该在某些平台上跑。三层选择，**优先级 CLI > 声明 > 默认**。
+
+### 默认
+
+全部 skill × 第一期三平台 × 两模式。默认是全量，因为**默认值决定了遗漏的方向**——
+默认全量时遗漏表现为"跑得慢"，默认稀疏时遗漏表现为"以为测过了"。后者是静默错误。
+
+### 声明：`tools/skill-harness/matrix.json`
+
+**稀疏文件，只记例外。** 不在文件里的 skill 一律按默认全量。
+
+```json
+{
+  "overrides": [
+    {
+      "skill": "mint/runby-opencode",
+      "platforms": [],
+      "reason": "这个 skill 的作用就是驱动 opencode 跑别的 skill，被测对象是 opencode 不是它自己"
+    },
+    {
+      "skill": "research/learn-video",
+      "platforms": ["claude"],
+      "reason": "依赖 claude 的后台任务通道，其余平台无等价机制"
+    }
+  ]
+}
+```
+
+`platforms` 是**白名单**：`[]` 表示完全不测，缺省该条目表示全测。
+
+**`reason` 是必填字段，由测试强制。** 这是本节唯一的硬约束。
+一条没有理由的排除，和忘了测是同一件事，而且更危险——它看起来像个决定。
+L2 增加一条：`matrix.json` 里任何 `reason` 为空或缺失即测试失败。
+
+### CLI：本次覆盖
+
+```
+skill-harness run
+  --skill <path>        可重复，如 --skill mint/learn-skill
+  --bundle <name>       复用 skills-index.json 的 bundle：research|coding|writing|design|mint|devops|creative
+  --platform <id>       可重复，默认 claude,pi,hermes
+  --mode native|inject|both     默认 both
+  --repeat <n>          默认 1
+```
+
+`--bundle` 复用 `skills-index.json` 已有的分组，不新造分类体系。
+CLI 显式指定的平台**可以覆盖声明里的白名单**（用于验证某条排除是否还成立），
+但报告里必须标注「本次结果违反了 matrix.json 的声明」。
+
+### 报告必须是三态
+
+选择性执行的代价是**覆盖率会静默腐烂**。缓解手段是让"没跑"在输出里无法伪装成"通过"：
+
+| 状态 | 含义 | 渲染 |
+|---|---|---|
+| `pass` / `fail` | 真跑了 | 正常 |
+| `declared-na` | 声明排除，附 reason | 灰显，鼠标可见 reason |
+| `not-run` | 本次选择没覆盖 | **空格，不是对勾** |
+
+`not-run` 永远不得折叠进 `pass`，也不得从矩阵里省略行列。
+这是 QM `residual` 那条纪律的直接应用：没有 residual 的归因表一定在撒谎。
+
+### `skill-harness coverage`
+
+不起任何进程，读历史产物，输出每个格子**最近一次成功运行的时间**与当时的 `contentHash`。
+
+```
+skill                    claude      pi          hermes
+mint/learn-skill         3d ago      3d ago      never
+research/extract-url     12d ago·陈  never       never
+mint/runby-opencode      n/a         n/a         n/a
+```
+
+`陈` = 该 skill 的 `contentHash` 在最近一次运行之后变过，结论已过期。
+`skills-index.json` 里本来就维护 `contentHash`，直接复用，不新增机制。
+
+**这条命令是选择机制的配套约束，不是可选功能。** 允许挑着跑，就必须同时提供
+「哪些格子已经很久没跑过 / 结论已过期」的视图，否则选择机制会在半年内把覆盖率
+悄悄掏空，而没有任何一次运行会报错。
+
+---
+
 ## RunRecord
 
 ```
@@ -543,15 +631,18 @@ tools/skill-harness/
     pi.js
     hermes.js
   jail.js             # 通用 jail 构造与清理
+  select.js           # 默认 → matrix.json 声明 → CLI 覆盖，产出待跑格子清单
   runner.js           # 矩阵分发
   record.js           # RunRecord 规范化
+  coverage.js         # 读历史产物，算每格最近一次运行时间与 contentHash 是否过期
   parse/
     claude-code-jsonl.js   # claude 与 hermes trace 共用
     pi-json.js
   evaluate/
     process.js        # 负向断言 + 工具分布
   report.js
-  cli.js              # skill-harness run|dry-run|report
+  cli.js              # skill-harness run|dry-run|report|coverage
+  matrix.json         # 稀疏声明：只记不该全量跑的 skill，reason 必填
   probe/
     probe-anchor/     # 框架自身的冒烟 skill：正文 token + references/ token
       SKILL.md
@@ -565,6 +656,7 @@ tests/harness/
   parse.test.mjs      # 纯函数解析器单测（数量最多）
   profile.test.mjs    # L1 整表快照
   jail.test.mjs       # 隔离有效性负向断言
+  select.test.mjs     # 选择器纯函数单测 + matrix.json 的 reason 必填校验
 ```
 
 `probe/probe-anchor/` 是框架的自检装置，不是被测 skill。它验证「skill 的附属文件在
@@ -671,7 +763,10 @@ native 模式下 prompt 里没有 skill 正文，所以 dry-run 还要打印 `in
 3. anchor probe 在 native 模式 + 非触发 prompt 下，三平台 `triggered` 均为 `false`
 4. `dry-run` 输出六份完整 prompt（3 平台 × 2 模式），可人工核对
 5. **jail 探针未被触碰**（L3 断言通过）；claude 的 `builtinSkillFloor = 12` 被 L1 快照钉住
-6. `npm test` 全绿，且 L2 fixture 数 > 0
+6. 选择器可用：`--skill` / `--bundle` / `--platform` / `--mode` 四个选择维度各有一条单测；
+   `matrix.json` 中 `reason` 缺失时 `npm test` 变红
+7. `skill-harness coverage` 能对当前 39 个 skill 输出完整三态矩阵，`not-run` 显示为空格
+8. `npm test` 全绿，且 L2 fixture 数 > 0
 
 ### 第二期 · 看得出差异
 
@@ -754,7 +849,15 @@ claude 的「触发」是 13 选 1，另两个是 1 选 1，难度不同量级�
 **缓解**：jail 目录名一律中性（`mkdtemp` 前缀用 `skill-harness-`，不含 jail/inject/probe 等词）；
 把「拒绝执行」作为 `RunRecord` 的一个可识别失败类别，而不是混进普通质量失败。
 
-**9. OAuth token 经环境变量传给子进程。**
+**9. 选择机制会让覆盖率静默腐烂。**
+允许挑着跑，最可能的失败不是跑错，而是半年后没人记得哪些格子从来没跑过，
+而期间没有任何一次运行会报错——所有跑过的都绿着。
+**缓解**：三件事捆绑交付，缺一不可 ——
+报告三态（`not-run` 不得渲染成对勾）、`matrix.json` 的 `reason` 必填、
+`skill-harness coverage` 用 `contentHash` 标出过期结论。
+这三条在第一期验收里，不推迟。
+
+**10. OAuth token 经环境变量传给子进程。**
 claude 的 jail 必须注入 `CLAUDE_CODE_OAUTH_TOKEN`，该值会出现在子进程环境里。
 **缓解**：token 只在 `jail()` 构造 env 时从 keychain 现取，不落盘、不进 `RunRecord`、
 不进任何 artifact；`dry-run` 输出与报告渲染对该字段一律打码。
