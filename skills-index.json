@@ -112,7 +112,9 @@
     {
       "path": "research/sync-xtimeline",
       "bundle": "research",
-      "installScope": "project"
+      "installScope": "project",
+      "contentHash": "9913531fbbd693d2",
+      "contentVersion": "0.1.0"
     },
     {
       "path": "creative/capture-todo",
