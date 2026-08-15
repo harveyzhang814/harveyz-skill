@@ -103,6 +103,11 @@
       "contentVersion": "0.7.5"
     },
     {
+      "path": "research/watch-x",
+      "bundle": "research",
+      "installScope": "project"
+    },
+    {
       "path": "creative/capture-todo",
       "bundle": "creative",
       "installScope": "essential",
