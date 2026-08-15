@@ -9,6 +9,7 @@
 > - [[qm-turn-slice]]（纵切面——一条 Slack 消息从进入到回复送出，十九道闸门）
 > - [[qm-harness-layer]]（Harness 层——四适配器一套接口、tape 事件溯源、上下文压缩、冷启动重放）
 > - [[qm-authz-layer]]（授权与安全层——「持久化的代价」的第四、五次出现；`replaceGrantsIfCurrent` 与 `transitionStatus` 同为 CAS）
+> - [[qm-credentials-layer]]（凭证层——「持久化的代价」第六处：密文格式版本 × 密钥派生方式 × 候选密钥链）
 >
 > 调研对象：`yc-software/qm`（YC 出品的开源多人 agent harness）
 > 本地路径：`~/Repositories/qm`
@@ -490,6 +491,19 @@ else if ((kind === "steer" || kind === "followUp") && s.text) await handlers.onS
 ```
 
 `RunSignalKind` 的类型定义里**根本没有** `followUp`——它已经被删掉了。但反序列化路径必须继续认它，因为 Postgres 里躺着旧信号，所以要靠 `as string` 绕过类型系统。在一个**禁止写注释**的代码库里，这行代码不解释自己为什么存在，读者得自己推断出「这是给旧数据留的门」。
+
+> **补记（后续两篇又找到三处，总数到六）**：
+> **第四处** `auth/signed-token.ts:18-37` —— JWS 三段式 vs 旧的两段式 `payload.sig`，且旧格式的签名同时接受
+> base64url 和 hex 两种编码，靠 `token.split(".").length !== 3` 分流（见 [[qm-authz-layer]] §3.4）。
+> **第五处** `policy/command-policy.ts:774-779` —— 存进 DB 的规则可能是 `compileSafeRegex` 收紧之前写的，
+> 编译失败就跳过并打日志提示 "re-save it to migrate"。**校验器变严格了，历史数据不会跟着变**
+> （见 [[qm-authz-layer]] §6.5）。注意跳过的后果是这条规则不生效，对 `deny` 规则来说是失败开放。
+> **第六处** `connectors/connector-client-store.ts:63-95` —— 也是最精致的一处，三个维度同时兼容：
+> 密文格式版本（`v2:` 前缀 vs 三段旧格式）× 密钥派生方式（HKDF `current` vs 原始/sha256 的 `legacy`）
+> × 候选密钥链（`fallbacks?: SecretKey[]`）。凡是加密落库的系统，这三层迟早都要有
+> （见 [[qm-credentials-layer]] §5.2）。
+>
+> 六处分布在五个互不相干的子系统里，说明这不是某一处的技术债，是「durable by default」的固定税率。
 
 ### 12.1 `turn-origin` 的合并规则是第五种「收紧代数」
 

@@ -9,6 +9,7 @@
 > - [[qm-turn-slice]]（纵切面——一条 Slack 消息从进入到回复送出，十九道闸门）
 > - [[qm-harness-layer]]（Harness 层——四适配器一套接口、tape 事件溯源、上下文压缩、冷启动重放）
 > - [[qm-run-lifecycle]]（执行内核的运行时——租约、排空、回收、中断重入）
+> - [[qm-credentials-layer]]（凭证层——本篇讲铸造端，那篇讲凭证本身的一生：存入、借出、刷新、过期）
 >
 > 调研对象：`yc-software/qm`（YC 出品的开源多人 agent harness）
 > 本地路径：`~/Repositories/qm`

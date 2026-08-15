@@ -9,6 +9,7 @@
 > - [[qm-harness-layer]]（Harness 层——`systemPrompt` 与 runtime 选择的下游消费者）
 > - [[qm-run-lifecycle]]（执行内核运行时——第五种收紧代数 `turn-origin` rank 合并；参与者时间窗与 audience floor 的对应）
 > - [[qm-authz-layer]]（授权与安全层——audience floor 的执行侧；第六到第八种收紧代数；四种策略唯一的汇合点）
+> - [[qm-credentials-layer]]（凭证层——`Resolution` 里 `credentials` 字段的来源；cutover 策略的 scope→org 回退与分层配置同构）
 >
 > 调研对象：`yc-software/qm` 的 `src/resolution/`
 > 本地路径：`~/Repositories/qm`
