@@ -18,6 +18,7 @@
 > - [[qm-synthesis]]（综述——本篇的 `lastHarness` 是进程内状态那节的六个实例之一）
 > - [[qm-surface-layer]]（表面层——插件与 core 之间的签名协议，harness 不参与）
 > - [[qm-web-client]]（Web 客户端——同一个替换手法用在浏览器里：`streamFn` 被换成一次 HTTP）
+> - [[qm-skill-adaptation]]（skill 跨 harness 适配机制——末端补偿、三层一致性测试；**修正本篇第 1.2 节与计数各一处**）
 >
 > 调研对象：`yc-software/qm` 的 `src/harness/`
 > 本地路径：`~/Repositories/qm`
@@ -95,7 +96,9 @@ const models = {
 
 绑定 `this`，然后**只挂载实现了的方法**。没实现的键根本不存在，调用侧的 `?.` 才有意义（`deps.harness.models.oneShot` 为 `undefined` 时，记忆抽取会直接返回空数组而不是崩）。
 
-`tools.name` 默认是恒等函数，**目前四个适配器没有一个覆盖它**——这个接缝存在但未使用。
+`tools.name` 默认是恒等函数。
+
+> **勘误**（2026-08-14，见 [[qm-skill-adaptation]] 第 3.3 节）：原文此处写「目前四个适配器没有一个覆盖它——这个接缝存在但未使用」，**这是错的**。opencode 覆盖了它（`bridgeToolName`：`read → workspace_read`、`execute → workspace_execute`、`write → workspace_write`），并且有测试守着（`test/harness-adapter.test.ts:52-55`）。更关键的是它配套在 systemPrompt 尾部注入了一段别名说明（`opencode-harness.ts:863`）——这个接缝是整个跨平台 skill 适配里**唯一真正落地的能力协商机制**。
 
 ---
 

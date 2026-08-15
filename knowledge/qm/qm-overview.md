@@ -13,6 +13,7 @@
 > - [[qm-synthesis]]（综述——十五篇的可迁移做法按问题收敛，不按模块）
 > - [[qm-surface-layer]]（表面层——`plugins/` 的信任边界：唯一公网入口、内建 IdP、没有权力的管理面）
 > - [[qm-web-client]]（Web 客户端——`plugins/web-ui`：换掉 streamFn 的接缝、路由三分类、只读是产品决定）
+> - [[qm-skill-adaptation]]（纵切面——同一个 skill 怎么在四个异构 harness 上都能用：末端补偿、能力表的真实身份、三层一致性测试、以及 QM 没做的那一半）
 >
 > 调研对象：`yc-software/qm`（YC 出品的开源多人 agent harness）
 > 本地路径：`~/Repositories/qm`

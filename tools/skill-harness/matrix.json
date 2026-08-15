@@ -1,0 +1,9 @@
+{
+  "overrides": [
+    {
+      "skill": "mint/runby-opencode",
+      "platforms": [],
+      "reason": "这个 skill 的作用就是驱动 opencode 去跑别的 skill，被测对象是 opencode 而不是它自己，放进矩阵会自我指涉"
+    }
+  ]
+}
