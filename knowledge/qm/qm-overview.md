@@ -410,6 +410,7 @@ flowchart LR
 > - [[qm-execution-layer]]（sandbox / workspace / files / processes / tools）——能力协商式的 Sandbox 接口、四个后端、三层文件模型、用 shell 长出所有能力、路由与迁移、进程生命周期的三层真相
 > - [[qm-skills-layer]]（skills）——scope 所有权与遮蔽、状态机与能力授权、Pack 的供应链防护、两级物化与懒加载、`liveActor` 授权维度
 > - [[qm-autonomy-layer]]（自主工作层——cron 调度、monitor 轮询、`runTrigger` 主干、触发回合与人类回合的差集）
+> - [[qm-publish-layer]]（发布层——`publish` 把工作区目录变成持久内部 Web 应用：名字、版本、受众、视角）
 
 #### F. 凭证与外部服务
 
@@ -486,6 +487,9 @@ AGENTS.md 是写给 coding agent 看的操作手册（`CLAUDE.md` 是它的 syml
 - [[qm-authz-layer]] —— B 组授权与安全层：`identity/` `acl/` `directory/` `auth/` `admin/` `policy/` `security/` `classify/` `ratelimit/`，能力令牌四道闸门、audience floor 的执行侧、命令反混淆、安全姿态与影子筛查（已完成）
 - [[qm-credentials-layer]] —— F 组凭证与外部连接层：`credentials/` `connectors/` `model/`，借还协议、OAuth 单飞刷新、HKDF 用途隔离、常驻/临时凭证迁移、模型清单（已完成）
 - [[qm-autonomy-layer]] —— H 组自主工作层：`cron/` `monitors/` `triggers/` `wake/`，`runTrigger` 主干、时间的两种语义、两套调度引擎与租约毒丸、三层幂等、给模型的情境说明书、沉默作为一等结果、触发回合与人类回合的差集（已完成）
-- **I 组** `deploy/` `environments/` + **J 组** `audit/` `onboarding/` —— 20 个文件里还剩约 14 个。J 组的 `persistence/durable-map.ts`（事务语义、版本行序列化）与 `idempotency/`（全部）已在 [[qm-autonomy-layer]] §4 里啃掉；`persistence/leader-lease.ts` 在那篇 §3.3 和 [[qm-run-lifecycle]] 里各覆盖了一半
-- 分类遗漏：`util/`（13）、`surface-cache/`（6）、`deployment/`（5）、`projects/`（1）四个目录不在上面 A–J 任何一组里。注意 `deployment/` 与 I 组的 `deploy/` 不是同一个目录
+- [[qm-publish-layer]] —— I 组发布层：`deploy/` `environments/`，两个版本指针、git 作为版本存储、86 行与 664 行的两个 provider、默认受众的差量重算、owner shell、三扇门鉴权（已完成）
+- **剩余** —— 三块：
+  - `surface-cache/`（6 文件 1321 行）—— **名字骗人，它不是缓存**，是 Slack 会话内容的本地权威镜像 + ambient（何时主动开口）决策链。没有 TTL、没有淘汰，只有「命中零行才回源且不写回」。够单独一篇
+  - **顶层文件**（5 个 3235 行）—— 这批**从未出现在 A–J 分组里**，是本次调研最大的一处遗漏：`wiring.ts`（1490，全仓唯一装配点，`BuiltApp` 就是组件清单）、`config.ts`（859，约 120 个字段）、`types.ts`（488，领域词汇表）、`egress-authz-main.ts`（251，**第二个进程入口**，沙箱出网的实际执法点）、`index.ts`（147）。加上 `deployment/`（5 文件 1647 行，与 `deploy/` 完全无关，是 QM 装机本身的配置层：工具描述符、密钥闸门、上线冒烟检查）
+  - **收尾**：`util/`（13 文件 357 行，其中 `safe-regex.ts` 的手写 ReDoS 扫描器和 `network.ts` 的 SSRF 网段表是真内容）、`projects/`（1 文件 236 行，`managedGroups` 的唯一实现）、`audit/`（44 行接口 + 内存兜底，真实现在 `admin/postgres-audit-log.ts`）、`onboarding/`（75 行，状态编码在 memory 文本里）
 - 综述：把各篇散落的「可迁移做法」按问题（而非按模块）收敛成一份清单

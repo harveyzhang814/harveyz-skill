@@ -11,6 +11,7 @@
 > - [[qm-authz-layer]]（授权与安全层——「持久化的代价」的第四、五次出现；`replaceGrantsIfCurrent` 与 `transitionStatus` 同为 CAS）
 > - [[qm-credentials-layer]]（凭证层——「持久化的代价」第六处：密文格式版本 × 密钥派生方式 × 候选密钥链）
 > - [[qm-autonomy-layer]]（自主工作层——同一套 `leaderLease`，保护的是「谁来扫表」这个角色）
+> - [[qm-publish-layer]]（发布层——`advisory-lock` 与 `leader-lease` 的分工，以及令牌版本位的正面写法）
 >
 > 调研对象：`yc-software/qm`（YC 出品的开源多人 agent harness）
 > 本地路径：`~/Repositories/qm`

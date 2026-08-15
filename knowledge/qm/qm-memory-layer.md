@@ -11,6 +11,7 @@
 > - [[qm-authz-layer]]（授权与安全层——`classifyScopeLabel` 决定记忆记录的 scope 标签，是本篇 scope 过滤的输入端）
 > - [[qm-credentials-layer]]（凭证层——`DurableMap` 的 `take` / `merge` / `deleteIf` 在借还协议里的密集使用）
 > - [[qm-autonomy-layer]]（自主工作层——cron 的跨次记忆就是工作区磁盘，不走记忆层机制）
+> - [[qm-publish-layer]]（发布层——已发布应用的持久盘 `$DATA_DIR` 与记忆层无关，是另一条持久化路径）
 >
 > 调研对象：`yc-software/qm` 的 `src/memory/`
 > 本地路径：`~/Repositories/qm`

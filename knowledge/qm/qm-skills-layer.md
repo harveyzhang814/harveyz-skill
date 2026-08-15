@@ -11,6 +11,7 @@
 > - [[qm-authz-layer]]（授权与安全层——skill 共享走 `grantsOfKind("skill", ...)`，`skill:` 前缀的 grant 只能由 org 授出）
 > - [[qm-credentials-layer]]（凭证层——skill 使用组织凭证走 broker 通道，不经过借还协议）
 > - [[qm-autonomy-layer]]（自主工作层——触发回合缺 `liveActor`，因此不能共享或提升 skill）
+> - [[qm-publish-layer]]（发布层——app 与 skill 同属 artifact，共用 ACL 与 home scope 概念）
 >
 > 调研对象：`yc-software/qm` 的 `src/skills/`
 > 本地路径：`~/Repositories/qm`

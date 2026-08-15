@@ -11,6 +11,7 @@
 > - [[qm-authz-layer]]（授权与安全层——`createSecretValueMasker` 在沙箱回显里遮蔽密钥；命令策略的裁决由沙箱执行）
 > - [[qm-credentials-layer]]（凭证层——`renderUseScript` 生成的脚本在沙箱里执行；假 HOME 的清理依赖沙箱销毁）
 > - [[qm-autonomy-layer]]（自主工作层——monitor 观察的正是执行层起的后台进程）
+> - [[qm-publish-layer]]（发布层——`publish` 的输入是工作区目录，两者生命周期恰好相反）
 >
 > 调研对象：`yc-software/qm` 的 `src/sandbox/`、`src/workspace/`、`src/files/`、`src/processes/`、`src/tools/`
 > 本地路径：`~/Repositories/qm`

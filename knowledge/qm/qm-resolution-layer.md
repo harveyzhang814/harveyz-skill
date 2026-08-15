@@ -11,6 +11,7 @@
 > - [[qm-authz-layer]]（授权与安全层——audience floor 的执行侧；第六到第八种收紧代数；四种策略唯一的汇合点）
 > - [[qm-credentials-layer]]（凭证层——`Resolution` 里 `credentials` 字段的来源；cutover 策略的 scope→org 回退与分层配置同构）
 > - [[qm-autonomy-layer]]（自主工作层——`scopeFloor` / `scopeShared` 传下去的 audience 就是权限下界的实参）
+> - [[qm-publish-layer]]（发布层——`environments/` 决定 rw 层用哪个 scope 的工作区）
 >
 > 调研对象：`yc-software/qm` 的 `src/resolution/`
 > 本地路径：`~/Repositories/qm`

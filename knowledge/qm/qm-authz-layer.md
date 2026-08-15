@@ -11,6 +11,7 @@
 > - [[qm-run-lifecycle]]（执行内核的运行时——租约、排空、回收、中断重入）
 > - [[qm-credentials-layer]]（凭证层——本篇讲铸造端，那篇讲凭证本身的一生：存入、借出、刷新、过期）
 > - [[qm-autonomy-layer]]（自主工作层——`liveActor !== true` 的另一半：无人在场时究竟允许做什么）
+> - [[qm-publish-layer]]（发布层——`deploy:<id>` 是同一个 `AclStore` 里的一等资源；默认受众的差量重算）
 >
 > 调研对象：`yc-software/qm`（YC 出品的开源多人 agent harness）
 > 本地路径：`~/Repositories/qm`
