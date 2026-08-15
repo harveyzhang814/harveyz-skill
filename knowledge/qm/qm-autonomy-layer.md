@@ -12,6 +12,7 @@
 > - [[qm-authz-layer]]（授权与安全层——身份、能力令牌、ACL、命令策略、安全姿态）
 > - [[qm-credentials-layer]]（凭证层——借还协议、OAuth、加密盒、连接器状态缓存）
 > - [[qm-publish-layer]]（发布层——共用两把 Postgres 锁；`publish` 的 upsert 与 `cron` 的先查后建成对照）
+> - [[qm-surface-mirror]]（镜像层——「什么时候主动说话」的第三种答案：群里有人说了值得回应的话）
 >
 > 调研对象：`yc-software/qm`（YC 出品的开源多人 agent harness）
 > 本地路径：`~/Repositories/qm`

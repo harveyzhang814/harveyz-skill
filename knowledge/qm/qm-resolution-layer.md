@@ -12,6 +12,7 @@
 > - [[qm-credentials-layer]]（凭证层——`Resolution` 里 `credentials` 字段的来源；cutover 策略的 scope→org 回退与分层配置同构）
 > - [[qm-autonomy-layer]]（自主工作层——`scopeFloor` / `scopeShared` 传下去的 audience 就是权限下界的实参）
 > - [[qm-publish-layer]]（发布层——`environments/` 决定 rw 层用哪个 scope 的工作区）
+> - [[qm-surface-mirror]]（镜像层——频道常驻指令不走 `Resolution`，是第二条频道级 prompt 注入路径）
 >
 > 调研对象：`yc-software/qm` 的 `src/resolution/`
 > 本地路径：`~/Repositories/qm`

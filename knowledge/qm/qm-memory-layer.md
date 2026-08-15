@@ -12,6 +12,7 @@
 > - [[qm-credentials-layer]]（凭证层——`DurableMap` 的 `take` / `merge` / `deleteIf` 在借还协议里的密集使用）
 > - [[qm-autonomy-layer]]（自主工作层——cron 的跨次记忆就是工作区磁盘，不走记忆层机制）
 > - [[qm-publish-layer]]（发布层——已发布应用的持久盘 `$DATA_DIR` 与记忆层无关，是另一条持久化路径）
+> - [[qm-surface-mirror]]（镜像层——聊天历史的本地权威副本，与记忆层是两套独立的「记住」）
 >
 > 调研对象：`yc-software/qm` 的 `src/memory/`
 > 本地路径：`~/Repositories/qm`

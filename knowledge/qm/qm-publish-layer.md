@@ -12,6 +12,7 @@
 > - [[qm-authz-layer]]（授权与安全层——身份、能力令牌、ACL、命令策略、安全姿态）
 > - [[qm-credentials-layer]]（凭证层——借还协议、OAuth、加密盒、连接器状态缓存）
 > - [[qm-autonomy-layer]]（自主工作层——cron、monitor、触发器主干、无人在场的回合）
+> - [[qm-surface-mirror]]（镜像层——同为 Postgres 双实现模式，但那里是编排，这里是事件合并）
 >
 > 调研对象：`yc-software/qm`（YC 出品的开源多人 agent harness）
 > 本地路径：`~/Repositories/qm`

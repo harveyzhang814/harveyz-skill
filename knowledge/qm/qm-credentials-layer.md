@@ -12,6 +12,7 @@
 > - [[qm-authz-layer]]（授权与安全层——身份、能力令牌、ACL、命令策略、安全姿态）
 > - [[qm-autonomy-layer]]（自主工作层——凭证审批的异步通知边：`createAskExpirySweep` 挂在调度器上）
 > - [[qm-publish-layer]]（发布层——`viewer-session` 的 HMAC 用途派生是 HKDF 域分离的廉价版）
+> - [[qm-surface-mirror]]（镜像层——ambient 主动回合是自动回合，凭证同意被硬性 403）
 >
 > 调研对象：`yc-software/qm`（YC 出品的开源多人 agent harness）
 > 本地路径：`~/Repositories/qm`

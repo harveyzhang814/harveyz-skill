@@ -12,6 +12,7 @@
 > - [[qm-credentials-layer]]（凭证层——模型清单与 harness 能力的交叉约束：自定义模型只对 pi / opencode / mock 开放）
 > - [[qm-autonomy-layer]]（自主工作层——cron 每次 fire 新开会话，几乎不触发上下文压缩；monitor 相反）
 > - [[qm-publish-layer]]（发布层——owner shell 的聊天列指向 `/app-edit`，是对话层的另一个 surface）
+> - [[qm-surface-mirror]]（镜像层——判官与 ack emoji 是两处小模型调用，各有独立的模型选择）
 >
 > 调研对象：`yc-software/qm` 的 `src/harness/`
 > 本地路径：`~/Repositories/qm`

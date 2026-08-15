@@ -12,6 +12,7 @@
 > - [[qm-credentials-layer]]（凭证层——十九道闸门里「注入凭证」那一道的展开）
 > - [[qm-autonomy-layer]]（自主工作层——同一条主干的另一个入口：无人说话时回合从哪来）
 > - [[qm-publish-layer]]（发布层——`publish` 工具在回合内的落点，以及回合结束后继续存在的东西）
+> - [[qm-surface-mirror]]（镜像层——同一条消息的另一个去向：留档并交给 ambient 判官）
 >
 > 调研对象：`yc-software/qm` 的 turn 全链路
 > 本地路径：`~/Repositories/qm`
