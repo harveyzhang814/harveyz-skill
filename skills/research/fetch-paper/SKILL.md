@@ -129,8 +129,8 @@ WebFetch(url="https://api.crossref.org/works?query.bibliographic=<urlencode(标�
 1. **arXiv** — 若已确认 arXiv ID，PDF 直链为 `https://arxiv.org/pdf/<arXiv ID>`
 2. **Unpaywall** — 若已确认 DOI，`WebFetch(url="https://api.unpaywall.org/v2/<DOI>?email=fetch-paper@localhost")`，取响应中 `best_oa_location.url_for_pdf`
 3. **Semantic Scholar** — `WebFetch(url="https://api.semanticscholar.org/graph/v1/paper/DOI:<DOI>?fields=openAccessPdf")`，取 `openAccessPdf.url`
-4. **PMC** — 若论文属生物医学领域，`WebFetch(url="https://www.ncbi.nlm.nih.gov/pmc/utils/idconv/v1.0/?ids=<DOI>&format=json")` 换取 PMC ID，PDF 直链为 `https://www.ncbi.nlm.nih.gov/pmc/articles/<PMC ID>/pdf/`
-5. **期刊官网 OA 页面** — 若 Crossref 元数据里 `license` 字段显示开放许可（如 CC-BY），尝试该页面上的 PDF 链接
+4. **PMC** — 若论文属生物医学领域，`WebFetch(url="https://www.ncbi.nlm.nih.gov/pmc/utils/idconv/v1.0/?ids=<DOI>&format=json")` 换取 PMC ID（该 URL 会 301 到 `pmc.ncbi.nlm.nih.gov` 新域名，WebFetch 会提示重新请求一次；返回 JSON 里 PMC ID 在 `records[0].pmcid`）。**注意**：PDF 直链 `https://www.ncbi.nlm.nih.gov/pmc/articles/<PMC ID>/pdf/` 实测已失效——该链接最终落地到一个 200 状态的"Preparing to download..."HTML 中间页，需要浏览器执行 JS 解一个 Proof-of-Work 挑战（cloudpmc-viewer）并写入 cookie 才能拿到真正的 PDF，WebFetch/纯 HTTP 请求无法完成，判定为必然失败，直接记入「B 手动候选」，不必重试。另外 Unpaywall/Semantic Scholar 对 PMC 收录的论文通常也会把同一个 PMC 落地页当作 `best_oa_location`/`openAccessPdf`（但 `url_for_pdf` 常为 null），所以此渠道确实会被触达，只是触达后大概率下载失败
+5. **期刊官网 OA 页面** — 若 Crossref 元数据里 `license` 字段显示开放许可（如 CC-BY），尝试该页面上的 PDF 链接。**注意**：实测 Unpaywall/Semantic Scholar 判定为 OA 但 `url_for_pdf` 为 null 的情况很常见（渠道 2/3 未必能给出可下载直链），此时确实会落到这一步；但 ScienceDirect、MDPI 等主流出版商的文章落地页对自动化请求（含 WebFetch、curl 加常规浏览器 UA）普遍返回 403，即便该文确为 CC-BY 开放许可也一样——这是发布方的反爬拦截，不是个别失败。遇到 403 或非 PDF 响应直接判定该渠道失败，记入「B 手动候选」，不要反复重试同一出版商
 6. **作者/机构仓库自存版** — `WebSearch("\"<标题>\" filetype:pdf")`，人工判断结果是否为作者自存版（个人主页、机构仓库域名，而非镜像站）
 
 对每个候选 URL：
