@@ -162,8 +162,8 @@
       "path": "coding/explain-pm",
       "bundle": "coding",
       "installScope": "global",
-      "contentHash": "b099d35d28f18bf2",
-      "contentVersion": "1.1.1"
+      "contentHash": "64612c19ac2c0afa",
+      "contentVersion": "1.2.0"
     },
     {
       "path": "writing/forge-doc",
