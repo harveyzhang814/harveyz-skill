@@ -11,6 +11,13 @@
 > - [[qm-authz-layer]]（授权与安全层——四个 harness 各自调用的 `parseSecurityScreenVerdict` 与安全筛查系统提示的来源）
 > - [[qm-credentials-layer]]（凭证层——模型清单与 harness 能力的交叉约束：自定义模型只对 pi / opencode / mock 开放）
 > - [[qm-autonomy-layer]]（自主工作层——cron 每次 fire 新开会话，几乎不触发上下文压缩；monitor 相反）
+> - [[qm-publish-layer]]（发布层——owner shell 的聊天列指向 `/app-edit`，是对话层的另一个 surface）
+> - [[qm-surface-mirror]]（镜像层——判官与 ack emoji 是两处小模型调用，各有独立的模型选择）
+> - [[qm-crosscutting]]（横切件——`countTokens` 服务于上下文压缩阈值；`message-tag` 是 tape 的渲染件）
+> - [[qm-assembly-layer]]（装配层——四个 harness 适配器在 `wiring.ts` 里的选择与模型 id 解析）
+> - [[qm-synthesis]]（综述——本篇的 `lastHarness` 是进程内状态那节的六个实例之一）
+> - [[qm-surface-layer]]（表面层——插件与 core 之间的签名协议，harness 不参与）
+> - [[qm-web-client]]（Web 客户端——同一个替换手法用在浏览器里：`streamFn` 被换成一次 HTTP）
 >
 > 调研对象：`yc-software/qm` 的 `src/harness/`
 > 本地路径：`~/Repositories/qm`

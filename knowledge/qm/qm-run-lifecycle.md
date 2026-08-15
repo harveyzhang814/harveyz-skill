@@ -11,6 +11,13 @@
 > - [[qm-authz-layer]]（授权与安全层——「持久化的代价」的第四、五次出现；`replaceGrantsIfCurrent` 与 `transitionStatus` 同为 CAS）
 > - [[qm-credentials-layer]]（凭证层——「持久化的代价」第六处：密文格式版本 × 密钥派生方式 × 候选密钥链）
 > - [[qm-autonomy-layer]]（自主工作层——同一套 `leaderLease`，保护的是「谁来扫表」这个角色）
+> - [[qm-publish-layer]]（发布层——`advisory-lock` 与 `leader-lease` 的分工，以及令牌版本位的正面写法）
+> - [[qm-surface-mirror]]（镜像层——ambient 主动回合会 steer 进正在跑的同容器 run）
+> - [[qm-crosscutting]]（横切件——`swallow` 约定、`createKeyedQueue`、`sweeper` 的实现）
+> - [[qm-assembly-layer]]（装配层——十个 sweeper 的间隔、关停五阶段、`stopWithBackstop` 三层兜底）
+> - [[qm-synthesis]]（综述——本篇的持久化队列账单被收进「四层幂等」的代价段）
+> - [[qm-surface-layer]]（表面层——`durable: boolean` 那条链的另外两端）
+> - [[qm-web-client]]（Web 客户端——`runId`、SSE、信号、中断重入的浏览器一侧）
 >
 > 调研对象：`yc-software/qm`（YC 出品的开源多人 agent harness）
 > 本地路径：`~/Repositories/qm`

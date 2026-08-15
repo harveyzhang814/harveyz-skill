@@ -11,6 +11,13 @@
 > - [[qm-authz-layer]]（授权与安全层——十九道闸门里鉴权与内容筛查两道的展开）
 > - [[qm-credentials-layer]]（凭证层——十九道闸门里「注入凭证」那一道的展开）
 > - [[qm-autonomy-layer]]（自主工作层——同一条主干的另一个入口：无人说话时回合从哪来）
+> - [[qm-publish-layer]]（发布层——`publish` 工具在回合内的落点，以及回合结束后继续存在的东西）
+> - [[qm-surface-mirror]]（镜像层——同一条消息的另一个去向：留档并交给 ambient 判官）
+> - [[qm-crosscutting]]（横切件——`message-tag.ts` 的 `<message from=...>` 是消息渲染格式）
+> - [[qm-assembly-layer]]（装配层——`TurnRequest` 53 个字段的定义处，以及组件从哪来）
+> - [[qm-synthesis]]（综述——本篇「妥协要留痕」被收进「失败往哪边倒」一章的代价段）
+> - [[qm-surface-layer]]（表面层——十九道闸门之前，Web 侧的入站路径（Slack 侧不在其中））
+> - [[qm-web-client]]（Web 客户端——十九道闸门的另一个入口，多一道 `surface === "web"` 的行动者比对）
 >
 > 调研对象：`yc-software/qm` 的 turn 全链路
 > 本地路径：`~/Repositories/qm`

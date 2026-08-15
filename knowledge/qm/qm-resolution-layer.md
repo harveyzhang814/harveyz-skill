@@ -11,6 +11,13 @@
 > - [[qm-authz-layer]]（授权与安全层——audience floor 的执行侧；第六到第八种收紧代数；四种策略唯一的汇合点）
 > - [[qm-credentials-layer]]（凭证层——`Resolution` 里 `credentials` 字段的来源；cutover 策略的 scope→org 回退与分层配置同构）
 > - [[qm-autonomy-layer]]（自主工作层——`scopeFloor` / `scopeShared` 传下去的 audience 就是权限下界的实参）
+> - [[qm-publish-layer]]（发布层——`environments/` 决定 rw 层用哪个 scope 的工作区）
+> - [[qm-surface-mirror]]（镜像层——频道常驻指令不走 `Resolution`，是第二条频道级 prompt 注入路径）
+> - [[qm-crosscutting]]（横切件——`projects/` 是 `managedGroups` 的唯一实现，命中即短路 directory）
+> - [[qm-assembly-layer]]（装配层——装机层的审批只有 `require_approval`/`deny`，收紧代数在配置层的落点）
+> - [[qm-synthesis]]（综述——本篇开的收紧代数序列最终收到九种，综述里是第一章）
+> - [[qm-surface-layer]]（表面层——`Resolution` 之前的一段：principal 是怎么被确定下来的）
+> - [[qm-web-client]]（Web 客户端——模型选择器只是偏好，在这一层的策略地板内被采纳）
 >
 > 调研对象：`yc-software/qm` 的 `src/resolution/`
 > 本地路径：`~/Repositories/qm`

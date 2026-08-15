@@ -11,6 +11,13 @@
 > - [[qm-run-lifecycle]]（执行内核的运行时——租约、排空、回收、中断重入）
 > - [[qm-authz-layer]]（授权与安全层——身份、能力令牌、ACL、命令策略、安全姿态）
 > - [[qm-credentials-layer]]（凭证层——借还协议、OAuth、加密盒、连接器状态缓存）
+> - [[qm-publish-layer]]（发布层——共用两把 Postgres 锁；`publish` 的 upsert 与 `cron` 的先查后建成对照）
+> - [[qm-surface-mirror]]（镜像层——「什么时候主动说话」的第三种答案：群里有人说了值得回应的话）
+> - [[qm-crosscutting]]（横切件——`hashId` 的 NUL 分隔符；`cron-store` 与 `project-store` 对 CAS 的相反态度）
+> - [[qm-assembly-layer]]（装配层——scheduler 的 pg-boss 队列在什么条件下才存在）
+> - [[qm-synthesis]]（综述——本篇的 `runTrigger` 六问是「待验证的授权」一章的中心）
+> - [[qm-surface-layer]]（表面层——有人在场的那一侧：登录、会话、冒充）
+> - [[qm-web-client]]（Web 客户端——Crons 视图管理的就是这一层的对象）
 >
 > 调研对象：`yc-software/qm`（YC 出品的开源多人 agent harness）
 > 本地路径：`~/Repositories/qm`
