@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Persisted watch-x watchlist — one entry per watched X account: handle,
+"""Persisted sync-xtimeline watchlist — one entry per watched X account: handle,
 profile_url, and a last_seen_tweet_id cursor for incremental digesting.
 Pure I/O + CRUD + diff logic here, no MCP/network calls — those live in
 mcp_timeline_client.py and fetch_new_tweets.py.
@@ -17,8 +17,8 @@ from typing import Optional
 
 
 def _data_dir() -> Path:
-    env_dir = os.environ.get("HSKILL_WATCH_X_DATA_DIR")
-    return Path(env_dir) if env_dir else Path.home() / ".hskill" / "watch-x"
+    env_dir = os.environ.get("HSKILL_SYNC_XTIMELINE_DATA_DIR")
+    return Path(env_dir) if env_dir else Path.home() / ".hskill" / "sync-xtimeline"
 
 
 def _watchlist_path() -> Path:

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Stage 2 for watch-x: renders a Markdown digest from a translated report
+"""Stage 2 for sync-xtimeline: renders a Markdown digest from a translated report
 (fetch_new_tweets.py's JSON, with the orchestrating skill having added a
 "translated" field to each tweet in report["new"][handle]) and writes it
 to disk — but only when there's something to report (new tweets, freshly-
@@ -16,8 +16,8 @@ from pathlib import Path
 
 
 def _data_dir() -> Path:
-    env_dir = os.environ.get("HSKILL_WATCH_X_DATA_DIR")
-    return Path(env_dir) if env_dir else Path.home() / ".hskill" / "watch-x"
+    env_dir = os.environ.get("HSKILL_SYNC_XTIMELINE_DATA_DIR")
+    return Path(env_dir) if env_dir else Path.home() / ".hskill" / "sync-xtimeline"
 
 
 def has_content(report: dict) -> bool:

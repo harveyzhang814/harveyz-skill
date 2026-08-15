@@ -2,7 +2,7 @@
 Only covers the deterministic validation-error paths that don't need a
 real, logged-in X session (same scope as clip-url's xcom-adjacent tests).
 
-Run: python3 -m pytest skills/research/watch-x/tests/ -v
+Run: python3 -m pytest skills/research/sync-xtimeline/tests/ -v
 """
 import asyncio
 import sys

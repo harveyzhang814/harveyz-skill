@@ -1,13 +1,13 @@
 ---
-name: watch-x
+name: sync-xtimeline
 version: "0.1.0"
-description: "Batch-watch a fixed set of X (Twitter) accounts for new tweets and produce a translated Markdown digest of what's new since last run. Trigger phrases: 'watch this X account', '/watch-x add <profile_url>', '/watch-x list', '/watch-x remove <handle>', '/watch-x run', or a request to run watch-x on a schedule via /loop or schedule. Not for saving a single article or tweet to Obsidian (use clip-url for that) — this skill never ingests into Obsidian, never tags, never downloads images, and only reports incremental new tweets, not full thread content."
+description: "Batch-watch a fixed set of X (Twitter) accounts for new tweets and produce a translated Markdown digest of what's new since last run. Trigger phrases: 'watch this X account', '/sync-xtimeline add <profile_url>', '/sync-xtimeline list', '/sync-xtimeline remove <handle>', '/sync-xtimeline run', or a request to run sync-xtimeline on a schedule via /loop or schedule. Not for saving a single article or tweet to Obsidian (use clip-url for that) — this skill never ingests into Obsidian, never tags, never downloads images, and only reports incremental new tweets, not full thread content."
 user_invocable: true
 ---
 
-# watch-x
+# sync-xtimeline
 
-批量追更一批固定的 X 博主，每次运行只报告上次运行之后的新推文（翻译成中文），产出一份 Markdown 摘要文件。跟 [clip-url](../clip-url/) 的单篇入库流程完全独立：不进 Obsidian、不打标、不下载图片、不展开长线程。详见设计文档 `docs/superpowers/specs/2026-08-15-watch-x-design.md`。
+批量追更一批固定的 X 博主，每次运行只报告上次运行之后的新推文（翻译成中文），产出一份 Markdown 摘要文件。跟 [clip-url](../clip-url/) 的单篇入库流程完全独立：不进 Obsidian、不打标、不下载图片、不展开长线程。详见设计文档 `docs/superpowers/specs/2026-08-15-watch-x-design.md`（历史文档，写作时 skill 还叫 watch-x，之后改名为 sync-xtimeline，内容仍然适用）。
 
 **依赖**：跟 clip-url 一样依赖 `browser-fetch-mcp`。在本仓库 checkout 内运行会自动定位；若通过 `hskill install` 安装到别处运行，需要额外运行 `hskill install --tool browser-fetch-mcp`。
 
@@ -16,17 +16,17 @@ user_invocable: true
 ## 路径变量
 
 ```
-SkillDir: skills/research/watch-x
+SkillDir: skills/research/sync-xtimeline
 ```
 
 ## 用法
 
 四个子命令：
 
-- `/watch-x add <profile_url>` — 关注一个账号
-- `/watch-x remove <handle>` — 取消关注
-- `/watch-x list` — 查看当前关注列表和游标
-- `/watch-x run`（或无参数默认）— 跑一次增量抓取，产出摘要
+- `/sync-xtimeline add <profile_url>` — 关注一个账号
+- `/sync-xtimeline remove <handle>` — 取消关注
+- `/sync-xtimeline list` — 查看当前关注列表和游标
+- `/sync-xtimeline run`（或无参数默认）— 跑一次增量抓取，产出摘要
 
 ### add / remove / list
 
@@ -54,4 +54,4 @@ SkillDir: skills/research/watch-x
 | `scripts/watchlist.py` | 关注列表持久化（增/删/查）+ 纯函数游标 diff 逻辑（`compute_update`），也是 `add`/`remove`/`list` 子命令的 CLI 入口 |
 | `scripts/mcp_timeline_client.py` | 调用 browser-fetch-mcp 的 `fetch_user_timeline` MCP 工具 |
 | `scripts/fetch_new_tweets.py` | `run` 子命令的第一阶段：遍历关注列表、抓取、对比游标、更新游标，输出待翻译的 JSON 报告 |
-| `scripts/render_digest.py` | `run` 子命令的第二阶段：把翻译后的报告渲染成 Markdown，非空时写入 `~/.hskill/watch-x/digests/` |
+| `scripts/render_digest.py` | `run` 子命令的第二阶段：把翻译后的报告渲染成 Markdown，非空时写入 `~/.hskill/sync-xtimeline/digests/` |
