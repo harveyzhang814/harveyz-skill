@@ -197,3 +197,81 @@ test('pi: jailEnv 不重定向 HOME——pi 的 jail 靠命令行开关', () => 
   assert.equal(env.HOME, undefined)
   assert.equal(env.PATH, '/usr/bin')
 })
+
+import { hermesAdapter } from '../../tools/skill-harness/adapters/hermes.js'
+
+test('hermes: jailEnv 重定向 HOME', () => {
+  const env = hermesAdapter.jailEnv({ jailDir: '/tmp/h', source: { PATH: '/usr/bin' } })
+  assert.equal(env.HOME, '/tmp/h')
+  assert.equal(env.PATH, '/usr/bin')
+})
+
+test('hermes: seedJail 只复制三个凭证/配置文件', async () => {
+  const { dir: fakeHome, cleanup: c1 } = await createJail()
+  const { dir: jailDir, cleanup: c2 } = await createJail()
+  try {
+    const src = path.join(fakeHome, '.hermes')
+    await fs.ensureDir(path.join(src, 'skills/should-not-be-copied'))
+    await fs.writeFile(path.join(src, '.env'), 'MINIMAX_CN_API_KEY=k\n')
+    await fs.writeFile(path.join(src, 'auth.json'), '{}')
+    await fs.writeFile(path.join(src, 'config.yaml'), 'model:\n  default: M\n')
+    await fs.writeFile(path.join(src, 'SOUL.md'), 'should not be copied')
+
+    await hermesAdapter.seedJail({ jailDir, hermesHome: src })
+
+    assert.ok(await fs.pathExists(path.join(jailDir, '.hermes/.env')))
+    assert.ok(await fs.pathExists(path.join(jailDir, '.hermes/auth.json')))
+    assert.ok(await fs.pathExists(path.join(jailDir, '.hermes/config.yaml')))
+    assert.equal(await fs.pathExists(path.join(jailDir, '.hermes/SOUL.md')), false)
+    assert.equal(await fs.pathExists(path.join(jailDir, '.hermes/skills/should-not-be-copied')), false)
+  } finally {
+    await c1(); await c2()
+  }
+})
+
+test('hermes: install 复制进 jail 的 .hermes/skills/，返回空 args', async () => {
+  const { dir, cleanup } = await createJail()
+  try {
+    const extraArgs = await hermesAdapter.install({ jailDir: dir, skillPath: 'tools/skill-harness/probe/probe-anchor' })
+    assert.deepEqual(extraArgs, [])
+    assert.ok(await fs.pathExists(path.join(dir, '.hermes/skills/probe-anchor/SKILL.md')))
+  } finally {
+    await cleanup()
+  }
+})
+
+test('hermes: args 用 -z 与 --safe-mode', () => {
+  const a = hermesAdapter.args({ model: 'M', provider: 'P', positional: 'go', jailDir: '/tmp/h' })
+  assert.ok(a.includes('--safe-mode'))
+  assert.ok(a.includes('--yolo'))
+  assert.equal(a[a.indexOf('-z') + 1], 'go')
+  assert.equal(a[a.indexOf('-m') + 1], 'M')
+  assert.equal(a[a.indexOf('--provider') + 1], 'P')
+  assert.equal(a[a.indexOf('--usage-file') + 1], '/tmp/h/usage.json')
+})
+
+test('hermes: 不接受 systemAppend——该平台无 system prompt 追加通道', () => {
+  assert.throws(() => hermesAdapter.args({ model: 'M', provider: 'P', positional: 'go', jailDir: '/t', systemAppend: 'X' }), /prompt-only/)
+})
+
+test('hermes: parseSessionId 从 sessions list 输出取 UUID', () => {
+  const out = [
+    '                 Recent Sessions',
+    '┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━┓',
+    '┃ ID                                   ┃ Msgs ┃',
+    '┡━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━┩',
+    '│ 3f6c9c1e-2f2a-4a1b-9c3d-8e7f6a5b4c3d │ 6    │',
+    '└──────────────────────────────────────┴──────┘',
+  ].join('\n')
+  assert.equal(hermesAdapter.parseSessionId(out), '3f6c9c1e-2f2a-4a1b-9c3d-8e7f6a5b4c3d')
+})
+
+test('hermes: parseSessionId 无会话时返回 null', () => {
+  assert.equal(hermesAdapter.parseSessionId('no sessions found'), null)
+})
+
+test('hermes: collectArgs 走 trace 格式导出到 stdout', () => {
+  assert.deepEqual(hermesAdapter.collectArgs('sid-1'), [
+    'sessions', 'export', '--format', 'trace', '--session-id', 'sid-1', '-',
+  ])
+})
