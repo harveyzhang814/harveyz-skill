@@ -8,6 +8,7 @@
 > - [[qm-resolution-layer]]（解析层深入分析——`Resolution` 对象、分层配置、audience floor、prompt 协议）
 > - [[qm-turn-slice]]（纵切面——一条 Slack 消息从进入到回复送出，十九道闸门）
 > - [[qm-harness-layer]]（Harness 层——四适配器一套接口、tape 事件溯源、上下文压缩、冷启动重放）
+> - [[qm-authz-layer]]（授权与安全层——「持久化的代价」的第四、五次出现；`replaceGrantsIfCurrent` 与 `transitionStatus` 同为 CAS）
 >
 > 调研对象：`yc-software/qm`（YC 出品的开源多人 agent harness）
 > 本地路径：`~/Repositories/qm`

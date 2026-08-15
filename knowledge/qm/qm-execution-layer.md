@@ -8,6 +8,7 @@
 > - [[qm-turn-slice]]（纵切面——沙箱 provision 与命令闸在 turn 时序里的位置）
 > - [[qm-harness-layer]]（Harness 层——`ToolContext` 的另一端，以及同构的能力协商 profile）
 > - [[qm-run-lifecycle]]（执行内核运行时——沙箱进程回收与 run 回收是两套独立的 reaper）
+> - [[qm-authz-layer]]（授权与安全层——`createSecretValueMasker` 在沙箱回显里遮蔽密钥；命令策略的裁决由沙箱执行）
 >
 > 调研对象：`yc-software/qm` 的 `src/sandbox/`、`src/workspace/`、`src/files/`、`src/processes/`、`src/tools/`
 > 本地路径：`~/Repositories/qm`

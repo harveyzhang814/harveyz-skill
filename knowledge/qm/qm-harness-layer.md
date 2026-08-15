@@ -8,6 +8,7 @@
 > - [[qm-execution-layer]]（执行环境层——`ToolContext` 的另一端）
 > - [[qm-skills-layer]]（技能层）
 > - [[qm-run-lifecycle]]（执行内核运行时——`INTERRUPTED_TOOL_RESULT` 的另一端 `resumeNote`；tape 与 entries 两条日志的接缝）
+> - [[qm-authz-layer]]（授权与安全层——四个 harness 各自调用的 `parseSecurityScreenVerdict` 与安全筛查系统提示的来源）
 >
 > 调研对象：`yc-software/qm` 的 `src/harness/`
 > 本地路径：`~/Repositories/qm`
