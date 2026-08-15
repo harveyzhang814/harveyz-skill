@@ -2,7 +2,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import os from 'node:os'
 import path from 'node:path'
-import { ADAPTERS, planCell, runId, artifactDir } from '../../tools/skill-harness/runner.js'
+import { ADAPTERS, planCell, runId, artifactDir, resolveContentHash } from '../../tools/skill-harness/runner.js'
 
 const CTX = {
   model: 'MiniMax-M2.7',
@@ -74,4 +74,16 @@ test('runId: 形如 YYYYMMDD-HHMMSS-<4 hex>', () => {
 test('artifactDir: 落在 $HOME/.hskill/skill-harness/ 下', () => {
   const d = artifactDir('20260815-101112-abcd')
   assert.equal(d, path.join(os.homedir(), '.hskill/skill-harness/20260815-101112-abcd'))
+})
+
+test('resolveContentHash: 按 skill 从 contentHashMap 里查，不是全局单值', () => {
+  const map = new Map([['a/b', 'hash-a'], ['c/d', 'hash-c']])
+  assert.equal(resolveContentHash({ contentHashMap: map }, 'a/b'), 'hash-a')
+  assert.equal(resolveContentHash({ contentHashMap: map }, 'c/d'), 'hash-c')
+})
+
+test('resolveContentHash: 查不到的 skill 或缺失的 map 给 null 而非伪造', () => {
+  const map = new Map([['a/b', 'hash-a']])
+  assert.equal(resolveContentHash({ contentHashMap: map }, 'unknown/skill'), null)
+  assert.equal(resolveContentHash({}, 'a/b'), null)
 })

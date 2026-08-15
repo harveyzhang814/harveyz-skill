@@ -46,8 +46,10 @@ export function parsePiJsonl(raw, { skillDir } = {}) {
     })
   }
 
+  // 空集合是"不知道"，不是"没触发"：零个可解析事件说明这次运行本身没抓到东西。
+  const noEvents = events.length === 0
   const skillMd = skillDir ? `${skillDir.replace(/\/$/, '')}/SKILL.md` : null
-  const triggered = Boolean(skillMd) && toolCalls.some(
+  const triggered = noEvents ? null : Boolean(skillMd) && toolCalls.some(
     t => t.name === 'read' && typeof t.args?.path === 'string' && t.args.path.endsWith(skillMd),
   )
 
@@ -69,7 +71,7 @@ export function parsePiJsonl(raw, { skillDir } = {}) {
     provider: last?.message?.provider ?? null,
     reply: last ? textOf(last.message) : null,
     triggered,
-    toolCalls,
+    toolCalls: noEvents ? null : toolCalls,
     turns: events.filter(e => e.type === 'turn_start').length || null,
     usage,
     visibleSkills: null,

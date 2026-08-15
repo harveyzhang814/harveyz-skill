@@ -55,6 +55,12 @@ export function planCell(cell, ctx) {
   return { argv, env, redactedEnv: redactEnv(env), systemAppend, positional }
 }
 
+// 纯函数。矩阵跑全量时每个 skill 有自己的 contentHash，不能用单个 run-wide 值——
+// 否则 coverage.js 的 staleness 判定永远拿不到匹配值，每格都会被判成过期。
+export function resolveContentHash(ctx, skill) {
+  return ctx.contentHashMap?.get(skill) ?? null
+}
+
 async function runOne(cell, ctx) {
   const adapter = ADAPTERS[cell.platform]
   const { dir: jailDir, cleanup } = await createJail()
@@ -99,7 +105,7 @@ async function runOne(cell, ctx) {
     const parsed = adapter.parse(raw, { skillName: path.basename(ctx.skillPath), skillDir: ctx.skillDir })
     return makeRecord({
       platform: cell.platform, skill: cell.skill, skillName: path.basename(ctx.skillPath),
-      contentHash: ctx.contentHash ?? null,
+      contentHash: resolveContentHash(ctx, cell.skill),
       task: ctx.task, repeat: cell.repeat ?? 0, mode: cell.mode,
       requestedModel: ctx.model, durationMs: Date.now() - started,
       exitCode, stderr, parsed,

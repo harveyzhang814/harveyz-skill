@@ -8,6 +8,7 @@ import { planCell, runMatrix, ADAPTERS } from './runner.js'
 import { loadRuns, buildCoverage, renderCoverage } from './coverage.js'
 import { renderReport } from './report.js'
 import { stripFrontmatter } from './prompt.js'
+import { claudeOAuthToken } from './jail.js'
 
 const here = path.dirname(fileURLToPath(import.meta.url))
 const REPO_ROOT = path.resolve(here, '../..')
@@ -103,10 +104,25 @@ async function main() {
     skillPath,
     skillDir: skillPath,
     skillBody: stripFrontmatter(await fs.readFile(path.join(skillPath, 'SKILL.md'), 'utf8')),
-    contentHash: index.skills.find(s => s.path === opts.skills?.[0])?.contentHash ?? null,
+    // 每个 skill 有自己的 contentHash——全量跑时 opts.skills 是 undefined，
+    // 单个值在这里没有意义，必须查表；查表逻辑在 runner.js 的 resolveContentHash。
+    contentHashMap: new Map(index.skills.map(s => [s.path, s.contentHash])),
     source: process.env,
     jailDir: '<created at run time>',
     sessionId: '00000000-0000-0000-0000-000000000000',
+  }
+
+  // claudeAdapter.jailEnv 重定向 HOME 后 claude 读不到 keychain/配置，必须显式传 token。
+  // 只在 run/dry-run 才取，coverage/report 不碰 adapter，不该在没有 keychain 的机器上报错。
+  if (!opts.baseUrl && command === 'run') {
+    ctx.oauthToken = claudeOAuthToken()
+  } else if (!opts.baseUrl && command === 'dry-run') {
+    try {
+      ctx.oauthToken = claudeOAuthToken()
+    } catch {
+      // dry-run 只是打印计划，机器上没有 keychain 条目时不该因此失败——留空即可，
+      // redactEnv 输出里这一项就是缺失，而不是伪造一个假 token。
+    }
   }
 
   if (command === 'dry-run') {

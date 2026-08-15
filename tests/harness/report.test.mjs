@@ -4,12 +4,16 @@ import { renderReport } from '../../tools/skill-harness/report.js'
 
 const CELLS = [
   { skill: 'a/x', platform: 'claude', mode: 'native', state: 'run' },
+  { skill: 'a/x', platform: 'claude', mode: 'inject', state: 'run' },
   { skill: 'a/x', platform: 'pi', mode: 'native', state: 'not-run' },
+  { skill: 'a/x', platform: 'pi', mode: 'inject', state: 'not-run' },
   { skill: 'a/x', platform: 'hermes', mode: 'native', state: 'declared-na', reason: '无等价机制' },
+  { skill: 'a/x', platform: 'hermes', mode: 'inject', state: 'declared-na', reason: '无等价机制' },
 ]
 
 const RECORDS = [
   { skill: 'a/x', platform: 'claude', mode: 'native', exitCode: 0, triggered: true, modelMismatch: false, unavailable: [], reply: 'ok' },
+  { skill: 'a/x', platform: 'claude', mode: 'inject', exitCode: 1, triggered: null, modelMismatch: false, unavailable: [], reply: null },
 ]
 
 test('页眉打印模型——没写模型的跨平台报告不可解读', () => {
@@ -18,16 +22,19 @@ test('页眉打印模型——没写模型的跨平台报告不可解读', () =>
   assert.ok(out.includes('minimax-cn'))
 })
 
-test('not-run 渲染成空格，绝不是对勾', () => {
+test('not-run 渲染成空格，绝不是对勾；native 与 inject 两列独立，不被合并', () => {
   const out = renderReport({ cells: CELLS, records: RECORDS, model: 'M', provider: 'P' })
   assert.ok(!out.includes('✓'), 'not-run must never render as a checkmark')
   const row = out.split('\n').find(l => l.startsWith('a/x'))
-  // 列宽 12：claude 列是 'pass'，pi 列必须整列空白，hermes 列是 'n/a'
-  const cols = [0, 1, 2].map(i => row.slice(26 + i * 12, 26 + (i + 1) * 12))
+  // 列宽 16，6 列：claude/native claude/inject pi/native pi/inject hermes/native hermes/inject
+  const cols = [0, 1, 2, 3, 4, 5].map(i => row.slice(26 + i * 16, 26 + (i + 1) * 16))
   assert.equal(cols[0].trim(), 'pass')
-  assert.equal(cols[1].trim(), '')
-  assert.equal(cols[2].trim(), 'n/a')
-  assert.ok(out.includes('not-run: 1'))
+  assert.equal(cols[1].trim(), 'fail')
+  assert.equal(cols[2].trim(), '')
+  assert.equal(cols[3].trim(), '')
+  assert.equal(cols[4].trim(), 'n/a')
+  assert.equal(cols[5].trim(), 'n/a')
+  assert.ok(out.includes('not-run: 2'))
 })
 
 test('capabilities 表有生产消费者——报告读它说明各平台拿不到什么', () => {
@@ -52,6 +59,13 @@ test('exitCode 非零渲染成 fail', () => {
   const bad = [{ ...RECORDS[0], exitCode: 1 }]
   const out = renderReport({ cells: CELLS, records: bad, model: 'M', provider: 'P' })
   assert.ok(out.includes('fail'))
+})
+
+test('exitCode 为 0 但 reply 缺失时不得渲染成 pass——空结果不是确认通过', () => {
+  const empty = [{ ...RECORDS[0], reply: null, triggered: null, unavailable: ['toolCalls', 'reply', 'triggered'] }]
+  const out = renderReport({ cells: CELLS, records: empty, model: 'M', provider: 'P' })
+  const row = out.split('\n').find(l => l.startsWith('a/x'))
+  assert.equal(row.slice(26, 26 + 16).trim(), 'fail')
 })
 
 test('modelMismatch 单列，不混进普通失败', () => {

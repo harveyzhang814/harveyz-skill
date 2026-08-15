@@ -29,7 +29,10 @@ export function parseClaudeCodeJsonl(raw, { skillName } = {}) {
     }
   }
 
-  const triggered = toolCalls.some(t => t.name === 'Skill' && t.args?.skill === skillName)
+  // 空集合是"不知道"，不是"没触发"：零个可解析事件说明这次运行本身没抓到东西，
+  // 不能拿空数组算出一个自信的 false 来冒充"确实没触发"。
+  const noEvents = events.length === 0
+  const triggered = noEvents ? null : toolCalls.some(t => t.name === 'Skill' && t.args?.skill === skillName)
 
   const u = result?.usage
   const usage = u
@@ -49,7 +52,7 @@ export function parseClaudeCodeJsonl(raw, { skillName } = {}) {
     provider: null,   // claude 的输出不带 provider；显式 null 保证与 pi 解析器形状一致
     reply: result?.result ?? null,
     triggered,
-    toolCalls,
+    toolCalls: noEvents ? null : toolCalls,
     turns: result?.num_turns ?? null,
     usage,
     visibleSkills: system?.skills ?? null,

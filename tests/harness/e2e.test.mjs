@@ -14,7 +14,11 @@ const BASE_URL = 'https://api.minimaxi.com/anthropic'
 
 const SKILL_PATH = path.resolve('tools/skill-harness/probe/probe-anchor')
 
-// claude 的 16 个内置 skill 不算宿主泄漏——jail 挡不住它们，这是已知不对称。
+// claude 的内置 skill 不算宿主泄漏——jail 挡不住它们，这是已知不对称。
+// TODO: 2026-08-15 E2E 实测发现 builtinSkillFloor 从 16 降到 15（见
+// docs/superpowers/specs/measurements/2026-08-14-native-vs-inject.md 的 L1 快照漂移记录），
+// 但那条记录只给出了数量变化，没指出具体是哪个 skill 消失了。这里仍列着旧的 16 个，
+// 需要一次新的 E2E 实测（对比 system 行 skills[] 的实际集合）来确定该删掉哪一个。
 const CLAUDE_BUILTINS = new Set([
   'deep-research', 'design-sync', 'dataviz', 'update-config', 'verify', 'debug',
   'code-review', 'simplify', 'batch', 'fewer-permission-prompts', 'doctor',
@@ -93,10 +97,10 @@ test('E2E L3: 宿主 skill 不可见', { skip: !ENABLED }, async () => {
   }
 })
 
-test('E2E: claude 的 builtinSkillFloor 实测值仍是 16', { skip: !ENABLED }, async () => {
+test('E2E: claude 的 builtinSkillFloor 实测值仍是 15', { skip: !ENABLED }, async () => {
   const { records } = await runMatrix(cells('native'), await baseCtx())
   const claude = records.find(r => r.platform === 'claude')
-  assert.equal(claude.builtinSkillFloor, 16, 'upstream changed its builtin skill set — update profiles.js and the L1 snapshot')
+  assert.equal(claude.builtinSkillFloor, 15, 'upstream changed its builtin skill set — update profiles.js and the L1 snapshot')
 })
 
 test('E2E: 三平台实测 model 与请求一致', { skip: !ENABLED }, async () => {

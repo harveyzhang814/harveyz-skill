@@ -83,7 +83,7 @@ test('claude: 空输入不抛错，字段全 null', () => {
   assert.equal(r.reply, null)
   assert.equal(r.sessionId, null)
   assert.equal(r.usage, null)
-  assert.deepEqual(r.toolCalls, [])
+  assert.equal(r.toolCalls, null)
 })
 
 test('claude: 非法 JSON 行被跳过而不是让整个解析崩掉', () => {
@@ -182,7 +182,7 @@ test('pi: message_update 流式增量被跳过，不产生额外 toolCalls', () 
 test('pi: 空输入不抛错', () => {
   const r = parsePiJsonl('', { skillDir: '/x' })
   assert.equal(r.reply, null)
-  assert.deepEqual(r.toolCalls, [])
+  assert.equal(r.toolCalls, null)
 })
 
 test('pi parse 是纯函数：同一输入两次调用 deepEqual', () => {

@@ -19,7 +19,7 @@ export function makeRecord({
   const triggered = mode === 'inject' ? null : (p.triggered ?? null)
   if (mode !== 'inject' && triggered === null) unavailable.push('triggered')
 
-  for (const field of ['toolCalls', 'turns', 'usage', 'model']) {
+  for (const field of ['toolCalls', 'turns', 'usage', 'model', 'reply']) {
     if (p[field] === null || p[field] === undefined) unavailable.push(field)
   }
 
