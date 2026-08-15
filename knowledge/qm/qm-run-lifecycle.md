@@ -15,6 +15,7 @@
 > - [[qm-surface-mirror]]（镜像层——ambient 主动回合会 steer 进正在跑的同容器 run）
 > - [[qm-crosscutting]]（横切件——`swallow` 约定、`createKeyedQueue`、`sweeper` 的实现）
 > - [[qm-assembly-layer]]（装配层——十个 sweeper 的间隔、关停五阶段、`stopWithBackstop` 三层兜底）
+> - [[qm-synthesis]]（综述——本篇的持久化队列账单被收进「四层幂等」的代价段）
 >
 > 调研对象：`yc-software/qm`（YC 出品的开源多人 agent harness）
 > 本地路径：`~/Repositories/qm`

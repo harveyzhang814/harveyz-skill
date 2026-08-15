@@ -15,6 +15,7 @@
 > - [[qm-publish-layer]]（发布层——`publish` 把工作区目录变成持久内部 Web 应用）
 > - [[qm-surface-mirror]]（镜像层——`surface-cache/` 不是缓存；ambient 决定何时主动开口）
 > - [[qm-crosscutting]]（横切件——`util/`、`projects/`、`audit/`、`onboarding/`）
+> - [[qm-synthesis]]（综述——本篇的缺失三分类构成「这个能力可能不在」的下半）
 >
 > 调研对象：`yc-software/qm`（YC 出品的开源多人 agent harness）
 > 本地路径：`~/Repositories/qm`

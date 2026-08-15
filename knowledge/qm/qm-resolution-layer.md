@@ -15,6 +15,7 @@
 > - [[qm-surface-mirror]]（镜像层——频道常驻指令不走 `Resolution`，是第二条频道级 prompt 注入路径）
 > - [[qm-crosscutting]]（横切件——`projects/` 是 `managedGroups` 的唯一实现，命中即短路 directory）
 > - [[qm-assembly-layer]]（装配层——装机层的审批只有 `require_approval`/`deny`，收紧代数在配置层的落点）
+> - [[qm-synthesis]]（综述——本篇开的收紧代数序列最终收到九种，综述里是第一章）
 >
 > 调研对象：`yc-software/qm` 的 `src/resolution/`
 > 本地路径：`~/Repositories/qm`

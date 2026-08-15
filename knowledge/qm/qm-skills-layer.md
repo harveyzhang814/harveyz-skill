@@ -15,6 +15,7 @@
 > - [[qm-surface-mirror]]（镜像层——频道常驻指令是 skill 之外的另一处频道级行为配置）
 > - [[qm-crosscutting]]（横切件——`pack-fetcher` 的 SSRF 判定用 `isPrivateNetworkIp`）
 > - [[qm-assembly-layer]]（装配层——`deployment/` 会往技能注册表种子，四层碰撞检查 + 舰队级锁）
+> - [[qm-synthesis]]（综述——本篇的内容哈希幂等是「用内容算身份」九次出现之一）
 >
 > 调研对象：`yc-software/qm` 的 `src/skills/`
 > 本地路径：`~/Repositories/qm`

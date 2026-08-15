@@ -10,6 +10,7 @@
 > - [[qm-run-lifecycle]]（执行内核运行时——蓝绿自我排空、两层租约、重试与回收、`routeWake` 并发策略、中断重入）
 > - [[qm-authz-layer]]（授权与安全层——身份等价、能力令牌四道闸门、ACL audience floor、命令反混淆、安全姿态与筛查、审计）
 > - [[qm-credentials-layer]]（凭证与外部连接层——借还协议、OAuth 客户端、加密盒、常驻/临时凭证、模型清单）
+> - [[qm-synthesis]]（综述——十五篇的可迁移做法按问题收敛，不按模块）
 >
 > 调研对象：`yc-software/qm`（YC 出品的开源多人 agent harness）
 > 本地路径：`~/Repositories/qm`
@@ -495,6 +496,6 @@ AGENTS.md 是写给 coding agent 看的操作手册（`CLAUDE.md` 是它的 syml
 - [[qm-crosscutting]] —— 横切件：`util/`（13）、`projects/`（1）、`audit/`（1）、`onboarding/`（1），一行代码的防线、两种 ReDoS 答案、`swallow` 约定、伪装成 scope 的托管群组（已完成）
 - [[qm-assembly-layer]] —— 装配层：五个顶层文件 `wiring.ts` `config.ts` `types.ts` `egress-authz-main.ts` `index.ts` + `deployment/`，三条切换轴、状态孪生与能力缺席、九处延迟绑定、什么该崩什么该警告、装机定制层、出网执法的第二个进程（已完成）
 
-**`src/` 已全部覆盖。** 十五篇合计覆盖 A–J 十组 + 四个未分类目录 + 五个从未进入分组的顶层文件。
+- [[qm-synthesis]] —— 综述：把十五篇里散落的约 330 条可迁移做法按**问题**（而非按模块）收敛。十个反复出现的答案、一个反复出现的失败、七条只出现一次但值得单拎的、以及这些做法失效的四个前提（已完成）
 
-- 唯一剩下的：综述——把十五篇里散落的可迁移做法按问题（而非按模块）收敛成一份清单
+**`src/` 已全部覆盖，调研收尾。** 前十五篇按模块覆盖 A–J 十组 + 四个未分类目录 + 五个从未进入分组的顶层文件；第十六篇不覆盖新代码，按问题重排。

@@ -15,6 +15,7 @@
 > - [[qm-publish-layer]]（发布层——`publish` 把工作区目录变成持久内部 Web 应用）
 > - [[qm-surface-mirror]]（镜像层——`surface-cache/` 不是缓存；ambient 决定何时主动开口）
 > - [[qm-assembly-layer]]（装配层——两个手写 ReDoS 分析器的对照；`orgId()` 全局与多租户预留缝）
+> - [[qm-synthesis]]（综述——本篇的 `shq` 与 `swallow` 进入「只出现一次但值得单拎」，并附本次重数的覆盖率）
 >
 > 调研对象：`yc-software/qm`（YC 出品的开源多人 agent harness）
 > 本地路径：`~/Repositories/qm`
@@ -34,7 +35,7 @@
 ## 一、这一篇在收什么尾
 
 前十三篇按模块切分，剩下这四个目录切不进任何一组，因为它们**横切**所有组。
-`util/` 平均每个文件 27 行，最长 67 行；`errors.ts` 只有 14 行，却被 89 个文件
+`util/` 平均每个文件 27 行，最长 67 行；`errors.ts` 只有 14 行，却被 88 个文件
 import——是全仓引用最广的模块。
 
 小不等于不重要。这一篇挑出真正有内容的部分：**几处只有一两行但承担了整个仓库
@@ -296,11 +297,12 @@ export function swallowAs<T>(context: string, fallback: T): (e: unknown) => T {
 }
 ```
 
-14 行，89 个文件引用。这是全仓最重要的一条约定。
+14 行，88 个文件 import，其中 59 个用了 `swallow` / `swallowAs`，
+合计 235 个调用点（其余只用 `errMessage`）。这是全仓最重要的一条约定。
 
-`swallow` 的第一个参数是**必填的 context 字符串**。所以不存在
-「一个空的 `catch {}`」——每一处被吞掉的异常都必然带着一句人写的、说明这是
-哪里的话。前面十三篇里反复出现的
+`swallow` 的第一个参数是**必填的 context 字符串**。所以几乎不存在
+「一个空的 `catch {}`」——全仓 `src/` 只数出 4 个，其余每一处被吞掉的异常都
+带着一句人写的、说明这是哪里的话。前面十三篇里反复出现的
 `swallow("leader-lease: unlock failed", e)`、
 `swallow("aws-deploy: hydrate-fail terminate", e2)`、
 `swallow("slack: surface-cache ingest", e)`，都是这个约定的实例。
@@ -315,6 +317,15 @@ export function swallowAs<T>(context: string, fallback: T): (e: unknown) => T {
 现在可以把话说完整：**这个仓库有一个正确的吞异常工具，而那些出问题的地方
 恰恰是没有用它的地方。** 约定存在但不强制，于是它的覆盖率就成了代码质量的
 一个可测量指标。
+
+**这个指标我在写 [[qm-synthesis]] 时补数了：** `src/` 里 235 处走约定，
+另有 **111 处**裸写的 `.catch(() => x)` 绕过它，覆盖率约 68%。抽样 14 处，
+全部落在 `swallowAs` 的适用范围内——也就是说这 111 处不是「另有用途」，
+是纯粹的漏网。其中 `src/resolution/scope-membership.ts:61` 的
+`.catch(() => false)` 值得单看：目录查询失败被静默地当成「不是成员」。
+失败方向是安全的，但它塌掉了 [[qm-resolution-layer]] §4.1 那个三态判定——
+`boolean | undefined` 存在的全部意义，就是让「答不上来」不等于「否」，
+而一个 `.catch(() => false)` 把这两者又合并回去了。
 
 ---
 
@@ -718,6 +729,8 @@ reason to skip it.
     让「吞掉并返回默认值」能压缩成一个表达式——降低使用成本，覆盖率才上得去。
 13. 约定存在但不强制时，它的覆盖率就是一个可测量的代码质量指标：
     `.catch(() => undefined)` 出现在哪里，问题通常就在哪里。
+    这个仓库的实测值是 235 处走约定 / 111 处绕过，约 68%——
+    **这个数字本身应该进 CI，而不是等人来数。**
 
 **关于反向代理**
 
