@@ -22,6 +22,7 @@ methodology: diataxis
 | [how-to/use-hub.md](how-to/use-hub.md) | 如何安装和使用 hub：TUI 启动、项目注册、任务管理、分支列表与 push/pull 操作 |
 | [how-to/use-extract-cognition.md](how-to/use-extract-cognition.md) | 如何用 extract-cognition：模式 A/B 决策、--pass 分段、产出四文件该读哪个、怎么把认知动作手册用起来 |
 | [how-to/use-init-goal.md](how-to/use-init-goal.md) | 如何用 init-goal 为 /loop 生成结构化目标：模版选择、生成文件说明、修改目标 |
+| [how-to/use-skill-harness.md](how-to/use-skill-harness.md) | 如何用 skill-harness 跨平台测试 skill：四个子命令（dry-run/run/report/coverage）、matrix.json 排除声明、Phase 1 只跑探针 skill 的限制 |
 
 ## reference/ — 参考文档
 
