@@ -71,7 +71,7 @@ export function parseClaudeCodeJsonl(raw, { skillName } = {}) {
     sessionId: system?.session_id ?? result?.session_id ?? null,
     model: system?.model ?? null,
     provider: null,   // claude 的输出不带 provider；显式 null 保证与 pi 解析器形状一致
-    reply: result?.result || fallbackReply,
+    reply: result ? (result.result ?? null) : fallbackReply,
     triggered,
     toolCalls: noEvents ? null : toolCalls,
     turns: result?.num_turns ?? null,
