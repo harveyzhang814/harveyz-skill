@@ -87,3 +87,65 @@ test('readEnvFile: 解析 KEY=VALUE，忽略注释与空行，去掉引号', asy
 test('readEnvFile: 文件不存在返回空对象', () => {
   assert.deepEqual(readEnvFile('/nonexistent/path/.env'), {})
 })
+
+import { claudeAdapter } from '../../tools/skill-harness/adapters/claude.js'
+
+test('claude: jailEnv 重定向 HOME 与 CLAUDE_CONFIG_DIR', () => {
+  const env = claudeAdapter.jailEnv({ jailDir: '/tmp/h', source: { PATH: '/usr/bin' }, oauthToken: 'tok' })
+  assert.equal(env.HOME, '/tmp/h')
+  assert.equal(env.CLAUDE_CONFIG_DIR, '/tmp/h/.claude')
+  assert.equal(env.CLAUDE_CODE_OAUTH_TOKEN, 'tok')
+  assert.equal(env.PATH, '/usr/bin')
+})
+
+test('claude: jailEnv 不透传宿主的 CLAUDECODE 等变量', () => {
+  const env = claudeAdapter.jailEnv({ jailDir: '/tmp/h', source: { CLAUDECODE: '1', CLAUDE_CONFIG_DIR: '/real' }, oauthToken: 't' })
+  assert.equal(env.CLAUDECODE, undefined)
+  assert.equal(env.CLAUDE_CONFIG_DIR, '/tmp/h/.claude')
+})
+
+test('claude: 走第三方端点时用 baseUrl + apiKey 而非 oauth', () => {
+  const env = claudeAdapter.jailEnv({ jailDir: '/tmp/h', source: {}, baseUrl: 'https://x/anthropic', apiKey: 'k' })
+  assert.equal(env.ANTHROPIC_BASE_URL, 'https://x/anthropic')
+  assert.equal(env.ANTHROPIC_API_KEY, 'k')
+  assert.equal(env.CLAUDE_CODE_OAUTH_TOKEN, undefined)
+})
+
+test('claude: install 把 skill 复制进 jail 的 .claude/skills/，返回空 args', async () => {
+  const { dir, cleanup } = await createJail()
+  try {
+    const extraArgs = await claudeAdapter.install({ jailDir: dir, skillPath: 'tools/skill-harness/probe/probe-anchor' })
+    assert.deepEqual(extraArgs, [])
+    assert.ok(await fs.pathExists(path.join(dir, '.claude/skills/probe-anchor/SKILL.md')))
+    assert.ok(await fs.pathExists(path.join(dir, '.claude/skills/probe-anchor/references/token.md')))
+  } finally {
+    await cleanup()
+  }
+})
+
+test('claude: args 含 --setting-sources user 与 stream-json', () => {
+  const a = claudeAdapter.args({ model: 'M', systemAppend: null, positional: 'go', sessionId: 'sid' })
+  assert.ok(a.includes('-p'))
+  assert.ok(a.includes('--setting-sources'))
+  assert.equal(a[a.indexOf('--setting-sources') + 1], 'user')
+  assert.ok(a.includes('--output-format'))
+  assert.equal(a[a.indexOf('--output-format') + 1], 'stream-json')
+  assert.ok(a.includes('--verbose'))
+  assert.equal(a[a.indexOf('--model') + 1], 'M')
+  assert.equal(a[a.indexOf('--session-id') + 1], 'sid')
+  assert.equal(a[a.length - 1], 'go')
+})
+
+test('claude: systemAppend 为 null 时不出现 --append-system-prompt', () => {
+  const a = claudeAdapter.args({ model: 'M', systemAppend: null, positional: 'go', sessionId: 's' })
+  assert.ok(!a.includes('--append-system-prompt'))
+})
+
+test('claude: systemAppend 非空时紧跟其值', () => {
+  const a = claudeAdapter.args({ model: 'M', systemAppend: 'COMP', positional: 'go', sessionId: 's' })
+  assert.equal(a[a.indexOf('--append-system-prompt') + 1], 'COMP')
+})
+
+test('claude: collect 返回 null——过程数据在 stdout 里', () => {
+  assert.equal(claudeAdapter.collect(), null)
+})
