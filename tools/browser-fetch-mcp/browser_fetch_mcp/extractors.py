@@ -657,3 +657,40 @@ EXTRACT_JS_XCOM_HEADLESS = r"""() => {
         return {title, author, publishDate, blocks, imageBlocks,
                 totalTextBlocks: blocks.length, totalImages: imageBlocks.length};
 }"""
+
+# Timeline-listing extraction for fetch_user_timeline: unlike
+# EXTRACT_JS_XCOM_HEADED/HEADLESS (full single-tweet body extraction,
+# including Draft.js rich-text paragraph merging for X Articles/Notes),
+# a profile timeline only shows a short plain-text snippet per card —
+# there's no Draft.js rendering to handle here, so one JS variant covers
+# both headed and headless (no behavioral split needed).
+EXTRACT_JS_XCOM_TIMELINE = r"""() => {
+    const articles = Array.from(document.querySelectorAll('article[data-testid="tweet"]'));
+    const tweets = [];
+    for (const article of articles) {
+        const timeEl = article.querySelector('time');
+        if (!timeEl) continue;
+        const linkEl = timeEl.closest('a[href*="/status/"]');
+        if (!linkEl) continue;
+        const href = linkEl.getAttribute('href') || '';
+        const match = href.match(/\/status\/(\d+)/);
+        if (!match) continue;
+        const tweetId = match[1];
+        const url = 'https://x.com' + href;
+        const timestamp = timeEl.getAttribute('datetime') || '';
+
+        const authorEl = article.querySelector('[data-testid="User-Name"]');
+        let authorHandle = '';
+        if (authorEl) {
+            const lines = authorEl.innerText.split('\n').map(l => l.trim()).filter(Boolean);
+            const handleLine = lines.find(l => l.startsWith('@'));
+            authorHandle = handleLine || '';
+        }
+
+        const textEl = article.querySelector('[data-testid="tweetText"]');
+        const text = textEl ? textEl.innerText.replace(/\s+/g, ' ').trim() : '';
+
+        tweets.push({tweetId, url, timestamp, authorHandle, text});
+    }
+    return {tweets};
+}"""
