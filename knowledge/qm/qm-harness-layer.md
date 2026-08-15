@@ -8,6 +8,9 @@
 > - [[qm-execution-layer]]（执行环境层——`ToolContext` 的另一端）
 > - [[qm-skills-layer]]（技能层）
 > - [[qm-run-lifecycle]]（执行内核运行时——`INTERRUPTED_TOOL_RESULT` 的另一端 `resumeNote`；tape 与 entries 两条日志的接缝）
+> - [[qm-authz-layer]]（授权与安全层——四个 harness 各自调用的 `parseSecurityScreenVerdict` 与安全筛查系统提示的来源）
+> - [[qm-credentials-layer]]（凭证层——模型清单与 harness 能力的交叉约束：自定义模型只对 pi / opencode / mock 开放）
+> - [[qm-autonomy-layer]]（自主工作层——cron 每次 fire 新开会话，几乎不触发上下文压缩；monitor 相反）
 >
 > 调研对象：`yc-software/qm` 的 `src/harness/`
 > 本地路径：`~/Repositories/qm`

@@ -8,6 +8,9 @@
 > - [[qm-turn-slice]]（纵切面——`resolve()` 在 turn 时序里的位置与前后闸门）
 > - [[qm-harness-layer]]（Harness 层——`systemPrompt` 与 runtime 选择的下游消费者）
 > - [[qm-run-lifecycle]]（执行内核运行时——第五种收紧代数 `turn-origin` rank 合并；参与者时间窗与 audience floor 的对应）
+> - [[qm-authz-layer]]（授权与安全层——audience floor 的执行侧；第六到第八种收紧代数；四种策略唯一的汇合点）
+> - [[qm-credentials-layer]]（凭证层——`Resolution` 里 `credentials` 字段的来源；cutover 策略的 scope→org 回退与分层配置同构）
+> - [[qm-autonomy-layer]]（自主工作层——`scopeFloor` / `scopeShared` 传下去的 audience 就是权限下界的实参）
 >
 > 调研对象：`yc-software/qm` 的 `src/resolution/`
 > 本地路径：`~/Repositories/qm`
@@ -529,6 +532,27 @@ async setSecurityPosture(id, posture) { await writeQueue(...); }
 > 用的是 `rank = { direct: 0, human: 1, ambient: 2, automation: 3 }` **取更高者**——rank 顺序正是可信度递减，
 > 冲突时假定更不可信的来源。两边都是 `automation` 时，`screenData` 走的又是「拼接并各自标注来源」，
 > 与这里的 soul 文本算法一模一样。同一族代数出现在一个完全不相干的模块里，见 [[qm-run-lifecycle]] §12.1。
+
+> **再补（调研 B 组时又找到三个，总数到八）**：
+> **第六种** `security/security-posture.ts:36-39` 的 `composeSecurityPosture` —— 取 `POSTURE_RANK` 更大者，
+> **平手返回 orgFloor**。与 turn-origin 同形，但那里平手返回 typed（新形态优先），这里平手返回下界（组织优先）；
+> 平手规则由语义决定，不是模板。
+> **第七种** `composePolicy` + `evaluateCommandWithLayer` 的**求值顺序** —— 收紧性不靠比较函数，靠组织规则
+> 物理排在数组前面加上「首个命中即返回」；白名单的兜底拒绝还发生在查 layer 规则之前，于是 layer 只能收紧。
+> **第八种** 安全筛查分块裁决的 reduce —— 决策不同取 strict，决策相同取分数更高者。
+> 八次里没有一次是取交集或取并集这类对称运算：这套系统里没有「合并权限」，只有「叠加约束」。
+> 详见 [[qm-authz-layer]] §9。
+
+> **三补（调研 H 组时第九种，形状最简单也最能说明问题）**：
+> `triggers/trigger-store.ts:24-32` 的 `recipientConsentSatisfied` —— 合并的两个来源是
+> 「本次触发是否**要求**收件人同意」和「记录里**存着**的那条同意」。不要求同意时它返回
+> `recipientConsent === undefined || status === "accepted"`：**即使这次不需要问，一条已存的
+> `declined` 仍然拦得住**。也就是说「我不需要问你」不能覆盖「你已经说过不要」。
+> 要求同意时则再加一道 `samePerson(recipientId, requiredRecipient)`——同意必须是当前这个
+> 收件人给的，改了投递目标旧同意自动失效。
+> 同一篇里还有一个非代数但同向的实例：`api/server.ts` 的 `strictPostAllowed` 在最严姿态下
+> 只放行 `/v1/triggers/:id/consent` 且 `decision === "decline"`——**收缩权限的操作永远畅通，
+> 扩张权限的操作照常审批**。九次仍然没有一次是对称运算。详见 [[qm-autonomy-layer]] §6。
 
 **3. 最少权限者定上限。**
 egress 允许取交集、拒绝取并集、历史过滤用 `every`。房间的能力等于房间里最受限的那个人的能力。

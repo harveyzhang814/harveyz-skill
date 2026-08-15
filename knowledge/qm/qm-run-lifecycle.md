@@ -8,6 +8,9 @@
 > - [[qm-resolution-layer]]（解析层深入分析——`Resolution` 对象、分层配置、audience floor、prompt 协议）
 > - [[qm-turn-slice]]（纵切面——一条 Slack 消息从进入到回复送出，十九道闸门）
 > - [[qm-harness-layer]]（Harness 层——四适配器一套接口、tape 事件溯源、上下文压缩、冷启动重放）
+> - [[qm-authz-layer]]（授权与安全层——「持久化的代价」的第四、五次出现；`replaceGrantsIfCurrent` 与 `transitionStatus` 同为 CAS）
+> - [[qm-credentials-layer]]（凭证层——「持久化的代价」第六处：密文格式版本 × 密钥派生方式 × 候选密钥链）
+> - [[qm-autonomy-layer]]（自主工作层——同一套 `leaderLease`，保护的是「谁来扫表」这个角色）
 >
 > 调研对象：`yc-software/qm`（YC 出品的开源多人 agent harness）
 > 本地路径：`~/Repositories/qm`
@@ -489,6 +492,31 @@ else if ((kind === "steer" || kind === "followUp") && s.text) await handlers.onS
 ```
 
 `RunSignalKind` 的类型定义里**根本没有** `followUp`——它已经被删掉了。但反序列化路径必须继续认它，因为 Postgres 里躺着旧信号，所以要靠 `as string` 绕过类型系统。在一个**禁止写注释**的代码库里，这行代码不解释自己为什么存在，读者得自己推断出「这是给旧数据留的门」。
+
+> **补记（后续两篇又找到三处，总数到六）**：
+> **第四处** `auth/signed-token.ts:18-37` —— JWS 三段式 vs 旧的两段式 `payload.sig`，且旧格式的签名同时接受
+> base64url 和 hex 两种编码，靠 `token.split(".").length !== 3` 分流（见 [[qm-authz-layer]] §3.4）。
+> **第五处** `policy/command-policy.ts:774-779` —— 存进 DB 的规则可能是 `compileSafeRegex` 收紧之前写的，
+> 编译失败就跳过并打日志提示 "re-save it to migrate"。**校验器变严格了，历史数据不会跟着变**
+> （见 [[qm-authz-layer]] §6.5）。注意跳过的后果是这条规则不生效，对 `deny` 规则来说是失败开放。
+> **第六处** `connectors/connector-client-store.ts:63-95` —— 也是最精致的一处，三个维度同时兼容：
+> 密文格式版本（`v2:` 前缀 vs 三段旧格式）× 密钥派生方式（HKDF `current` vs 原始/sha256 的 `legacy`）
+> × 候选密钥链（`fallbacks?: SecretKey[]`）。凡是加密落库的系统，这三层迟早都要有
+> （见 [[qm-credentials-layer]] §5.2）。
+>
+> 六处分布在五个互不相干的子系统里，说明这不是某一处的技术债，是「durable by default」的固定税率。
+>
+> **再补（H 组第七处，这一处的兼容层出现在读侧而不是写侧）**：
+> `sessions/session-store.ts:211-241` 同时定义了 `stableOriginPattern`
+> （`^agent:main:cron:[^:]+$`）和 `legacyOriginPattern`（`^cron:[^:]+(:.+)?$`）两套 threadRef 形态，
+> 而 `cronIdOf` / `postgres-session-store.ts:143-155` 的 `cronIdExpr` 用
+> `COALESCE(substring(...stable...), substring(...legacy...))` 同时认两种。
+> 与前六处不同的是：调度器**只产生 legacy 形态**（`cron:{id}:fire:{hash}`），
+> stable 形态只由管理后台自己拼出来。所以这不是「老数据留下来的」，是**两个模块对同一个
+> 命名约定有不同理解，靠一个 `COALESCE` 把分歧兜住**。兼容层于是成了分歧的掩体——
+> 它让不一致不产生故障，也让不一致不被发现。见 [[qm-autonomy-layer]] §12 存疑 7。
+>
+> 七处里六处是时间轴上的（旧格式），一处是模块间的。前者会随迁移消失，后者不会。
 
 ### 12.1 `turn-origin` 的合并规则是第五种「收紧代数」
 
