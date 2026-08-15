@@ -317,4 +317,30 @@ These constants are defined in both `interactive.bats` and `install.bats`:
 | `grep version:` gives `"1.0.0"` with quotes | Use `_skill_version` instead of raw grep |
 | Asserting skip message in `$output` of `_install` | Skips go to stderr — use `$(_stderr)` |
 | Project scope test installing to `MOCK_HOME` | Must `cd` to the project dir before running the CLI |
+
+---
+
+## tests/harness/ — 跨平台 harness 测试
+
+三层，前两层零成本零 LLM，进默认 `npm test`；第三层真跑模型，默认 skip。
+
+| 文件 | 层 | 测什么 |
+|---|---|---|
+| `select.test.mjs` | L2 | 选择器纯函数 + `matrix.json` 的 `reason` 必填 |
+| `profile.test.mjs` | L1 | 三平台差异表整表 `deepEqual` 快照 |
+| `parse.test.mjs` | L2 | 两个解析器，喂真实抓取的 fixture |
+| `record.test.mjs` | L2 | `RunRecord` 规范化与 `unavailable` 归因 |
+| `prompt.test.mjs` | L2 | 两种模式的 prompt 组装 |
+| `jail.test.mjs` | L2/L3 | env 白名单、凭证打码、三个适配器的 args 与 install |
+| `runner.test.mjs` | L2 | `planCell` 纯函数 |
+| `coverage.test.mjs` | L2 | 覆盖率视图与 `contentHash` 过期判定 |
+| `report.test.mjs` | L2 | 三态渲染 |
+| `cli.test.mjs` | L2 | 参数解析与 dry-run |
+| `e2e.test.mjs` | L3 | 真模型端到端，`SKILL_HARNESS_E2E=1` 开启 |
+
+**fixtures 是真实抓取的，不是手写的。** 重新抓取的命令见
+`docs/superpowers/specs/measurements/2026-08-14-native-vs-inject.md`。
+
+**L1 快照变红时不要直接改断言。** 那些数（`builtinSkillFloor` 等）是实测值，
+变了说明上游变了，应当重新实测并在 measurements 目录追加记录。
 | Adding a new skill fixture | Pull name, src, ver, bundle from `skills-index.json` — do not hardcode paths |
