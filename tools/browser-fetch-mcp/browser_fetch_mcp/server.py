@@ -19,6 +19,7 @@ from browser_fetch_mcp.extractors import (
     EXTRACT_JS,
     EXTRACT_JS_XCOM_HEADED,
     EXTRACT_JS_XCOM_HEADLESS,
+    EXTRACT_JS_XCOM_TIMELINE,
     dispatch_site,
     is_thin,
     wechat_publish_date_from_ct,
@@ -61,6 +62,10 @@ async def _get_context(key: str) -> BrowserContext:
 
 def _profile_key(chrome_profile: str) -> str:
     return hashlib.sha256(chrome_profile.encode("utf-8")).hexdigest()[:16]
+
+
+_TIMELINE_MAX_SCROLL_ITERATIONS = 15
+_TIMELINE_STALL_LIMIT = 2
 
 
 async def _xcom_scrape(url: str, pw_cookies: list[dict], headless: bool) -> dict:
@@ -123,6 +128,63 @@ async def _xcom_scrape(url: str, pw_cookies: list[dict], headless: bool) -> dict
             result = await page.evaluate(js)
             result["publishDate"] = result.get("publishDate", "")
             return result
+        finally:
+            await browser.close()
+
+
+async def _xcom_scrape_timeline(
+    profile_url: str, pw_cookies: list[dict], headless: bool, max_tweets: int
+) -> dict:
+    """One-off browser launch for an x.com/twitter.com profile timeline —
+    same lifecycle model as _xcom_scrape (never reuses the warm persistent
+    context, always closes in finally), but scrolls repeatedly and merges
+    each pass's visible cards into an accumulator (keyed by tweet_id, so a
+    card re-seen after scrolling doesn't duplicate) instead of extracting
+    once. Stops early once max_tweets are collected, or after
+    _TIMELINE_STALL_LIMIT consecutive scroll passes yield no new tweets
+    (the account has fewer than max_tweets total, or the feed stopped
+    loading more)."""
+    async with async_playwright() as p:
+        browser = await p.chromium.launch(
+            headless=headless,
+            args=["--disable-blink-features=AutomationControlled"],
+        )
+        try:
+            ctx_kwargs = {
+                "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+                "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36",
+            }
+            if not headless:
+                ctx_kwargs["viewport"] = {"width": 1280, "height": 900}
+
+            ctx = await browser.new_context(**ctx_kwargs)
+            await ctx.add_cookies(pw_cookies)
+            page = await ctx.new_page()
+            await page.goto(profile_url, timeout=60000, wait_until="domcontentloaded")
+            await page.wait_for_selector('article[data-testid="tweet"]', timeout=60000)
+
+            collected: dict[str, dict] = {}
+            stalls = 0
+            for _ in range(_TIMELINE_MAX_SCROLL_ITERATIONS):
+                result = await page.evaluate(EXTRACT_JS_XCOM_TIMELINE)
+                before = len(collected)
+                for tweet in result["tweets"]:
+                    collected[tweet["tweetId"]] = tweet
+
+                if len(collected) >= max_tweets:
+                    break
+                if len(collected) == before:
+                    stalls += 1
+                    if stalls >= _TIMELINE_STALL_LIMIT:
+                        break
+                else:
+                    stalls = 0
+
+                await page.evaluate("window.scrollBy(0, window.innerHeight * 3)")
+                await page.wait_for_timeout(800)
+
+            tweets = sorted(collected.values(), key=lambda t: int(t["tweetId"]), reverse=True)
+            return {"tweets": tweets[:max_tweets]}
         finally:
             await browser.close()
 
@@ -386,6 +448,97 @@ async def fetch_article(
         "image_count": image_count,
         "content_thin": content_thin,
     }
+
+
+@mcp.tool()
+async def fetch_user_timeline(
+    profile_url: str,
+    chrome_profile: Optional[str] = None,
+    max_tweets: int = 20,
+) -> dict:
+    """Fetch the most recent tweets visible on an x.com/twitter.com profile
+    timeline page — a lightweight batch listing (tweet_id/url/text/
+    timestamp/author_handle/type per tweet), NOT the full per-tweet
+    extraction fetch_article does (no thread expansion, no image download).
+    Scrolls the timeline collecting distinct tweet cards until max_tweets
+    are found or the feed stops yielding new ones, then returns them sorted
+    most-recent-first by tweet_id (X's snowflake IDs are monotonically
+    increasing, so numeric comparison is a reliable recency order).
+
+    type is one of "post", "repost", "quote", "reply" (repost > quote >
+    reply > post priority when multiple signals are present — e.g. a
+    repost of a reply classifies as "repost", since that's why it's on
+    this timeline). For "repost", the returned url/text/author_handle
+    already belong to the ORIGINAL tweet (X renders reposted cards with
+    the original tweet's own data, not the reposter's). For "reply",
+    reply_to_handle names who it's replying to. For "quote",
+    quoted_author/quoted_text/quoted_timestamp describe the embedded
+    quoted tweet (its own permalink isn't extractable — X doesn't render
+    it as a real link in this view). All four of reply_to_handle/
+    quoted_author/quoted_text/quoted_timestamp are None except for their
+    one applicable type.
+
+    chrome_profile is required (falls back to the persisted default if
+    omitted; raises ValueError if neither is set) — x.com has no
+    anonymous timeline view. Uses the same one-off browser launch as
+    fetch_article's xcom path (headed first, headless fallback).
+
+    Raises ValueError if profile_url's scheme isn't http/https, or if
+    profile_url isn't an x.com/twitter.com URL.
+    """
+    parsed_url = urlparse(profile_url)
+    if parsed_url.scheme not in ("http", "https") or not parsed_url.netloc:
+        raise ValueError(f"Rejected URL with scheme '{parsed_url.scheme}' — only http/https allowed")
+
+    if dispatch_site(profile_url) != "xcom":
+        raise ValueError(f"fetch_user_timeline only supports x.com/twitter.com URLs, got: {profile_url}")
+
+    effective_chrome_profile = chrome_profile or config.get_default_chrome_profile(_data_dir())
+    if not effective_chrome_profile:
+        raise ValueError("chrome_profile is required for fetch_user_timeline")
+
+    cookies_dict = await asyncio.to_thread(extract_cookies, "https://x.com", effective_chrome_profile)
+    if not {"auth_token", "ct0", "twid"} & cookies_dict.keys():
+        raise ValueError(
+            f"No x.com session cookies in {effective_chrome_profile} — "
+            "log into x.com in that Chrome profile first"
+        )
+    pw_cookies = [
+        {"name": k, "value": v, "domain": ".x.com", "path": "/", "secure": True}
+        for k, v in cookies_dict.items()
+    ]
+
+    try:
+        result = await _xcom_scrape_timeline(profile_url, pw_cookies, headless=False, max_tweets=max_tweets)
+    except Exception as e:
+        print(
+            f"[browser-fetch-mcp] headed timeline scrape failed ({e}); "
+            f"falling back to headless (lower fidelity)",
+            file=sys.stderr,
+        )
+        try:
+            result = await _xcom_scrape_timeline(profile_url, pw_cookies, headless=True, max_tweets=max_tweets)
+        except Exception as e:
+            raise RuntimeError(
+                f"fetch_user_timeline failed for {profile_url} (headed and headless both failed): {e}"
+            ) from e
+
+    tweets = [
+        {
+            "tweet_id": t["tweetId"],
+            "url": t["url"],
+            "text": t["text"],
+            "timestamp": t["timestamp"],
+            "author_handle": t["authorHandle"],
+            "type": t["type"],
+            "reply_to_handle": t["replyToHandle"],
+            "quoted_author": t["quotedAuthor"],
+            "quoted_text": t["quotedText"],
+            "quoted_timestamp": t["quotedTimestamp"],
+        }
+        for t in result["tweets"]
+    ]
+    return {"tweets": tweets}
 
 
 @mcp.tool()
