@@ -149,3 +149,51 @@ test('claude: systemAppend 非空时紧跟其值', () => {
 test('claude: collect 返回 null——过程数据在 stdout 里', () => {
   assert.equal(claudeAdapter.collect(), null)
 })
+
+import { piAdapter } from '../../tools/skill-harness/adapters/pi.js'
+
+test('pi: install 不复制文件，返回 --skill 绝对路径', async () => {
+  const { dir, cleanup } = await createJail()
+  try {
+    const extraArgs = await piAdapter.install({ jailDir: dir, skillPath: 'tools/skill-harness/probe/probe-anchor' })
+    assert.equal(extraArgs[0], '--skill')
+    assert.ok(path.isAbsolute(extraArgs[1]))
+    assert.ok(extraArgs[1].endsWith('probe-anchor'))
+    assert.equal(await fs.pathExists(path.join(dir, '.pi')), false)
+  } finally {
+    await cleanup()
+  }
+})
+
+test('pi: args 含全部隔离开关', () => {
+  const a = piAdapter.args({ model: 'M', provider: 'P', systemAppend: null, positional: 'go', jailDir: '/tmp/h' })
+  for (const flag of ['-p', '-ns', '-ne', '-np', '--no-themes', '-nc', '--mode']) {
+    assert.ok(a.includes(flag), `missing ${flag}`)
+  }
+  assert.equal(a[a.indexOf('--mode') + 1], 'json')
+  assert.equal(a[a.indexOf('--model') + 1], 'M')
+  assert.equal(a[a.indexOf('--provider') + 1], 'P')
+  assert.equal(a[a.indexOf('--session-dir') + 1], '/tmp/h/sessions')
+  assert.equal(a[a.length - 1], 'go')
+})
+
+test('pi: -ns 与 --skill 可共存——实测 -ns 不影响显式加载', () => {
+  const a = [...piAdapter.args({ model: 'M', provider: 'P', systemAppend: null, positional: 'go', jailDir: '/tmp/h' }), '--skill', '/abs/x']
+  assert.ok(a.includes('-ns'))
+  assert.ok(a.includes('--skill'))
+})
+
+test('pi: systemAppend 为 null 时不出现 --append-system-prompt', () => {
+  const a = piAdapter.args({ model: 'M', provider: 'P', systemAppend: null, positional: 'go', jailDir: '/tmp/h' })
+  assert.ok(!a.includes('--append-system-prompt'))
+})
+
+test('pi: collect 返回 null', () => {
+  assert.equal(piAdapter.collect(), null)
+})
+
+test('pi: jailEnv 不重定向 HOME——pi 的 jail 靠命令行开关', () => {
+  const env = piAdapter.jailEnv({ jailDir: '/tmp/h', source: { PATH: '/usr/bin', HOME: '/real/home' } })
+  assert.equal(env.HOME, undefined)
+  assert.equal(env.PATH, '/usr/bin')
+})
