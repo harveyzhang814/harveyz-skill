@@ -16,6 +16,7 @@
 > - [[qm-crosscutting]]（横切件——`countTokens` 的采样外推；`onboarding` 状态编码在 memory 文本里）
 > - [[qm-assembly-layer]]（装配层——记忆服务在 `wiring.ts` 里的 postgres/内存二选一）
 > - [[qm-synthesis]]（综述——本篇的「标注出身而非过滤」「动作脚本」在其他五个模块里的同构出现）
+> - [[qm-surface-layer]]（表面层——插件侧的入口与身份，与记忆层无直接交集，作为全景补齐）
 >
 > 调研对象：`yc-software/qm` 的 `src/memory/`
 > 本地路径：`~/Repositories/qm`

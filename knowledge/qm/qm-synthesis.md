@@ -16,6 +16,7 @@
 > - [[qm-surface-mirror]]（镜像层——单调合并、ambient 判官、模型决策日志）
 > - [[qm-crosscutting]]（横切件——`shq`、两种 ReDoS 答案、`swallow` 约定）
 > - [[qm-assembly-layer]]（装配层——三条切换轴、缺失的三种类型、出网执法的第二个进程）
+> - [[qm-surface-layer]]（表面层——本篇第三节那条 durable 链在 plugins 侧闭合，`64` 的来历也在那里）
 >
 > 调研对象：`yc-software/qm`，本地路径 `~/Repositories/qm`，`main` @ `0f0e0ad`
 > 本篇写作时间：2026-08-15

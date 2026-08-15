@@ -16,6 +16,7 @@
 > - [[qm-crosscutting]]（横切件——`admin/scoped-event-sink.ts` 已有通用事件汇工厂，那两个账本没用它）
 > - [[qm-assembly-layer]]（装配层——`liveFallback` 那段翻译逻辑住在 `wiring.ts` 里）
 > - [[qm-synthesis]]（综述——本篇的模型决策日志被列为整个调研里最被低估的一条）
+> - [[qm-surface-layer]]（表面层——`surface-cache/` 镜像的是平台消息，这一篇是 Web 侧的表面）
 >
 > 调研对象：`yc-software/qm`（YC 出品的开源多人 agent harness）
 > 本地路径：`~/Repositories/qm`

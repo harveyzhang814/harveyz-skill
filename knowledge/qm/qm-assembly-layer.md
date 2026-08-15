@@ -16,6 +16,7 @@
 > - [[qm-surface-mirror]]（镜像层——`surface-cache/` 不是缓存；ambient 决定何时主动开口）
 > - [[qm-crosscutting]]（横切件——`util/`、`projects/`、`audit/`、`onboarding/`）
 > - [[qm-synthesis]]（综述——本篇的缺失三分类构成「这个能力可能不在」的下半）
+> - [[qm-surface-layer]]（表面层——启动期校验在插件侧的同构：攒齐全部问题再一次性报）
 >
 > 调研对象：`yc-software/qm`（YC 出品的开源多人 agent harness）
 > 本地路径：`~/Repositories/qm`

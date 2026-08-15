@@ -11,6 +11,7 @@
 > - [[qm-authz-layer]]（授权与安全层——身份等价、能力令牌四道闸门、ACL audience floor、命令反混淆、安全姿态与筛查、审计）
 > - [[qm-credentials-layer]]（凭证与外部连接层——借还协议、OAuth 客户端、加密盒、常驻/临时凭证、模型清单）
 > - [[qm-synthesis]]（综述——十五篇的可迁移做法按问题收敛，不按模块）
+> - [[qm-surface-layer]]（表面层——`plugins/` 的信任边界：唯一公网入口、内建 IdP、没有权力的管理面）
 >
 > 调研对象：`yc-software/qm`（YC 出品的开源多人 agent harness）
 > 本地路径：`~/Repositories/qm`
@@ -498,4 +499,11 @@ AGENTS.md 是写给 coding agent 看的操作手册（`CLAUDE.md` 是它的 syml
 
 - [[qm-synthesis]] —— 综述：把十五篇里散落的约 330 条可迁移做法按**问题**（而非按模块）收敛。十个反复出现的答案、一个反复出现的失败、七条只出现一次但值得单拎的、以及这些做法失效的四个前提（已完成）
 
-**`src/` 已全部覆盖，调研收尾。** 前十五篇按模块覆盖 A–J 十组 + 四个未分类目录 + 五个从未进入分组的顶层文件；第十六篇不覆盖新代码，按问题重排。
+- [[qm-surface-layer]] —— 表面层：`plugins/chassis` `plugins/portal` `plugins/auth` `plugins/admin`（4043 行 TS），「唯一公网入口」被兑现成的七条约束、请求侧白名单与响应侧删除名单、路由只决定一次、内建 OIDC 服务端而不是客户端分支、一次性令牌桶限流、三层 fail-closed 链（已完成）
+
+**`src/` 已全部覆盖；`plugins/` 覆盖了信任边界的那一半。** 前十五篇按模块覆盖 A–J 十组 + 四个未分类目录 + 五个从未进入分组的顶层文件；第十六篇不覆盖新代码，按问题重排；第十七篇转向 `plugins/`。
+
+**仍未覆盖：** `plugins/web-ui`（26,595 行 React SPA）——现在是整个仓库最大的一块空白。另有 `cli/`（109 文件）、`scripts/`（46 个）、`skills-seed/`（79 文件）只在本篇的清单层面提过。
+
+> 上面「阅读范围」一栏写的 `plugins/*/README.md` 是第一篇当时的范围。
+> 到 [[qm-surface-layer]] 为止，`plugins/` 里除 `web-ui` 外的源码已经逐文件读过。

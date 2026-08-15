@@ -16,6 +16,7 @@
 > - [[qm-surface-mirror]]（镜像层——`surface-cache/` 不是缓存；ambient 决定何时主动开口）
 > - [[qm-assembly-layer]]（装配层——两个手写 ReDoS 分析器的对照；`orgId()` 全局与多租户预留缝）
 > - [[qm-synthesis]]（综述——本篇的 `shq` 与 `swallow` 进入「只出现一次但值得单拎」，并附本次重数的覆盖率）
+> - [[qm-surface-layer]]（表面层——反向代理头的第三种强度：请求侧允许名单 vs 响应侧删除名单）
 >
 > 调研对象：`yc-software/qm`（YC 出品的开源多人 agent harness）
 > 本地路径：`~/Repositories/qm`
