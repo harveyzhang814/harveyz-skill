@@ -5,7 +5,7 @@
 export const claudeProfile = {
   id: 'claude',
   skillChannel: 'skill-dir',
-  builtinSkillFloor: 16,
+  builtinSkillFloor: 15,
   injection: 'append-system-prompt',
   qualityChannel: 'stdout-json',
   processChannel: 'inline',

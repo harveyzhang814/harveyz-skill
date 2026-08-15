@@ -14,7 +14,7 @@ test('L1: skillChannel 整表', () => {
 })
 
 test('L1: builtinSkillFloor 整表（2026-08-14 实测，变了必须重新实测再改）', () => {
-  assert.deepEqual(PROFILES.map(p => p.builtinSkillFloor), [16, 0, 0])
+  assert.deepEqual(PROFILES.map(p => p.builtinSkillFloor), [15, 0, 0])
 })
 
 test('L1: injection 整表', () => {

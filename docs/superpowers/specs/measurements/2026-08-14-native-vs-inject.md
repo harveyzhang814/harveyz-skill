@@ -135,3 +135,12 @@ n=1 且被目录名混淆，不作为结论。但记录在案：inject 模式的
 
 探针在本目录。各平台命令见上表。claude 需要 keychain 取 token，
 pi 与 hermes 用当前用户已有凭证即可。
+
+## L1 快照漂移记录
+
+**2026-08-15**：E2E 实测 `builtinSkillFloor` 值，发现从 16 变为 15。
+
+方法：`SKILL_HARNESS_E2E=1 npm test` 运行 `tests/harness/e2e.test.mjs`，获取 claude 启动时的 `skills[]` 数组长度。
+已更新 `profiles.js` 与 `profile.test.mjs` 的 L1 断言。
+
+n=1，后续运行应监视一致性。

@@ -70,7 +70,7 @@ test('unavailable 字段在报告里显式说明，不静默省略', () => {
 test('builtinSkillFloor 不对称在报告里给出归因提示', () => {
   const out = renderReport({ cells: CELLS, records: RECORDS, model: 'M', provider: 'P' })
   assert.ok(/builtinSkillFloor/.test(out))
-  assert.ok(/16/.test(out))
+  assert.ok(/15/.test(out))
 })
 
 test('矩阵行数等于 skill 数，不省略任何行列', () => {
