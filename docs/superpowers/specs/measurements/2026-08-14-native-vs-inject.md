@@ -78,7 +78,26 @@ claude -p --model MiniMax-M2.7 ...
 回报 `modelUsage.MiniMax-M2.7 = { canonicalModel: "minimax-m2.7", provider: "firstParty" }`，
 `is_error: false`，`num_turns: 4`。三平台同模型可达。
 
-### `builtinSkillFloor` 实为 16，且可程序读取
+### 2026-08-15 复核：`builtinSkillFloor` 是模型的函数，不是平台常量
+
+第一期 E2E 测出 15，与本文最初记录的 16 不符。复核时按控制变量重测三次，
+同一个 jail、同一份探针 skill，只换模型：
+
+| 配置 | `system.skills` | 内置数 | 是否含 `schedule` |
+|---|---|---|---|
+| 空 jail，OAuth + `claude-sonnet-5` | 16 项 | 16 | 是 |
+| 装探针，OAuth + `claude-sonnet-5` | 17 项 | 16 | 是 |
+| 装探针，`ANTHROPIC_BASE_URL=https://api.minimaxi.com/anthropic` + `--model MiniMax-M2.7` | 16 项 | **15** | **否** |
+
+**没有任何内置 skill 被上游删除。** 差的那一个是 `schedule`，它在第三方端点下被门控。
+框架统一 pin 模型，所以标准配置下该值稳定为 15；但这个数必须连同当时的模型一起解读，
+L1 快照变红时**先查模型有没有变**，再考虑上游增删。
+
+复现：三个脚本的差异仅在 env（`CLAUDE_CODE_OAUTH_TOKEN` vs
+`ANTHROPIC_BASE_URL`+`ANTHROPIC_API_KEY`）与是否传 `--model`，读 stream-json 首行的
+`skills` 数组即可。
+
+### 最初记录：`builtinSkillFloor` 实为 16，且可程序读取
 
 `claude -p --output-format stream-json --verbose` 首行 `system` 事件带 `skills` 数组。
 jail 内该数组 17 项 = 探针 1 + 内置 16：

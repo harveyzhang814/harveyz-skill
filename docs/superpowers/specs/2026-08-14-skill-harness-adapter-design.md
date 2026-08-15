@@ -195,7 +195,8 @@ opencode 的 `export <sessionID>` 是同一形状。claude / pi 的 `collect` �
 PlatformProfile {
   id                  // "claude" | "pi" | "hermes"
   skillChannel        // native 通道："skill-dir" | "explicit-flag"
-  builtinSkillFloor   // jail 后仍存在的内置 skill 数（claude 16，pi 0，hermes 0，实测）
+  builtinSkillFloor   // jail 后仍存在的内置 skill 数（标准配置下 claude 15，pi 0，hermes 0）
+                      // 注意：claude 这一格随模型/认证变化，见「实测结论 3」
   injection           // inject 模式的注入位："append-system-prompt" | "prompt-only"
   qualityChannel      // 质量输出来源："stdout-json" | "stdout-text"
   processChannel      // 过程数据来源："inline" | "collect" | "none"
@@ -272,19 +273,34 @@ QM 白名单里同时列这两个变量，正是这个原因。
 足以让 jail 内的 skill 被发现并按 description 触发。** 原方案里「传空值屏蔽全部设置源」
 的写法作废——我们要的恰恰是加载 jail 的 user 源。
 
-**实测结论 3：jail 挡不住内置 skill，`builtinSkillFloor = 16`。**
+**实测结论 3：jail 挡不住内置 skill，且 `builtinSkillFloor` 随模型/认证变化。**
 `--output-format stream-json` 的首行 `system` 事件带一个 `skills` 数组，是**程序可读的
-ground truth**，不用问模型。上述配置下该数组有 17 项 = 探针 1 + 内置 16：
+ground truth**，不用问模型。
+
+2026-08-15 复核实测，**同一个 jail、同一份探针，换模型就换数**：
+
+| 配置 | `skills` 数组 | 内置数 | 差异 |
+|---|---|---|---|
+| OAuth + `claude-sonnet-5`（默认） | 17 项 | **16** | 含 `schedule` |
+| `ANTHROPIC_BASE_URL` 指向第三方 + `--model MiniMax-M2.7` | 16 项 | **15** | **无 `schedule`** |
+
+内置清单（OAuth 下的全 16 项）：
 `deep-research` `design-sync` `dataviz` `update-config` `verify` `debug` `code-review`
 `simplify` `batch` `fewer-permission-prompts` `doctor` `loop` `schedule` `claude-api`
 `run` `run-skill-generator`。
 
-**claude 上拿不到零 skill 基线。** 含义：claude 的触发测试是「在 17 个候选中选中目标」，
-另两个平台是「在 1 个候选中选中目标」——已知的不对称，报告里 claude 的触发失败
-必须先归因到这一格。
+**没有任何内置 skill 被上游删除**——`schedule` 在第三方端点下被门控，不出现在候选集里。
+这条推翻了本节初稿"16 是平台常量"的假设：**`builtinSkillFloor` 是「平台 × 模型/认证」的函数，
+不是平台属性。** 框架统一 pin 模型（见「模型必须 pin」），所以跑测时该值稳定在 **15**；
+但换 provider 就会变，L1 快照必须连同当时的模型一起解读。
+
+**claude 上拿不到零 skill 基线。** 含义：在框架的标准配置下，claude 的触发测试是
+「在 16 个候选中选中目标」，另两个平台是「在 1 个候选中选中目标」——已知的不对称，
+报告里 claude 的触发失败必须先归因到这一格。
 
 `builtinSkillFloor` 由适配器从 `system` 事件的 `skills` 数组长度算出并写进 `RunRecord`，
-不硬编码；L1 快照钉的是「当前实测值」，上游增删内置 skill 时测试变红，强制来这里更新。
+不硬编码；L1 快照钉的是「标准配置下的实测值」。该测试变红时**先确认模型是否变了**，
+再考虑是不是上游增删了内置 skill——两种原因的处置完全不同。
 
 **`--bare` 不用。** 它的说明含「keychain reads」被跳过且认证严格走 `ANTHROPIC_API_KEY`，
 与我们用 OAuth token 的路径冲突；且它跳过的东西（hooks/LSP/plugin sync/CLAUDE.md 发现）
@@ -775,7 +791,8 @@ native 模式下 jail 内**有意**放了被测 skill，所以探针不能放在
 
 1. **宿主 skill 不可见**：读一遍用户真实 `~/.claude/skills/`、`~/.hermes/skills/`、
    `~/.pi/agent/skills/` 的目录名清单，断言 `RunRecord.reply` 与 `toolCalls` 里
-   一个都没出现（claude 的 16 个内置 skill 名除外，它们进白名单）。
+   一个都没出现（claude 的 16 个内置 skill 名除外，它们进白名单——白名单按 OAuth 下的
+   全集取，是标准配置 15 项的超集，多留一项无害）。
 2. **宿主配置不可见**：在 jail 的 `CLAUDE.md` / `AGENTS.md` 位置放一个唯一 token，
    同时断言宿主的对应文件内容特征串不出现。
 
@@ -821,7 +838,7 @@ native 模式下 prompt 里没有 skill 正文，所以 dry-run 还要打印 `in
 2. anchor probe 在 **native 模式下三平台全部 `FILE` 通过**；inject 模式下带补偿行也全部通过
 3. anchor probe 在 native 模式 + 非触发 prompt 下，三平台 `triggered` 均为 `false`
 4. `dry-run` 输出六份完整 prompt（3 平台 × 2 模式），可人工核对
-5. **jail 探针未被触碰**（L3 断言通过）；claude 的 `builtinSkillFloor = 16` 被 L1 快照钉住
+5. **jail 探针未被触碰**（L3 断言通过）；claude 的 `builtinSkillFloor = 15` 被 L1 快照钉住
 6. 选择器可用：`--skill` / `--bundle` / `--platform` / `--mode` 四个选择维度各有一条单测；
    `matrix.json` 中 `reason` 缺失时 `npm test` 变红
 7. `skill-harness coverage` 能对当前 39 个 skill 输出完整三态矩阵，`not-run` 显示为空格
@@ -893,9 +910,9 @@ LLM 输出天然有方差。**缓解**：第二期先做不受方差影响的负
 QM 的 `bridgeToolName` 是三行硬编码 if，三个工具三行；工具面扩大后会变成一长串。
 **缓解**：见「未决问题」。短期靠 L1 整表快照锁住，长期靠让 skill 正文逐步不再需要补偿。
 
-**7. claude 的触发测试与另两平台不可比（`builtinSkillFloor = 16`）。**
-实测：jail 后 claude 仍带 16 个内置 skill，pi 与 hermes 为 0。
-claude 的「触发」是 17 选 1，另两个是 1 选 1，难度不同量级。
+**7. claude 的触发测试与另两平台不可比（标准配置下 `builtinSkillFloor = 15`）。**
+实测：jail 后 claude 仍带 15 个内置 skill（OAuth + sonnet 下是 16，差 `schedule`），
+pi 与 hermes 为 0。claude 的「触发」是 16 选 1，另两个是 1 选 1，难度不同量级。
 **缓解**：`builtinSkillFloor` 进 profile 并由报告渲染读出；claude 的 `triggered = false`
 必须先归因到这一格，不得直接判为 description 有问题。
 若日后需要可比性，为 pi/hermes 各塞入等量的诱饵 skill 拉平候选数——第一期不做。
