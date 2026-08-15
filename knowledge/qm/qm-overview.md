@@ -409,6 +409,7 @@ flowchart LR
 > 这一组已拆成两篇深入分析：
 > - [[qm-execution-layer]]（sandbox / workspace / files / processes / tools）——能力协商式的 Sandbox 接口、四个后端、三层文件模型、用 shell 长出所有能力、路由与迁移、进程生命周期的三层真相
 > - [[qm-skills-layer]]（skills）——scope 所有权与遮蔽、状态机与能力授权、Pack 的供应链防护、两级物化与懒加载、`liveActor` 授权维度
+> - [[qm-autonomy-layer]]（自主工作层——cron 调度、monitor 轮询、`runTrigger` 主干、触发回合与人类回合的差集）
 
 #### F. 凭证与外部服务
 
@@ -431,7 +432,22 @@ flowchart LR
 
 #### H. 后台自动化 —— 「没人看着的时候」
 
-`cron/`（store、schedule、pg-boss 队列、scheduler）+ `monitors/`（broker、poller、store，即 watches）。对应工具面上的 `cron` 和 `watch`。
+`cron/`（store、schedule、pg-boss 队列、scheduler）+ `monitors/`（broker、poller、store，即 watches）。对应工具面上的 `cron` 和 `background`（`watch` / `unwatch` 两个 action，不是独立工具）。
+
+> **[[qm-autonomy-layer]] 的更正与补充。** 这个分组把 `triggers/` 划给了 G 组，
+> 但读下来 `triggers/run-trigger.ts` 才是 H 组的主干——`cron/` 和 `monitors/`
+> 都只是它的调用者，另外两个调用者是 `keychain-ask` 和 `secret-drop`。按调用
+> 关系而不是按「触达」这个词分，`triggers/` 应当归 H 组；G 组里真正属于投递的
+> 是 `reach/` 和 `delivery/`。
+>
+> H 组回答的问题也不是「后台自动化」这么宽。它的中心是一句话：
+> **调度器决定何时，`runTrigger` 决定此刻是否仍然合法**。cron 表里存的不是
+> 一个待执行的动作，是一个待重新验证的授权——三个月前建的 cron，人可能离职了、
+> 被移出频道了、目标频道可能变私有了、收件人可能改主意了，所以每次 fire 都要
+> 从头重问一遍那六个问题。
+>
+> 另外 `wake/`（3 个文件）在 A 组里只被当作「唤醒机制」提过一句，它和 H 组
+> 共用 `util/sweeper.ts` 与 `persistence/leader-lease.ts`，一并在那篇里覆盖了。
 
 #### I. 应用发布 —— 「把内部工具做出来并发出去」
 
@@ -469,7 +485,7 @@ AGENTS.md 是写给 coding agent 看的操作手册（`CLAUDE.md` 是它的 syml
 - [[qm-run-lifecycle]] —— A 组运行时：`runs/` `sessions/` `wake/` `tasks/`，蓝绿自我排空、两层租约、两个重试计数器、中断重入（已完成）
 - [[qm-authz-layer]] —— B 组授权与安全层：`identity/` `acl/` `directory/` `auth/` `admin/` `policy/` `security/` `classify/` `ratelimit/`，能力令牌四道闸门、audience floor 的执行侧、命令反混淆、安全姿态与影子筛查（已完成）
 - [[qm-credentials-layer]] —— F 组凭证与外部连接层：`credentials/` `connectors/` `model/`，借还协议、OAuth 单飞刷新、HKDF 用途隔离、常驻/临时凭证迁移、模型清单（已完成）
-- **H 组** `cron/` + `monitors/` —— 7 个文件，自主工作；与 A 组 `wake/` 合看才完整。**下一篇建议**：前两篇各挖出一条指向它的线索——[[qm-authz-layer]] §5.3 的 `liveActor !== true`（cron 回合不得行使管理权）与 [[qm-credentials-layer]] §3.8 的同一条约束在凭证授权上的落点。「无人在场的回合能做什么」这个问题现在只有否定的一半，H 组是肯定的那一半
-- **I 组** `deploy/` `environments/` + **J 组** `persistence/` `idempotency/` `audit/` `onboarding/` —— 20 个文件。J 组的 `persistence/` 值得优先：`DurableMap` 的 `take` / `merge` / `deleteIf` 原语已经在四篇里被反复引用，但没有一篇打开过它的实现
+- [[qm-autonomy-layer]] —— H 组自主工作层：`cron/` `monitors/` `triggers/` `wake/`，`runTrigger` 主干、时间的两种语义、两套调度引擎与租约毒丸、三层幂等、给模型的情境说明书、沉默作为一等结果、触发回合与人类回合的差集（已完成）
+- **I 组** `deploy/` `environments/` + **J 组** `audit/` `onboarding/` —— 20 个文件里还剩约 14 个。J 组的 `persistence/durable-map.ts`（事务语义、版本行序列化）与 `idempotency/`（全部）已在 [[qm-autonomy-layer]] §4 里啃掉；`persistence/leader-lease.ts` 在那篇 §3.3 和 [[qm-run-lifecycle]] 里各覆盖了一半
 - 分类遗漏：`util/`（13）、`surface-cache/`（6）、`deployment/`（5）、`projects/`（1）四个目录不在上面 A–J 任何一组里。注意 `deployment/` 与 I 组的 `deploy/` 不是同一个目录
 - 综述：把各篇散落的「可迁移做法」按问题（而非按模块）收敛成一份清单

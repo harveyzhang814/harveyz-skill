@@ -10,6 +10,7 @@
 > - [[qm-harness-layer]]（Harness 层——四适配器一套接口、tape 事件溯源、上下文压缩、冷启动重放）
 > - [[qm-run-lifecycle]]（执行内核的运行时——租约、排空、回收、中断重入）
 > - [[qm-authz-layer]]（授权与安全层——身份、能力令牌、ACL、命令策略、安全姿态）
+> - [[qm-autonomy-layer]]（自主工作层——凭证审批的异步通知边：`createAskExpirySweep` 挂在调度器上）
 >
 > 调研对象：`yc-software/qm`（YC 出品的开源多人 agent harness）
 > 本地路径：`~/Repositories/qm`

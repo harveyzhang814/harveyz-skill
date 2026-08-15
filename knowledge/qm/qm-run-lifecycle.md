@@ -10,6 +10,7 @@
 > - [[qm-harness-layer]]（Harness 层——四适配器一套接口、tape 事件溯源、上下文压缩、冷启动重放）
 > - [[qm-authz-layer]]（授权与安全层——「持久化的代价」的第四、五次出现；`replaceGrantsIfCurrent` 与 `transitionStatus` 同为 CAS）
 > - [[qm-credentials-layer]]（凭证层——「持久化的代价」第六处：密文格式版本 × 密钥派生方式 × 候选密钥链）
+> - [[qm-autonomy-layer]]（自主工作层——同一套 `leaderLease`，保护的是「谁来扫表」这个角色）
 >
 > 调研对象：`yc-software/qm`（YC 出品的开源多人 agent harness）
 > 本地路径：`~/Repositories/qm`
@@ -504,6 +505,18 @@ else if ((kind === "steer" || kind === "followUp") && s.text) await handlers.onS
 > （见 [[qm-credentials-layer]] §5.2）。
 >
 > 六处分布在五个互不相干的子系统里，说明这不是某一处的技术债，是「durable by default」的固定税率。
+>
+> **再补（H 组第七处，这一处的兼容层出现在读侧而不是写侧）**：
+> `sessions/session-store.ts:211-241` 同时定义了 `stableOriginPattern`
+> （`^agent:main:cron:[^:]+$`）和 `legacyOriginPattern`（`^cron:[^:]+(:.+)?$`）两套 threadRef 形态，
+> 而 `cronIdOf` / `postgres-session-store.ts:143-155` 的 `cronIdExpr` 用
+> `COALESCE(substring(...stable...), substring(...legacy...))` 同时认两种。
+> 与前六处不同的是：调度器**只产生 legacy 形态**（`cron:{id}:fire:{hash}`），
+> stable 形态只由管理后台自己拼出来。所以这不是「老数据留下来的」，是**两个模块对同一个
+> 命名约定有不同理解，靠一个 `COALESCE` 把分歧兜住**。兼容层于是成了分歧的掩体——
+> 它让不一致不产生故障，也让不一致不被发现。见 [[qm-autonomy-layer]] §12 存疑 7。
+>
+> 七处里六处是时间轴上的（旧格式），一处是模块间的。前者会随迁移消失，后者不会。
 
 ### 12.1 `turn-origin` 的合并规则是第五种「收紧代数」
 
