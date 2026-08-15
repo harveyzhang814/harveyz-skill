@@ -317,6 +317,7 @@ These constants are defined in both `interactive.bats` and `install.bats`:
 | `grep version:` gives `"1.0.0"` with quotes | Use `_skill_version` instead of raw grep |
 | Asserting skip message in `$output` of `_install` | Skips go to stderr — use `$(_stderr)` |
 | Project scope test installing to `MOCK_HOME` | Must `cd` to the project dir before running the CLI |
+| Adding a new skill fixture | Pull name, src, ver, bundle from `skills-index.json` — do not hardcode paths |
 
 ---
 
@@ -343,4 +344,3 @@ These constants are defined in both `interactive.bats` and `install.bats`:
 
 **L1 快照变红时不要直接改断言。** 那些数（`builtinSkillFloor` 等）是实测值，
 变了说明上游变了，应当重新实测并在 measurements 目录追加记录。
-| Adding a new skill fixture | Pull name, src, ver, bundle from `skills-index.json` — do not hardcode paths |
