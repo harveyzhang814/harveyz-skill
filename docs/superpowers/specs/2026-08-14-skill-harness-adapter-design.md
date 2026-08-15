@@ -195,7 +195,7 @@ opencode 的 `export <sessionID>` 是同一形状。claude / pi 的 `collect` �
 PlatformProfile {
   id                  // "claude" | "pi" | "hermes"
   skillChannel        // native 通道："skill-dir" | "explicit-flag"
-  builtinSkillFloor   // jail 后仍存在的内置 skill 数（claude 12，pi 0，hermes 0）
+  builtinSkillFloor   // jail 后仍存在的内置 skill 数（claude 16，pi 0，hermes 0，实测）
   injection           // inject 模式的注入位："append-system-prompt" | "prompt-only"
   qualityChannel      // 质量输出来源："stdout-json" | "stdout-text"
   processChannel      // 过程数据来源："inline" | "collect" | "none"
@@ -272,12 +272,19 @@ QM 白名单里同时列这两个变量，正是这个原因。
 足以让 jail 内的 skill 被发现并按 description 触发。** 原方案里「传空值屏蔽全部设置源」
 的写法作废——我们要的恰恰是加载 jail 的 user 源。
 
-**实测结论 3：jail 挡不住内置 skill。** 上述配置下模型仍能列出 12 个 Claude Code
-内置 skill（`dataviz` `update-config` `keybindings-help` `code-review` `simplify`
-`fewer-permission-prompts` `loop` `schedule` `claude-api` `run` `init` `security-review`）。
-**claude 上拿不到零 skill 基线**，`builtinSkillFloor = 12`。含义：claude 的触发测试
-是「在 13 个候选中选中目标」，另两个平台是「在 1 个候选中选中目标」——
-这是一个已知的不对称，报告里 claude 的触发失败必须先归因到这一格。
+**实测结论 3：jail 挡不住内置 skill，`builtinSkillFloor = 16`。**
+`--output-format stream-json` 的首行 `system` 事件带一个 `skills` 数组，是**程序可读的
+ground truth**，不用问模型。上述配置下该数组有 17 项 = 探针 1 + 内置 16：
+`deep-research` `design-sync` `dataviz` `update-config` `verify` `debug` `code-review`
+`simplify` `batch` `fewer-permission-prompts` `doctor` `loop` `schedule` `claude-api`
+`run` `run-skill-generator`。
+
+**claude 上拿不到零 skill 基线。** 含义：claude 的触发测试是「在 17 个候选中选中目标」，
+另两个平台是「在 1 个候选中选中目标」——已知的不对称，报告里 claude 的触发失败
+必须先归因到这一格。
+
+`builtinSkillFloor` 由适配器从 `system` 事件的 `skills` 数组长度算出并写进 `RunRecord`，
+不硬编码；L1 快照钉的是「当前实测值」，上游增删内置 skill 时测试变红，强制来这里更新。
 
 **`--bare` 不用。** 它的说明含「keychain reads」被跳过且认证严格走 `ANTHROPIC_API_KEY`，
 与我们用 OAuth token 的路径冲突；且它跳过的东西（hooks/LSP/plugin sync/CLAUDE.md 发现）
@@ -330,8 +337,13 @@ args (第一步 · 运行):
   [-t <toolsets>]
 
 args (第二步 · collect):
+  hermes sessions list                                      # jail 内只有一个会话，取其 id
   hermes sessions export --format trace --session-id <id> -
 ```
+
+**`-z` 不打印 session id**（其文档明确「no session_id line」），所以 collect 必须先
+`sessions list`。这在 jail 里是确定性的：每次运行都是全新 jail，SQLite store 里
+有且只有一个会话。非 jail 环境下这个做法不成立——又一条 jail 是前置条件而非可选项的理由。
 
 **实测结论 1：hermes 的 jail 是三者里最干净的。** `HOME` 重定向 + 上述三个凭证文件后，
 `hermes skills list` 输出 `0 hub-installed, 0 builtin, 1 local` —— 恰好只有探针 skill，
@@ -406,6 +418,44 @@ hermes 无 system prompt 追加通道，整体拼成一段走 `-z`。
 | ✗ 触发但执行错 | ✓ | 平台的 skill 加载机制有损耗（如截断、包装干扰） | 记录到差异表 |
 
 第 5 行需要 `RunRecord.triggered` 区分「未触发」与「触发了但做错」，见下。
+
+---
+
+## 模型必须 pin
+
+**三个平台的默认模型不同，不 pin 就测不出平台差异。** 实测本机默认值：
+
+| 平台 | 默认模型 | provider |
+|---|---|---|
+| claude | `claude-sonnet-5` | anthropic |
+| pi | `MiniMax-M2.7` | minimax-cn |
+| hermes | `MiniMax-M2.7` | minimax-cn |
+
+按默认值跑出来的"跨平台差异"实际是**平台 ⊗ 模型**的混合效应，且 claude 那一列
+同时换了平台和模型，归因完全无效。这条比 jail 更前置：jail 挡的是配置污染，
+这条挡的是自变量本身不成立。
+
+**已实测可行的方案**：三平台跑同一个模型。
+
+```
+claude:  ANTHROPIC_BASE_URL=<兼容端点> ANTHROPIC_API_KEY=<key> claude --model <id>
+pi:      pi --provider <name> --model <id>
+hermes:  hermes -m <id> --provider <name>
+```
+
+2026-08-14 验证：claude 指向 `https://api.minimaxi.com/anthropic` +
+`--model MiniMax-M2.7` 成功运行，`modelUsage` 回报 `MiniMax-M2.7` / `canonicalModel: minimax-m2.7`。
+即 claude 的 Anthropic 兼容端点可承载第三方模型，三平台同模型可达。
+
+三条约束：
+
+1. **模型是 CLI 必填参数**，无默认值。`skill-harness run` 缺 `--model` 直接报错退出，
+   错误信息说明理由，不静默用平台默认值。
+2. **`RunRecord` 记录 `model` 与 `provider` 实测值**（从各平台输出里读，不是回填传入参数），
+   并在 `parse` 里断言其与请求值一致；不一致时该 run 标记 `modelMismatch`，报告中单列。
+3. **报告页眉打印本次使用的模型**。一份没写模型的跨平台报告不可解读。
+
+同模型跑不通的平台（如某平台不支持该 provider），该格记 `not-run` 而非降级到默认模型。
 
 ---
 
@@ -501,6 +551,9 @@ RunRecord {
   // 标识
   platform, skill, task, repeat, sessionId
   mode: "native" | "inject"
+  model, provider          // 各平台输出里读到的实测值，非回填的请求参数
+  modelMismatch: boolean   // 实测值 ≠ 请求值；报告中单列，不混进普通失败
+  builtinSkillFloor: number | null   // 本次运行时该平台可见的非被测 skill 数
 
   // 质量
   reply: string
@@ -537,13 +590,19 @@ RunRecord {
 `stderr` 上限 16KB 且保留**尾部** —— 抄 QM 的 codex RPC 客户端：
 子进程退出码单独看没有诊断价值，要拼上 stderr 尾部才知道为什么死。
 
-**`triggered` 的判定按平台不同，由 `parse` 从轨迹里读，不靠猜：**
+**`triggered` 的判定按平台不同，判据已实测确认，由 `parse` 从轨迹里读，不靠猜：**
 
-| 平台 | 判据 |
+| 平台 | 判据（已实测） |
 |---|---|
-| claude | stream-json 中出现 `Skill` 工具调用且参数含目标 skill 名 |
-| pi | 轨迹中出现该 skill 的加载/调用事件 |
-| hermes | `sessions export --format trace` 的 Claude Code JSONL 中同 claude |
+| claude | `assistant` 事件的 `message.content[]` 中存在 `{type:"tool_use", name:"Skill", input:{skill:"<名>"}}` |
+| pi | `tool_execution_start` 事件中 `toolName === "read"` 且 `args.path` 以 `<skill 目录>/SKILL.md` 结尾 |
+| hermes | `sessions export --format trace` 出 Claude Code JSONL，判据同 claude |
+
+**pi 的机制与 claude 根本不同，这一点要写进差异表。** pi 没有 `Skill` 工具——
+它把 skill 索引放进 system prompt，由模型**自己用 `read` 工具去读 SKILL.md**。
+这与 QM 的做法逐字一致（`materialize.ts:402`：「To use one, read its SKILL.md and follow it」）。
+含义：pi 上「触发」和「读文件」是同一个动作，若 `read` 失败则 skill 等于没加载；
+claude 上二者是分开的两步，可以触发成功但读文件失败。
 
 若某平台的轨迹里根本没有可判定的信号，`triggered` 填 `null` 并把
 `"triggered"` 计入 `unavailable` —— 不用「回复里有没有 skill 特征词」这类启发式凑数。
@@ -684,7 +743,7 @@ assert.deepEqual(
 );
 assert.deepEqual(
   [claude, pi, hermes].map(a => a.profile.builtinSkillFloor),
-  [12, 0, 0],                      // 2026-08-14 实测；变了必须重新实测再改
+  [16, 0, 0],                      // 2026-08-14 实测；变了必须重新实测再改
 );
 assert.deepEqual(
   [claude, pi, hermes].map(a => a.compensation),
@@ -716,7 +775,7 @@ native 模式下 jail 内**有意**放了被测 skill，所以探针不能放在
 
 1. **宿主 skill 不可见**：读一遍用户真实 `~/.claude/skills/`、`~/.hermes/skills/`、
    `~/.pi/agent/skills/` 的目录名清单，断言 `RunRecord.reply` 与 `toolCalls` 里
-   一个都没出现（`builtinSkillFloor` 里那 12 个内置名除外，它们进白名单）。
+   一个都没出现（claude 的 16 个内置 skill 名除外，它们进白名单）。
 2. **宿主配置不可见**：在 jail 的 `CLAUDE.md` / `AGENTS.md` 位置放一个唯一 token，
    同时断言宿主的对应文件内容特征串不出现。
 
@@ -762,7 +821,7 @@ native 模式下 prompt 里没有 skill 正文，所以 dry-run 还要打印 `in
 2. anchor probe 在 **native 模式下三平台全部 `FILE` 通过**；inject 模式下带补偿行也全部通过
 3. anchor probe 在 native 模式 + 非触发 prompt 下，三平台 `triggered` 均为 `false`
 4. `dry-run` 输出六份完整 prompt（3 平台 × 2 模式），可人工核对
-5. **jail 探针未被触碰**（L3 断言通过）；claude 的 `builtinSkillFloor = 12` 被 L1 快照钉住
+5. **jail 探针未被触碰**（L3 断言通过）；claude 的 `builtinSkillFloor = 16` 被 L1 快照钉住
 6. 选择器可用：`--skill` / `--bundle` / `--platform` / `--mode` 四个选择维度各有一条单测；
    `matrix.json` 中 `reason` 缺失时 `npm test` 变红
 7. `skill-harness coverage` 能对当前 39 个 skill 输出完整三态矩阵，`not-run` 显示为空格
@@ -834,9 +893,9 @@ LLM 输出天然有方差。**缓解**：第二期先做不受方差影响的负
 QM 的 `bridgeToolName` 是三行硬编码 if，三个工具三行；工具面扩大后会变成一长串。
 **缓解**：见「未决问题」。短期靠 L1 整表快照锁住，长期靠让 skill 正文逐步不再需要补偿。
 
-**7. claude 的触发测试与另两平台不可比（`builtinSkillFloor = 12`）。**
-实测：jail 后 claude 仍带 12 个内置 skill，pi 与 hermes 为 0。
-claude 的「触发」是 13 选 1，另两个是 1 选 1，难度不同量级。
+**7. claude 的触发测试与另两平台不可比（`builtinSkillFloor = 16`）。**
+实测：jail 后 claude 仍带 16 个内置 skill，pi 与 hermes 为 0。
+claude 的「触发」是 17 选 1，另两个是 1 选 1，难度不同量级。
 **缓解**：`builtinSkillFloor` 进 profile 并由报告渲染读出；claude 的 `triggered = false`
 必须先归因到这一格，不得直接判为 description 有问题。
 若日后需要可比性，为 pi/hermes 各塞入等量的诱饵 skill 拉平候选数——第一期不做。

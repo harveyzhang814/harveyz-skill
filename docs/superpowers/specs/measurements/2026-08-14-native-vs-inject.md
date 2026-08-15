@@ -55,6 +55,73 @@
 - `--safe-mode` 不影响目录发现的 skill。其隐含的 `--ignore-rules` 说明里那句
   "skip ... and preloaded skills" 只指 `-s` 的强制预载通道。
 
+## 追加实测（同日，写实施计划时为确定解析器字段名而抓的样本）
+
+### 各平台默认模型不同 —— 自变量不成立
+
+| 平台 | 默认模型 | provider |
+|---|---|---|
+| claude | `claude-sonnet-5` | anthropic |
+| pi | `MiniMax-M2.7` | minimax-cn |
+| hermes | `MiniMax-M2.7` | minimax-cn |
+
+按默认值跑出的"跨平台差异"是平台 ⊗ 模型的混合效应。
+
+**已验证的解法**：claude 指向 Anthropic 兼容的第三方端点可跑同一模型。
+
+```
+ANTHROPIC_BASE_URL=https://api.minimaxi.com/anthropic \
+ANTHROPIC_API_KEY=<minimax key> \
+claude -p --model MiniMax-M2.7 ...
+```
+
+回报 `modelUsage.MiniMax-M2.7 = { canonicalModel: "minimax-m2.7", provider: "firstParty" }`，
+`is_error: false`，`num_turns: 4`。三平台同模型可达。
+
+### `builtinSkillFloor` 实为 16，且可程序读取
+
+`claude -p --output-format stream-json --verbose` 首行 `system` 事件带 `skills` 数组。
+jail 内该数组 17 项 = 探针 1 + 内置 16：
+
+```
+deep-research design-sync dataviz update-config verify debug code-review simplify
+batch fewer-permission-prompts doctor loop schedule claude-api run run-skill-generator
+```
+
+修正前文"12 个"——那是模型自己列举的，不是 ground truth。
+
+### 轨迹格式
+
+**claude `--output-format stream-json --verbose`**，本次 9 行：
+
+| type | 关键字段 |
+|---|---|
+| `system` | `session_id` `model` `tools[]` `skills[]` |
+| `assistant` | `message.content[]`，`tool_use` 块有 `name` `input` |
+| `user` | `tool_result` 块 + `tool_use_result` |
+| `result` | `result` `usage` `total_cost_usd` `num_turns` `duration_ms` `is_error` `subtype` |
+
+触发判据：`{type:"tool_use", name:"Skill", input:{skill:"probe-anchor"}}`。
+
+**pi `--mode json`**（也是 JSONL，本次 170 行；需 `< /dev/null`，否则等 stdin 超时）：
+
+| type | 关键字段 |
+|---|---|
+| `session` | `id` `cwd` `version` |
+| `tool_execution_start` | `toolName` `args` `toolCallId` |
+| `tool_execution_end` | `toolName` `isError` `result` |
+| `message_end` | `message.usage = {input, output, cacheRead, cacheWrite, totalTokens, cost}` |
+| `message_update` × 144 | 流式增量，解析时跳过 |
+
+**pi 没有 Skill 工具。** 本次两次工具调用都是 `read`：先读
+`probe-anchor/SKILL.md`，再读 `references/token.md`。即 pi 走的是「索引进 system prompt，
+模型自己 read SKILL.md」——与 QM `materialize.ts:402` 逐字一致。
+触发判据因此是：`toolName === "read"` 且 `args.path` 以 `<skill>/SKILL.md` 结尾。
+
+**hermes**：`sessions export --format trace` 出 Claude Code JSONL（help 原文
+"'trace' emits Claude Code JSONL for the Hugging Face Agent Trace Viewer"）。
+`-z` 不打印 session id，collect 须先 `hermes sessions list` 取 jail 内唯一会话。
+
 ## 一次未复现的异常
 
 claude inject 模式第一次运行时工作目录名为 `jail-inject`，模型**拒绝执行**，理由是
