@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.28.0] - 2026-08-15
+
+### Added
+- `sync-xtimeline`：新增 skill（原名 watch-x），批量追更一批固定的 X 博主推文，抓取时自动识别推文类型（post/repost/quote/reply），产出翻译摘要 + 累计静态 HTML 时间线视图（X 风格深色主题）
+- `browser-fetch-mcp`：新增 `fetch_user_timeline` MCP 工具，支持抓取 X 用户时间线
+- `fetch-paper`：新增 skill，贡献到 research bundle
+
+### Changed
+- `explain-pm`：输出改为分层，界定技术语言边界，允许调研代码
+
+### Fixed
+- `fetch-paper`：修复 PMC/OA 页面被反爬拦截无法抓取、PDF 二进制内容误用 Write 工具写盘、SKILL.md F3 违规
+- `learn-video`：硬编码用户路径改用 `$HOME` + task_id 读取重试；改为后台执行+日志判定，避免阻塞调用
+
 ## [0.27.0] - 2026-08-13
 
 ### Added
