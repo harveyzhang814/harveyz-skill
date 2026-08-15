@@ -134,7 +134,7 @@ WebFetch(url="https://api.crossref.org/works?query.bibliographic=<urlencode(标�
 6. **作者/机构仓库自存版** — `WebSearch("\"<标题>\" filetype:pdf")`，人工判断结果是否为作者自存版（个人主页、机构仓库域名，而非镜像站）
 
 对每个候选 URL：
-- 用 WebFetch 请求
+- 用 WebFetch 请求。注意：WebFetch 遇到二进制/PDF 响应时不会把原始字节当文本返回，而是自动把内容存到一个临时文件，并在返回文本里报告该临时文件路径（形如"Binary content ... also saved to /path/to/file.pdf"）——**记下这个临时文件路径**，Step 5 A 写盘时要用它
 - **校验返回内容确为 PDF**：检查响应 `Content-Type` 是否为 `application/pdf`，或内容开头是否为 `%PDF-`。若是登录页/验证码页/HTML 错误页伪装的 200 响应，判定该渠道失败——记入「B 手动候选」列表，继续尝试下一个渠道，不重试同一渠道
 - 若该渠道明确需要人工点击/验证码/交互式操作才能拿到文件本身（例如落地页只有"Request full text"按钮）→ 直接记入「B 手动候选」列表，不算失败也不算成功，继续尝试下一个渠道
 
@@ -159,7 +159,11 @@ slug=$(echo "<论文标题>" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9一-�
 mkdir -p "<download_dir>/$slug"
 ```
 
-将下载到的 PDF 内容用 Write 工具写入 `<download_dir>/$slug/paper.pdf`。
+用 Bash 把 Step 4 中 WebFetch 报告的临时文件路径复制到目标位置（PDF 是二进制内容，不能用 Write 工具写入——Write 只接受文本，二进制字节会被破坏）：
+
+```bash
+cp "<WebFetch 报告的临时文件路径>" "<download_dir>/$slug/paper.pdf"
+```
 
 用 Write 工具写入 `<download_dir>/$slug/metadata.md`：
 
