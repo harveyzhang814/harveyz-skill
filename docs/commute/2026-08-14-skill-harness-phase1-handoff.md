@@ -2,7 +2,7 @@
 
 **日期**：2026-08-14
 **author 模型**：claude-opus-5
-**状态**：待执行 <!-- 待执行 → 执行中 → 待验收 → 已验收 / 打回 -->
+**状态**：已验收 <!-- 待执行 → 执行中 → 待验收 → 已验收 / 打回 -->
 **交接目的**：spec 与实施计划已由用户批准并提交，接手方按计划逐 task 实现第一期代码，原 session 按最小验收锚点验收。
 
 > **接手方须知**：你正在接手一个任务。本文档是完整交接与唯一权威入口：从头读到尾，按「工作流约定」开工，完成后等原 session 按「最小验收锚点」验收。
@@ -22,6 +22,25 @@
 7. 15 个 task 各自成 commit，`git log --oneline` 可见，全部通过仓库的 commit-msg hook
 
 第 5 条需要真模型调用（约 6 次），有成本。若因凭证/网络跑不通，**如实报告哪几条没跑、卡在哪**，不要跳过后声称完成。
+
+### 验收结果（2026-08-15）
+
+逐条实跑，全部通过：
+
+1. ✅ `npm test`：185 tests，178 pass，0 fail，7 skipped（e2e 全部 skip）。
+2. ✅ dry-run 输出 6 段，native 段含 `jail writes:` 且不含 skill 正文——实现方与 reviewer 各自独立验证。
+3. ✅ `coverage` 输出 39 行完整三态矩阵，0 个 `✓`——现场重新核实。
+4. ✅ `matrix.json` reason 清空 → `npm test` 变红（`仓库自带的 matrix.json 合法` 失败）；改回 → 恢复绿——现场重新核实，改动已还原。
+5. ✅ **真实 E2E 7/7 全绿**（`SKILL_HARNESS_E2E=1 node --test tests/harness/e2e.test.mjs`，exit 0，`builtinSkillFloor=15`）。首次真实跑通只有 3/7；接手方在用户指示下追查根因，独立复现定位并修复了 6 个真实 bug（`pi` 管道 stdio 死锁、`hermes` session-id 正则格式不符、`hermes` triggered 判据用错平台的工具名、`hermes` reply/`model` 字段提取遗漏 `system`/`result` 事件类型缺失的兜底、一处测试断言在数据缺失时"静默通过"的掩盖间隙），每个修复均有独立 review 通过。另确认 `pi` 偶发（约 1/7）上游网络抖动为真实上游问题、非本地代码缺陷，harness 的超时+kill 行为本身正确，不可结构性消除，已记录为已知限制。
+6. ✅ `grep -rE 'sk-ant|oat01|MINIMAX_CN_API_KEY=' ~/.hskill/skill-harness/` 无命中——覆盖全部 30 个真实运行产物目录（含本次调查产生的额外真实运行）。
+7. ✅ 15 个 task 各自成 commit，另加 7 个后续修复 commit（1 个 final review 修复 wave + 6 个真实 E2E 缺陷修复），全部通过 commit-msg hook。
+
+**结论：7 条硬判据全部达成，验收通过。**
+
+已知遗留、非阻塞项：
+- `hermesProfile.capabilities`（Task 3 的 L1 快照）把 `usage` 列为 hermes 能力之一，但真实抓取的 hermes trace 里完全没有 usage/turn-count 字段，这条能力声明可能不准确——留给下一阶段用同样的"重新实测再改"纪律处理，不在本次范围内强改。
+- `report.js` 的矩阵表格在 native/inject 双模式数据下的展示已在最终 review 修复轮中一并修好（6 列布局）。
+- 详见 worktree 内 `.superpowers/sdd/2026-08-14-skill-harness-phase1/progress.md` 的完整执行 ledger（含全部 15 个 task 的 review 记录、6 个真实 bug 的复现证据与修复过程）。
 
 ---
 
