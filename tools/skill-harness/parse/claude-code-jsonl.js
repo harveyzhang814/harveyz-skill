@@ -21,13 +21,27 @@ export function parseClaudeCodeJsonl(raw, { skillName } = {}) {
   const result = events.find(e => e.type === 'result')
 
   const toolCalls = []
+  let lastAssistantEvent = null
   for (const e of events) {
     if (e.type !== 'assistant') continue
+    lastAssistantEvent = e
     for (const block of e.message?.content ?? []) {
       if (block.type !== 'tool_use') continue
       toolCalls.push({ name: block.name, args: block.input ?? {}, ok: true, seq: toolCalls.length })
     }
   }
+
+  // 这个解析器是 claude 与 hermes 共用的（见文件头注释），但 hermes 的
+  // `sessions export --format trace` 没有 claude 的 `result` 事件——2026-08-15
+  // 真实 E2E 抓取确认，trace 里只有 user/assistant 消息事件。回退到最后一条
+  // assistant 事件的文本块拼接作为 reply；没有文本块时保持 null，绝不猜测或抛错。
+  const fallbackReply = lastAssistantEvent
+    ? (lastAssistantEvent.message?.content ?? [])
+        .filter(block => block.type === 'text')
+        .map(block => block.text)
+        .join('')
+        .trim() || null
+    : null
 
   // 空集合是"不知道"，不是"没触发"：零个可解析事件说明这次运行本身没抓到东西，
   // 不能拿空数组算出一个自信的 false 来冒充"确实没触发"。
@@ -57,7 +71,7 @@ export function parseClaudeCodeJsonl(raw, { skillName } = {}) {
     sessionId: system?.session_id ?? result?.session_id ?? null,
     model: system?.model ?? null,
     provider: null,   // claude 的输出不带 provider；显式 null 保证与 pi 解析器形状一致
-    reply: result?.result ?? null,
+    reply: result?.result || fallbackReply,
     triggered,
     toolCalls: noEvents ? null : toolCalls,
     turns: result?.num_turns ?? null,

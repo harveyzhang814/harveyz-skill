@@ -225,15 +225,21 @@ test('hermes: toolCalls 是 skill_view 与 read_file，按出现顺序编号', (
   assert.ok(r.toolCalls[1].args.path.endsWith('references/token.md'))
 })
 
-test('hermes: sessionId/model/reply/turns/usage/visibleSkills/isError 真实均为 null——trace 无 system/result 事件', () => {
+test('hermes: sessionId/model/turns/usage/visibleSkills/isError 真实均为 null——trace 无 system/result 事件', () => {
   const r = parseClaudeCodeJsonl(hermesFixture('probe-anchor-native.jsonl'), { skillName: 'probe-anchor' })
   assert.equal(r.sessionId, null)
   assert.equal(r.model, null)
-  assert.equal(r.reply, null)
   assert.equal(r.turns, null)
   assert.equal(r.usage, null)
   assert.equal(r.visibleSkills, null)
   assert.equal(r.isError, null)
+})
+
+// 2026-08-15 真实 E2E 抓取确认：trace 没有 `result` 事件，reply 靠回退到最后一条
+// assistant 事件的文本块拼接（见 claude-code-jsonl.js 的 fallbackReply 注释）。
+test('hermes: reply 无 result 事件时回退到最后一条 assistant 事件的文本块', () => {
+  const r = parseClaudeCodeJsonl(hermesFixture('probe-anchor-native.jsonl'), { skillName: 'probe-anchor' })
+  assert.equal(r.reply, 'BODY=BODY-4B21E8\nFILE=ANCHOR-7F3A9C')
 })
 
 test('hermes: provider 恒为 null，与 claude/pi 解析器形状一致', () => {
