@@ -2,16 +2,13 @@ import fs from 'fs-extra'
 import os from 'node:os'
 import path from 'node:path'
 import crypto from 'node:crypto'
-import { execFile } from 'node:child_process'
-import { promisify } from 'node:util'
+import { spawn } from 'node:child_process'
 import { claudeAdapter } from './adapters/claude.js'
 import { piAdapter } from './adapters/pi.js'
 import { hermesAdapter } from './adapters/hermes.js'
 import { buildPrompt } from './prompt.js'
 import { makeRecord } from './record.js'
 import { createJail, redactEnv } from './jail.js'
-
-const execFileAsync = promisify(execFile)
 
 export const ADAPTERS = { claude: claudeAdapter, pi: piAdapter, hermes: hermesAdapter }
 
@@ -61,6 +58,51 @@ export function resolveContentHash(ctx, skill) {
   return ctx.contentHashMap?.get(skill) ?? null
 }
 
+// `pi` (v0.82.1) hangs indefinitely when its stdout/stderr are plain OS pipes
+// (Node's default child_process stdio) — confirmed by direct reproduction.
+// Redirecting to real files instead of pipes sidesteps the hang, so every
+// platform's subprocess goes through this file-backed capture uniformly.
+// Files are read back only once, after the process has already exited, so
+// there's no unbounded-memory-while-still-running risk the way pipe
+// buffering had — the old `maxBuffer` cap is no longer needed.
+function runCaptured(bin, argv, { cwd, env, timeoutMs, outPath, errPath }) {
+  return new Promise(resolve => {
+    let outFd
+    let errFd
+    try {
+      outFd = fs.openSync(outPath, 'w')
+      errFd = fs.openSync(errPath, 'w')
+    } catch (err) {
+      resolve({ stdout: '', stderr: String(err.message), code: 1 })
+      return
+    }
+
+    const spawnOpts = { cwd, env, stdio: ['ignore', outFd, errFd] }
+    if (timeoutMs != null) {
+      spawnOpts.timeout = timeoutMs
+      spawnOpts.killSignal = 'SIGTERM'
+    }
+    const child = spawn(bin, argv, spawnOpts)
+
+    let settled = false
+    const finish = (code, errMessage) => {
+      if (settled) return
+      settled = true
+      try { fs.closeSync(outFd) } catch { /* already closed */ }
+      try { fs.closeSync(errFd) } catch { /* already closed */ }
+      let stdout = ''
+      let stderr = ''
+      try { stdout = fs.readFileSync(outPath, 'utf8') } catch { /* nothing written */ }
+      try { stderr = fs.readFileSync(errPath, 'utf8') } catch { /* nothing written */ }
+      resolve({ stdout, stderr: errMessage ?? stderr, code: code ?? 1 })
+    }
+    // 'close' fires after the stdio streams (our file fds) have finished —
+    // safer than 'exit' for making sure the file writes are flushed.
+    child.on('close', code => finish(code))
+    child.on('error', err => finish(1, String(err.message)))
+  })
+}
+
 async function runOne(cell, ctx) {
   const adapter = ADAPTERS[cell.platform]
   const { dir: jailDir, cleanup } = await createJail()
@@ -76,28 +118,27 @@ async function runOne(cell, ctx) {
     const plan = planCell(cell, { ...ctx, jailDir })
     const argv = [...plan.argv, ...extraArgs]
 
-    let stdout = ''
-    let stderr = ''
-    let exitCode = 0
-    try {
-      const r = await execFileAsync(BIN[cell.platform], argv, {
-        cwd: jailDir, env: plan.env, maxBuffer: 64 * 1024 * 1024, timeout: ctx.timeoutMs ?? 300000,
-      })
-      stdout = r.stdout
-      stderr = r.stderr
-    } catch (e) {
-      stdout = e.stdout ?? ''
-      stderr = e.stderr ?? String(e.message)
-      exitCode = e.code ?? 1
-    }
+    const r = await runCaptured(BIN[cell.platform], argv, {
+      cwd: jailDir, env: plan.env, timeoutMs: ctx.timeoutMs ?? 300000,
+      outPath: path.join(jailDir, 'stdout.log'), errPath: path.join(jailDir, 'stderr.log'),
+    })
+    const stdout = r.stdout
+    const stderr = r.stderr
+    const exitCode = r.code ?? 1
 
     let raw = stdout
     const collected = adapter.collect ? adapter.collect() : null
     if (collected === null && cell.platform === 'hermes') {
-      const list = await execFileAsync(BIN.hermes, ['sessions', 'list'], { cwd: jailDir, env: plan.env }).catch(() => ({ stdout: '' }))
+      const list = await runCaptured(BIN.hermes, ['sessions', 'list'], {
+        cwd: jailDir, env: plan.env,
+        outPath: path.join(jailDir, 'hermes-list-stdout.log'), errPath: path.join(jailDir, 'hermes-list-stderr.log'),
+      })
       const sid = adapter.parseSessionId(list.stdout)
       if (sid) {
-        const exp = await execFileAsync(BIN.hermes, adapter.collectArgs(sid), { cwd: jailDir, env: plan.env, maxBuffer: 64 * 1024 * 1024 }).catch(() => ({ stdout: '' }))
+        const exp = await runCaptured(BIN.hermes, adapter.collectArgs(sid), {
+          cwd: jailDir, env: plan.env,
+          outPath: path.join(jailDir, 'hermes-export-stdout.log'), errPath: path.join(jailDir, 'hermes-export-stderr.log'),
+        })
         raw = exp.stdout || stdout
       }
     }

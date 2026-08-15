@@ -7,7 +7,11 @@ import { parseClaudeCodeJsonl } from '../parse/claude-code-jsonl.js'
 // 白名单，不是整目录复制：只带凭证与模型配置，不带用户的 skills/SOUL.md/memory。
 const SEED_FILES = ['.env', 'auth.json', 'config.yaml']
 
-const UUID_RE = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i
+// Real hermes session IDs look like `20260815_055002_18cd05`
+// (YYYYMMDD_HHMMSS_ + 6 lowercase hex chars), not a UUID — confirmed against
+// real `hermes sessions list` output. UUID kept as a fallback alternative in
+// case a different hermes version/config ever produces UUID-style IDs.
+const SESSION_ID_RE = /\d{8}_\d{6}_[0-9a-f]{6}|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i
 
 export const hermesAdapter = {
   profile: hermesProfile,
@@ -48,7 +52,7 @@ export const hermesAdapter = {
   // -z 不打印 session id，所以 collect 先 sessions list。
   // jail 里每次运行都是全新 store，有且只有一个会话，因此这个做法是确定性的。
   parseSessionId(listOutput) {
-    const m = String(listOutput).match(UUID_RE)
+    const m = String(listOutput).match(SESSION_ID_RE)
     return m ? m[0] : null
   },
 

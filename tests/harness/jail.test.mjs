@@ -254,20 +254,26 @@ test('hermes: 不接受 systemAppend——该平台无 system prompt 追加通�
   assert.throws(() => hermesAdapter.args({ model: 'M', provider: 'P', positional: 'go', jailDir: '/t', systemAppend: 'X' }), /prompt-only/)
 })
 
-test('hermes: parseSessionId 从 sessions list 输出取 UUID', () => {
+test('hermes: parseSessionId 从 sessions list 输出取真实格式 ID', () => {
   const out = [
-    '                 Recent Sessions',
-    '┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━┓',
-    '┃ ID                                   ┃ Msgs ┃',
-    '┡━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━┩',
-    '│ 3f6c9c1e-2f2a-4a1b-9c3d-8e7f6a5b4c3d │ 6    │',
-    '└──────────────────────────────────────┴──────┘',
+    'Preview                                            Last Active   Src    ID',
+    '───────────────────────────────────────────────────────────────────────────────────────────────',
+    'run anchor probe                                   just now      cli    20260815_055002_18cd05',
   ].join('\n')
-  assert.equal(hermesAdapter.parseSessionId(out), '3f6c9c1e-2f2a-4a1b-9c3d-8e7f6a5b4c3d')
+  assert.equal(hermesAdapter.parseSessionId(out), '20260815_055002_18cd05')
 })
 
 test('hermes: parseSessionId 无会话时返回 null', () => {
   assert.equal(hermesAdapter.parseSessionId('no sessions found'), null)
+})
+
+test('hermes: parseSessionId 仍兼容 UUID 格式（回归防护）', () => {
+  const out = [
+    'Preview                                            Last Active   Src    ID',
+    '───────────────────────────────────────────────────────────────────────────────────────────────',
+    'run anchor probe                                   just now      cli    3f6c9c1e-2f2a-4a1b-9c3d-8e7f6a5b4c3d',
+  ].join('\n')
+  assert.equal(hermesAdapter.parseSessionId(out), '3f6c9c1e-2f2a-4a1b-9c3d-8e7f6a5b4c3d')
 })
 
 test('hermes: collectArgs 走 trace 格式导出到 stdout', () => {
