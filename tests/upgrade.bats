@@ -10,6 +10,7 @@ SKILL_SRC="${REPO_ROOT}/skills/research/survey-skillrepo"
 setup() {
   TEST_DIR="$(mktemp -d)"
   MOCK_HOME="${TEST_DIR}/home"
+  STDERR_FILE="${TEST_DIR}/upgrade-stderr"
   mkdir -p "${MOCK_HOME}/.claude/skills"
   mkdir -p "${MOCK_HOME}/.cursor/skills"
   mkdir -p "${MOCK_HOME}/.config/opencode/skills"
@@ -20,14 +21,14 @@ teardown() {
 }
 
 _upgrade() {
-  HOME="${MOCK_HOME}" node "${CLI}" upgrade "$@" 2>/tmp/bats-upgrade-stderr | cat
+  HOME="${MOCK_HOME}" node "${CLI}" upgrade "$@" 2>"${STDERR_FILE}" | cat
 }
 
 _upgrade_exit() {
-  HOME="${MOCK_HOME}" node "${CLI}" upgrade "$@" 2>/tmp/bats-upgrade-stderr
+  HOME="${MOCK_HOME}" node "${CLI}" upgrade "$@" 2>"${STDERR_FILE}"
 }
 
-_stderr() { cat /tmp/bats-upgrade-stderr; }
+_stderr() { cat "${STDERR_FILE}"; }
 
 _skill_version() {
   grep -o 'version: [^[:space:]]*' "$1" | head -1 | awk '{print $2}' | tr -d '"'
