@@ -43,6 +43,13 @@ export function parseClaudeCodeJsonl(raw, { skillName } = {}) {
         .trim() || null
     : null
 
+  // 这个解析器是 claude 与 hermes 共用的（见文件头注释），但 hermes 的
+  // `sessions export --format trace` 没有 claude 的 `system` 事件——2026-08-15
+  // 真实 E2E 抓取确认，与 reply 缺失是同一类根因（trace 里压根没有握手层元数据行）。
+  // 回退到最后一条 assistant 事件的 message.model 字段：模型在一次会话内不会变，
+  // 任取一条都行，这里复用上面已有的 lastAssistantEvent 与 reply 回退保持一致。
+  const fallbackModel = lastAssistantEvent?.message?.model ?? null
+
   // 空集合是"不知道"，不是"没触发"：零个可解析事件说明这次运行本身没抓到东西，
   // 不能拿空数组算出一个自信的 false 来冒充"确实没触发"。
   const noEvents = events.length === 0
@@ -69,7 +76,9 @@ export function parseClaudeCodeJsonl(raw, { skillName } = {}) {
 
   return {
     sessionId: system?.session_id ?? result?.session_id ?? null,
-    model: system?.model ?? null,
+    // system 事件存在即用它的 model（claude 路径，与之前完全一致，哪怕 model 是
+    // 空字符串也不落入 fallback）；不存在才走 fallbackModel（hermes 路径）。
+    model: system ? (system.model ?? null) : fallbackModel,
     provider: null,   // claude 的输出不带 provider；显式 null 保证与 pi 解析器形状一致
     reply: result ? (result.result ?? null) : fallbackReply,
     triggered,

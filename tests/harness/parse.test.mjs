@@ -203,8 +203,9 @@ test('空集合保险：hermes fixture 目录非空', () => {
 
 // hermes 真实抓取（2026-08-15，HOME=jail + --safe-mode + --yolo，
 // MiniMax-M2.7 / minimax-cn）：hermes 的 trace 里没有 claude 的
-// system/result 事件类型，所以 sessionId/model/reply/turns/usage/visibleSkills/
+// system/result 事件类型，所以 sessionId/reply/turns/usage/visibleSkills/
 // isError 全部合法地是 null——不是解析失败，是这个格式本来就不带这些信息。
+// model 例外：它从 assistant 事件的 message.model 回退拿到（见下方专门测试）。
 // triggered 能算出 true，靠的正是本次修的 skill_view 判据。
 
 test('hermes: triggered 判据是 skill_view 工具且 args.name 匹配（真实抓取，证明 bugfix）', () => {
@@ -225,14 +226,21 @@ test('hermes: toolCalls 是 skill_view 与 read_file，按出现顺序编号', (
   assert.ok(r.toolCalls[1].args.path.endsWith('references/token.md'))
 })
 
-test('hermes: sessionId/model/turns/usage/visibleSkills/isError 真实均为 null——trace 无 system/result 事件', () => {
+test('hermes: sessionId/turns/usage/visibleSkills/isError 真实均为 null——trace 无 system/result 事件', () => {
   const r = parseClaudeCodeJsonl(hermesFixture('probe-anchor-native.jsonl'), { skillName: 'probe-anchor' })
   assert.equal(r.sessionId, null)
-  assert.equal(r.model, null)
   assert.equal(r.turns, null)
   assert.equal(r.usage, null)
   assert.equal(r.visibleSkills, null)
   assert.equal(r.isError, null)
+})
+
+// 2026-08-15 真实 E2E 抓取确认：trace 没有 `system` 事件，model 靠回退到
+// 最后一条 assistant 事件的 message.model 字段（见 claude-code-jsonl.js 的
+// fallbackModel 注释）——与 reply 的 fallbackReply 是同一类修复。
+test('hermes: model 无 system 事件时回退到 assistant 事件的 message.model', () => {
+  const r = parseClaudeCodeJsonl(hermesFixture('probe-anchor-native.jsonl'), { skillName: 'probe-anchor' })
+  assert.equal(r.model, 'MiniMax-M2.7')
 })
 
 // 2026-08-15 真实 E2E 抓取确认：trace 没有 `result` 事件，reply 靠回退到最后一条
