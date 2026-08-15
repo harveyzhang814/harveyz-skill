@@ -22,6 +22,8 @@ SKILL2_SRC="${REPO_ROOT}/skills/writing/manage-dir"
 setup() {
   TEST_DIR="$(mktemp -d)"
   MOCK_HOME="${TEST_DIR}/home"
+  STDERR_FILE="${TEST_DIR}/install-stderr"
+  UNINSTALL_STDERR_FILE="${TEST_DIR}/uninstall-stderr"
   mkdir -p "${MOCK_HOME}/.claude/skills"
   mkdir -p "${MOCK_HOME}/.cursor/skills"
   mkdir -p "${MOCK_HOME}/.config/opencode/skills"
@@ -37,10 +39,10 @@ teardown() {
 
 # Run CLI non-interactively (pipe forces non-TTY); captures stdout.
 _install() {
-  HOME="${MOCK_HOME}" node "${CLI}" install "$@" 2>/tmp/bats-install-stderr | cat
+  HOME="${MOCK_HOME}" node "${CLI}" install "$@" 2>"${STDERR_FILE}" | cat
 }
 
-_stderr() { cat /tmp/bats-install-stderr; }
+_stderr() { cat "${STDERR_FILE}"; }
 
 # Extract the installed version from a SKILL.md (strips surrounding quotes).
 _skill_version() {
@@ -127,7 +129,7 @@ _skill_version() {
   local err
   HOME="${MOCK_HOME}" node "${CLI}" install \
     --skill "${SKILL1_NAME}" --target claude --scope user \
-    2>/tmp/bats-install-stderr >/dev/null | cat
+    2>"${STDERR_FILE}" >/dev/null | cat
   err="$(_stderr)"
   [[ "$err" == *"skipped"* ]] || [[ "$err" == *"up-to-date"* ]]
 }
@@ -199,7 +201,7 @@ _skill_version() {
 # ── uninstall skill ───────────────────────────────────────────────────────────
 
 _uninstall() {
-  HOME="${MOCK_HOME}" node "${CLI}" uninstall "$@" 2>/tmp/bats-uninstall-stderr | cat
+  HOME="${MOCK_HOME}" node "${CLI}" uninstall "$@" 2>"${UNINSTALL_STDERR_FILE}" | cat
 }
 
 

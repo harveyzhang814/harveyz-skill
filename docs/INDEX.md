@@ -22,6 +22,7 @@ methodology: diataxis
 | [how-to/use-hub.md](how-to/use-hub.md) | 如何安装和使用 hub：TUI 启动、项目注册、任务管理、分支列表与 push/pull 操作 |
 | [how-to/use-extract-cognition.md](how-to/use-extract-cognition.md) | 如何用 extract-cognition：模式 A/B 决策、--pass 分段、产出四文件该读哪个、怎么把认知动作手册用起来 |
 | [how-to/use-init-goal.md](how-to/use-init-goal.md) | 如何用 init-goal 为 /loop 生成结构化目标：模版选择、生成文件说明、修改目标 |
+| [how-to/use-skill-harness.md](how-to/use-skill-harness.md) | 如何用 skill-harness 跨平台测试 skill：四个子命令（dry-run/run/report/coverage）、matrix.json 排除声明、Phase 1 只跑探针 skill 的限制 |
 
 ## reference/ — 参考文档
 
@@ -37,6 +38,7 @@ methodology: diataxis
 | [reference/hub-reference.md](reference/hub-reference.md) | hub CLI 完整参考：projects/tasks/git 子命令、所有参数、JSON 输出格式、错误格式 |
 | [reference/todo-format-spec.md](reference/todo-format-spec.md) | TODO.md 文件结构、字段规范、todo_format.yaml 完整定义 |
 | [reference/todo-tool-reference.md](reference/todo-tool-reference.md) | todo-tool 数据模型（SQL）、CLI 接口、API 端点完整参考 |
+| [reference/reader-profile.md](reference/reader-profile.md) | 跟 Harvey 讲技术的校准基准（文档与对话通用）：读者认知边界、必须有/必须没有两张判据表、三层词汇与锚定规则、对话与长文档的场合差异 |
 
 ## adr/ — 架构决策记录
 

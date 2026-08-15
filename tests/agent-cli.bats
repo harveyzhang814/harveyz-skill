@@ -16,6 +16,7 @@ setup() {
   MOCK_SKILL_DIR="${MOCK_HOME}/.claude/skills"
   MOCK_TOOL_DIR="${MOCK_HOME}/.local/bin"
   MOCK_TOOL_DATA="${MOCK_HOME}/.local/share/hskill/tools"
+  STDERR_FILE="${TEST_DIR}/cli-stderr"
 
   mkdir -p "${MOCK_SKILL_DIR}"
   mkdir -p "${MOCK_TOOL_DIR}"
@@ -30,15 +31,15 @@ teardown() {
 
 _cli() {
   # Pipe through cat to force non-TTY on stdout
-  HOME="${MOCK_HOME}" node "${CLI}" "$@" 2>/tmp/bats-stderr | cat
+  HOME="${MOCK_HOME}" node "${CLI}" "$@" 2>"${STDERR_FILE}" | cat
 }
 
 _cli_exit() {
-  HOME="${MOCK_HOME}" node "${CLI}" "$@" 2>/tmp/bats-stderr
+  HOME="${MOCK_HOME}" node "${CLI}" "$@" 2>"${STDERR_FILE}"
 }
 
 _stderr() {
-  cat /tmp/bats-stderr
+  cat "${STDERR_FILE}"
 }
 
 # ── JSON output validity ───────────────────────────────────────────────────────

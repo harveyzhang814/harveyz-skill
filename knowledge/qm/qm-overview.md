@@ -8,6 +8,12 @@
 > - [[qm-turn-slice]]（纵切面——一条 Slack 消息从进入到回复送出，十九道闸门）
 > - [[qm-harness-layer]]（Harness 层——四适配器一套接口、tape 事件溯源、上下文压缩、冷启动重放）
 > - [[qm-run-lifecycle]]（执行内核运行时——蓝绿自我排空、两层租约、重试与回收、`routeWake` 并发策略、中断重入）
+> - [[qm-authz-layer]]（授权与安全层——身份等价、能力令牌四道闸门、ACL audience floor、命令反混淆、安全姿态与筛查、审计）
+> - [[qm-credentials-layer]]（凭证与外部连接层——借还协议、OAuth 客户端、加密盒、常驻/临时凭证、模型清单）
+> - [[qm-synthesis]]（综述——十五篇的可迁移做法按问题收敛，不按模块）
+> - [[qm-surface-layer]]（表面层——`plugins/` 的信任边界：唯一公网入口、内建 IdP、没有权力的管理面）
+> - [[qm-web-client]]（Web 客户端——`plugins/web-ui`：换掉 streamFn 的接缝、路由三分类、只读是产品决定）
+> - [[qm-skill-adaptation]]（纵切面——同一个 skill 怎么在四个异构 harness 上都能用：末端补偿、能力表的真实身份、三层一致性测试、以及 QM 没做的那一半）
 >
 > 调研对象：`yc-software/qm`（YC 出品的开源多人 agent harness）
 > 本地路径：`~/Repositories/qm`
@@ -366,6 +372,14 @@ flowchart LR
 | `classify/` | scope 分类器 |
 | `ratelimit/` | 限流 + 预算追踪（防花钱失控） |
 
+> 这一组已单独成篇，见 [[qm-authz-layer]]。九个目录合起来在回答同一个问题的五个互不信任的子问题：
+> 你是谁（`identity/`，10 秒 TTL）、你在哪（`directory/`，push 快照）、资源共享给谁（`acl/`，每回合重算）、
+> 这次调用被授权做什么（`auth/`，1 小时能力令牌 + 每次使用重新核对）、这段内容能不能当指令
+> （`security/` `policy/` `classify/`，单次）。`admin/` 与 `ratelimit/` 是治理与花钱的闸门，不在这条主线上。
+>
+> 表格里「留存策略」一项需要更正：`admin/retention.ts` 算的是 DAU / WAU / MAU 与周 cohort **留存分析报表**，
+> 不是数据保留期策略。`admin/` 范围内的五张事件表没有任何过期清理。
+
 #### C. 上下文解析 —— 「这一轮该带什么进模型」
 
 `resolution/` 是最能体现产品复杂度的模块，**已单独深入分析，见 [[qm-resolution-layer]]**：
@@ -399,6 +413,11 @@ flowchart LR
 > 这一组已拆成两篇深入分析：
 > - [[qm-execution-layer]]（sandbox / workspace / files / processes / tools）——能力协商式的 Sandbox 接口、四个后端、三层文件模型、用 shell 长出所有能力、路由与迁移、进程生命周期的三层真相
 > - [[qm-skills-layer]]（skills）——scope 所有权与遮蔽、状态机与能力授权、Pack 的供应链防护、两级物化与懒加载、`liveActor` 授权维度
+> - [[qm-autonomy-layer]]（自主工作层——cron 调度、monitor 轮询、`runTrigger` 主干、触发回合与人类回合的差集）
+> - [[qm-publish-layer]]（发布层——`publish` 把工作区目录变成持久内部 Web 应用：名字、版本、受众、视角）
+> - [[qm-surface-mirror]]（镜像层——`surface-cache/` 不是缓存；ambient 决定 AI 什么时候主动开口）
+> - [[qm-crosscutting]]（横切件——`util/`、`projects/`、`audit/`、`onboarding/`；一行代码的防线）
+> - [[qm-assembly-layer]]（装配层——五个顶层文件 + `deployment/`：词汇、旋钮、接线、交付、以及第二个进程）
 
 #### F. 凭证与外部服务
 
@@ -406,13 +425,37 @@ flowchart LR
 
 凭证的产品模型有意思：**共享凭证带「用途」（purpose）**——但 SECURITY.md 诚实承认「purpose 不是强制授权，它只是随凭证走的一条给模型的指令 + 一个审计字段」。
 
+> 这一组已单独成篇，见 [[qm-credentials-layer]]。主线是一个词：**借**——agent 从不拥有第三方凭证，
+> 只走「问（ask）→ 批（grant）→ 物化（materialize）→ 用掉（claim）」的借还协议。
+> `model/` 是这条主线的反面：平台自己的模型凭证不需要借，所以七个文件加起来比 `keychain.ts`
+> 一个文件还短——这个体量差本身就是论点。
+>
+> 上面这段描述有三处需要更正：`background-exec-broker.ts` 与 OAuth 毫无关系（broker 的是沙箱后台进程）；
+> `browser-session-store` 存的是 Playwright 的 cookie jar，不是用户登录会话；
+> `connector-status.ts` 在 `credentials/` 不在 `connectors/`，且存的是缓存不是凭证。
+
 #### G. 触达与投递 —— 「回复送到哪儿」
 
 `reach/`（解析收件人 / 频道 / 群，含成员校验与「群 DM 最多 8 人」这类产品规则）+ `delivery/` + `surfaces/`（Slack 安装、manifest、runtime）+ `triggers/`（consent notice、edit notice、keychain ask、provenance、run trigger）+ `insights/reach-denied-notifier`。
 
 #### H. 后台自动化 —— 「没人看着的时候」
 
-`cron/`（store、schedule、pg-boss 队列、scheduler）+ `monitors/`（broker、poller、store，即 watches）。对应工具面上的 `cron` 和 `watch`。
+`cron/`（store、schedule、pg-boss 队列、scheduler）+ `monitors/`（broker、poller、store，即 watches）。对应工具面上的 `cron` 和 `background`（`watch` / `unwatch` 两个 action，不是独立工具）。
+
+> **[[qm-autonomy-layer]] 的更正与补充。** 这个分组把 `triggers/` 划给了 G 组，
+> 但读下来 `triggers/run-trigger.ts` 才是 H 组的主干——`cron/` 和 `monitors/`
+> 都只是它的调用者，另外两个调用者是 `keychain-ask` 和 `secret-drop`。按调用
+> 关系而不是按「触达」这个词分，`triggers/` 应当归 H 组；G 组里真正属于投递的
+> 是 `reach/` 和 `delivery/`。
+>
+> H 组回答的问题也不是「后台自动化」这么宽。它的中心是一句话：
+> **调度器决定何时，`runTrigger` 决定此刻是否仍然合法**。cron 表里存的不是
+> 一个待执行的动作，是一个待重新验证的授权——三个月前建的 cron，人可能离职了、
+> 被移出频道了、目标频道可能变私有了、收件人可能改主意了，所以每次 fire 都要
+> 从头重问一遍那六个问题。
+>
+> 另外 `wake/`（3 个文件）在 A 组里只被当作「唤醒机制」提过一句，它和 H 组
+> 共用 `util/sweeper.ts` 与 `persistence/leader-lease.ts`，一并在那篇里覆盖了。
 
 #### I. 应用发布 —— 「把内部工具做出来并发出去」
 
@@ -448,9 +491,25 @@ AGENTS.md 是写给 coding agent 看的操作手册（`CLAUDE.md` 是它的 syml
 - [[qm-turn-slice]] —— 纵切面：一条 Slack 消息从进来到回复送出，十九道闸门（已完成）
 - [[qm-harness-layer]] —— Harness 层：四适配器、tape 事件溯源、上下文压缩、冷启动重放（已完成）
 - [[qm-run-lifecycle]] —— A 组运行时：`runs/` `sessions/` `wake/` `tasks/`，蓝绿自我排空、两层租约、两个重试计数器、中断重入（已完成）
-- **B 组** `identity/` `acl/` `directory/` `auth/` `admin/` `policy/` `security/` `classify/` `ratelimit/` —— 40 个文件，是未调研量里最大的一块，也是 scope 模型的执行侧。前八篇反复引用「授权」「posture」「audience floor 的上游」，但没有一篇真正打开过 `acl/` 与 `auth/`。**下一篇建议**（原计划的 `security-screener` + `classify/` + provenance 只是其中 5 个文件，建议扩成整组）
-- **F 组** `credentials/` `connectors/` `model/` —— 23 个文件；共享凭证的 purpose 语义、OAuth 与 connector、模型网关
-- **H 组** `cron/` + `monitors/` —— 自主工作；与本组 `wake/` 合看才完整
-- **I 组** `deploy/` `environments/` + **J 组** `persistence/` `idempotency/` `audit/` `onboarding/`
-- 分类遗漏：`util/`（13）、`surface-cache/`（6）、`deployment/`（5）、`projects/`（1）四个目录不在上面 A–J 任何一组里。注意 `deployment/` 与 I 组的 `deploy/` 不是同一个目录
-- 综述：把各篇散落的「可迁移做法」按问题（而非按模块）收敛成一份清单
+- [[qm-authz-layer]] —— B 组授权与安全层：`identity/` `acl/` `directory/` `auth/` `admin/` `policy/` `security/` `classify/` `ratelimit/`，能力令牌四道闸门、audience floor 的执行侧、命令反混淆、安全姿态与影子筛查（已完成）
+- [[qm-credentials-layer]] —— F 组凭证与外部连接层：`credentials/` `connectors/` `model/`，借还协议、OAuth 单飞刷新、HKDF 用途隔离、常驻/临时凭证迁移、模型清单（已完成）
+- [[qm-autonomy-layer]] —— H 组自主工作层：`cron/` `monitors/` `triggers/` `wake/`，`runTrigger` 主干、时间的两种语义、两套调度引擎与租约毒丸、三层幂等、给模型的情境说明书、沉默作为一等结果、触发回合与人类回合的差集（已完成）
+- [[qm-publish-layer]] —— I 组发布层：`deploy/` `environments/`，两个版本指针、git 作为版本存储、86 行与 664 行的两个 provider、默认受众的差量重算、owner shell、三扇门鉴权（已完成）
+- [[qm-surface-mirror]] —— 镜像层：`surface-cache/`，平台无关抽象、单调合并的 upsert、双实现契约与它的偏差、ambient 判官、把模型每次自主决定都存下来（已完成）
+- [[qm-crosscutting]] —— 横切件：`util/`（13）、`projects/`（1）、`audit/`（1）、`onboarding/`（1），一行代码的防线、两种 ReDoS 答案、`swallow` 约定、伪装成 scope 的托管群组（已完成）
+- [[qm-assembly-layer]] —— 装配层：五个顶层文件 `wiring.ts` `config.ts` `types.ts` `egress-authz-main.ts` `index.ts` + `deployment/`，三条切换轴、状态孪生与能力缺席、九处延迟绑定、什么该崩什么该警告、装机定制层、出网执法的第二个进程（已完成）
+
+- [[qm-synthesis]] —— 综述：把十五篇里散落的约 330 条可迁移做法按**问题**（而非按模块）收敛。十个反复出现的答案、一个反复出现的失败、七条只出现一次但值得单拎的、以及这些做法失效的四个前提（已完成）
+
+- [[qm-surface-layer]] —— 表面层：`plugins/chassis` `plugins/portal` `plugins/auth` `plugins/admin`（4043 行 TS），「唯一公网入口」被兑现成的七条约束、请求侧白名单与响应侧删除名单、路由只决定一次、内建 OIDC 服务端而不是客户端分支、一次性令牌桶限流、三层 fail-closed 链（已完成）
+
+**`src/` 已全部覆盖；`plugins/` 覆盖了信任边界的那一半。** 前十五篇按模块覆盖 A–J 十组 + 四个未分类目录 + 五个从未进入分组的顶层文件；第十六篇不覆盖新代码，按问题重排；第十七篇转向 `plugins/`。
+
+- [[qm-web-client]] —— Web 客户端：`plugins/web-ui`（服务端 1948 行 + 桥 1381 行，源码共 18,772 行），把 Pi `Agent` 的 `streamFn` 换成一次 HTTP 并丢弃它拼好的上下文、core 侧路由的三分类与「未分类的写即最严」、进程内索引作为快路径、只读是产品决定；§6 补了渲染不可信内容的三层防线——CSP 管能不能执行、DOMPurify 管长什么样、`sandbox` 指令管算不算同源（已完成）
+
+**`src/` 与 `plugins/` 的服务端部分至此全部读过。**
+
+**仍未覆盖：** `plugins/web-ui` 的 55 个前端组件（约 15,400 行 Lit）、`cli/`（109 文件）、`scripts/`（46 个）、`skills-seed/`（79 文件）。原先标为值得一看的那个 16 行 markdown 净化器**已查完**（[[qm-web-client]] §6）：它是接线不是净化器，真正的第一层是 CSP；留下的缝是 `img-src https:` 允许的自动外带。
+
+> 上面「阅读范围」一栏写的 `plugins/*/README.md` 是第一篇当时的范围。
+> 到 [[qm-surface-layer]] 为止，`plugins/` 里除 `web-ui` 外的源码已经逐文件读过。

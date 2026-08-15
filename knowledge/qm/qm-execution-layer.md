@@ -8,6 +8,16 @@
 > - [[qm-turn-slice]]（纵切面——沙箱 provision 与命令闸在 turn 时序里的位置）
 > - [[qm-harness-layer]]（Harness 层——`ToolContext` 的另一端，以及同构的能力协商 profile）
 > - [[qm-run-lifecycle]]（执行内核运行时——沙箱进程回收与 run 回收是两套独立的 reaper）
+> - [[qm-authz-layer]]（授权与安全层——`createSecretValueMasker` 在沙箱回显里遮蔽密钥；命令策略的裁决由沙箱执行）
+> - [[qm-credentials-layer]]（凭证层——`renderUseScript` 生成的脚本在沙箱里执行；假 HOME 的清理依赖沙箱销毁）
+> - [[qm-autonomy-layer]]（自主工作层——monitor 观察的正是执行层起的后台进程）
+> - [[qm-publish-layer]]（发布层——`publish` 的输入是工作区目录，两者生命周期恰好相反）
+> - [[qm-surface-mirror]]（镜像层——ambient 主动回合也会起沙箱，但走的是自动回合那套约束）
+> - [[qm-crosscutting]]（横切件——`shq` 是所有 shell 拼接的正确性所在）
+> - [[qm-assembly-layer]]（装配层——沙箱是三选一而非二选一；出网策略在第二个进程里被执行）
+> - [[qm-synthesis]]（综述——本篇的能力协商 profile 是全仓三处同构之一，见「这个能力可能不在」一章）
+> - [[qm-surface-layer]]（表面层——沙箱之外，人从哪里进来）
+> - [[qm-web-client]]（Web 客户端——真正的循环跑在这一层的沙箱里，浏览器一侧是影子）
 >
 > 调研对象：`yc-software/qm` 的 `src/sandbox/`、`src/workspace/`、`src/files/`、`src/processes/`、`src/tools/`
 > 本地路径：`~/Repositories/qm`

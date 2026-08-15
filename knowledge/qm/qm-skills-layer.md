@@ -8,6 +8,16 @@
 > - [[qm-turn-slice]]（纵切面——技能索引与懒加载在 turn 时序里的位置）
 > - [[qm-harness-layer]]（Harness 层——技能索引进的那个 systemPrompt 由谁消费）
 > - [[qm-run-lifecycle]]（执行内核运行时——技能物化发生在 `GapPhase.skills_materialize` 相）
+> - [[qm-authz-layer]]（授权与安全层——skill 共享走 `grantsOfKind("skill", ...)`，`skill:` 前缀的 grant 只能由 org 授出）
+> - [[qm-credentials-layer]]（凭证层——skill 使用组织凭证走 broker 通道，不经过借还协议）
+> - [[qm-autonomy-layer]]（自主工作层——触发回合缺 `liveActor`，因此不能共享或提升 skill）
+> - [[qm-publish-layer]]（发布层——app 与 skill 同属 artifact，共用 ACL 与 home scope 概念）
+> - [[qm-surface-mirror]]（镜像层——频道常驻指令是 skill 之外的另一处频道级行为配置）
+> - [[qm-crosscutting]]（横切件——`pack-fetcher` 的 SSRF 判定用 `isPrivateNetworkIp`）
+> - [[qm-assembly-layer]]（装配层——`deployment/` 会往技能注册表种子，四层碰撞检查 + 舰队级锁）
+> - [[qm-synthesis]]（综述——本篇的内容哈希幂等是「用内容算身份」九次出现之一）
+> - [[qm-surface-layer]]（表面层——插件用的是另一套 `plugins/chassis` 词汇，不共享 core 的 util）
+> - [[qm-web-client]]（Web 客户端——斜杠命令只下发 name/description/scope，技能正文不进浏览器）
 >
 > 调研对象：`yc-software/qm` 的 `src/skills/`
 > 本地路径：`~/Repositories/qm`
