@@ -13,6 +13,8 @@
 > - [[qm-credentials-layer]]（凭证层——借还协议、OAuth、加密盒、连接器状态缓存）
 > - [[qm-autonomy-layer]]（自主工作层——cron、monitor、触发器主干、无人在场的回合）
 > - [[qm-publish-layer]]（发布层——`publish` 把工作区目录变成持久内部 Web 应用）
+> - [[qm-crosscutting]]（横切件——`admin/scoped-event-sink.ts` 已有通用事件汇工厂，那两个账本没用它）
+> - [[qm-assembly-layer]]（装配层——`liveFallback` 那段翻译逻辑住在 `wiring.ts` 里）
 >
 > 调研对象：`yc-software/qm`（YC 出品的开源多人 agent harness）
 > 本地路径：`~/Repositories/qm`

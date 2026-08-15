@@ -13,6 +13,8 @@
 > - [[qm-autonomy-layer]]（自主工作层——`scopeFloor` / `scopeShared` 传下去的 audience 就是权限下界的实参）
 > - [[qm-publish-layer]]（发布层——`environments/` 决定 rw 层用哪个 scope 的工作区）
 > - [[qm-surface-mirror]]（镜像层——频道常驻指令不走 `Resolution`，是第二条频道级 prompt 注入路径）
+> - [[qm-crosscutting]]（横切件——`projects/` 是 `managedGroups` 的唯一实现，命中即短路 directory）
+> - [[qm-assembly-layer]]（装配层——装机层的审批只有 `require_approval`/`deny`，收紧代数在配置层的落点）
 >
 > 调研对象：`yc-software/qm` 的 `src/resolution/`
 > 本地路径：`~/Repositories/qm`

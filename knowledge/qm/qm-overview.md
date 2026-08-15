@@ -412,6 +412,8 @@ flowchart LR
 > - [[qm-autonomy-layer]]（自主工作层——cron 调度、monitor 轮询、`runTrigger` 主干、触发回合与人类回合的差集）
 > - [[qm-publish-layer]]（发布层——`publish` 把工作区目录变成持久内部 Web 应用：名字、版本、受众、视角）
 > - [[qm-surface-mirror]]（镜像层——`surface-cache/` 不是缓存；ambient 决定 AI 什么时候主动开口）
+> - [[qm-crosscutting]]（横切件——`util/`、`projects/`、`audit/`、`onboarding/`；一行代码的防线）
+> - [[qm-assembly-layer]]（装配层——五个顶层文件 + `deployment/`：词汇、旋钮、接线、交付、以及第二个进程）
 
 #### F. 凭证与外部服务
 
@@ -490,7 +492,9 @@ AGENTS.md 是写给 coding agent 看的操作手册（`CLAUDE.md` 是它的 syml
 - [[qm-autonomy-layer]] —— H 组自主工作层：`cron/` `monitors/` `triggers/` `wake/`，`runTrigger` 主干、时间的两种语义、两套调度引擎与租约毒丸、三层幂等、给模型的情境说明书、沉默作为一等结果、触发回合与人类回合的差集（已完成）
 - [[qm-publish-layer]] —— I 组发布层：`deploy/` `environments/`，两个版本指针、git 作为版本存储、86 行与 664 行的两个 provider、默认受众的差量重算、owner shell、三扇门鉴权（已完成）
 - [[qm-surface-mirror]] —— 镜像层：`surface-cache/`，平台无关抽象、单调合并的 upsert、双实现契约与它的偏差、ambient 判官、把模型每次自主决定都存下来（已完成）
-- **剩余** —— 两块：
-  - **顶层文件**（5 个 3235 行）—— 这批**从未出现在 A–J 分组里**，是本次调研最大的一处遗漏：`wiring.ts`（1490，全仓唯一装配点，`BuiltApp` 就是组件清单）、`config.ts`（859，约 120 个字段）、`types.ts`（488，领域词汇表）、`egress-authz-main.ts`（251，**第二个进程入口**，沙箱出网的实际执法点）、`index.ts`（147）。加上 `deployment/`（5 文件 1647 行，与 `deploy/` 完全无关，是 QM 装机本身的配置层：工具描述符、密钥闸门、上线冒烟检查）
-  - **收尾**：`util/`（13 文件 357 行，其中 `safe-regex.ts` 的手写 ReDoS 扫描器和 `network.ts` 的 SSRF 网段表是真内容）、`projects/`（1 文件 236 行，`managedGroups` 的唯一实现）、`audit/`（44 行接口 + 内存兜底，真实现在 `admin/postgres-audit-log.ts`）、`onboarding/`（75 行，状态编码在 memory 文本里）
-- 综述：把各篇散落的「可迁移做法」按问题（而非按模块）收敛成一份清单
+- [[qm-crosscutting]] —— 横切件：`util/`（13）、`projects/`（1）、`audit/`（1）、`onboarding/`（1），一行代码的防线、两种 ReDoS 答案、`swallow` 约定、伪装成 scope 的托管群组（已完成）
+- [[qm-assembly-layer]] —— 装配层：五个顶层文件 `wiring.ts` `config.ts` `types.ts` `egress-authz-main.ts` `index.ts` + `deployment/`，三条切换轴、状态孪生与能力缺席、九处延迟绑定、什么该崩什么该警告、装机定制层、出网执法的第二个进程（已完成）
+
+**`src/` 已全部覆盖。** 十五篇合计覆盖 A–J 十组 + 四个未分类目录 + 五个从未进入分组的顶层文件。
+
+- 唯一剩下的：综述——把十五篇里散落的可迁移做法按问题（而非按模块）收敛成一份清单

@@ -13,6 +13,8 @@
 > - [[qm-autonomy-layer]]（自主工作层——cron 的跨次记忆就是工作区磁盘，不走记忆层机制）
 > - [[qm-publish-layer]]（发布层——已发布应用的持久盘 `$DATA_DIR` 与记忆层无关，是另一条持久化路径）
 > - [[qm-surface-mirror]]（镜像层——聊天历史的本地权威副本，与记忆层是两套独立的「记住」）
+> - [[qm-crosscutting]]（横切件——`countTokens` 的采样外推；`onboarding` 状态编码在 memory 文本里）
+> - [[qm-assembly-layer]]（装配层——记忆服务在 `wiring.ts` 里的 postgres/内存二选一）
 >
 > 调研对象：`yc-software/qm` 的 `src/memory/`
 > 本地路径：`~/Repositories/qm`

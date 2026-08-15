@@ -13,6 +13,8 @@
 > - [[qm-autonomy-layer]]（自主工作层——触发回合缺 `liveActor`，因此不能共享或提升 skill）
 > - [[qm-publish-layer]]（发布层——app 与 skill 同属 artifact，共用 ACL 与 home scope 概念）
 > - [[qm-surface-mirror]]（镜像层——频道常驻指令是 skill 之外的另一处频道级行为配置）
+> - [[qm-crosscutting]]（横切件——`pack-fetcher` 的 SSRF 判定用 `isPrivateNetworkIp`）
+> - [[qm-assembly-layer]]（装配层——`deployment/` 会往技能注册表种子，四层碰撞检查 + 舰队级锁）
 >
 > 调研对象：`yc-software/qm` 的 `src/skills/`
 > 本地路径：`~/Repositories/qm`

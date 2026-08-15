@@ -13,6 +13,8 @@
 > - [[qm-credentials-layer]]（凭证层——借还协议、OAuth、加密盒、连接器状态缓存）
 > - [[qm-autonomy-layer]]（自主工作层——cron、monitor、触发器主干、无人在场的回合）
 > - [[qm-surface-mirror]]（镜像层——同为 Postgres 双实现模式，但那里是编排，这里是事件合并）
+> - [[qm-crosscutting]]（横切件——`shq`、`proxyHeaders` 的 `extra` 参数、双层锁模式）
+> - [[qm-assembly-layer]]（装配层——`src/deployment/` 与 `src/deploy/` 名字接近而毫无关系）
 >
 > 调研对象：`yc-software/qm`（YC 出品的开源多人 agent harness）
 > 本地路径：`~/Repositories/qm`

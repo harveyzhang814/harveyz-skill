@@ -13,6 +13,8 @@
 > - [[qm-autonomy-layer]]（自主工作层——monitor 观察的正是执行层起的后台进程）
 > - [[qm-publish-layer]]（发布层——`publish` 的输入是工作区目录，两者生命周期恰好相反）
 > - [[qm-surface-mirror]]（镜像层——ambient 主动回合也会起沙箱，但走的是自动回合那套约束）
+> - [[qm-crosscutting]]（横切件——`shq` 是所有 shell 拼接的正确性所在）
+> - [[qm-assembly-layer]]（装配层——沙箱是三选一而非二选一；出网策略在第二个进程里被执行）
 >
 > 调研对象：`yc-software/qm` 的 `src/sandbox/`、`src/workspace/`、`src/files/`、`src/processes/`、`src/tools/`
 > 本地路径：`~/Repositories/qm`

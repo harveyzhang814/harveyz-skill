@@ -13,6 +13,8 @@
 > - [[qm-autonomy-layer]]（自主工作层——同一套 `leaderLease`，保护的是「谁来扫表」这个角色）
 > - [[qm-publish-layer]]（发布层——`advisory-lock` 与 `leader-lease` 的分工，以及令牌版本位的正面写法）
 > - [[qm-surface-mirror]]（镜像层——ambient 主动回合会 steer 进正在跑的同容器 run）
+> - [[qm-crosscutting]]（横切件——`swallow` 约定、`createKeyedQueue`、`sweeper` 的实现）
+> - [[qm-assembly-layer]]（装配层——十个 sweeper 的间隔、关停五阶段、`stopWithBackstop` 三层兜底）
 >
 > 调研对象：`yc-software/qm`（YC 出品的开源多人 agent harness）
 > 本地路径：`~/Repositories/qm`

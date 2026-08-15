@@ -13,6 +13,8 @@
 > - [[qm-autonomy-layer]]（自主工作层——同一条主干的另一个入口：无人说话时回合从哪来）
 > - [[qm-publish-layer]]（发布层——`publish` 工具在回合内的落点，以及回合结束后继续存在的东西）
 > - [[qm-surface-mirror]]（镜像层——同一条消息的另一个去向：留档并交给 ambient 判官）
+> - [[qm-crosscutting]]（横切件——`message-tag.ts` 的 `<message from=...>` 是消息渲染格式）
+> - [[qm-assembly-layer]]（装配层——`TurnRequest` 53 个字段的定义处，以及组件从哪来）
 >
 > 调研对象：`yc-software/qm` 的 turn 全链路
 > 本地路径：`~/Repositories/qm`

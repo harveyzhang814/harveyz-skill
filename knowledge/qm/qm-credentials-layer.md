@@ -13,6 +13,8 @@
 > - [[qm-autonomy-layer]]（自主工作层——凭证审批的异步通知边：`createAskExpirySweep` 挂在调度器上）
 > - [[qm-publish-layer]]（发布层——`viewer-session` 的 HMAC 用途派生是 HKDF 域分离的廉价版）
 > - [[qm-surface-mirror]]（镜像层——ambient 主动回合是自动回合，凭证同意被硬性 403）
+> - [[qm-crosscutting]]（横切件——`Math.max` 钳制手法的另一个实例：防时钟回拨）
+> - [[qm-assembly-layer]]（装配层——没有 `CONNECTOR_SECRET_KEY` 时整个 keychain 从 `BuiltApp` 消失）
 >
 > 调研对象：`yc-software/qm`（YC 出品的开源多人 agent harness）
 > 本地路径：`~/Repositories/qm`

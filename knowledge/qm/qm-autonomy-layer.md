@@ -13,6 +13,8 @@
 > - [[qm-credentials-layer]]（凭证层——借还协议、OAuth、加密盒、连接器状态缓存）
 > - [[qm-publish-layer]]（发布层——共用两把 Postgres 锁；`publish` 的 upsert 与 `cron` 的先查后建成对照）
 > - [[qm-surface-mirror]]（镜像层——「什么时候主动说话」的第三种答案：群里有人说了值得回应的话）
+> - [[qm-crosscutting]]（横切件——`hashId` 的 NUL 分隔符；`cron-store` 与 `project-store` 对 CAS 的相反态度）
+> - [[qm-assembly-layer]]（装配层——scheduler 的 pg-boss 队列在什么条件下才存在）
 >
 > 调研对象：`yc-software/qm`（YC 出品的开源多人 agent harness）
 > 本地路径：`~/Repositories/qm`
