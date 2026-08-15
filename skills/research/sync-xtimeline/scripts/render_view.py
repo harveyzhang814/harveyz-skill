@@ -28,6 +28,7 @@ PAGE_TEMPLATE = """<!DOCTYPE html>
 <html lang="zh">
 <head>
 <meta charset="utf-8">
+<meta name="color-scheme" content="dark">
 <title>X 追更历史</title>
 <style>
 {css}
@@ -43,21 +44,30 @@ PAGE_TEMPLATE = """<!DOCTYPE html>
 """
 
 CSS = """
+:root {
+  color-scheme: dark;
+  --bg: #000000;
+  --text: #e7e9ea;
+  --secondary: #71767b;
+  --border: #2f3336;
+  --accent: #1d9bf0;
+  --topbar-bg: rgba(0, 0, 0, 0.65);
+}
 * { box-sizing: border-box; }
 body {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   max-width: 600px;
   margin: 0 auto;
   padding: 0 0 2rem;
-  color: #0f1419;
-  background: #fff;
+  color: var(--text);
+  background: var(--bg);
 }
 header.topbar {
   position: sticky; top: 0; z-index: 10;
-  background: rgba(255, 255, 255, 0.85);
+  background: var(--topbar-bg);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  border-bottom: 1px solid #eff3f4;
+  border-bottom: 1px solid var(--border);
   padding: 0.9rem 1rem;
   font-size: 1.15rem;
   font-weight: 800;
@@ -67,12 +77,12 @@ h2.handle {
   font-size: 1.05rem;
   font-weight: 800;
   padding: 0.7rem 0;
-  border-bottom: 1px solid #eff3f4;
+  border-bottom: 1px solid var(--border);
   margin-top: 1.5rem;
 }
 .timeline { display: flex; flex-direction: column; }
-article.tweet { border-bottom: 1px solid #eff3f4; padding: 0.7rem 0; }
-.caption { font-size: 0.8rem; font-weight: 700; color: #536471; margin: 0 0 0.4rem calc(2.5rem + 0.75rem); }
+article.tweet { border-bottom: 1px solid var(--border); padding: 0.7rem 0; }
+.caption { font-size: 0.8rem; font-weight: 700; color: var(--secondary); margin: 0 0 0.4rem calc(2.5rem + 0.75rem); }
 .tweet-row { display: flex; gap: 0.75rem; }
 .avatar {
   flex: 0 0 auto;
@@ -84,14 +94,14 @@ article.tweet { border-bottom: 1px solid #eff3f4; padding: 0.7rem 0; }
 }
 .tweet-main { flex: 1 1 auto; min-width: 0; padding-top: 0.05rem; }
 .tweet-header { display: flex; align-items: baseline; gap: 0.35rem; flex-wrap: wrap; }
-.tweet-header .name { font-weight: 800; font-size: 0.95rem; }
-.tweet-header .ts { color: #536471; font-size: 0.9rem; text-decoration: none; }
+.tweet-header .name { font-weight: 800; font-size: 0.95rem; color: var(--text); }
+.tweet-header .ts { color: var(--secondary); font-size: 0.9rem; text-decoration: none; }
 .tweet-header .ts::before { content: "·"; margin-right: 0.35rem; }
 .tweet-header .ts:hover { text-decoration: underline; }
-.reply-to { color: #536471; font-size: 0.9rem; margin: 0.05rem 0 0.25rem; }
+.reply-to { color: var(--secondary); font-size: 0.9rem; margin: 0.05rem 0 0.25rem; }
 .tweet-text { font-size: 0.95rem; line-height: 1.5; margin: 0.15rem 0 0.5rem; white-space: pre-wrap; }
 .quote-card {
-  border: 1px solid #eff3f4;
+  border: 1px solid var(--border);
   border-radius: 0.9rem;
   padding: 0.6rem 0.8rem;
   margin: 0.2rem 0 0.5rem;
@@ -105,12 +115,12 @@ article.tweet { border-bottom: 1px solid #eff3f4; padding: 0.7rem 0; }
   display: flex; align-items: center; justify-content: center;
   font-weight: 700; font-size: 0.65rem;
 }
-.quote-card .name { font-weight: 700; font-size: 0.85rem; }
-.quote-card .ts { color: #536471; font-size: 0.8rem; }
+.quote-card .name { font-weight: 700; font-size: 0.85rem; color: var(--text); }
+.quote-card .ts { color: var(--secondary); font-size: 0.8rem; }
 .quote-card .ts::before { content: "·"; margin-right: 0.3rem; }
-.quote-card .text { font-size: 0.85rem; line-height: 1.4; margin-top: 0.2rem; }
-.handle-meta { color: #536471; font-size: 0.85rem; font-weight: 400; margin-left: 0.4rem; }
-.empty { color: #536471; padding: 2rem 0; }
+.quote-card .text { font-size: 0.85rem; line-height: 1.4; margin-top: 0.2rem; color: var(--text); }
+.handle-meta { color: var(--secondary); font-size: 0.85rem; font-weight: 400; margin-left: 0.4rem; }
+.empty { color: var(--secondary); padding: 2rem 0; }
 """
 
 
