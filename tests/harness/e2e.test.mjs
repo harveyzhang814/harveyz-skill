@@ -106,6 +106,7 @@ test('E2E: claude 的 builtinSkillFloor 实测值仍是 15', { skip: !ENABLED },
 test('E2E: 三平台实测 model 与请求一致', { skip: !ENABLED }, async () => {
   const { records } = await runMatrix(cells('native'), await baseCtx())
   for (const r of records) {
+    assert.ok(!r.unavailable.includes('model'), `${r.platform}: model data was not captured (subprocess output missing or timeout)`)
     assert.equal(r.modelMismatch, false, `${r.platform}: requested ${MODEL}, got ${r.model}`)
   }
 })
