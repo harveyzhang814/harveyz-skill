@@ -2,35 +2,31 @@
 
 ## 🚧 待开发
 
----
+### 按 description-trigger-role 研究优化所有 skill 的 description
+**优先级**: P3 | **日期**: 2026-07-04
 
-## ✅ 已完成
-
-### 约定 skill 任务在 session 中的回报信息格式
-**完成日期**: 2026-07-02
-
-以 extract-url 为例落地：新增 `count_article_stats.py` 统计字符/代码块/图片；SKILL.md 步骤 4 定义四种状态卡片（完成/失败/部分完成/已跳过）；批量流程每篇即时输出 + 汇总行；通用卡片壳规范写入 `knowledge/skill-philosophy/04-completion-report/standard.md`。
+根据 `knowledge/skill-philosophy/07-description-trigger-role` 的研究结论，审视并优化 `skills/` 下所有 Skill 的 description 字段：移除操作内容与工作流摘要，改写为纯触发条件语言，补充合法额外信息（症状/情境/可达性声明）。
 
 ---
 
-### 重构 extract-url tag 为固定集与候选集分离
-**完成日期**: 2026-07-02
+### [x] 调整 extract-url 标签生成顺序为先原文后翻译
+**优先级**: P1 | **日期**: 2026-07-08
 
-`article_utils.py` 实现 `load_fixed_tags` / `move_fixed_from_candidate` / `enforce_tag_separation`；`validate_article.py` 调用兜底移位；`file-format.md` 更新 `tags` / `candidate_tags` 字段说明及 `fixed_tags.txt` 格式规范。词表路径：`~/.hskill/url-extract/fixed_tags.txt`（需手动填入初始词条）。
-
----
-
-### 开发参考 grill-me 风格的 question-me skill
-**完成日期**: 2026-07-01
-
-实现了 question-me skill（`skills/coding/question-me/`）：Phase 0-4 流程（自查 → 意图校准 3 问 → 动态深挖 → 摘要确认），内部决策树格式（`[status] id=XX [dep=YY] 文本`），render_tree.py 生成可视化 HTML（card 树 + 自动刷新），9 项单元测试覆盖解析/树构建/环检测。
+`extract-url` skill 当前 Subagent 2 流程是先翻译全文（阶段 1），再基于译文生成 `description`/`tags`/`candidate_tags`（阶段 2）。应改为先基于原文生成 `description` 和 `tags`/`candidate_tags`，再翻译全文，调整 SKILL.md 中「翻译 + 打标」步骤的阶段顺序与提示文案。
 
 ---
 
-### 设计多平台 Skill 补丁的同步与生命周期管理机制
-**完成日期**: 2026-07-01
+### [x] 调研 extract-url 索引存储方案
+**优先级**: P2 | **日期**: 2026-07-17
 
-实现了完整的热修生命周期管理方案：fix-skill v2.1.0 自动写入 HOTFIXES.md，新增 sync-hotfix v1.1.1 处理合并回源（HOTFIXES.md 扫描 + Step 5 全文件 diff 安全网）。方法论文档见 `docs/explanation/skill-hotfix-lifecycle.md`，格式规范见 `docs/reference/hotfix-lifecycle.md`。
+extract-url 目前用集中式 SQLite（`url-index.db`）维护所有文章的索引。调研方向：改成每个文章文件夹下维护独立的 `meta.json` 是否更合适，对比两种方案在查询、并发写入、迁移成本、与 Obsidian 生态兼容性等维度的优劣，产出结论后再决定是否实施。
+
+---
+
+### 为 manage-dir 添加文档 formatter 维护机制
+**优先级**: P1 | **日期**: 2026-08-01
+
+`manage-dir` skill 目前缺少针对每份文档的 formatter 维护机制。在实际使用过程中会沉淀大量方法论，包括对文档本身的定义方式——例如「Explanation」这类分类标签不够直观地表达出人管理视角与 Agent 方法论视角之间的侧重差异。这类定义应放进对应文档的 formatter 中管理，而非停留在笼统的分类标签上。
 
 ---
 
@@ -120,3 +116,14 @@ sync-agent 已完成，现在将 Hermes agent 配置目录 `~/.hermes` 纳入同
 
 **期望行为**：`hskill uninstall p-launch` 清理上述所有文件，并从 `~/.zshrc` 移除 snippet。  
 **扩展点**：tool 可在 `tool.json` 里声明 `uninstallPaths[]`，installer 统一处理。
+
+---
+
+## harveyz-skill — pdf-math-translate skill 优化
+
+### 审查优化 pdf-math-translate skill 内容质量
+**优先级**: P2 | **日期**: 2026-07-16
+
+刚从外部贡献进 `skills/research/pdf-math-translate/` 的 skill，需要全面内容质量审查：SKILL.md 中所有可执行路径硬编码为另一台机器的用户名（`/Users/harveyopenclaw/...`），在其他机器上无法直接跑通，需改为自适应检测或参数化；同时检查 SKILL.md 结构、触发词（description）、文档完整性是否符合仓库 skill 规范（参考 `docs/reference/skill-spec.md`）。
+
+---

@@ -25,16 +25,16 @@ if _parsed.scheme not in ('http', 'https') or not _parsed.netloc:
 
 # --- Config (after security check) ---
 sys.path.insert(0, str(Path(__file__).parent))
-from config import get_vault_path, get_chrome_profile
+from config import get_vault_path, get_chrome_profile, get_article_paths
 vault_path = get_vault_path()
 skill_dir  = str(Path(__file__).parent.parent)
 
-import urllib.request, hashlib, shutil, tempfile
+import urllib.request, shutil, tempfile
 from datetime import datetime, timezone, timedelta
 from playwright.sync_api import sync_playwright
 
 sys.path.insert(0, os.path.join(skill_dir, 'references'))
-from article_utils import infer_ext, format_block, sanitize_filename, repair_frontmatter, record_issues
+from article_utils import infer_ext, format_block, repair_frontmatter, record_fetch_issues
 
 
 def _is_safe_image_url(src):
@@ -136,14 +136,6 @@ def _fetch_with_cookies(url):
         return None
 
 
-url_hash   = hashlib.md5(url.encode()).hexdigest()[:8]
-image_dir  = os.path.join(vault_path, 'Image')
-origin_dir = os.path.join(vault_path, 'Origin')
-db_path    = os.path.join(vault_path, 'url-index.db')
-
-os.makedirs(image_dir, exist_ok=True)
-os.makedirs(origin_dir, exist_ok=True)
-
 # --- Load HTML and extract content ---
 with open(html_path, encoding='utf-8', errors='replace') as f:
     html = f.read()
@@ -162,6 +154,14 @@ if _is_thin(result):
         result = retried
         print(f"Cookie 重试成功，获得 {len(result['blocks'])} blocks", file=sys.stderr)
 
+title = result.get('title', 'Untitled')
+paths = get_article_paths(url, title)
+image_dir   = paths['image_dir']
+origin_dir  = paths['origin_dir']
+origin_path = paths['origin_path']
+os.makedirs(image_dir, exist_ok=True)
+os.makedirs(origin_dir, exist_ok=True)
+
 # --- Download images ---
 downloaded = []
 for i, img in enumerate(result.get('imageBlocks', [])):
@@ -169,7 +169,7 @@ for i, img in enumerate(result.get('imageBlocks', [])):
         print(f"  [{i+1}] Skipped unsafe image URL: {img['src'][:80]}")
         continue
     ext   = infer_ext(img['src'])
-    fname = f"{url_hash}_img_{i+1}{ext}"
+    fname = f"img_{i+1}{ext}"
     fpath = os.path.join(image_dir, fname)
     try:
         req = urllib.request.Request(img['src'], headers={'User-Agent': 'Mozilla/5.0'})
@@ -185,20 +185,16 @@ for i, img in enumerate(result.get('imageBlocks', [])):
 
 # --- Build origin file ---
 blocks       = result['blocks']
-title        = result.get('title', 'Untitled')
 author       = result.get('author', '')
 publish_date = (result.get('publishDate') or '')[:10]
 fetch_date   = datetime.now(timezone(timedelta(hours=8))).strftime('%Y-%m-%d')
-
-origin_filename = sanitize_filename(title) + '.md'
-origin_path     = os.path.join(origin_dir, origin_filename)
 
 body_units = []
 for i, block in enumerate(blocks):
     parts = [format_block(block)]
     for img in downloaded:
         if img.get('afterBlock') == i:
-            parts.append(f'![](Image/{img["filename"]})')
+            parts.append(f'![](../Image/{img["filename"]})')
     body_units.append('\n'.join(parts))
 
 body = '\n\n'.join(body_units)
@@ -220,12 +216,12 @@ with open(origin_path, 'w', encoding='utf-8') as f:
     f.write(origin_content)
 
 # --- Validate ---
-fm, fixed, remaining = repair_frontmatter(origin_path, url, {'fetch_date': fetch_date})
+fm, fixed, remaining = repair_frontmatter(origin_path, url, {'fetch_date': fetch_date}, skip_remaining_fields={'description'})
 if remaining:
-    record_issues(url, '; '.join(remaining), db_path)
+    record_fetch_issues('; '.join(remaining), paths['article_dir'])
     print(f"警告：校验问题 {remaining}", file=sys.stderr)
 else:
-    record_issues(url, '', db_path)
+    record_fetch_issues('', paths['article_dir'])
 
 print(f"ORIGIN_PATH: {origin_path}")
 print(f"抓取完成：{title} ({len(blocks)} blocks, {len(downloaded)} images)")

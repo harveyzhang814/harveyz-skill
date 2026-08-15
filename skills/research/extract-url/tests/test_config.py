@@ -67,3 +67,50 @@ def test_config_path_env_override(tmp_path):
     )
     assert result.returncode == 0, result.stderr
     assert '/env/vault' in result.stdout.strip()
+
+
+def test_get_url_hash_matches_md5_first_8_hex(tmp_path):
+    import hashlib
+    url = 'https://example.com/a'
+    assert config.get_url_hash(url) == hashlib.md5(url.encode()).hexdigest()[:8]
+
+
+def test_get_article_paths_returns_expected_keys(tmp_path):
+    cfg = tmp_path / 'config.json'
+    cfg.write_text(json.dumps({'VAULT_PATH': str(tmp_path / 'vault'), 'CHROME_PROFILE': '/p'}))
+    with patch.object(config, 'CONFIG_PATH', cfg):
+        paths = config.get_article_paths('https://example.com/a', 'My Article')
+    assert set(paths.keys()) == {
+        'url_hash', 'article_dir', 'origin_dir', 'translation_dir',
+        'image_dir', 'origin_path', 'translation_path',
+    }
+
+
+def test_get_article_paths_uses_url_hash_as_folder_name(tmp_path):
+    cfg = tmp_path / 'config.json'
+    vault = tmp_path / 'vault'
+    cfg.write_text(json.dumps({'VAULT_PATH': str(vault), 'CHROME_PROFILE': '/p'}))
+    url = 'https://example.com/a'
+    with patch.object(config, 'CONFIG_PATH', cfg):
+        paths = config.get_article_paths(url, 'My Article')
+    assert paths['url_hash'] == config.get_url_hash(url)
+    assert paths['article_dir'] == str(vault / paths['url_hash'])
+    assert paths['origin_dir'] == str(vault / paths['url_hash'] / 'Origin')
+    assert paths['translation_dir'] == str(vault / paths['url_hash'] / 'Translation')
+    assert paths['image_dir'] == str(vault / paths['url_hash'] / 'Image')
+
+
+def test_get_article_paths_sanitizes_title_for_filename(tmp_path):
+    cfg = tmp_path / 'config.json'
+    cfg.write_text(json.dumps({'VAULT_PATH': str(tmp_path / 'vault'), 'CHROME_PROFILE': '/p'}))
+    with patch.object(config, 'CONFIG_PATH', cfg):
+        paths = config.get_article_paths('https://example.com/a', 'A/B:C*D?E')
+    assert Path(paths['origin_path']).name == 'ABCDE.md'
+
+
+def test_get_article_paths_translation_reuses_origin_filename(tmp_path):
+    cfg = tmp_path / 'config.json'
+    cfg.write_text(json.dumps({'VAULT_PATH': str(tmp_path / 'vault'), 'CHROME_PROFILE': '/p'}))
+    with patch.object(config, 'CONFIG_PATH', cfg):
+        paths = config.get_article_paths('https://example.com/a', 'My Article')
+    assert Path(paths['origin_path']).name == Path(paths['translation_path']).name == 'My Article.md'

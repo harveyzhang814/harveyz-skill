@@ -1,8 +1,8 @@
 {
-  "version": 3,
+  "version": 4,
   "baseBranch": "staging",
   "config": {
-    "outputDir": "tools/hub/docs/design-previews",
+    "outputDir": ".hskill/sync-design/html",
     "designSpec": null,
     "platforms": {
       "textual-tui": {
@@ -15,6 +15,17 @@
         "designSystemFile": null,
         "styleStrategy": "textual-inline-css",
         "notes": null
+      },
+      "hskill-cli": {
+        "label": "hskill CLI",
+        "stackRef": null,
+        "uiFilePatterns": [
+          "bin/cli.js",
+          "bin/preview.mjs"
+        ],
+        "designSystemFile": null,
+        "styleStrategy": "fzf-terminal-inline-css",
+        "notes": null
       }
     }
   },
@@ -22,7 +33,7 @@
     {
       "id": "git-textual-tui",
       "platform": "textual-tui",
-      "htmlFile": "tools/hub/docs/design-previews/git-textual-tui-design.html",
+      "htmlFile": ".hskill/sync-design/html/git-textual-tui-design.html",
       "sourceFiles": ["tools/hub/hub/tui/panels/git.py"],
       "uiStates": ["idle", "loading", "with-branches", "empty"],
       "lastSyncCommit": "71c5693da12befc5f1a34102fc0a4b409bf07cd4",
@@ -31,11 +42,21 @@
     {
       "id": "tasks-textual-tui",
       "platform": "textual-tui",
-      "htmlFile": "tools/hub/docs/design-previews/tasks-textual-tui-design.html",
+      "htmlFile": ".hskill/sync-design/html/tasks-textual-tui-design.html",
       "sourceFiles": ["tools/hub/hub/tui/panels/tasks.py"],
       "uiStates": ["idle", "with-tasks", "all-done", "empty"],
       "lastSyncCommit": "71c5693da12befc5f1a34102fc0a4b409bf07cd4",
       "description": "展示当前项目的任务列表，支持新建、完成和删除"
+    }
+  ],
+  "drafts": [
+    {
+      "id": "hskill-menu-hskill-cli",
+      "platform": "hskill-cli",
+      "htmlFile": ".hskill/sync-design/html/drafts/hskill-menu-hskill-cli-design.html",
+      "uiStates": ["skill-view", "single-platform-view"],
+      "description": "hskill 的交互式安装选择器，支持按 skill 维度浏览，或用 ctrl-t 循环切换到逐个平台维度（每次只看一个平台的安装状态），并多选安装/升级/卸载 skill、tool、hook",
+      "linkedEntryId": null
     }
   ],
   "ignoredFiles": []

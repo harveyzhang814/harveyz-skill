@@ -1,14 +1,14 @@
 {
   "name": "harveyz-skill",
-  "version": "0.21.0",
-  "description": "Skill manager for Claude Code, Cursor, and Codex",
+  "version": "0.27.0",
+  "description": "Skill manager for Claude Code, Cursor, Codex, OpenClaw, Hermes, OpenCode, and Pi",
   "type": "module",
   "bin": {
     "hskill": "bin/cli.js"
   },
   "scripts": {
     "prepack": "node scripts/generate-npmignore.js",
-    "test": "bats tests/ && bash scripts/run-skill-tests.sh"
+    "test": "bats tests/ && bash scripts/run-skill-tests.sh && node --test tests/mcp.test.mjs"
   },
   "files": [
     "bin/",
@@ -16,7 +16,7 @@
     "bundles.json",
     "skills-index.json",
     "CHANGELOG.md",
-    "skills/research/learn-skill/",
+    "skills/mint/learn-skill/",
     "skills/research/extract-url/",
     "skills/research/extract-vision/",
     "skills/research/learn-video/",
@@ -24,12 +24,17 @@
     "skills/research/learn-paper/",
     "skills/research/extract-cognition/",
     "skills/research/probe-session/",
+    "skills/research/pdf-math-translate/",
+    "skills/research/clip-url/",
     "skills/creative/capture-todo/",
     "skills/creative/capture-insight/",
     "skills/coding/init-workflow/",
     "skills/coding/setup-debug/",
-    "skills/meta/init-goal/",
+    "skills/coding/init-goal/",
     "skills/coding/question-me/",
+    "skills/coding/capture-vocab/",
+    "skills/coding/rephrase/",
+    "skills/coding/explain-pm/",
     "skills/writing/forge-doc/",
     "skills/writing/draw-diagram/",
     "skills/writing/manage-dir/",
@@ -49,8 +54,10 @@
     "skills/meta/release-project/",
     "skills/meta/sync-hotfix/",
     "skills/meta/sync-agent/",
+    "skills/coding/handoff/",
     "tools/hub/",
     "tools/sync-agent/",
+    "tools/browser-fetch-mcp/",
     "hooks/check-similar-branch/"
   ],
   "engines": {
@@ -58,8 +65,10 @@
   },
   "dependencies": {
     "@inquirer/prompts": "^8.4.2",
+    "@modelcontextprotocol/sdk": "^1.30.0",
     "chalk": "^5.3.0",
-    "fs-extra": "^11.2.0"
+    "fs-extra": "^11.2.0",
+    "zod": "^4.4.3"
   },
   "author": "harveyzhang",
   "repository": {

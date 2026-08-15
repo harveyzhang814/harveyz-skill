@@ -7,6 +7,101 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.27.0] - 2026-08-13
+
+### Added
+- `clip-url`：新增 browser-fetch-mcp 前置可用性检测，抓取前先确认 MCP 可用，避免执行到中途才发现环境问题
+- `clip-url`：正文开头新增流程概览（路线图），列出各步骤编号，减少多步骤执行时的偏差
+
+### Changed
+- `clip-url`：优化 description 触发文案，定位为 extract-url 的通用替代品参与触发竞争，覆盖更多保存/归档/翻译存档场景
+
+### Fixed
+- `clip-url`：chrome_profile 询问从「可能每次任务都问」改为「只在首次使用本 skill 时问一次」，无论用户当时是否设置了值，都会记住已经问过
+
+## [0.26.1] - 2026-08-13
+
+### Fixed
+- `clip-url`：MCP 抓取脚本此前写死仓库内相对路径来定位 `browser-fetch-mcp`，在任何非源码 checkout 的已安装环境下都会 `FileNotFoundError`；改为 dev-mode（仓库内）优先、已安装模式（`~/.local/bin/browser-fetch-mcp`）兜底的探测逻辑，并把 `browser-fetch-mcp` 注册进 `skills-index.json` 的 `tools[]`（新增 `research-tools` bundle），使其首次可通过 `hskill install --tool browser-fetch-mcp` 安装
+
+## [0.26.0] - 2026-08-12
+
+### Added
+- `hskill mcp`：新增 MCP（Model Context Protocol）服务器子命令，以 stdio 方式暴露 8 个工具（`hskill_list`/`hskill_status`/`hskill_outdated`/`hskill_info`/`hskill_install`/`hskill_uninstall`/`hskill_hooks`/`hskill_update`），供 MCP 兼容的 agent host（Claude Code、Claude Desktop、Cursor 等）直接调用 hskill 的操作
+
+### Changed
+- `publish-skill` 审计：修正 `pdf-math-translate` description 语言违规（改为英文），刷新 `capture-vocab`/`extract-url`/`pdf-math-translate` 三个 skill 的 contentHash 记录
+
+## [0.25.1] - 2026-07-22
+
+### Fixed
+- `extract-url`：新增微信公众号文章抓取脚本（`playwright_web_wechat.py`），修复隐藏正文、懒加载图片、发布日期提取失败问题
+- `extract-url`：修复 X.com Article 正文中加粗文字被错误拆分为独立段落、加粗样式丢失的问题
+
+## [0.25.0] - 2026-07-20
+
+### Added
+- `hskill` install menu：新增按平台切换的循环视图（per-platform cycling view），一键升级快捷键
+- `pdf-math-translate`：重写 frontmatter，补充 Init/Execute 两阶段流程与最新 CLI 参考
+
+### Fixed
+- `explain-pm`：警示性意见调整为统一放在结尾，不再穿插
+- `init-workflow`：修正 force-push 检测逻辑，合并提交（merge commit）豁免检查
+
+### Changed
+- 记录不新增 meta.json 完整性检查的 ADR 决策
+
+## [0.24.0] - 2026-07-18
+
+### Added
+- `extract-url`：用 per-article `meta.json` 索引替代 SQLite 索引，`article_utils`/`dedup_check`/`playwright_web(_arxiv)`/`playwright_xcom`/`validate_article` 全部切换到 meta.json 读写；提供旧数据迁移脚本（写 meta.json + 清理遗留文件）
+- `pdf-math-translate`：从其他项目贡献到 `research` bundle 的 PDF 数学翻译 skill
+- `explain-pm`：新增 skill，注册到 `coding` bundle
+- `rephrase`：新增 skill，单次改写用户陈述以提升精确度
+
+### Fixed
+- `extract-url`：放宽翻译文章的 author/publish_date 校验规则
+- `question-me`：补充决策树格式中 label 字段的示例与一致性规则（v3.0.1）
+- `publish-skill` 审计：修正 `learn-skill`/`survey-skillrepo`/`init-skill` 三个 skill 历史遗留的 contentHash 记录错误（内容本身未变更）
+
+### Changed
+- `extract-url`：SKILL.md 与 subagent prompt 更新以适配 meta.json 索引；skills-index.json 同步更新 contentHash
+
+## [0.23.0] - 2026-07-09
+
+### Added
+- `hskill upgrade`：批量升级已安装 skill 到最新版本，支持 `--skill`/`--target`/`--scope`/`--json`，只升级已安装的 skill，不会新装
+
+### Fixed
+- `extract-url`：修正 Claude Code 补丁里写死的 SKILL_DIR 路径
+- `extract-url`：打标顺序调整为先原文后翻译，收紧标签规则；候选标签新增并列清单合并规则
+- `capture-vocab`：补上 `.hskill/` 路径缺失的点前缀
+- `question-me`：补充 label 字段的决策树格式说明
+
+### Changed
+- `extract-url`：Subagent 1/2 派发 prompt 拆分到 `references/`；更新 skills-index.json 的 contentHash/contentVersion
+
+## [0.22.1] - 2026-07-06
+
+### Fixed
+- `hskill update`：更新命令从 `npm update` 改为 `npm install -g harveyz-skill@latest`，修复 0.x.y semver 约束导致跨 minor 版本无法更新的问题
+
+## [0.22.0] - 2026-07-06
+
+### Added
+- `capture-vocab`：项目级领域术语字典 skill，支持 add/query/update/remove，上下文自动推断字段
+
+### Changed
+- `sync-design` v5.0.0：模式路由（sync/design），设计阶段流程（新建/修改草稿），三检查点草稿删除，`linkedEntryId` 自动回填
+- `question-me` v3.0.0：重构为 section-structure 标准；v2.0.0 动态树 + 遍历顺序漏洞修复
+- `extract-url` v2.3.0：章节结构重组，新增 `count_article_stats.py` 完成回报卡片
+- `scout-philosophy`：新增阶段八——产出可直接复制的起始模板（`standard.md`）
+- `init-goal`：移至 `coding/` bundle，`installScope` 改为 global
+- `learn-skill`：移至 `mint` bundle
+
+### Removed
+- `dispatch-task`、`close-task`：归档
+
 ## [0.21.0] - 2026-07-01
 
 ### Added

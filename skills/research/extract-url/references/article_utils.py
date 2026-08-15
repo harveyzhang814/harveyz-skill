@@ -1,8 +1,9 @@
 """
 共享工具函数：格式化 block、构建文章、修复 frontmatter
 """
-import re, os, json, sqlite3, yaml
+import re, os, json, yaml
 from datetime import datetime, timezone, timedelta
+from pathlib import Path
 
 # ------------------------------------------------------------
 # 公共常量
@@ -113,7 +114,7 @@ description: {description}
 # ------------------------------------------------------------
 # 4. repair_frontmatter: 自动修复 frontmatter 字段
 # ------------------------------------------------------------
-def repair_frontmatter(fp, url, defaults=None):
+def repair_frontmatter(fp, url, defaults=None, skip_remaining_fields=None):
     """
     尝试自动补全缺失字段，返回 (fm_dict, 修复了哪些字段, 剩余问题列表)
     """
@@ -236,35 +237,35 @@ def repair_frontmatter(fp, url, defaults=None):
         f.write(fm_str + content[m.end():])
 
     # 检查剩余问题
+    skip = set(skip_remaining_fields or ())
     for fld in ['publish_date', 'author', 'source_url']:
-        if not fm.get(fld, '').strip():
+        if fld not in skip and not fm.get(fld, '').strip():
             remaining.append(f'{fld}空')
-    if 'origin_title' not in fm or not fm.get('origin_title', '').strip():
+    if 'origin_title' not in skip and ('origin_title' not in fm or not fm.get('origin_title', '').strip()):
         remaining.append('origin_title空')
-    if 'description' not in fm or not fm.get('description', '').strip():
+    if 'description' not in skip and ('description' not in fm or not fm.get('description', '').strip()):
         remaining.append('description空')
 
     return fm, fixed, remaining
 
 
 # ------------------------------------------------------------
-# 5. record_issues: 写入 issues 字段
+# 5. record_fetch_issues: Subagent 1 阶段的问题写入临时文件，供 write_meta_json 合并
 # ------------------------------------------------------------
-def record_issues(url, issues_text, db_path=None):
-    """将 issues 写入 SQLite"""
-    if db_path is None:
-        raise ValueError("db_path is required")
-    conn = sqlite3.connect(db_path)
-    conn.execute('UPDATE url_index SET issues=? WHERE source_url=?',
-                 (issues_text, url))
-    conn.commit()
+def record_fetch_issues(issues_text, article_dir):
+    """将 Subagent 1 阶段校验问题写入 <article_dir>/.fetch_issues.tmp，供 write_meta_json 合并。"""
+    tmp_path = Path(article_dir) / '.fetch_issues.tmp'
+    if issues_text:
+        tmp_path.write_text(issues_text, encoding='utf-8')
+    elif tmp_path.exists():
+        tmp_path.unlink()
 
 
 # ------------------------------------------------------------
-# 6. write_url_index: 写入 SQLite url_index 表
+# 6. write_meta_json: 写入 <hash8>/meta.json
 # ------------------------------------------------------------
-def write_url_index(url, origin_path, article_path, db_path, category=''):
-    """Insert or replace a URL index entry after successful fetch+translate."""
+def write_meta_json(url, meta_path, article_path, category=''):
+    """Write (or overwrite) meta.json after successful fetch+translate, merging any pending fetch-stage issues."""
     fetch_date = datetime.now(timezone(timedelta(hours=8))).strftime('%Y-%m-%d')
     fm = {}
     try:
@@ -277,14 +278,23 @@ def write_url_index(url, origin_path, article_path, db_path, category=''):
     except Exception:
         pass
     cat = category or (fm.get('category') or '')
-    conn = sqlite3.connect(db_path)
-    conn.execute(
-        "INSERT OR REPLACE INTO url_index "
-        "(source_url, title, fetched_at, issues, category, origin_path, article_path) "
-        "VALUES (?,?,?,?,?,?,?)",
-        (url, os.path.basename(article_path), fetch_date, '', cat, origin_path, article_path)
-    )
-    conn.commit()
+
+    meta_path = Path(meta_path)
+    meta_path.parent.mkdir(parents=True, exist_ok=True)
+    tmp_issues_path = meta_path.parent / '.fetch_issues.tmp'
+    issues = ''
+    if tmp_issues_path.exists():
+        issues = tmp_issues_path.read_text(encoding='utf-8').strip()
+        tmp_issues_path.unlink()
+
+    meta = {
+        'source_url': url,
+        'title': os.path.basename(article_path),
+        'category': cat,
+        'fetched_at': fetch_date,
+        'issues': issues,
+    }
+    meta_path.write_text(json.dumps(meta, ensure_ascii=False, indent=2), encoding='utf-8')
 
 
 # ------------------------------------------------------------

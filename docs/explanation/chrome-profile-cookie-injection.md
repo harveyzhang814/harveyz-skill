@@ -4,6 +4,8 @@
 
 X.com 的具体应用见 [xcom-playwright-auth.md](xcom-playwright-auth.md)。
 
+一个考虑过的替代方案（常驻 MCP server + persistent context，尚未采纳、未设计）见 [mcp-browser-fetch-experiment.md](mcp-browser-fetch-experiment.md)。
+
 ---
 
 ## 问题

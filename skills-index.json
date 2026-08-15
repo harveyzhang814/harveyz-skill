@@ -1,6 +1,7 @@
 {
   "toolBundleMeta": {
-    "tools": "开发者 OS 工具（hub — 项目管理 + git 状态 + 任务跟踪；sync — Syncthing 守护进程管理）"
+    "tools": "开发者 OS 工具（hub — 项目管理 + git 状态 + 任务跟踪；sync — Syncthing 守护进程管理）",
+    "research-tools": "研究抓取后端（browser-fetch-mcp — clip-url/extract-url 共用的认证浏览器抓取 MCP server）"
   },
   "tools": [
     {
@@ -14,12 +15,17 @@
       "path": "tools/sync-agent",
       "bundle": "tools",
       "installScope": "global"
+    },
+    {
+      "name": "browser-fetch-mcp",
+      "path": "tools/browser-fetch-mcp",
+      "bundle": "research-tools"
     }
   ],
   "bundleMeta": {
-    "research": "研究工具（extract-url + learn-video + extract-vision + survey-skillrepo + learn-paper + extract-cognition + probe-session）",
+    "research": "研究工具（extract-url + learn-video + extract-vision + survey-skillrepo + learn-paper + extract-cognition + probe-session + clip-url）",
     "creative": "创意工具（capture-todo + capture-insight）",
-    "coding": "程序工具（init-workflow + setup-debug + init-goal + question-me）",
+    "coding": "程序工具（init-workflow + setup-debug + init-goal + question-me + capture-vocab + rephrase + explain-pm）",
     "writing": "写作工具（forge-doc + draw-diagram + manage-dir + migrate-spec）",
     "design": "设计工具（scout-brand + build-style + sync-design）",
     "mint": "Skill 生命周期工具（init-skill + publish-skill + archive-skill + dedup-skill + contribute-skill + fix-skill + runby-opencode + scout-philosophy + learn-skill）",
@@ -30,15 +36,15 @@
       "path": "mint/learn-skill",
       "bundle": "mint",
       "installScope": "global",
-      "contentHash": "542f333a8a72024c",
+      "contentHash": "5255c96c742fbab8",
       "contentVersion": "2.0.0"
     },
     {
       "path": "research/extract-url",
       "bundle": "research",
       "installScope": "global",
-      "contentHash": "609f536b940bf5c8",
-      "contentVersion": "2.2.0"
+      "contentHash": "23481acf2a35120c",
+      "contentVersion": "2.8.0"
     },
     {
       "path": "research/extract-vision",
@@ -58,7 +64,7 @@
       "path": "research/survey-skillrepo",
       "bundle": "research",
       "installScope": "global",
-      "contentHash": "ea823301b039a8aa",
+      "contentHash": "e9d46ca1e90ee289",
       "contentVersion": "2.0.1"
     },
     {
@@ -81,6 +87,20 @@
       "installScope": "project",
       "contentHash": "91391f7b702e0797",
       "contentVersion": "0.3.0"
+    },
+    {
+      "path": "research/pdf-math-translate",
+      "bundle": "research",
+      "installScope": "project",
+      "contentHash": "94dde69e6bc5429c",
+      "contentVersion": "2.0.0"
+    },
+    {
+      "path": "research/clip-url",
+      "bundle": "research",
+      "installScope": "project",
+      "contentHash": "46e5edd59daaa755",
+      "contentVersion": "0.7.5"
     },
     {
       "path": "creative/capture-todo",
@@ -121,8 +141,29 @@
       "path": "coding/question-me",
       "bundle": "coding",
       "installScope": "global",
-      "contentHash": "2496270c52272fc8",
-      "contentVersion": "2.0.0"
+      "contentHash": "5c6c510e1fa77723",
+      "contentVersion": "3.0.1"
+    },
+    {
+      "path": "coding/capture-vocab",
+      "bundle": "coding",
+      "installScope": "project",
+      "contentHash": "0ef9e2c82f9876f4",
+      "contentVersion": "1.1.2"
+    },
+    {
+      "path": "coding/rephrase",
+      "bundle": "coding",
+      "installScope": "global",
+      "contentHash": "cc5a948ce0e80a53",
+      "contentVersion": "1.0.1"
+    },
+    {
+      "path": "coding/explain-pm",
+      "bundle": "coding",
+      "installScope": "global",
+      "contentHash": "b099d35d28f18bf2",
+      "contentVersion": "1.1.1"
     },
     {
       "path": "writing/forge-doc",
@@ -170,14 +211,14 @@
       "path": "design/sync-design",
       "bundle": "design",
       "installScope": "project",
-      "contentHash": "c306109c397f0f32",
-      "contentVersion": "3.1.0"
+      "contentHash": "aaf5794eff6cf793",
+      "contentVersion": "5.0.0"
     },
     {
       "path": "mint/init-skill",
       "bundle": "mint",
       "installScope": "project",
-      "contentHash": "4053e6476d1c3f09",
+      "contentHash": "ff8aeceb83b17a1e",
       "contentVersion": "1.2.0"
     },
     {
@@ -226,8 +267,8 @@
       "path": "mint/scout-philosophy",
       "bundle": "mint",
       "installScope": "project",
-      "contentHash": "46b5c57f31d514bf",
-      "contentVersion": "1.0.0"
+      "contentHash": "5c3b14c8dfa460b9",
+      "contentVersion": "1.0.1"
     },
     {
       "path": "meta/clean-git",
@@ -256,6 +297,12 @@
       "installScope": "global",
       "contentHash": "3762c7b6488a5f90",
       "contentVersion": "1.1.1"
+    },
+    {
+      "path": "coding/handoff",
+      "bundle": "coding",
+      "contentHash": "e853463d770ce355",
+      "contentVersion": "1.1.0"
     }
   ],
   "hooks": [
@@ -370,6 +417,10 @@
     {
       "from": "research-skill-philosophy",
       "to": "scout-philosophy"
+    },
+    {
+      "from": "domain-vocab",
+      "to": "capture-vocab"
     }
   ]
 }

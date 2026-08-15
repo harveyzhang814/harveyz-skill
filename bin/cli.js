@@ -27,7 +27,7 @@ const jsonFlag = args.includes('--json')
 // ── Help ─────────────────────────────────────────────────────────────────────
 function printHelp() {
   console.log(`
-  ${chalk.bold('hskill')} — skill manager for Claude Code, Cursor, Codex, OpenClaw, Hermes, and OpenCode  v${version}
+  ${chalk.bold('hskill')} — skill manager for Claude Code, Cursor, Codex, OpenClaw, Hermes, OpenCode, and Pi  v${version}
 
   ${chalk.cyan('Usage:')}
     hskill                         interactive install (requires TTY + fzf)
@@ -35,7 +35,7 @@ function printHelp() {
     hskill install --bundle <b>    install a skill bundle
     hskill install --skill <s>     install specific skill(s)
     hskill install --tool <t>      install shell tool(s)
-    hskill install --target <t>    set target (claude/cursor/codex/openclaw/hermes/opencode/all)
+    hskill install --target <t>    set target (${SKILL_TARGETS.join('/')}/all)
     hskill install --scope <s>     set scope: user (default) or project
     hskill install --force         overwrite existing installs
     hskill list [--json]           list available skills and bundles
@@ -51,6 +51,7 @@ function printHelp() {
     hskill uninstall <tool> --yes      skip all confirmations (incl. config files)
     hskill uninstall <skill> --scope <s> --target <t>  uninstall a skill
     hskill update                  update hskill to the latest version
+    hskill mcp                     start an MCP server (stdio) exposing hskill's tools to MCP-capable agent hosts
     hskill version                 show version
     hskill --help                  show this help
 
@@ -75,7 +76,7 @@ if (args[0] === '--help' || args[0] === '-h') {
     console.log(JSON.stringify({
       name: 'hskill',
       version,
-      description: 'Skill manager for Claude Code, Cursor, Codex, OpenClaw, and Hermes',
+      description: 'Skill manager for Claude Code, Cursor, Codex, OpenClaw, Hermes, OpenCode, and Pi',
       agent_notes: 'Interactive mode requires TTY. Use --json for machine-readable output. Set NO_COLOR=1 to suppress ANSI codes.',
       commands: [
         {
@@ -87,7 +88,7 @@ if (args[0] === '--help' || args[0] === '-h') {
             { name: '--bundle', arg: '<name>',   description: 'Install a skill bundle (comma-separated)' },
             { name: '--skill',  arg: '<name>',   description: 'Install specific skill(s) (comma-separated)' },
             { name: '--tool',   arg: '<name>',   description: 'Install shell tool(s) (comma-separated)' },
-            { name: '--target', arg: '<target>', description: 'Install target', enum: ['claude','cursor','codex','openclaw','hermes','opencode','all'] },
+            { name: '--target', arg: '<target>', description: 'Install target', enum: [...SKILL_TARGETS,'all'] },
             { name: '--scope',  arg: '<scope>',  description: 'Install scope', enum: ['user','project'], default: 'user' },
             { name: '--force',  description: 'Overwrite existing installs' },
           ],
@@ -124,8 +125,23 @@ if (args[0] === '--help' || args[0] === '-h') {
           ],
         },
         {
+          name: 'upgrade',
+          description: 'Upgrade already-installed skills to their latest version',
+          note: 'Only upgrades skills already installed on the given target. Never installs new ones.',
+          flags: [
+            { name: '--skill',  arg: '<name>',   description: 'Upgrade a specific skill (default: all installed)' },
+            { name: '--target', arg: '<target>', description: 'Limit to one target', enum: SKILL_TARGETS },
+            { name: '--scope',  arg: '<scope>',  description: 'Install scope', enum: ['user','project'], default: 'user' },
+            { name: '--json',   description: 'Machine-readable output' },
+          ],
+        },
+        {
           name: 'update',
           description: 'Update hskill to the latest version via npm',
+        },
+        {
+          name: 'mcp',
+          description: "Start an MCP server (stdio) exposing hskill's tools to MCP-capable agent hosts",
         },
         {
           name: 'version',
@@ -148,10 +164,10 @@ if (args[0] === '--version' || args[0] === '-v' || subcommand === 'version') {
 if (subcommand === 'update') {
   console.log(chalk.dim('  · Updating hskill…'))
   try {
-    execSync('npm update -g harveyz-skill', { stdio: 'inherit' })
+    execSync('npm install -g harveyz-skill@latest', { stdio: 'inherit' })
     console.log(chalk.green('  ✔ hskill updated'))
   } catch {
-    console.error(chalk.red('  ✗ Update failed. Try: npm update -g harveyz-skill'))
+    console.error(chalk.red('  ✗ Update failed. Try: npm install -g harveyz-skill@latest'))
     process.exit(1)
   }
   // Run skill rename migrations
@@ -176,6 +192,20 @@ if (subcommand === 'update') {
     console.log('')
   }
   process.exit(0)
+}
+
+// ── MCP server ───────────────────────────────────────────────────────────────
+if (subcommand === 'mcp') {
+  const { startServer } = await import('../lib/mcp-server.js')
+  await startServer()
+  // StdioServerTransport keeps stdin/stdout open for JSON-RPC. bin/cli.js is a
+  // flat top-level script with no early-return mechanism (this is a real ES
+  // module, so a bare top-level `return` is a syntax error) — every other
+  // subcommand block ends itself with process.exit(), which we can't do here
+  // without killing the server we just started. Blocking on a promise that
+  // never resolves is what stops execution from falling through into the
+  // generic install-arg parsing near the end of this file.
+  await new Promise(() => {})
 }
 
 // ── List ─────────────────────────────────────────────────────────────────────
@@ -216,6 +246,27 @@ function resolveHookDisplayVersion(inst, sourceVersion) {
   return sourceVersion ?? '—'
 }
 
+// ── Shared skill scan ─────────────────────────────────────────────────────────
+function buildSkillRows(nameFilter = null) {
+  const items = nameFilter
+    ? getAllSkillItems().filter(s => s.skillName === nameFilter)
+    : getAllSkillItems()
+  return items.map(s => {
+    const inst = checkInstalled(s.skillName, s.version ?? '—')
+    return {
+      name:         s.skillName,
+      bundle:       s.bundle        ?? '—',
+      version:      s.version       ?? '—',
+      installScope: s.installScope  ?? null,
+      srcPath:      s.srcPath,
+      userStatus:   scopeSummary(inst.user),
+      projectStatus: scopeSummary(inst.project),
+      userDetail:   inst.user,
+      projectDetail: inst.project,
+    }
+  })
+}
+
 // ── Status / Outdated ─────────────────────────────────────────────────────────
 if (subcommand === 'status' || subcommand === 'outdated') {
   const outdatedOnly = subcommand === 'outdated'
@@ -244,22 +295,16 @@ if (subcommand === 'status' || subcommand === 'outdated') {
     return chalk.dim('—')
   }
 
-  const skillRows = skillItems.map(s => {
-    const inst = checkInstalled(s.skillName, s.version ?? '—')
-    return {
-      name: s.skillName, bundle: s.bundle ?? '—', version: s.version ?? '—',
-      installScope: s.installScope ?? null,
-      userStatus: scopeSummary(inst.user), projectStatus: scopeSummary(inst.project),
-      userDetail: inst.user, projectDetail: inst.project,
-    }
-  }).sort((a, b) => a.bundle.localeCompare(b.bundle) || a.name.localeCompare(b.name))
+  const skillRows = buildSkillRows().sort((a, b) =>
+    a.bundle.localeCompare(b.bundle) || a.name.localeCompare(b.name)
+  )
   const toolRows = toolItems.map(t => {
     const inst = checkToolInstalled(t.toolName, t.srcPath)
     return { name: t.toolName, version: t.version ?? '—', installScope: t.installScope ?? null, ...inst }
   })
 
   if (jsonFlag) {
-    const targets = ['claude', 'cursor', 'codex', 'openclaw', 'hermes', 'opencode']
+    const targets = SKILL_TARGETS
     const jsonSkills = skillRows.map(r => ({
       name: r.name,
       version: r.version,
@@ -291,7 +336,7 @@ if (subcommand === 'status' || subcommand === 'outdated') {
       process.exit(0)
     }
 
-    const targets = ['claude', 'cursor', 'codex', 'openclaw', 'hermes', 'opencode']
+    const targets = SKILL_TARGETS
 
     if (outdatedSkills.length) {
       console.log('\n  ' + chalk.bold('SKILLS WITH UPDATES'))
@@ -394,7 +439,7 @@ if (subcommand === 'info') {
     process.exit(1)
   }
 
-  const targets = ['claude', 'cursor', 'codex']
+  const targets = SKILL_TARGETS
 
   function statusLabel(status) {
     if (status === 'up-to-date') return chalk.green('✓ up to date')
@@ -450,7 +495,9 @@ if (subcommand === 'info') {
 if (subcommand === 'uninstall') {
   const nameToRemove = args[1]
   if (!nameToRemove || nameToRemove.startsWith('--')) {
-    console.error(chalk.red('  ✗ Usage: hskill uninstall <tool-or-skill-name> [--yes] [--scope user|project] [--target claude|...]'))
+    const msg = 'Usage: hskill uninstall <tool-or-skill-name> [--yes] [--scope user|project] [--target claude|...]'
+    if (jsonFlag) process.stderr.write(JSON.stringify({ error: true, message: msg }) + '\n')
+    else console.error(chalk.red('  ✗ ' + msg))
     process.exit(1)
   }
 
@@ -466,13 +513,24 @@ if (subcommand === 'uninstall') {
   const isSkill = skillItems2.some(s => s.skillName === nameToRemove)
 
   if (!isTool && !isSkill) {
-    console.error(chalk.red(`  ✗ Unknown tool or skill: "${nameToRemove}"`))
+    const msg = `Unknown tool or skill: "${nameToRemove}"`
+    if (jsonFlag) process.stderr.write(JSON.stringify({ error: true, message: msg }) + '\n')
+    else console.error(chalk.red('  ✗ ' + msg))
     process.exit(1)
   }
 
   if (isTool) {
+    // uninstallTool logs unconditional chalk status lines via console.error;
+    // suppress them in --json mode so they don't pollute stderr JSON output.
+    const originalError = jsonFlag ? console.error : null
+    if (jsonFlag) console.error = () => {}
     const { removed, failed } = await uninstallTool(nameToRemove, { yes: yesFlag })
-    if (removed.length > 0) console.error(chalk.green.bold(`✔ ${nameToRemove} uninstalled`))
+    if (jsonFlag) {
+      console.error = originalError
+      console.log(JSON.stringify({ removed: removed.length > 0, failed: failed.length > 0 }, null, 2))
+    } else if (removed.length > 0) {
+      console.error(chalk.green.bold(`✔ ${nameToRemove} uninstalled`))
+    }
     process.exit(failed.length ? 1 : 0)
   }
 
@@ -480,17 +538,26 @@ if (subcommand === 'uninstall') {
   const scope = scopeArg2
   const selectedTargets = targetArg2
     ? [targetArg2]
-    : ['claude', 'cursor', 'codex', 'openclaw', 'hermes', 'opencode']
+    : SKILL_TARGETS
   const targets = resolveTargets(selectedTargets, scope)
 
   let anyRemoved = false
   let anyFailed  = false
+  // uninstallSkill logs unconditional chalk status lines via console.error;
+  // suppress them in --json mode so they don't pollute stderr JSON output.
+  const originalError2 = jsonFlag ? console.error : null
+  if (jsonFlag) console.error = () => {}
   for (const { dir } of targets) {
     const { removed, failed } = await uninstallSkill(nameToRemove, dir)
     if (removed.length) anyRemoved = true
     if (failed.length)  anyFailed  = true
   }
-  if (anyRemoved) console.error(chalk.green.bold(`✔ ${nameToRemove} uninstalled`))
+  if (jsonFlag) {
+    console.error = originalError2
+    console.log(JSON.stringify({ removed: anyRemoved, failed: anyFailed }, null, 2))
+  } else if (anyRemoved) {
+    console.error(chalk.green.bold(`✔ ${nameToRemove} uninstalled`))
+  }
   process.exit(anyFailed ? 1 : 0)
 }
 
@@ -609,16 +676,77 @@ if (subcommand === 'hooks') {
   if (hooksSubcmd === 'uninstall') {
     const nameToRemove = args[2]
     if (!nameToRemove || nameToRemove.startsWith('--')) {
-      console.error(chalk.red('  ✗ Usage: hskill hooks uninstall <name> [--scope user|project]'))
+      const msg = 'Usage: hskill hooks uninstall <name> [--scope user|project]'
+      if (hookJsonFlag) process.stderr.write(JSON.stringify({ error: true, message: msg }) + '\n')
+      else console.error(chalk.red('  ✗ ' + msg))
       process.exit(1)
     }
     const { removed } = await uninstallHook(nameToRemove, hookScopeArg, hookProjectArg)
-    if (!removed) console.log(chalk.dim(`  · ${nameToRemove} was not installed in ${hookScopeArg} scope`))
+    if (hookJsonFlag) {
+      console.log(JSON.stringify({ removed }, null, 2))
+    } else if (!removed) {
+      console.log(chalk.dim(`  · ${nameToRemove} was not installed in ${hookScopeArg} scope`))
+    }
     process.exit(0)
   }
 
   console.error(chalk.red(`  ✗ Unknown hooks subcommand: "${hooksSubcmd}". Use list, install, or uninstall.`))
   process.exit(1)
+}
+
+// ── Upgrade ───────────────────────────────────────────────────────────────────
+if (subcommand === 'upgrade') {
+  const upgradeSkillIdx  = args.indexOf('--skill')
+  const upgradeTargetIdx = args.indexOf('--target')
+  const upgradeScopeIdx  = args.indexOf('--scope')
+  const upgradeSkillArg  = upgradeSkillIdx  !== -1 ? args[upgradeSkillIdx  + 1] : null
+  const upgradeTargetArg = upgradeTargetIdx !== -1 ? args[upgradeTargetIdx + 1] : null
+  const upgradeScopeArg  = upgradeScopeIdx  !== -1 ? args[upgradeScopeIdx  + 1] : 'user'
+
+  // Validate --skill name early for clear error feedback
+  if (upgradeSkillArg) {
+    const known = getAllSkillItems().some(s => s.skillName === upgradeSkillArg)
+    if (!known) {
+      const msg = `Unknown skill: "${upgradeSkillArg}"`
+      if (jsonFlag) process.stderr.write(JSON.stringify({ error: true, message: msg }) + '\n')
+      else console.error(chalk.red('  ✗ ' + msg))
+      process.exit(1)
+    }
+  }
+
+  const rows        = buildSkillRows(upgradeSkillArg)
+  const targetList  = resolveTargets(upgradeTargetArg ? [upgradeTargetArg] : ['all'], upgradeScopeArg)
+  const scopeKey    = upgradeScopeArg + 'Detail'   // 'userDetail' or 'projectDetail'
+
+  const summary = {}
+  for (const { name: targetName, dir } of targetList) {
+    const upgradeList = rows
+      .filter(r => r[scopeKey]?.[targetName]?.status === 'update')
+      .map(r => ({ skillName: r.name, srcPath: r.srcPath, version: r.version }))
+
+    if (!upgradeList.length) continue
+
+    console.log('')
+    const result = await installSkills(upgradeList, [{ name: targetName, dir }], true)
+    Object.assign(summary, result)
+    console.log('')
+  }
+
+  const nothingUpgraded = Object.keys(summary).length === 0
+  if (jsonFlag) {
+    if (nothingUpgraded) {
+      console.log(JSON.stringify({ skills: {}, upToDate: true }, null, 2))
+    } else {
+      console.log(JSON.stringify({ skills: summary }, null, 2))
+    }
+  } else {
+    if (nothingUpgraded) {
+      console.log(chalk.green('  ✓ All installed skills are up to date'))
+    } else {
+      printSummary(summary, null)
+    }
+  }
+  process.exit(0)
 }
 
 // ── Install ───────────────────────────────────────────────────────────────────
@@ -640,19 +768,23 @@ const scopeArg  = scopeIdx  !== -1 ? installArgs[scopeIdx  + 1] : undefined
 const TOOL_BUNDLE_VALUES = new Set(TOOL_BUNDLE_CHOICES.map(c => c.value))
 
 // ── Two-step target→scope selector ───────────────────────────────────────────
-const ALL_SKILL_TARGETS = ['claude', 'cursor', 'codex', 'openclaw', 'hermes', 'opencode']
+// Paths are derived from SKILL_TARGETS/userSkillDir (lib/targets.js) — the single
+// source of truth — so adding a target there is enough to update every view here.
+const TARGET_DIRS = SKILL_TARGETS.map(name => {
+  const real = userSkillDir(name)
+  return { name, real, disp: real.replace(os.homedir(), '~') }
+})
 
 function selectTargetThenScope() {
   // Step 1: platform (target)
   const targetInput = [
-    'claude    ~/.claude/skills/',
-    'cursor    ~/.cursor/skills/',
-    'codex     ~/.codex/skills/',
-    'openclaw  ~/.openclaw/skills/',
-    'hermes    ~/.hermes/skills/',
-    'opencode  ~/.config/opencode/skills/',
-    'all       all 6 targets',
+    ...TARGET_DIRS.map(({ name, disp }) => `${name.padEnd(8)}  ${disp}/`),
+    `all       all ${TARGET_DIRS.length} targets`,
   ].join('\n')
+
+  const allEchoLines = TARGET_DIRS.map(({ disp }) => `echo "  ${disp}/";`).join(' ')
+  const caseArms      = TARGET_DIRS.map(({ name, disp, real }) => `${name}) disp="${disp}/"; real="${real}/";;`).join(' ')
+  const previewScript = `t=$(echo {} | awk '{print $1}'); if [ "$t" = "all" ]; then echo ""; echo "  安装到所有平台:"; echo ""; ${allEchoLines} else case "$t" in ${caseArms} esac; echo ""; echo "  安装路径:"; echo ""; printf "  \\033[36m%s\\033[0m\\n" "$disp"; echo ""; if [ -d "$real" ]; then echo "  ✓ 目录已存在"; else echo "  · 将自动新建"; fi; fi`
 
   const targetResult = spawnSync('fzf', [
     '--multi',
@@ -661,7 +793,7 @@ function selectTargetThenScope() {
     '--layout=reverse',
     '--border=rounded',
     '--color=header:italic:dim,prompt:cyan,pointer:cyan,hl:cyan,hl+:cyan:bold',
-    '--preview=t=$(echo {} | awk \'{print $1}\'); if [ "$t" = "all" ]; then echo ""; echo "  安装到所有平台:"; echo ""; for p in claude cursor codex openclaw hermes opencode; do printf "  ~/.%s/skills/\\n" "$p"; done; else p="${HOME}/.${t}/skills/"; echo ""; echo "  安装路径:"; echo ""; printf "  \\033[36m%s\\033[0m\\n" "$p"; echo ""; if [ -d "$p" ]; then echo "  ✓ 目录已存在"; else echo "  · 将自动新建"; fi; fi',
+    `--preview=${previewScript}`,
     '--preview-window=right:45%:wrap',
   ], {
     input: targetInput,
@@ -673,7 +805,7 @@ function selectTargetThenScope() {
 
   const rawTargets = targetResult.stdout.trim().split('\n')
     .map(l => l.trim().split(/\s+/)[0])
-  const expandedTargets = rawTargets.includes('all') ? ALL_SKILL_TARGETS : rawTargets
+  const expandedTargets = rawTargets.includes('all') ? SKILL_TARGETS : rawTargets
 
   // Step 2: scope (user/project) — skip if all selected targets are user-only
   const allUserOnly = expandedTargets.every(t => USER_ONLY_TARGETS.has(t))
@@ -721,15 +853,34 @@ function requireFzf() {
   }
 }
 
-// 用 fzf 交互式选择 skill/tool，返回选中的 item 列表
-function fzfSelect() {
-  requireFzf()
-  const skillItems  = getAllSkillItems()
+const G = '\x1b[32m', Y = '\x1b[33m', C = '\x1b[36m', D = '\x1b[2m', R = '\x1b[0m'
+function colorIcon(status) {
+  if (status === 'up-to-date') return G + '✓' + R
+  if (status === 'update')     return Y + '↑' + R
+  return D + '—' + R
+}
+function scopeHint(installScope) {
+  if (installScope === 'essential') return Y + '»' + R
+  if (installScope === 'global' || installScope === 'project') return C + '▸' + R
+  return D + '—' + R
+}
+
+// ── Hidden: fzf reload helper ─────────────────────────────────────────────────
+// 供 fzf 的 reload()/execute() 动作回调，重新打印某个视图的最新内容（不进入交互模式）
+if (subcommand === '__fzf-view') {
+  const key = args[1]
+  const content = key === 'skill' ? buildSkillViewInput() : buildSinglePlatformViewInput(key)
+  process.stdout.write(content + '\n')
+  process.exit(0)
+}
+
+// 构建"按 skill 维度"的 fzf 输入行（skill/tool/hook 都在同一列表里）
+function buildSkillViewInput() {
+  const skillItems = getAllSkillItems()
   const toolItems   = getAllToolItems()
   const hookItems   = getAllHookItems()
-  const previewPath = path.join(__dirname, 'preview.mjs')
 
-  // 构建 fzf 输入：每行 "NAME\tVERSION\tBUNDLE\tKIND\tSRCPATH\tINSTALLSCOPE"
+  // 每行 "NAME\tVERSION\tBUNDLE\tKIND\tSRCPATH\tINSTALLSCOPE"
   const lines = [
     ...skillItems.map(s => {
       const bundle = s.srcPath.split('/').slice(-2, -1)[0]
@@ -741,18 +892,6 @@ function fzfSelect() {
 
   const nameWidth    = Math.max(...lines.map(l => l.split('\t')[0].length))
   const versionWidth = Math.max(...lines.map(l => l.split('\t')[1].length))
-
-  const G = '\x1b[32m', Y = '\x1b[33m', C = '\x1b[36m', D = '\x1b[2m', R = '\x1b[0m'
-  function colorIcon(status) {
-    if (status === 'up-to-date') return G + '✓' + R
-    if (status === 'update')     return Y + '↑' + R
-    return D + '—' + R
-  }
-  function scopeHint(installScope) {
-    if (installScope === 'essential') return Y + '»' + R
-    if (installScope === 'global' || installScope === 'project') return C + '▸' + R
-    return D + '—' + R
-  }
 
   // fzf 展示格式：NAME   VERSION   U:?  P:?  BUNDLE
   const displayLines = lines.map(l => {
@@ -776,28 +915,105 @@ function fzfSelect() {
     return `${name.padEnd(nameWidth)}  ${ver.padEnd(versionWidth)}  U:${uIcon}  P:${pIcon}  ${bundle}`
   })
 
-  // 把原始数据附在末尾（隐藏列，用于解析和 preview）
-  const fzfInput = displayLines.map((d, i) => `${d}\t${lines[i]}`).join('\n')
+  return displayLines.map((d, i) => `${d}\t${lines[i]}`).join('\n')
+}
 
-  const header = `  hskill  ·  U=user P=project  ${G}✓${R}=ok ${Y}↑${R}=update ${Y}»${R}=essential ${C}▸${R}=recommended ${D}—${R}=none  ·  tab 多选  ·  enter 确认`
+// 构建"单平台维度"的 fzf 输入行：每个 skill 一行，只展示该平台（user-scope）的安装状态
+function buildSinglePlatformViewInput(targetName) {
+  const skillItems = getAllSkillItems()
+  const nameWidth   = Math.max(...skillItems.map(s => s.skillName.length))
 
-  const result = spawnSync('fzf', [
-    '--multi',
-    '--ansi',
-    '--delimiter=\t',
-    '--with-nth=1',
-    '--prompt=  › ',
-    `--header=${header}`,
-    '--layout=reverse',
-    '--border=rounded',
-    '--color=header:italic:dim,prompt:cyan,pointer:cyan,hl:cyan,hl+:cyan:bold',
-    `--preview=node ${previewPath} {2} {3} {5} {6}`,
-    '--preview-window=right:42%:wrap',
-  ], {
-    input: fzfInput,
-    encoding: 'utf8',
-    stdio: ['pipe', 'pipe', 'inherit'],
+  const lines = skillItems.map(s => {
+    const bundle = s.srcPath.split('/').slice(-2, -1)[0]
+    return `${s.skillName}\t${s.version ?? '—'}\t${bundle}\tskill\t${s.srcPath}\t${s.installScope ?? ''}`
   })
+
+  const displayLines = skillItems.map(s => {
+    const installed = checkInstalled(s.skillName, s.version ?? '—')
+    const detail = installed.user[targetName]
+    const ver = detail.status === 'none' ? D + '—'.padEnd(7) + R : detail.version.padEnd(7)
+    return `${s.skillName.padEnd(nameWidth)}  ${colorIcon(detail.status)}  ${ver}`
+  })
+
+  return displayLines.map((d, i) => `${d}\t${lines[i]}`).join('\n')
+}
+
+function platformPrompt(key) {
+  return `  ${key} › `
+}
+
+// 静态 header：不随视图切换而变化，避免把 ANSI/中文塞进 fzf 的 shell 动作字符串里
+const COMBINED_HEADER = `  hskill  ·  ${G}✓${R}=ok ${Y}↑${R}=update ${Y}»${R}=essential ${C}▸${R}=recommended ${D}—${R}=none  ·  ctrl-t 切平台  ctrl-u 一键升级本平台  ctrl-g 升级该 skill 全平台  ·  tab 多选  ·  enter 确认`
+
+// 用 fzf 交互式选择 skill/tool，返回选中的 item 列表
+function fzfSelect() {
+  requireFzf()
+  const previewPath = path.join(__dirname, 'preview.mjs')
+  const selfPath     = process.argv[1]
+  // 用不带 flag 的 read（bash/zsh 通用；-n/-p/-k 等 flag 在两者语义不同，混用会挂住）等待回车再回到 fzf
+  const pauseCmd     = `; printf '\\n  按 enter 返回…'; read _`
+
+  // 视图顺序：skill 维度 → 逐个平台维度（每次只显示一个平台）→ 循环回 skill
+  const viewKeys  = ['skill', ...SKILL_TARGETS]
+  const skillViewInput = buildSkillViewInput()
+  const viewFiles = Object.fromEntries(viewKeys.map(key => [key, `/tmp/hskill-view-${key}-${process.pid}.txt`]))
+
+  for (const key of viewKeys) {
+    const content = key === 'skill' ? skillViewInput : buildSinglePlatformViewInput(key)
+    writeFileSync(viewFiles[key], content)
+  }
+
+  // 每个视图对应的 preview 命令：单平台视图额外传入平台 key，让 preview.mjs 只输出该平台的状态
+  function previewCmdFor(key) {
+    const base = `node ${previewPath} {2} {3} {5} {6}`
+    return key === 'skill' ? base : `${base} ${key}`
+  }
+
+  // ctrl-t 循环切换：根据当前 prompt 找到下一个视图，reload 对应文件、更新 prompt 和 preview 命令
+  const cycleCases = viewKeys.map((key, i) => {
+    const next = viewKeys[(i + 1) % viewKeys.length]
+    return `"${platformPrompt(key)}") echo "reload(cat ${viewFiles[next]})+change-prompt(${platformPrompt(next)})+change-preview(${previewCmdFor(next)})" ;;`
+  }).join('\n')
+  const cycleScript = `case "$FZF_PROMPT" in\n${cycleCases}\nesac`
+
+  // ctrl-u：仅在单平台视图下生效，一键升级该平台上所有已装 skill（user scope），完成后刷新当前视图
+  const upgradeAllCases = viewKeys.map(key => {
+    if (key === 'skill') return `"${platformPrompt(key)}") echo "" ;;`
+    const upgradeCmd = `node ${selfPath} upgrade --target ${key} --scope user${pauseCmd}`
+    return `"${platformPrompt(key)}") echo "execute(${upgradeCmd})+reload(node ${selfPath} __fzf-view ${key})" ;;`
+  }).join('\n')
+  const upgradeAllScript = `case "$FZF_PROMPT" in\n${upgradeAllCases}\nesac`
+
+  // ctrl-g：任意视图下，把光标所在的 skill 升级到它已安装的所有平台（user scope），完成后刷新当前视图
+  const upgradeSkillScript = `if [ {5} = skill ]; then key=$(echo "$FZF_PROMPT" | awk '{print $1}'); echo "execute(node ${selfPath} upgrade --skill {2}${pauseCmd})+reload(node ${selfPath} __fzf-view $key)"; else echo ""; fi`
+
+  let result
+  try {
+    result = spawnSync('fzf', [
+      '--multi',
+      '--ansi',
+      '--delimiter=\t',
+      '--with-nth=1',
+      `--prompt=${platformPrompt('skill')}`,
+      `--header=${COMBINED_HEADER}`,
+      '--layout=reverse',
+      '--border=rounded',
+      '--color=header:italic:dim,prompt:cyan,pointer:cyan,hl:cyan,hl+:cyan:bold',
+      `--preview=node ${previewPath} {2} {3} {5} {6}`,
+      '--preview-window=right:42%:wrap',
+      `--bind=ctrl-t:transform:${cycleScript}`,
+      `--bind=ctrl-u:transform:${upgradeAllScript}`,
+      `--bind=ctrl-g:transform:${upgradeSkillScript}`,
+    ], {
+      input: skillViewInput,
+      encoding: 'utf8',
+      stdio: ['pipe', 'pipe', 'inherit'],
+    })
+  } finally {
+    for (const file of Object.values(viewFiles)) {
+      try { unlinkSync(file) } catch { /* ignore */ }
+    }
+  }
 
   if (result.status !== 0 || !result.stdout.trim()) return []
 
@@ -1093,7 +1309,7 @@ try {
             '--header=  从哪里卸载  ·  tab 多选  ·  enter 确认  ·  esc 取消',
             '--layout=reverse', '--border=rounded',
             '--color=header:italic:dim,prompt:cyan,pointer:cyan,hl:cyan,hl+:cyan:bold',
-            '--preview=t=$(echo {} | awk \'{print $1}\'); if [ "$t" = "all" ]; then echo ""; echo "  从所有平台卸载:"; echo ""; for p in claude cursor codex openclaw hermes opencode; do printf "  ~/.%s/skills/\\n" "$p"; done; else echo ""; printf "  ~/.%s/skills/\\n" "$t"; fi',
+            `--preview=t=$(echo {} | awk '{print $1}'); if [ "$t" = "all" ]; then echo ""; echo "  从所有平台卸载:"; echo ""; ${TARGET_DIRS.map(({ disp }) => `echo "  ${disp}/";`).join(' ')} else case "$t" in ${TARGET_DIRS.map(({ name, disp }) => `${name}) echo ""; echo "  ${disp}/";;`).join(' ')} esac; fi`,
             '--preview-window=right:45%:wrap',
           ], {
             input: targetChoices2.map(c => c.name).join('\n') + '\nall      — all targets',
@@ -1184,14 +1400,14 @@ try {
     // When only --skill is given and no --target, use the combined selector.
     if (targetArg) {
       const scope = scopeArg ?? 'user'
-      const selectedTargets = targetArg === 'all' ? ['claude', 'cursor', 'codex', 'openclaw', 'hermes', 'opencode'] : [targetArg]
+      const selectedTargets = targetArg === 'all' ? SKILL_TARGETS : [targetArg]
       const targets = resolveTargets(selectedTargets, scope)
       console.log('')
       skillSummary = await installSkills(skillItems, targets, forceFlag)
       console.log('')
     } else {
       if (!process.stdout.isTTY) {
-        console.error(chalk.red('  ✗ Interactive target selection requires a TTY. Use --target claude|cursor|codex|openclaw|hermes|all.'))
+        console.error(chalk.red(`  ✗ Interactive target selection requires a TTY. Use --target ${SKILL_TARGETS.join('|')}|all.`))
         process.exit(1)
       }
       const selectedST = selectTargetThenScope()

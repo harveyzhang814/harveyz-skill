@@ -19,27 +19,19 @@ if _parsed.scheme not in ('http', 'https') or not _parsed.netloc:
 # --- Config (after security check) ---
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent))
-from config import get_vault_path, get_chrome_profile
+from config import get_vault_path, get_chrome_profile, get_article_paths
 vault_path     = get_vault_path()
 chrome_profile = get_chrome_profile()
 skill_dir      = str(Path(__file__).parent.parent)
 
-import json, urllib.request, urllib.error, ssl, hashlib, shutil, tempfile
+import json, urllib.request, urllib.error, ssl, shutil, tempfile
 import certifi
 from datetime import datetime, timezone, timedelta
 from playwright.sync_api import sync_playwright
 import pycookiecheat
 
 sys.path.insert(0, os.path.join(skill_dir, 'references'))
-from article_utils import infer_ext, format_block, sanitize_filename, repair_frontmatter, record_issues
-
-url_hash   = hashlib.md5(url.encode()).hexdigest()[:8]
-image_dir  = os.path.join(vault_path, 'Image')
-origin_dir = os.path.join(vault_path, 'Origin')
-db_path    = os.path.join(vault_path, 'url-index.db')
-
-os.makedirs(image_dir, exist_ok=True)
-os.makedirs(origin_dir, exist_ok=True)
+from article_utils import infer_ext, format_block, repair_frontmatter, record_fetch_issues
 
 
 def _is_safe_image_url(src):
@@ -108,8 +100,52 @@ _EXTRACT_JS_HEADED = r"""() => {
             return false;
         }
 
+        // X Articles/Notes render each paragraph as a Draft.js block div whose
+        // children are per-style-run spans (a new sibling span starts wherever
+        // bold toggles on/off). Without merging these runs, every bold word
+        // becomes its own top-level paragraph and the bold styling is lost.
+        function isDraftParagraphBlock(node) {
+            return node.tagName === 'DIV' && node.classList
+                && node.classList.contains('public-DraftStyleDefault-block');
+        }
+
+        function isBoldRun(span) {
+            // Inline style only (X marks bold runs with style="font-weight: bold"
+            // directly on the run) — NOT computed style, which would also pick up
+            // ambient bold from a heading ancestor and false-positive every run.
+            const w = span.style && span.style.fontWeight;
+            return w === 'bold' || parseInt(w) >= 600;
+        }
+
+        function paragraphToInlineMarkdown(blockDiv) {
+            let out = '';
+            for (const run of blockDiv.children) {
+                const text = (run.textContent || '').replace(/\s+/g, ' ');
+                if (!text) continue;
+                const trimmed = text.trim();
+                if (isBoldRun(run) && trimmed) {
+                    const lead = text.slice(0, text.indexOf(trimmed));
+                    const trail = text.slice(text.indexOf(trimmed) + trimmed.length);
+                    out += lead + '**' + trimmed + '**' + trail;
+                } else {
+                    out += text;
+                }
+            }
+            return out.trim();
+        }
+
+        function isInsideProcessedParagraph(node, processed) {
+            let el = node.parentElement;
+            while (el && el !== contentRoot) {
+                if (processed.has(el)) return true;
+                el = el.parentElement;
+            }
+            return false;
+        }
+
         const skipTags = new Set(['SCRIPT','STYLE','NAV','FOOTER','HEADER','ASIDE']);
         const contentUnits = [];
+        const processedParagraphs = new Set();
         let lastText = '';
 
         const walker = document.createTreeWalker(contentRoot, NodeFilter.SHOW_ELEMENT);
@@ -117,8 +153,19 @@ _EXTRACT_JS_HEADED = r"""() => {
         while (node = walker.nextNode()) {
             if (skipTags.has(node.tagName.toUpperCase())) continue;
             if (insideNestedTweet(node)) continue;
+            if (isInsideProcessedParagraph(node, processedParagraphs)) continue;
             const tag = node.tagName.toUpperCase();
             const tid = node.getAttribute('data-testid') || '';
+
+            if (isDraftParagraphBlock(node)) {
+                const md = paragraphToInlineMarkdown(node);
+                if (md && md.length > 5) {
+                    contentUnits.push({type: 'text', tag: 'p', content: md});
+                    lastText = md;
+                }
+                processedParagraphs.add(node);
+                continue;
+            }
 
             if (tag === 'DIV' && tid === 'tweetPhoto') {
                 const img = node.querySelector('img');
@@ -180,6 +227,10 @@ _EXTRACT_JS_HEADED = r"""() => {
                     lastText = t.trim();
                 }
             } else if (['H2','H3','P','LI','BLOCKQUOTE'].includes(tag)) {
+                // Mark processed so a nested Draft.js paragraph div (headings/
+                // blockquotes wrap one internally) isn't ALSO captured below,
+                // which would duplicate this element's text as an extra block.
+                processedParagraphs.add(node);
                 const t = node.innerText.replace(/\s+/g, ' ').trim();
                 if (t && t.length > 5) {
                     contentUnits.push({type: 'text', tag: tag.toLowerCase(), content: t});
@@ -261,8 +312,52 @@ _EXTRACT_JS_HEADLESS = r"""() => {
             return false;
         }
 
+        // X Articles/Notes render each paragraph as a Draft.js block div whose
+        // children are per-style-run spans (a new sibling span starts wherever
+        // bold toggles on/off). Without merging these runs, every bold word
+        // becomes its own top-level paragraph and the bold styling is lost.
+        function isDraftParagraphBlock(node) {
+            return node.tagName === 'DIV' && node.classList
+                && node.classList.contains('public-DraftStyleDefault-block');
+        }
+
+        function isBoldRun(span) {
+            // Inline style only (X marks bold runs with style="font-weight: bold"
+            // directly on the run) — NOT computed style, which would also pick up
+            // ambient bold from a heading ancestor and false-positive every run.
+            const w = span.style && span.style.fontWeight;
+            return w === 'bold' || parseInt(w) >= 600;
+        }
+
+        function paragraphToInlineMarkdown(blockDiv) {
+            let out = '';
+            for (const run of blockDiv.children) {
+                const text = (run.textContent || '').replace(/\s+/g, ' ');
+                if (!text) continue;
+                const trimmed = text.trim();
+                if (isBoldRun(run) && trimmed) {
+                    const lead = text.slice(0, text.indexOf(trimmed));
+                    const trail = text.slice(text.indexOf(trimmed) + trimmed.length);
+                    out += lead + '**' + trimmed + '**' + trail;
+                } else {
+                    out += text;
+                }
+            }
+            return out.trim();
+        }
+
+        function isInsideProcessedParagraph(node, processed) {
+            let el = node.parentElement;
+            while (el && el !== contentRoot) {
+                if (processed.has(el)) return true;
+                el = el.parentElement;
+            }
+            return false;
+        }
+
         const skipTags = new Set(['SCRIPT','STYLE','NAV','FOOTER','HEADER','ASIDE']);
         const contentUnits = [];
+        const processedParagraphs = new Set();
         let lastText = '';
 
         const walker = document.createTreeWalker(contentRoot, NodeFilter.SHOW_ELEMENT);
@@ -270,8 +365,19 @@ _EXTRACT_JS_HEADLESS = r"""() => {
         while (node = walker.nextNode()) {
             if (skipTags.has(node.tagName.toUpperCase())) continue;
             if (insideNestedTweet(node)) continue;
+            if (isInsideProcessedParagraph(node, processedParagraphs)) continue;
             const tag = node.tagName.toUpperCase();
             const tid = node.getAttribute('data-testid') || '';
+
+            if (isDraftParagraphBlock(node)) {
+                const md = paragraphToInlineMarkdown(node);
+                if (md && md.length > 5) {
+                    contentUnits.push({type: 'text', tag: 'p', content: md});
+                    lastText = md;
+                }
+                processedParagraphs.add(node);
+                continue;
+            }
 
             if (tag === 'DIV' && tid === 'tweetPhoto') {
                 const img = node.querySelector('img');
@@ -313,6 +419,10 @@ _EXTRACT_JS_HEADLESS = r"""() => {
                     lastText = directText;
                 }
             } else if (['H2','H3','P','LI','BLOCKQUOTE','PRE'].includes(tag)) {
+                // Mark processed so a nested Draft.js paragraph div (headings/
+                // blockquotes wrap one internally) isn't ALSO captured below,
+                // which would duplicate this element's text as an extra block.
+                processedParagraphs.add(node);
                 const t = node.innerText.replace(/\s+/g, ' ').trim();
                 if (t && t.length > 5) {
                     contentUnits.push({type: 'text', tag: tag.toLowerCase(), content: t});
@@ -403,6 +513,14 @@ if result.get('error'):
     print(f"ERROR: {result['error']}", file=sys.stderr)
     sys.exit(1)
 
+title = result.get('title', 'Untitled')
+paths = get_article_paths(url, title)
+image_dir   = paths['image_dir']
+origin_dir  = paths['origin_dir']
+origin_path = paths['origin_path']
+os.makedirs(image_dir, exist_ok=True)
+os.makedirs(origin_dir, exist_ok=True)
+
 # --- Download images ---
 downloaded = []
 for i, img in enumerate(result.get('imageBlocks', [])):
@@ -410,7 +528,7 @@ for i, img in enumerate(result.get('imageBlocks', [])):
         print(f"  [{i+1}] Skipped unsafe image URL: {img['src'][:80]}")
         continue
     ext   = infer_ext(img['src'])
-    fname = f"{url_hash}_img_{i+1}{ext}"
+    fname = f"img_{i+1}{ext}"
     fpath = os.path.join(image_dir, fname)
     try:
         req = urllib.request.Request(img['src'], headers={'User-Agent': 'Mozilla/5.0', 'Accept': 'image/*'})
@@ -427,20 +545,16 @@ for i, img in enumerate(result.get('imageBlocks', [])):
 
 # --- Build origin file ---
 blocks       = result['blocks']
-title        = result.get('title', 'Untitled')
 author       = result.get('author', '')
 publish_date = result.get('publishDate', '')[:10]
 fetch_date   = datetime.now(timezone(timedelta(hours=8))).strftime('%Y-%m-%d')
-
-origin_filename = sanitize_filename(title) + '.md'
-origin_path     = os.path.join(origin_dir, origin_filename)
 
 body_units = []
 for i, block in enumerate(blocks):
     parts = [format_block(block)]
     for img in downloaded:
         if img.get('afterBlock') == i:
-            parts.append(f'![](Image/{img["filename"]})')
+            parts.append(f'![](../Image/{img["filename"]})')
     body_units.append('\n'.join(parts))
 
 body = '\n\n'.join(body_units)
@@ -462,12 +576,12 @@ with open(origin_path, 'w', encoding='utf-8') as f:
     f.write(origin_content)
 
 # --- Validate ---
-fm, fixed, remaining = repair_frontmatter(origin_path, url, {'fetch_date': fetch_date})
+fm, fixed, remaining = repair_frontmatter(origin_path, url, {'fetch_date': fetch_date}, skip_remaining_fields={'description'})
 if remaining:
-    record_issues(url, '; '.join(remaining), db_path)
+    record_fetch_issues('; '.join(remaining), paths['article_dir'])
     print(f"警告：校验问题 {remaining}", file=sys.stderr)
 else:
-    record_issues(url, '', db_path)
+    record_fetch_issues('', paths['article_dir'])
 
 print(f"ORIGIN_PATH: {origin_path}")
 print(f"抓取完成：{title} ({len(blocks)} blocks, {len(downloaded)} images)")

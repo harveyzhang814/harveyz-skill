@@ -1,9 +1,10 @@
-import json, os, sqlite3, sys
+import json, os, sys
 from pathlib import Path
 
 import pytest
 
 sys.path.insert(0, str(Path(__file__).parent.parent / 'scripts'))
+from config import get_url_hash
 
 SCRIPTS_DIR = Path(__file__).parent.parent / 'scripts'
 
@@ -29,24 +30,18 @@ def skill_config(tmp_path):
 
 
 @pytest.fixture
-def url_index_db(skill_config):
-    """Create url_index table in vault's SQLite DB; return db Path."""
-    db_path = skill_config['vault'] / 'url-index.db'
-    conn = sqlite3.connect(str(db_path))
-    conn.execute("""
-        CREATE TABLE IF NOT EXISTS url_index (
-            source_url   TEXT PRIMARY KEY,
-            title        TEXT,
-            fetched_at   TEXT,
-            issues       TEXT,
-            category     TEXT,
-            origin_path  TEXT,
-            article_path TEXT
-        )
-    """)
-    conn.commit()
-    conn.close()
-    return db_path
+def write_meta_json_fixture(skill_config):
+    """Factory: write a meta.json for a given URL into the vault's <hash8> dir."""
+    def _write(url, **fields):
+        hash8 = get_url_hash(url)
+        article_dir = skill_config['vault'] / hash8
+        article_dir.mkdir(parents=True, exist_ok=True)
+        meta = {'source_url': url, 'title': '', 'category': '', 'fetched_at': '', 'issues': ''}
+        meta.update(fields)
+        meta_path = article_dir / 'meta.json'
+        meta_path.write_text(json.dumps(meta, ensure_ascii=False), encoding='utf-8')
+        return meta_path
+    return _write
 
 
 _ARTICLE_CONTENT = """\
@@ -68,7 +63,7 @@ This paragraph has more than ten characters and serves as content for testing.
 
 
 @pytest.fixture
-def valid_article_files(skill_config, url_index_db):
+def valid_article_files(skill_config):
     """Create origin + translated article files with valid frontmatter."""
     url = 'https://example.com/test-article'
     content = _ARTICLE_CONTENT.format(url=url)

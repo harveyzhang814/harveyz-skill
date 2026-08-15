@@ -2,6 +2,10 @@
 title: extract-url 完成回报格式设计
 date: 2026-07-02
 status: approved
+migrated: 2026-07-09
+implemented_in:
+  - skills/research/extract-url/SKILL.md  # 完成/失败/部分完成/已跳过卡片格式、批量汇总行
+  - skills/research/extract-url/scripts/count_article_stats.py  # CHARS/CODE_BLOCKS/IMAGES 统计脚本
 ---
 
 ## 背景

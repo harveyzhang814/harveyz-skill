@@ -35,7 +35,7 @@ tags:
 description: 一两句话摘要，概括文章核心内容，供快速阅读。
 ---
 
-[[Origin/文章原标题.md]]
+[[<hash8>/Origin/文章原标题.md]]
 
 ---
 
@@ -67,11 +67,16 @@ origin_filename = re.sub(r'[\\/:*?<>|".]', '', title) + '.md'
 
 ## 保存路径
 
+文章专属文件夹：`<hash8>/`，其中 `hash8 = md5(source_url).hexdigest()[:8]`，统一由 `scripts/config.py` 的 `get_article_paths()` 计算（图片、原文/译文文件名共用同一算法）。
+
 | 类型 | 路径 |
 |------|------|
-| 原文 | `Origin/<origin_title>.md` |
-| 译文 | `<title>.md`（无 Origin 子文件夹） |
-| 图片 | `Image/<url_hash>_img_N.ext` |
+| 原文 | `<hash8>/Origin/<origin_title>.md` |
+| 译文 | `<hash8>/Translation/<origin_title>.md`（与原文同名） |
+| 图片 | `<hash8>/Image/img_N.ext` |
+
+双链示例（译文首行）：`[[<hash8>/Origin/<origin_title>.md]]`
+图片引用示例（原文/译文正文内）：`![](../Image/img_1.jpg)`
 
 ## 固定词表（fixed_tags.txt）
 

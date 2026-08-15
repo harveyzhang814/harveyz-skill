@@ -1,11 +1,11 @@
-import sqlite3, subprocess, os, yaml
+import json, subprocess, os, yaml
 from pathlib import Path
 
 SCRIPTS_DIR = Path(__file__).parent.parent / 'scripts'
 
 
 def test_validate_article_success(skill_config, valid_article_files):
-    """Valid article exits 0 and writes URL to SQLite."""
+    """Valid article exits 0 and writes meta.json."""
     env = {
         **skill_config['env'],
         'ARTICLE_URL':    valid_article_files['url'],
@@ -19,14 +19,11 @@ def test_validate_article_success(skill_config, valid_article_files):
     )
     assert result.returncode == 0, result.stderr
 
-    db_path = skill_config['vault'] / 'url-index.db'
-    conn = sqlite3.connect(str(db_path))
-    row = conn.execute(
-        'SELECT source_url FROM url_index WHERE source_url=?',
-        (valid_article_files['url'],)
-    ).fetchone()
-    conn.close()
-    assert row is not None, 'URL should be written to SQLite after successful validation'
+    from config import get_url_hash
+    meta_path = skill_config['vault'] / get_url_hash(valid_article_files['url']) / 'meta.json'
+    assert meta_path.exists(), 'meta.json should be written after successful validation'
+    meta = json.loads(meta_path.read_text(encoding='utf-8'))
+    assert meta['source_url'] == valid_article_files['url']
 
 
 def test_validate_article_no_article_db_env_needed(skill_config, valid_article_files):
@@ -67,7 +64,7 @@ def test_validate_article_no_skill_dir_env_needed(skill_config, valid_article_fi
         f'Should work without ARTICLE_SKILL_DIR env var. stderr: {result.stderr}'
 
 
-def test_validate_article_missing_article_path(skill_config, url_index_db):
+def test_validate_article_missing_article_path(skill_config):
     """Exits 1 when ARTICLE_PATH does not exist."""
     env = {
         **skill_config['env'],
@@ -101,6 +98,92 @@ def test_validate_article_missing_config(tmp_path):
     assert result.returncode != 0
 
 
+_ARTICLE_MISSING_AUTHOR_DATE = """\
+---
+publish_date:
+fetch_date: 2024-01-02
+author:
+source_url: {url}
+origin_title: "Test Article"
+description: A test article for validation.
+tags:
+  - test
+---
+
+# Test Article
+
+This paragraph has more than ten characters and serves as content for testing.
+"""
+
+
+def test_validate_article_missing_author_and_date_still_succeeds(skill_config, tmp_path):
+    """author/publish_date missing (common for sites without that metadata) no longer blocks indexing."""
+    url = 'https://example.com/no-author-date'
+    content = _ARTICLE_MISSING_AUTHOR_DATE.format(url=url)
+    origin = skill_config['vault'] / 'Origin' / 'no-author-date.md'
+    article = skill_config['vault'] / 'no-author-date.md'
+    origin.write_text(content, encoding='utf-8')
+    article.write_text(content, encoding='utf-8')
+
+    env = {
+        **skill_config['env'],
+        'ARTICLE_URL':    url,
+        'ARTICLE_ORIGIN': str(origin),
+        'ARTICLE_PATH':   str(article),
+        'PATH': os.environ.get('PATH', ''),
+    }
+    result = subprocess.run(
+        ['python3', str(SCRIPTS_DIR / 'validate_article.py')],
+        env=env, capture_output=True, text=True
+    )
+    assert result.returncode == 0, result.stderr
+
+    from config import get_url_hash
+    meta_path = skill_config['vault'] / get_url_hash(url) / 'meta.json'
+    assert meta_path.exists(), 'meta.json should still be written when only author/publish_date are missing'
+
+
+_ARTICLE_MISSING_DESCRIPTION = """\
+---
+publish_date: 2024-01-01
+fetch_date: 2024-01-02
+author: Test Author
+source_url: {url}
+origin_title: "Test Article"
+tags:
+  - test
+---
+
+# Test Article
+
+This paragraph has more than ten characters and serves as content for testing.
+"""
+
+
+def test_validate_article_missing_description_still_blocks(skill_config, tmp_path):
+    """description is Subagent 2's own output; missing it must still block (regression guard)."""
+    url = 'https://example.com/no-description'
+    content = _ARTICLE_MISSING_DESCRIPTION.format(url=url)
+    origin = skill_config['vault'] / 'Origin' / 'no-description.md'
+    article = skill_config['vault'] / 'no-description.md'
+    origin.write_text(content, encoding='utf-8')
+    article.write_text(content, encoding='utf-8')
+
+    env = {
+        **skill_config['env'],
+        'ARTICLE_URL':    url,
+        'ARTICLE_ORIGIN': str(origin),
+        'ARTICLE_PATH':   str(article),
+        'PATH': os.environ.get('PATH', ''),
+    }
+    result = subprocess.run(
+        ['python3', str(SCRIPTS_DIR / 'validate_article.py')],
+        env=env, capture_output=True, text=True
+    )
+    assert result.returncode == 1
+    assert 'description空' in result.stderr
+
+
 _ARTICLE_WITH_MISPLACED_TAG = """\
 ---
 publish_date: 2024-01-01
@@ -125,7 +208,7 @@ This paragraph has more than ten characters and serves as content for testing.
 """
 
 
-def test_validate_moves_fixed_tag_from_candidate(skill_config, url_index_db, tmp_path):
+def test_validate_moves_fixed_tag_from_candidate(skill_config, tmp_path):
     """validate_article.py が fixed_tags にある candidate_tag を tags に移動する。"""
     url = 'https://example.com/tag-move-test'
     content = _ARTICLE_WITH_MISPLACED_TAG.format(url=url)
