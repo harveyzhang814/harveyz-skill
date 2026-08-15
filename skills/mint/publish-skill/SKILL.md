@@ -1,8 +1,8 @@
 ---
 name: publish-skill
-description: "Validate and publish a skill to the harveyz-skill repository. Checks SKILL.md format compliance (frontmatter fields, semver version, name-directory match, verb-noun naming convention) and registration in skills-index.json. Rules defined in docs/reference/skill-spec.md. Triggers: publish skill, register skill, validate skill format, check skill, add skill to index, is skill ready to publish."
+description: "Validate and publish a skill to the harveyz-skill repository. Checks SKILL.md format compliance (frontmatter fields, semver version, name-directory match, verb-noun or single-verb naming convention) and registration in skills-index.json. Rules defined in docs/reference/skill-spec.md. Triggers: publish skill, register skill, validate skill format, check skill, add skill to index, is skill ready to publish."
 user_invocable: true
-version: "1.3.1"
+version: "1.4.0"
 ---
 
 # skill-publish
@@ -59,8 +59,9 @@ cat /tmp/sv-unregistered.txt
 | F4 | `version` 字段 | 非空，格式为 `X.Y.Z`（semver） |
 | F5 | `user_invocable` 字段 | 显式声明 `true` 或 `false` |
 | F6 | 正文语言 | frontmatter 结束后的正文内容应为中文（含中文字符即视为合规） |
-| F7 | 目录命名规范 | skill 目录名须为 `<动词>-<名词>` 格式（2 词，连字符分隔，全小写），且动词必须在规范词表中；`archived/` 下的 skill 跳过此检查 |
+| F7 | 目录命名规范 | skill 目录名须为 `<动词>-<名词>`（2 段）或单独 `<动词>`（1 段）格式，连字符分隔，全小写；第一段必须语义上是动词，名词（若存在）不得为工具/平台专有名；`archived/` 下的 skill 跳过此检查 |
 | F8 | 内容 hash | 若 `skills-index.json` 中有 `contentHash` 记录：hash 不同且 version 未变 → 报错；hash 不同且 version 已递增 → 通过，Step 7 更新；无记录 → 首次初始化，Step 7 写入 |
+| F9 | 动词覆盖建议（警告，不阻断） | 目录名中的动词语义上合理但未命中规范词表时触发，建议评估是否补充进词表 |
 
 **F3 英文检测方法：** 提取 `description` 字段值，检查是否包含中文字符（`一-鿿` 范围）。有则报错。
 
@@ -69,19 +70,27 @@ cat /tmp/sv-unregistered.txt
 **F7 命名规范检测方法：**
 
 1. 取目录名（`path` 最后一段）
-2. 按连字符分割，检查是否恰好 2 段
-3. 检查第一段（动词）是否在规范词表中：
+2. 按连字符分割，允许恰好 1 段或 2 段
+3. 若 2 段：第一段为动词，第二段为名词；名词不得为工具/平台专有名（youtube、npm、diataxis 等）
+4. 若 1 段：整个目录名须是动词，不允许是单独名词（如 `diagram`、`config`）
+5. 动词判定（无论 1 段还是 2 段的第一段）：
+   a. 先在规范词表中查找：
 
-```
-extract  learn    forge    draw     manage   migrate  scout
-build    sync     publish  archive  contribute  analyze  clean
-release  validate init     dispatch close    setup    capture
-runby    probe    dedup    fix      survey   fetch
-```
+   ```
+   fetch    extract  learn    forge    draw     manage   migrate
+   scout    build    sync     publish  archive  contribute  analyze
+   clean    release  validate init     dispatch close    setup
+   capture  clip     runby    dedup
+   ```
 
-特殊模式：若目录名以 `runby-` 开头，直接视为合规（无需检查名词部分）。
+   命中 → 直接合规。
+   b. 未命中 → 按语义判断该词是否为合理动词（而非名词/专有名词/工具名）。若是合理动词 → 合规，但记为 **F9 警告**（建议评估是否补充进词表）；若明显不是动词 → **F7 违规**。
 
-违规示例：`skill-analyzer`（动词不在词表）、`diagram`（单词，非 2 段）、`youtube-learner`（动词不在词表）
+特殊模式：若目录名以 `runby-` 开头，直接视为合规（无需检查名词部分，也不参与动词判定）。
+
+违规示例：`skill-analyzer`（`skill` 是名词非动词）、`diagram`（单段但是名词非动词）、`youtube-learner`（`youtube` 是平台专有名非动词）
+
+合规但触发 F9 警告的示例：`probe-session`（`probe` 语义上是合理动词，未命中词表）、`handoff`（单段动词，语义完整，未命中词表）
 
 **F8 hash 计算方法：**
 
@@ -147,6 +156,11 @@ skill-publish 检查结果
   skills/meta/my-skill
     R1  未在 skills-index.json 中注册
 
+格式警告（不阻止通过，建议修复）
+--------
+  skills/mint/probe-session
+    F9  动词 'probe' 未命中规范词表，语义合理，建议评估是否补充进词表
+
 注册警告（不阻止通过，建议修复）
 --------
   skills/coding/setup-debug
@@ -161,7 +175,7 @@ skill-publish 检查结果
   ...
 
 ========================
-共发现 3 个问题（2 个格式，1 个注册），2 个警告
+共发现 3 个问题（2 个格式，1 个注册），3 个警告
 ```
 
 若全部通过（含警告）：
@@ -169,7 +183,7 @@ skill-publish 检查结果
 ```
 skill-publish 检查结果
 ========================
-所有 N 个 skill 格式与注册均符合规范。✓（2 个 R4 警告，建议填写 installScope）
+所有 N 个 skill 格式与注册均符合规范。✓（1 个 F9 警告，1 个 R4 警告，建议评估补充词表 / 填写 installScope）
 ```
 
 若完全无问题无警告：
@@ -201,6 +215,13 @@ skill-publish 检查结果
   是否继续？(y/n)
 ```
 确认后执行 `git mv` 重命名目录，并更新 `skills-index.json` 中对应的 `path` 值，最后运行 `node scripts/generate-npmignore.js`。
+
+**格式警告（F9）** — 动词未命中词表但语义合理，不阻止发布，仅询问是否顺带补充词表：
+```
+F9 警告：动词 'probe' 未命中规范词表（语义合理）。
+是否将 'probe' 加入 docs/reference/skill-spec.md 的规范动词词表？(y/n/跳过)
+```
+选 `y` 则用 Edit 工具在 `docs/reference/skill-spec.md` 的词表中追加该动词及含义（需用户补充一句含义描述），并同步追加到本文件 Step 3 的词表副本；选 `n`/跳过则保留警告，不做修改。
 
 **格式问题（F8）** — 询问 bump 类型后自动更新版本号，随即执行 Step 7：
 ```
