@@ -68,3 +68,29 @@ def test_malformed_cursor_on_one_handle_does_not_crash_run(monkeypatch):
     assert "badcursor" in report["failures"]
     assert "goodhandle" in report["baselines"]
     assert "goodhandle" not in report["failures"]
+
+
+def test_timeline_url_appends_all_tab():
+    """Bare profile URLs only show X's default Posts tab (posts + quotes) —
+    /all is needed to also see reposts and replies (verified by manual
+    probing against a real profile)."""
+    assert fetch_new_tweets._timeline_url("https://x.com/alice") == "https://x.com/alice/all"
+    assert fetch_new_tweets._timeline_url("https://x.com/alice/") == "https://x.com/alice/all"
+
+
+def test_run_fetches_the_all_tab_not_the_bare_profile_url(monkeypatch):
+    watchlist.save_watchlist([
+        {"handle": "alice", "profile_url": "https://x.com/alice", "last_seen_tweet_id": None},
+    ])
+
+    seen_urls = []
+
+    async def fake_fetch_timeline(profile_url, chrome_profile=None):
+        seen_urls.append(profile_url)
+        return [{"tweet_id": "100", "url": "u", "text": "hi", "timestamp": "t", "author_handle": "@alice"}]
+
+    monkeypatch.setattr(fetch_new_tweets, "fetch_timeline", fake_fetch_timeline)
+
+    asyncio.run(fetch_new_tweets.run(None))
+
+    assert seen_urls == ["https://x.com/alice/all"]

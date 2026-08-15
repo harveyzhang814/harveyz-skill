@@ -24,15 +24,43 @@ def has_content(report: dict) -> bool:
     return bool(report.get("new") or report.get("failures") or report.get("baselines"))
 
 
+def _type_suffix(t: dict, handle: str) -> str:
+    """A short "（...）" tag describing what kind of activity this is,
+    based on fetch_user_timeline's type classification — reliable per-type
+    signals (socialContext text, a second User-Name block, "Replying to"
+    text), not a guess from author_handle alone."""
+    ttype = t.get("type", "post")
+
+    if ttype == "repost":
+        author_handle = (t.get("author_handle") or "").lstrip("@")
+        if author_handle and author_handle != handle:
+            return f"（转推自 {t.get('author_handle', '')}）"
+        return "（转推）"
+
+    if ttype == "reply":
+        reply_to = t.get("reply_to_handle")
+        return f"（回复 {reply_to}）" if reply_to else "（回复）"
+
+    if ttype == "quote":
+        quoted_author = t.get("quoted_author") or ""
+        quoted_text = t.get("quoted_text") or ""
+        if quoted_author and quoted_text:
+            return f"（引用 {quoted_author}：{quoted_text}）"
+        if quoted_author:
+            return f"（引用 {quoted_author}）"
+        return "（引用推文）"
+
+    return ""
+
+
 def render_digest(report: dict) -> str:
     lines = [f"# X 追更摘要 — {report['run_time']}", ""]
 
     for handle, tweets in report.get("new", {}).items():
         lines.append(f"## @{handle}")
         for t in tweets:
-            author_handle = t.get("author_handle", "")
-            attribution = f"（转推自 {author_handle}）" if author_handle and author_handle.lstrip("@") != handle else ""
-            lines.append(f"- [{t['timestamp']}] {t.get('translated') or t.get('text', '')}{attribution}（[原文]({t['url']})）")
+            suffix = _type_suffix(t, handle)
+            lines.append(f"- [{t['timestamp']}] {t.get('translated') or t.get('text', '')}{suffix}（[原文]({t['url']})）")
         lines.append("")
 
     failures = report.get("failures", {})

@@ -24,6 +24,13 @@ def _data_dir() -> Path:
     return Path(env_dir) if env_dir else Path.home() / ".hskill" / "watch-x"
 
 
+def _timeline_url(profile_url: str) -> str:
+    """Bare profile URLs (as stored by watchlist.add_handle) only show X's
+    default Posts tab (posts + quotes) — /all is needed to also see
+    reposts and replies (verified by manually probing a real profile)."""
+    return profile_url.rstrip("/") + "/all"
+
+
 async def run(chrome_profile: Optional[str]) -> dict:
     entries = watchlist.load_watchlist()
     new: dict[str, list[dict]] = {}
@@ -33,7 +40,7 @@ async def run(chrome_profile: Optional[str]) -> dict:
     for entry in entries:
         handle = entry["handle"]
         try:
-            tweets = await fetch_timeline(entry["profile_url"], chrome_profile)
+            tweets = await fetch_timeline(_timeline_url(entry["profile_url"]), chrome_profile)
             kind, data = watchlist.compute_update(entry, tweets)
             if kind == "none":
                 continue

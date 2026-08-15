@@ -690,7 +690,70 @@ EXTRACT_JS_XCOM_TIMELINE = r"""() => {
         const textEl = article.querySelector('[data-testid="tweetText"]');
         const text = textEl ? textEl.innerText.replace(/\s+/g, ' ').trim() : '';
 
-        tweets.push({tweetId, url, timestamp, authorHandle, text});
+        // Type classification: repost > quote > reply > post — the most
+        // "outer" signal wins, since that's why the card is showing up on
+        // this timeline at all (e.g. a repost of a reply is a "repost").
+        //
+        // - repost: X marks these with a [data-testid="socialContext"]
+        //   label ("<name> reposted"). The article's own author/time/link/
+        //   text are already the ORIGINAL tweet's (verified against a real
+        //   profile: reposted cards render the original tweet's own data,
+        //   not the reposter's) — no extra fields needed.
+        // - quote: a second, distinct [data-testid="User-Name"] block
+        //   appears inside the article, wrapped in a div[role="link"] (NOT
+        //   a nested article[data-testid="tweet"] — verified this differs
+        //   from the full single-tweet page's quote/nested-article shape).
+        //   The quoted tweet's own text/timestamp are reachable inside that
+        //   wrapper; its permalink is NOT (no <a href> present there — X
+        //   binds the click via JS, not a real anchor).
+        // - reply: X shows a plain "Replying to @user" text line with no
+        //   dedicated testid, so this greps article.innerText directly.
+        let type = 'post';
+        let replyToHandle = null;
+        let quotedAuthor = null;
+        let quotedText = null;
+        let quotedTimestamp = null;
+
+        const socialContextEl = article.querySelector('[data-testid="socialContext"]');
+        const socialContext = socialContextEl ? socialContextEl.innerText.replace(/\s+/g, ' ').trim() : '';
+
+        const allAuthorBlocks = Array.from(article.querySelectorAll('[data-testid="User-Name"]'));
+        let quoteWrapper = null;
+        let otherAuthorHandle = null;
+        if (allAuthorBlocks.length >= 2) {
+            const otherBlock = allAuthorBlocks[1];
+            const otherLines = otherBlock.innerText.split('\n').map(l => l.trim()).filter(Boolean);
+            const handle = otherLines.find(l => l.startsWith('@'));
+            if (handle && handle !== authorHandle) {
+                otherAuthorHandle = handle;
+                let w = otherBlock;
+                while (w && w.getAttribute('role') !== 'link' && w !== article) {
+                    w = w.parentElement;
+                }
+                if (w && w !== article) quoteWrapper = w;
+            }
+        }
+
+        const replyingToMatch = article.innerText.match(/Replying to (@\S+)/);
+
+        if (socialContext.toLowerCase().includes('repost')) {
+            type = 'repost';
+        } else if (quoteWrapper && otherAuthorHandle) {
+            type = 'quote';
+            quotedAuthor = otherAuthorHandle;
+            const quotedTextEl = quoteWrapper.querySelector('[data-testid="tweetText"]');
+            quotedText = quotedTextEl ? quotedTextEl.innerText.replace(/\s+/g, ' ').trim() : null;
+            const quotedTimeEl = quoteWrapper.querySelector('time');
+            quotedTimestamp = quotedTimeEl ? quotedTimeEl.getAttribute('datetime') : null;
+        } else if (replyingToMatch) {
+            type = 'reply';
+            replyToHandle = replyingToMatch[1];
+        }
+
+        tweets.push({
+            tweetId, url, timestamp, authorHandle, text, type,
+            replyToHandle, quotedAuthor, quotedText, quotedTimestamp,
+        });
     }
     return {tweets};
 }"""

@@ -458,12 +458,25 @@ async def fetch_user_timeline(
 ) -> dict:
     """Fetch the most recent tweets visible on an x.com/twitter.com profile
     timeline page — a lightweight batch listing (tweet_id/url/text/
-    timestamp/author_handle per tweet), NOT the full per-tweet extraction
-    fetch_article does (no thread expansion, no image download). Scrolls
-    the timeline collecting distinct tweet cards until max_tweets are
-    found or the feed stops yielding new ones, then returns them sorted
+    timestamp/author_handle/type per tweet), NOT the full per-tweet
+    extraction fetch_article does (no thread expansion, no image download).
+    Scrolls the timeline collecting distinct tweet cards until max_tweets
+    are found or the feed stops yielding new ones, then returns them sorted
     most-recent-first by tweet_id (X's snowflake IDs are monotonically
     increasing, so numeric comparison is a reliable recency order).
+
+    type is one of "post", "repost", "quote", "reply" (repost > quote >
+    reply > post priority when multiple signals are present — e.g. a
+    repost of a reply classifies as "repost", since that's why it's on
+    this timeline). For "repost", the returned url/text/author_handle
+    already belong to the ORIGINAL tweet (X renders reposted cards with
+    the original tweet's own data, not the reposter's). For "reply",
+    reply_to_handle names who it's replying to. For "quote",
+    quoted_author/quoted_text/quoted_timestamp describe the embedded
+    quoted tweet (its own permalink isn't extractable — X doesn't render
+    it as a real link in this view). All four of reply_to_handle/
+    quoted_author/quoted_text/quoted_timestamp are None except for their
+    one applicable type.
 
     chrome_profile is required (falls back to the persisted default if
     omitted; raises ValueError if neither is set) — x.com has no
@@ -517,6 +530,11 @@ async def fetch_user_timeline(
             "text": t["text"],
             "timestamp": t["timestamp"],
             "author_handle": t["authorHandle"],
+            "type": t["type"],
+            "reply_to_handle": t["replyToHandle"],
+            "quoted_author": t["quotedAuthor"],
+            "quoted_text": t["quotedText"],
+            "quoted_timestamp": t["quotedTimestamp"],
         }
         for t in result["tweets"]
     ]
