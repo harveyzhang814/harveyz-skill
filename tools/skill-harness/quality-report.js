@@ -8,29 +8,36 @@ const COL = 12
 const LABEL = {
   pass: 'pass', fail: 'fail', unavailable: 'unavail',
   unstable: '~', 'declared-na': 'n/a', 'blocked-upstream': '.', 'not-run': '',
+  partial: 'partial',
 }
 
 // --repeat > 1 时同一个 (skill, platform, mode) 下有多条 record（每个 repeat 一条）。
-// upstream 这一行没有 repeat 维度可画，只能收敛成一个格子——不能像 .find 那样
-// 任取命中的第一条（等于随机拿一个 repeat 的结果代表全部），否则某个 repeat
-// 真的跑挂了会被别的 repeat 的成功悄悄盖过去。收敛规则是"任一 repeat 失败即算
-// 失败"：与 variance.js 的"不稳不取多数决"同一个哲学——不确定的东西不该被
-// 平滑成一个好看的结论。
+// upstream 这一行没有 repeat 维度可画，只能收敛成一个格子。三态而非二态：
+// 全部失败才是 'fail'，全部成功才是 'pass'，只有部分 repeat 装失败时是独立的
+// 'partial'——"4/5 装成了"和"5/5 全挂"是两个不同的事实，折成同一个 'fail'
+// 会把已经跑通、已经判出结果的 repeat 的证据抹掉（见 assertionState）。
 export function upstreamStatus(skill, platform, mode, records) {
   const matches = records.filter(r => r.skill === skill && r.platform === platform && r.mode === mode)
   if (!matches.length) return 'not-run'
-  const failed = matches.some(r => r.exitCode !== 0 || r.reply === null || r.reply === undefined)
-  return failed ? 'fail' : 'pass'
+  const failCount = matches.filter(r => r.exitCode !== 0 || r.reply === null || r.reply === undefined).length
+  if (failCount === 0) return 'pass'
+  if (failCount === matches.length) return 'fail'
+  return 'partial'
 }
 
 function assertionState({ skill, platform, mode, evalId, assertionId, assertion, verdicts, upstream }) {
   if (assertion.na_platforms?.includes(platform)) return 'declared-na'
-  if (upstream !== 'pass') return upstream === 'not-run' ? 'not-run' : 'blocked-upstream'
+  // 先查 verdict，再看 upstream：grade/index.js 的 selectGradeCells 是按 repeat
+  // 过滤上游失败的，所以哪怕这一格的 upstream 是 'fail'/'partial'，某个成功的
+  // repeat 完全可能已经被判出了 verdict——已经算出来的结果必须渲染，不能被折叠
+  // 后的 upstream 状态盖成 blocked-upstream。"没有 residual 的归因表一定在撒谎"
+  // 这条纪律双向都成立：不能瞒 fail，也不能瞒已经算出的 pass。
   const v = verdicts.find(x =>
     x.skill === skill && x.platform === platform && x.mode === mode &&
     x.evalId === evalId && x.assertionId === assertionId)
-  if (!v) return 'not-run'
-  return v.unstable ? 'unstable' : v.verdict
+  if (v) return v.unstable ? 'unstable' : v.verdict
+  if (upstream === 'not-run' || upstream === 'pass') return 'not-run'
+  return 'blocked-upstream'
 }
 
 export function renderQualityReport({ records, declarations, verdicts, allSkills, graderModel, subjectModel }) {
@@ -78,6 +85,7 @@ export function renderQualityReport({ records, declarations, verdicts, allSkills
   lines.push('')
   lines.push('legend: .  = blocked-upstream, 见本组 [upstream] 行')
   lines.push('        (空) = not-run    n/a = 声明排除    unavail = 判不了    ~ = unstable')
+  lines.push('        partial = [upstream] 行专属：部分 repeat 装失败，非全部——与 pass/fail 都不同')
   lines.push('')
   // 只打各态计数，不打任何合成比率——比率的分母里藏着「排除了多少 unavailable、
   // 多少 blocked」这些恰恰最该被看见的东西。

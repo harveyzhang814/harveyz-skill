@@ -111,12 +111,71 @@ test('量具与被测物同模型要打警告——否则差异可能只是自�
   assert.ok(!/自指/.test(diff))
 })
 
-test('upstreamStatus: --repeat > 1 时任一 repeat 上游失败即整格判 fail——不能被别的 repeat 的成功盖过去', () => {
+test('upstreamStatus: --repeat > 1 时部分 repeat 上游失败要返回 partial，不是 fail——"4/5 装成了"和"5/5 全挂"是不同的事实', () => {
   const records = [
     { skill: 'a/x', platform: 'claude', mode: 'native', repeat: 0, exitCode: 0, reply: 'ok' },
     { skill: 'a/x', platform: 'claude', mode: 'native', repeat: 1, exitCode: 1, reply: null },
   ]
+  assert.equal(upstreamStatus('a/x', 'claude', 'native', records), 'partial')
+})
+
+test('upstreamStatus: 全部 repeat 上游都失败才是 fail', () => {
+  const records = [
+    { skill: 'a/x', platform: 'claude', mode: 'native', repeat: 0, exitCode: 1, reply: null },
+    { skill: 'a/x', platform: 'claude', mode: 'native', repeat: 1, exitCode: 1, reply: null },
+  ]
   assert.equal(upstreamStatus('a/x', 'claude', 'native', records), 'fail')
+})
+
+test('审阅场景：一个 repeat 通过并被判 pass，另一个 repeat 上游失败——已算出的 pass 必须照常渲染和计数，[upstream] 显示 partial 而不是 fail', () => {
+  const decl = {
+    skill_name: 'x',
+    evals: [{ id: 1, frozen: '2026-08-17', assertions: [{ id: 'aa', text: 'A' }] }],
+  }
+  const records = [
+    { skill: 'a/x', platform: 'claude', mode: 'native', repeat: 0, exitCode: 0, reply: 'ok', model: 'subj-m', unavailable: [], modelMismatch: false },
+    { skill: 'a/x', platform: 'claude', mode: 'native', repeat: 1, exitCode: 1, reply: null, model: 'subj-m', unavailable: [], modelMismatch: false },
+  ]
+  const verdicts = [
+    { skill: 'a/x', platform: 'claude', mode: 'native', evalId: 1, assertionId: 'aa', verdict: 'pass', unstable: false },
+  ]
+  const out = renderQualityReport({
+    records, declarations: new Map([['a/x', decl]]), verdicts,
+    allSkills: ['a/x'], graderModel: 'grader-m', subjectModel: 'subj-m',
+  })
+
+  // width = max(24, 3+4)+2 = 26；只有 a/x 一个 skill，与 BASE 场景相同的列宽算法
+  const upRow = out.split('\n').find(l => l.trim().startsWith('[upstream]'))
+  const aaRow = out.split('\n').find(l => l.trim().startsWith('aa'))
+  const col = (row, i) => row.slice(26 + i * 12, 26 + (i + 1) * 12).trim()
+
+  assert.equal(col(upRow, 0), 'partial', '[upstream] 必须显示 partial，不能显示 fail——另一个 repeat 是真的跑通了的')
+  assert.equal(col(aaRow, 0), 'pass', '已经算出来的 verdict 必须照常渲染，不能被折叠后的 upstream 状态吞掉')
+  assert.ok(out.includes('pass: 1'), '计数必须反映这条真实算出的 pass，不能被折进 blocked-upstream')
+  assert.ok(out.includes('blocked-upstream: 0'))
+})
+
+test('全部 repeat 上游都失败时行为不变：整格仍是 fail，断言行仍是 .（blocked-upstream）', () => {
+  const decl = {
+    skill_name: 'x',
+    evals: [{ id: 1, frozen: '2026-08-17', assertions: [{ id: 'aa', text: 'A' }] }],
+  }
+  const records = [
+    { skill: 'a/x', platform: 'claude', mode: 'native', repeat: 0, exitCode: 1, reply: null, model: 'subj-m', unavailable: [], modelMismatch: false },
+    { skill: 'a/x', platform: 'claude', mode: 'native', repeat: 1, exitCode: 1, reply: null, model: 'subj-m', unavailable: [], modelMismatch: false },
+  ]
+  const out = renderQualityReport({
+    records, declarations: new Map([['a/x', decl]]), verdicts: [],
+    allSkills: ['a/x'], graderModel: 'grader-m', subjectModel: 'subj-m',
+  })
+
+  const upRow = out.split('\n').find(l => l.trim().startsWith('[upstream]'))
+  const aaRow = out.split('\n').find(l => l.trim().startsWith('aa'))
+  const col = (row, i) => row.slice(26 + i * 12, 26 + (i + 1) * 12).trim()
+
+  assert.equal(col(upRow, 0), 'fail')
+  assert.equal(col(aaRow, 0), '.')
+  assert.ok(out.includes('blocked-upstream: 1'))
 })
 
 test('未冻结的声明要警告——冻结前不得据其下平台结论', () => {
