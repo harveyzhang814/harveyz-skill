@@ -34,6 +34,7 @@ export function selectGradeCells({ records, declarations, only }) {
     out.push({
       skill: rec.skill, platform: rec.platform, mode: rec.mode,
       repeat: rec.repeat ?? 0, evalId: rec.evalId, evalDef, reply: rec.reply, task: rec.task,
+      harvestErrors: rec.harvestErrors,
     })
   }
   return out
@@ -110,6 +111,27 @@ function applyArtifactChannelOverride(assertions, declaredAssertions, platform) 
   })
 }
 
+// harvestErrors 记录了「这一格的产出物或轨迹这次没能落盘」——这是我们自己的
+// 原料问题，不是被测方的质量问题。凡是断言的 source 依赖那份缺失原料，
+// 必须强制改判 unavailable，不能指望 grader 自己老实报「材料不足」。
+function applyHarvestErrorOverride(assertions, declaredAssertions, harvestErrors) {
+  if (!harvestErrors?.length) return assertions
+  const missingArtifact = harvestErrors.some(e => e.startsWith('artifact '))
+  const missingTranscript = harvestErrors.some(e => e.startsWith('transcript:'))
+  if (!missingArtifact && !missingTranscript) return assertions
+  const sourceById = new Map(declaredAssertions.map(a => [a.id, a.source ?? 'reply']))
+  return assertions.map(a => {
+    const src = sourceById.get(a.id)
+    if (src === 'artifact' && missingArtifact) {
+      return { id: a.id, verdict: 'unavailable', evidence: `采集失败（${harvestErrors.join('; ')}），这条 artifact 级断言没有材料可判` }
+    }
+    if (src === 'transcript' && missingTranscript) {
+      return { id: a.id, verdict: 'unavailable', evidence: `采集失败（${harvestErrors.join('; ')}），这条 transcript 级断言没有材料可判` }
+    }
+    return a
+  })
+}
+
 // invoke 本身可能抛出（比如 CLI 里 claudeOAuthToken() 读 keychain 失败）——
 // 不是只有「返回了坏文本」这一种坏法。抛出必须和坏文本走同一条路：
 // 吞掉、留痕、让 parseGraderOutput 判 unavailable，不能让异常逃出格子的循环，
@@ -122,10 +144,31 @@ async function safeInvoke(invoke, prompt, model) {
   }
 }
 
+// records.json 里的顺序取决于 runMatrix 里并发 worker 谁先把 record push 进
+// 数组，两次运行的完成顺序可能不同。subjectModel 只用来跟 graderModel 比较、
+// 决定要不要打自指警告，选哪条 record 不该靠运气——按稳定 key 排序后再取。
+function stableRecordKey(r) {
+  return `${r.skill}|${r.platform}|${r.mode}|${r.evalId}|${r.repeat}`
+}
+
 export async function runGrade({ runDir, graderModel, only, invoke, declarations }) {
   if (!graderModel) throw new Error('--grader-model is required — an unpinned grader confounds the measuring stick with the thing measured')
   const records = await fs.readJson(path.join(runDir, 'records.json'))
   const cells = selectGradeCells({ records, declarations, only })
+
+  // --only 只重跑部分 skill 时，其余 skill 已经花钱评出的判定不能被整体覆盖
+  // 抹掉——那会让报告把「测了、被删了」显示成「没测过」。全量跑（没传 only）
+  // 时不保留旧数据：全量跑本来就该是权威的完整覆盖。
+  const gradingsPath = path.join(runDir, 'gradings.json')
+  let carryOver = []
+  if (only?.length) {
+    try {
+      const prior = await fs.readJson(gradingsPath)
+      carryOver = (prior.gradings ?? []).filter(g => !only.includes(g.skill))
+    } catch {
+      // 没有旧文件——没什么可保留的，正常情况（第一次跑 --only）
+    }
+  }
 
   const gradings = []
   for (const c of cells) {
@@ -141,17 +184,25 @@ export async function runGrade({ runDir, graderModel, only, invoke, declarations
     }
 
     const assertions = applyArtifactChannelOverride(parsed.assertions, c.evalDef.assertions, c.platform)
+    const assertionsFinal = applyHarvestErrorOverride(assertions, c.evalDef.assertions, c.harvestErrors)
 
     gradings.push({
       skill: c.skill, platform: c.platform, mode: c.mode,
       repeat: c.repeat, evalId: c.evalDef.id,
       frozen: c.evalDef.frozen ?? null,
-      assertions,
+      assertions: assertionsFinal,
     })
   }
 
-  const subjectModel = records.find(r => r.model)?.model ?? null
-  const out = { runId: path.basename(runDir), graderModel, subjectModel, gradings }
-  await fs.writeJson(path.join(runDir, 'gradings.json'), out, { spaces: 2 })
+  const subjectModel = [...records]
+    .sort((a, b) => (stableRecordKey(a) < stableRecordKey(b) ? -1 : stableRecordKey(a) > stableRecordKey(b) ? 1 : 0))
+    .find(r => r.model)?.model ?? null
+
+  // 已知权衡：合并后写回的文件头部 graderModel/subjectModel 只反映这次跑的
+  // 这批——如果 carryOver 里的旧判定是用不同 grader 模型评的，头部字段就不再
+  // 对它们准确。这是既有设计（单一头部字段）的既有局限，本条只修「删数据」
+  // 这个事故，不新增 per-grading 的模型追踪字段。
+  const out = { runId: path.basename(runDir), graderModel, subjectModel, gradings: [...carryOver, ...gradings] }
+  await fs.writeJson(gradingsPath, out, { spaces: 2 })
   return out
 }

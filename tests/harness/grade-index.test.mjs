@@ -176,3 +176,143 @@ test('pi 的 artifact 断言即使 grader 判 pass 也被强制改判 unavailabl
   assert.match(out.gradings[0].assertions[0].evidence, /artifactChannel/)
   await fs.remove(runDir)
 })
+
+// I2：harvestErrors 记录的是「这次没能采到材料」的原料事故，不是被测方的
+// 质量问题——凡是断言依赖那份缺失原料，必须强制改判 unavailable，不能指望
+// grader 自己老实报「材料不足」（这与上面 artifactChannel 覆盖是同一类问题）。
+const DECL_TWO_SOURCES = {
+  skill_name: 'x',
+  evals: [{ id: 1, prompt: 'do it', frozen: '2026-08-17',
+    assertions: [
+      { id: 'a', text: 'A', source: 'artifact' },
+      { id: 'b', text: 'B', source: 'reply' },
+    ] }],
+}
+
+test('I2：record.harvestErrors 含 artifact 采集失败时，source 为 artifact 的断言被强制改判 unavailable，即使 grader 判了 pass', async () => {
+  const runDir = await fs.mkdtemp(path.join(os.tmpdir(), 'grade-run-'))
+  const rec = {
+    skill: 'a/x', platform: 'claude', mode: 'native', repeat: 0, exitCode: 0, reply: 'ok', evalId: 1,
+    harvestErrors: ['artifact a.md: ENOENT'],
+  }
+  await fs.writeJson(path.join(runDir, 'records.json'), [rec])
+
+  const invoke = async () => '{"assertions":[{"id":"a","verdict":"pass","evidence":"看起来不错"},{"id":"b","verdict":"pass","evidence":"回复本身没问题"}]}'
+
+  const out = await runGrade({
+    runDir, graderModel: 'grader-m', invoke,
+    declarations: new Map([['a/x', DECL_TWO_SOURCES]]),
+  })
+
+  const assertions = out.gradings[0].assertions
+  assert.equal(assertions.find(a => a.id === 'a').verdict, 'unavailable')
+  assert.match(assertions.find(a => a.id === 'a').evidence, /ENOENT/)
+  // 不依赖失败原料的 reply 级断言不受影响——过度覆盖跟这次修的缺陷同样糟
+  assert.equal(assertions.find(a => a.id === 'b').verdict, 'pass')
+  await fs.remove(runDir)
+})
+
+test('I2：harvestErrors 为空数组或字段缺失时行为不变——不误伤没有采集问题的格子', async () => {
+  const runDir = await fs.mkdtemp(path.join(os.tmpdir(), 'grade-run-'))
+  const recEmpty = { skill: 'a/x', platform: 'claude', mode: 'native', repeat: 0, exitCode: 0, reply: 'ok', evalId: 1, harvestErrors: [] }
+  await fs.writeJson(path.join(runDir, 'records.json'), [recEmpty])
+
+  const invoke = async () => '{"assertions":[{"id":"a","verdict":"pass","evidence":"AAA"},{"id":"b","verdict":"pass","evidence":"BBB"}]}'
+
+  const out = await runGrade({
+    runDir, graderModel: 'grader-m', invoke,
+    declarations: new Map([['a/x', DECL_TWO_SOURCES]]),
+  })
+
+  assert.equal(out.gradings[0].assertions.find(a => a.id === 'a').verdict, 'pass')
+  assert.equal(out.gradings[0].assertions.find(a => a.id === 'b').verdict, 'pass')
+  await fs.remove(runDir)
+})
+
+// I5：--only 只重跑部分 skill 时，其余 skill 已经花钱评出的判定不能被整体
+// 覆盖抹掉——那会让报告把「测了、被删了」显示成「没测过」，两者对使用者的
+// 意义完全不同。
+test('I5：--only 重跑单个 skill 时，其余 skill 已有的 gradings 原样保留，只有 --only 命中的 skill 被换成新判定', async () => {
+  const runDir = await fs.mkdtemp(path.join(os.tmpdir(), 'grade-run-'))
+  const priorGradings = {
+    runId: 'r1', graderModel: 'old-grader', subjectModel: 'old-subj',
+    gradings: [
+      { skill: 'a/x', platform: 'claude', mode: 'native', repeat: 0, evalId: 1, frozen: null,
+        assertions: [{ id: 'a', verdict: 'pass', evidence: '旧判定 A' }] },
+      { skill: 'b/y', platform: 'claude', mode: 'native', repeat: 0, evalId: 1, frozen: null,
+        assertions: [{ id: 'a', verdict: 'fail', evidence: '旧判定 B' }] },
+    ],
+  }
+  await fs.writeJson(path.join(runDir, 'gradings.json'), priorGradings)
+
+  const rec = { skill: 'a/x', platform: 'claude', mode: 'native', repeat: 0, exitCode: 0, reply: 'ok', evalId: 1 }
+  await fs.writeJson(path.join(runDir, 'records.json'), [rec])
+
+  const invoke = async () => '{"assertions":[{"id":"a","verdict":"fail","evidence":"新判定 A"}]}'
+
+  const out = await runGrade({
+    runDir, graderModel: 'grader-m', only: ['a/x'], invoke,
+    declarations: new Map([['a/x', DECL]]),
+  })
+
+  const bGrading = out.gradings.find(g => g.skill === 'b/y')
+  assert.deepEqual(bGrading, priorGradings.gradings[1], 'b/y 未被 --only 命中，内容必须原样保留')
+  const aGrading = out.gradings.find(g => g.skill === 'a/x')
+  assert.equal(aGrading.assertions[0].verdict, 'fail')
+  assert.equal(aGrading.assertions[0].evidence, '新判定 A')
+  await fs.remove(runDir)
+})
+
+test('I5：没传 only（全量跑）时行为不变——旧文件内容被完全覆盖，只剩这次跑出来的', async () => {
+  const runDir = await fs.mkdtemp(path.join(os.tmpdir(), 'grade-run-'))
+  const priorGradings = {
+    runId: 'r1', graderModel: 'old-grader', subjectModel: 'old-subj',
+    gradings: [
+      { skill: 'b/y', platform: 'claude', mode: 'native', repeat: 0, evalId: 1, frozen: null,
+        assertions: [{ id: 'a', verdict: 'fail', evidence: '旧判定 B' }] },
+    ],
+  }
+  await fs.writeJson(path.join(runDir, 'gradings.json'), priorGradings)
+
+  const rec = { skill: 'a/x', platform: 'claude', mode: 'native', repeat: 0, exitCode: 0, reply: 'ok', evalId: 1 }
+  await fs.writeJson(path.join(runDir, 'records.json'), [rec])
+
+  const invoke = async () => '{"assertions":[{"id":"a","verdict":"pass","evidence":"新判定 A"}]}'
+
+  const out = await runGrade({
+    runDir, graderModel: 'grader-m', invoke,
+    declarations: new Map([['a/x', DECL]]),
+  })
+
+  assert.equal(out.gradings.length, 1)
+  assert.equal(out.gradings[0].skill, 'a/x')
+  await fs.remove(runDir)
+})
+
+// I6：subjectModel 取自并发 worker 乱序 push 的 records，谁先跑完谁说了算——
+// 选哪条 record 不该是随机的，必须按稳定 key 排序后再取，与数组原始顺序无关。
+test('I6：subjectModel 与 records 数组的原始顺序无关——两份顺序不同但内容相同的数组算出同一个 subjectModel', async () => {
+  const runDir1 = await fs.mkdtemp(path.join(os.tmpdir(), 'grade-run-'))
+  const runDir2 = await fs.mkdtemp(path.join(os.tmpdir(), 'grade-run-'))
+
+  const recA = { skill: 'a/x', platform: 'claude', mode: 'native', repeat: 0, exitCode: 1, reply: null, evalId: 1, model: null }
+  const recB = { skill: 'a/x', platform: 'hermes', mode: 'native', repeat: 0, exitCode: 0, reply: 'ok', evalId: 1, model: 'subj-m' }
+  const recC = { skill: 'a/x', platform: 'pi', mode: 'native', repeat: 0, exitCode: 0, reply: 'ok', evalId: 1, model: 'subj-m-2' }
+
+  // 顺序一：worker 完成顺序 A, B, C（A 的 model 是 null，模拟采集失败没拿到 model）
+  await fs.writeJson(path.join(runDir1, 'records.json'), [recA, recB, recC])
+  // 顺序二：worker 完成顺序 C, A, B——内容完全相同，仅数组顺序不同
+  await fs.writeJson(path.join(runDir2, 'records.json'), [recC, recA, recB])
+
+  const invoke = async () => '{"assertions":[{"id":"a","verdict":"pass","evidence":"x"}]}'
+  const declarations = new Map([['a/x', DECL]])
+
+  const out1 = await runGrade({ runDir: runDir1, graderModel: 'grader-m', invoke, declarations })
+  const out2 = await runGrade({ runDir: runDir2, graderModel: 'grader-m', invoke, declarations })
+
+  assert.equal(out1.subjectModel, out2.subjectModel)
+  // 按 stableRecordKey 排序后，claude（A，model null）< hermes（B）< pi（C）——
+  // 排序后第一个"有 model"的记录是 B，不是数组原始顺序的第一个（recA/recC）
+  assert.equal(out1.subjectModel, 'subj-m')
+  await fs.remove(runDir1); await fs.remove(runDir2)
+})
