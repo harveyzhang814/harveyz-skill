@@ -687,14 +687,18 @@ EXTRACT_JS_XCOM_TIMELINE = r"""() => {
             authorHandle = handleLine || '';
         }
 
-        // [^\S\n] (not-a-non-newline-whitespace, i.e. whitespace except \n)
-        // collapses runs of spaces/tabs but leaves \n alone — a plain \s+
-        // collapse would flatten a multi-paragraph tweet's line breaks into
-        // spaces and lose its paragraph structure (verified against a real
-        // multi-line tweet: X renders each paragraph as a separate line
-        // joined by \n in innerText).
+        // textContent, not innerText: a multi-paragraph tweet's line breaks
+        // are real \n characters sitting in its text nodes (verified against
+        // a real tweet), but innerText ALSO synthesizes its own \n around
+        // every block-level child — and X wraps each @mention in a <div>
+        // for its own unrelated layout reasons, so innerText was inserting
+        // a spurious line break around every mention even though the tweet
+        // renders as one unbroken line (verified against a real tweet with
+        // 3 mentions). textContent is a plain concatenation of text nodes:
+        // it keeps the real \n's and adds none of its own. [^\S\n] (whitespace
+        // except \n) then only collapses runs of spaces/tabs.
         const textEl = article.querySelector('[data-testid="tweetText"]');
-        const text = textEl ? textEl.innerText.replace(/[^\S\n]+/g, ' ').trim() : '';
+        const text = textEl ? textEl.textContent.replace(/[^\S\n]+/g, ' ').trim() : '';
 
         // Type classification: repost > quote > reply > post — the most
         // "outer" signal wins, since that's why the card is showing up on
@@ -748,7 +752,7 @@ EXTRACT_JS_XCOM_TIMELINE = r"""() => {
             type = 'quote';
             quotedAuthor = otherAuthorHandle;
             const quotedTextEl = quoteWrapper.querySelector('[data-testid="tweetText"]');
-            quotedText = quotedTextEl ? quotedTextEl.innerText.replace(/[^\S\n]+/g, ' ').trim() : null;
+            quotedText = quotedTextEl ? quotedTextEl.textContent.replace(/[^\S\n]+/g, ' ').trim() : null;
             const quotedTimeEl = quoteWrapper.querySelector('time');
             quotedTimestamp = quotedTimeEl ? quotedTimeEl.getAttribute('datetime') : null;
         } else if (replyingToMatch) {
