@@ -2,7 +2,7 @@
 
 **日期**：2026-08-15
 **author 模型**：claude-opus-5
-**状态**：待执行 <!-- 待执行 → 执行中 → 待验收 → 已验收 / 打回 -->
+**状态**：待验收 <!-- 待执行 → 执行中 → 待验收 → 已验收 / 打回 -->
 **交接目的**：把一轮设计讨论的背景、现状与已达成的决策交给新 session，由它把剩下四个未决问题讨论完、产出定稿 spec。这是设计续做，不是实现。
 
 > **接手方须知**：你正在接手一个任务。本文档是完整交接与唯一权威入口：从头读到尾，按「工作流约定」开工，完成后等原 session 按「最小验收锚点」验收。
@@ -16,6 +16,29 @@
 **「仍待定的四件事」全部有明确结论，据此产出定稿 spec 并经用户 review 通过，且过程中没有推翻本文「关键决定」中的任何一条——除非拿到了新证据并在 spec 里写明推翻理由。**
 
 判断依据不是"讨论得热不热闹"，而是：四件事逐条有结论、spec 落盘、用户说通过。
+
+### 接手方自报完成（2026-08-17）
+
+三项均达成，供原 session 核验：
+
+**① 四件待定事项逐条有结论**
+
+| 待定事项 | 结论 | spec 落点 |
+|---|---|---|
+| 1 grader 怎么跑、跑在哪、用什么模型 | 离线 `grade <runId>` 子命令 + `claude -p`，跑在空 jail 不装 skill；`--grader-model` 必填，与被测模型相同则报告顶部打自指警告 | 第 3 节 |
+| 2 grader 输出结构 | 沿用 `text`/`evidence`，`passed` 换成三态 `verdict: pass\|fail\|unavailable`；不存 `pass_rate` | 第 3 节 |
+| 3 41 个 skill 声明如何分批 | contentHash 驱动按需增量；已有 4 份 evals.json 迁移为冷启动覆盖；对比只在同一 runId 内做 | 「覆盖策略」节 |
+| 4 报告形态 | 单一断言级矩阵，第一期降为 `[upstream]` 前置行；blocked-upstream 计数按 `(skill,platform,mode)` 去重；尾部归因段落全保留 | 第 4 节 |
+
+**② spec 落盘**：`docs/superpowers/specs/2026-08-17-skill-harness-quality-eval-design.md`（commit `ca3f0fd`）。同一 commit 内已完成交接文档要求的收尾动作——上游 spec 的「过程评估」「质量评估」两节及第二、三期就地标注作废并指向新 spec，`2026-08-15-skill-harness-phase2-decisions.md` 内容全部并入定稿后删除。
+
+**③ 用户 review**：已通过。
+
+**关键决定 8 条无一被推翻。** 决定 5 被**扩充**（非推翻）：新证据是 `runner.js:154` 的 `finally` 调 `jail.js:34` 的 `fs.remove`，销毁的不只是 transcript，还有 agent 产出的文件——而质量声明要判的恰恰是文件。故「唯一一件现在不做就补不上的事」从 transcript 落盘扩为 transcript + jail 产出物落盘。
+
+**设计过程中另查出三处既有腐烂**，均已写入 spec 并列为前置任务：`adapters/pi.js:12` pi 未重定向 HOME（与仓库「产出写 `$HOME/.hskill/`、`~/Documents/notes/`」的约定冲突，会污染真实 HOME 且产出物采不到）；`skills/mint/learn-skill/evals/evals.json` 的 `skill_name` 腐烂成 `inspect-skill`；`assertions` 为裸字符串数组、无稳定 id。
+
+spec 末尾另附 5 项未确认汇总，均标了把握度档位。
 
 ---
 
@@ -177,6 +200,17 @@ learn-skill            claude   pi     hermes
 6. **git stash 栈与主仓和其他 worktree 共享**。不要用裸 `git stash` / `git stash pop`，会弹到别人的改动。
 
 7. **brainstorming 的硬门禁**：设计未经用户批准前，不得调用任何实现类 skill、不得写代码。架构路径的唯一后继是 `superpowers:writing-plans`，且必须在用户 review 定稿 spec 之后。
+
+---
+
+## 接手方 verify 核对结论（2026-08-15）
+
+结论：**通过，可开工。** 交接目的、验收锚点、8 条关键决定、范围铁律均自洽；相关文档索引 9 条路径逐条核实存在。
+
+一处失效，已处置：
+
+- 「工作流约定」第 1、2 条描述的状态已过期——`doc/harness-accept-record` 已 merge 进 staging（`8d2bacb`），worktree `.claude/worktrees/harness-accept` 已删除。**索引里的 9 个文件现在全部在 staging 上可读**，内容未丢失，仅取用方式变化。
+- 连带第 4 条「不要新建分支」失去指向对象。接手方新建 `doc/harness-quality-eval-design`，本轮全部产物在该分支积累，仍遵守「一个迭代一条分支」。
 
 ---
 

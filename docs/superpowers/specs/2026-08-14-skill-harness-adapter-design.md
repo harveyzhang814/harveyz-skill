@@ -4,6 +4,11 @@
 **调研依据:** [qm-skill-adaptation](../../../knowledge/qm/qm-skill-adaptation.md)（QM 机制）
 · [qm-adaptation-takeaways](../../../knowledge/qm/qm-adaptation-takeaways.md)（可借鉴清单）
 
+> **2026-08-17 局部作废。** 「过程评估」「质量评估」两节及「分期与验收」中的第二、三期已被
+> [2026-08-17-skill-harness-quality-eval-design.md](2026-08-17-skill-harness-quality-eval-design.md)
+> 取代，各节内已就地标注。其余各节（jail 构造、两种模式、模型 pin、选择器、RunRecord、
+> 测试分层、风险）仍然有效，第一期即按其实现并验收。
+
 ---
 
 ## Problem
@@ -649,51 +654,29 @@ hermes:  "This platform has no AskUserQuestion tool. When the instructions call 
 
 ---
 
-## 过程评估
+## 过程评估 — 已作废
 
-第二期只做两类**客观、一次运行即出确定结论、不需要 grader、不需要消除方差**的判定：
+**2026-08-17 作废。** 本节原规划的负向断言（`forbid`/`require`/`order`）、工具调用分布、
+以及后续讨论中替换过的步骤合规与过程错误分类，三条路都被推翻，第二期整体取消。
+三次尝试各自的致命伤见
+[2026-08-17-skill-harness-quality-eval-design.md](2026-08-17-skill-harness-quality-eval-design.md)
+的「为什么不做过程评估」一节。
 
-### 负向断言（primary）
-
-抄 QM `system-prompt-order.test.ts` 的 `fakeSandbox.unreached` 模式 ——
-**「不该被碰的东西」本身是断言，且错误消息说明违反了什么约束**。
-
-```
-声明形式（随 eval 用例给出）：
-  forbid:  ["Write", "Edit"]              # 这些工具一次都不得出现
-  require: ["Read"]                       # 这些工具至少出现一次
-  order:   [{ before: "Read", after: "Write" }]   # Write 之前必须先有 Read
-```
-
-`order` 的判定：在 `toolCalls` 的 `seq` 序列上，每个 `after` 的出现位置之前
-必须存在至少一个 `before`。首个 `after` 之前没有 `before` 即判失败。
-
-判定依据是 `RunRecord.toolCalls`。理由：**「不该做的事」比「做得好不好」容易判定一万倍**，
-且约束性指令（"不要"、"先…再…"）的跨平台遵守度差异，比生成质量的差异更大也更重要。
-
-### 工具调用分布（secondary）
-
-抄 QM 的 `tool_body.${string}` 思路：不只统计「共调了 12 次工具」，
-按工具名细分 `Read: 5, Bash: 4, Edit: 3`。**跨平台对比时，分布差异比总次数差异信息量大得多。**
-
-### 平台前置条件
-
-`processChannel === "none"` 的平台，过程评估整体不适用，报告显式标注跳过原因。
-这是 `capabilities` 表最先要登记的一格。
+决定性理由：**过程错误是回溯工具，不是判据。** 回溯需求改由「完整 transcript 与 jail 产出物落盘、
+但不建任何分析器」兜底。
 
 ---
 
-## 质量评估（第三期）
+## 质量评估 — 已被取代
 
-整套搬 `docs/explanation/skill-creator-testing-system.md` 已记录的方法论：
-`evals.json` 用例定义、`eval_metadata.json` 断言、grader agent 产出 `grading.json`
-（字段名 `text`/`passed`/`evidence`，viewer 依赖精确字段名）、`aggregate_benchmark.py`
-聚合出 `benchmark.json` + `benchmark.md`、eval viewer 人工 review。
+**2026-08-17 取代。** 本节原计划整套照搬 skill-creator 方法论、只换对照轴。
+实际定稿有三处偏离，见
+[2026-08-17-skill-harness-quality-eval-design.md](2026-08-17-skill-harness-quality-eval-design.md)：
 
-**只换对照轴**：`with_skill vs without_skill` → `platform_A vs platform_B`。
-断言体系、grader、聚合、viewer 全部照搬。换轴改动这么小，本身是这套方法论选得对的证据。
-
-采样次数由第二期的方差标定结果决定，不预先拍板。
+- 布尔 `passed` 换成三态 `verdict`，因此 skill-creator 的 viewer 与 `aggregate_benchmark.py` 不可复用
+- 不存 `summary.pass_rate`
+- 覆盖策略是 contentHash 驱动的按需增量，不预先分批；采样次数不再由第二期标定结果决定，
+  改为直接标定质量判定本身
 
 ---
 
@@ -844,31 +827,20 @@ native 模式下 prompt 里没有 skill 正文，所以 dry-run 还要打印 `in
 7. `skill-harness coverage` 能对当前 39 个 skill 输出完整三态矩阵，`not-run` 显示为空格
 8. `npm test` 全绿，且 L2 fixture 数 > 0
 
-### 第二期 · 看得出差异
+### 第二期 · 看得出差异 — 已取消
 
-范围：过程评估（负向断言 + 工具分布）+ 方差标定 + 对比报告。
+**2026-08-17 取消。** 见上文「过程评估 — 已作废」。
 
-方差标定：固定 skill 与任务，每个平台**每种模式**重复跑 **5 次**（3 平台 × 2 模式 = 30 次），
-在负向断言的通过率与工具调用分布两个维度上量出**同平台同模式的基线方差**，
-再与**跨平台差异**、**跨模式差异**分别比较。
+方差标定不随之取消，改为**直接标定质量判定本身**（同格重复跑 5 次，看 grader 的判定稳不稳），
+并入下一期。原方案「先标定过程指标、再赌质量指标」中间有断层：标定的东西和最终使用的东西
+不是一回事。
 
-跨模式差异必须单独量：它是测试装置引入的，不是被测对象的属性。
-若某平台的跨模式差异 ≥ 跨平台差异，说明该平台的两种模式在测两个不同的东西，
-报告中不得把它们的结果并列。
+### 第二期 · 评得了质量
 
-**这个数决定第三期每个格子的采样预算。** 判据：
-
-- 跨平台差异显著大于同平台方差 → 第三期按常规采样（每格 2-3 次）推进
-- 两者同量级 → 质量评估需显著提高采样次数，或改用更稳健的指标
-- 同平台方差 ≥ 跨平台差异 → 该指标不具区分度，换指标而非加样本
-
-这是第二期要交付的判断，不预先拍板。
-
-验收：能对一个真实 skill 给出「哪些平台违反了哪条约束性指令」的确定结论。
-
-### 第三期 · 评得了质量
-
-范围：搬 skill-creator 方法论换对照轴。
+范围与验收见
+[2026-08-17-skill-harness-quality-eval-design.md](2026-08-17-skill-harness-quality-eval-design.md)。
+五个组成部分：采集层、质量声明格式、`grade` 子命令与 grader 契约、断言级报告、
+方差标定与声明返修回路。
 
 ### 后续平台接入顺序
 

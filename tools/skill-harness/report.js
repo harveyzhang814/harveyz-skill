@@ -1,27 +1,23 @@
 import { PHASE1_PLATFORMS, MODES } from './select.js'
 import { PROFILES } from './profiles.js'
+import { modelMismatchLines, unavailableFieldLines } from './attribution.js'
+import { upstreamStatus } from './quality-report.js'
 
-// 三态：pass/fail 是真跑了；declared-na 是声明排除；not-run 是本次没覆盖。
-// not-run 永远不得折叠进 pass，也不得从矩阵里省略行列——
-// 这是 QM residual 那条纪律的直接应用：没有 residual 的归因表一定在撒谎。
-//
-// pass/fail 判定还要防一种伪装：exitCode === 0 但 reply 缺失/unavailable，
-// 说明这次运行虽然没崩，但我们其实没收集到任何可判读的结果——不能算 pass。
-function cellStatus(cell, records) {
-  if (cell.state === 'declared-na') return 'declared-na'
-  if (cell.state === 'not-run') return 'not-run'
-  const rec = records.find(r => r.skill === cell.skill && r.platform === cell.platform && r.mode === cell.mode)
-  if (!rec) return 'not-run'
-  if (rec.exitCode !== 0) return 'fail'
-  if (rec.reply === null || rec.reply === undefined) return 'fail'
-  return 'pass'
+// 一个 (skill, platform, mode) 组合下可能有多个 cell（--repeat 展开、eval 轴展开），
+// 这一行没有 repeat/eval 维度可画，只能收敛成一个结果——复用 quality-report.js
+// 已经验证过的三态收敛逻辑（pass/fail/partial），不要在这里另起一套只看 cells.find
+// 抓到的那一个 cell 的逻辑，那套逻辑在 --repeat 或多 eval 场景下和 counts 对不上。
+function comboStatus(skill, platform, mode, cells, records) {
+  const matches = cells.filter(c => c.skill === skill && c.platform === platform && c.mode === mode)
+  if (!matches.length || matches[0].state === 'not-run') return 'not-run'
+  if (matches[0].state === 'declared-na') return 'declared-na'
+  return upstreamStatus(skill, platform, mode, records)
 }
 
-function cellLabel(cell, records) {
-  const status = cellStatus(cell, records)
+function comboLabel(status) {
   if (status === 'declared-na') return 'n/a'
   if (status === 'not-run') return ''
-  return status
+  return status // pass / fail / partial
 }
 
 // 每个 skill × platform 有两种 mode（native/inject），矩阵必须把两者都画出来——
@@ -40,30 +36,21 @@ export function renderReport({ cells, records, model, provider }) {
   lines.push('skill'.padEnd(width) + COMBOS.map(c => `${c.platform}/${c.mode}`.padEnd(COL_WIDTH)).join(''))
 
   for (const skill of skills) {
-    const cols = COMBOS.map(({ platform, mode }) => {
-      const c = cells.find(x => x.skill === skill && x.platform === platform && x.mode === mode)
-      return (c ? cellLabel(c, records) : '').padEnd(COL_WIDTH)
-    })
+    const cols = COMBOS.map(({ platform, mode }) => comboLabel(comboStatus(skill, platform, mode, cells, records)).padEnd(COL_WIDTH))
     lines.push(skill.padEnd(width) + cols.join(''))
   }
 
-  const counts = { pass: 0, fail: 0, 'declared-na': 0, 'not-run': 0 }
-  for (const c of cells) counts[cellStatus(c, records)]++
+  const counts = { pass: 0, fail: 0, partial: 0, 'declared-na': 0, 'not-run': 0 }
+  for (const skill of skills) {
+    for (const { platform, mode } of COMBOS) {
+      counts[comboStatus(skill, platform, mode, cells, records)]++
+    }
+  }
   lines.push('')
-  lines.push(`pass: ${counts.pass}  fail: ${counts.fail}  declared-na: ${counts['declared-na']}  not-run: ${counts['not-run']}`)
+  lines.push(`pass: ${counts.pass}  fail: ${counts.fail}  partial: ${counts.partial}  declared-na: ${counts['declared-na']}  not-run: ${counts['not-run']}`)
 
-  const mism = records.filter(r => r.modelMismatch)
-  if (mism.length) {
-    lines.push('')
-    lines.push(`model mismatch (${mism.length}): ${mism.map(r => `${r.skill}@${r.platform}`).join(', ')}`)
-  }
-
-  const un = records.filter(r => r.unavailable?.length)
-  if (un.length) {
-    lines.push('')
-    lines.push('unavailable fields:')
-    for (const r of un) lines.push(`  ${r.skill}@${r.platform}/${r.mode}: ${r.unavailable.join(', ')}`)
-  }
+  lines.push(...modelMismatchLines(records))
+  lines.push(...unavailableFieldLines(records))
 
   const na = cells.filter(c => c.state === 'declared-na')
   if (na.length) {

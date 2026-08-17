@@ -9,25 +9,31 @@
       "files": [
         "/Users/harveyzhang96/Projects/harveyz-skill/skills/experiment/extract-cognition-workspace/fixtures/ai-work-essay.md"
       ],
+      "frozen": "2026-08-17",
       "assertions": [
         {
           "id": "playbook_in_mode_a",
+          "source": "artifact",
           "text": "产出物树中存在 3-playbook.md 文件，且内容非空——验证模式 A（无基线）也能产出头牌学习层手册，不受无基线限制。"
         },
         {
           "id": "every_move_has_anchor",
+          "source": "artifact",
           "text": "3-playbook.md 中每一张认知动作卡的「回指证据」栏均非空，且指向 2-signature.md 中的某条签名卡（F6 鸡汤锁）——不存在任何回指证据为空的动作卡。"
         },
         {
           "id": "moves_are_transferable",
+          "source": "artifact",
           "text": "3-playbook.md 中每一张认知动作卡的招名与「怎么自己跑」步骤中，不含本文专有名词或具体话题词（F7 不可迁移锁）——每招应能换题套用，「迁移练习」中有与本文内容无关的通用 prompt。"
         },
         {
           "id": "generator_section_present",
+          "source": "artifact",
           "text": "3-playbook.md 包含「一、这套思维的发生器」节，其中根性镜头 ≤2 条，且每张动作卡的「从哪条根性长出」栏均指向该节中某条根性。"
         },
         {
           "id": "no_attribution_without_baseline",
+          "source": "artifact",
           "text": "产出物树中不存在 4-attribution.md 文件（无基线不归因红线）；同时 3-playbook.md 已正常产出，证明无基线不影响学习层交付。"
         }
       ]
@@ -43,33 +49,41 @@
         "/Users/harveyzhang96/Projects/harveyz-skill/skills/experiment/extract-cognition-workspace/fixtures/baseline-2.md",
         "/Users/harveyzhang96/Projects/harveyz-skill/skills/experiment/extract-cognition-workspace/fixtures/baseline-3.md"
       ],
+      "frozen": "2026-08-17",
       "assertions": [
         {
           "id": "every_move_has_anchor",
+          "source": "artifact",
           "text": "3-playbook.md 中每一张认知动作卡的「回指证据」栏均非空，且指向 2-signature.md 中的某条签名卡（F6 鸡汤锁）——不存在任何回指证据为空的动作卡。"
         },
         {
           "id": "moves_are_transferable",
+          "source": "artifact",
           "text": "3-playbook.md 中每一张认知动作卡的招名与「怎么自己跑」步骤中，不含本文专有名词或具体话题词（F7 不可迁移锁）——每招应能换题套用，「迁移练习」中有与本文内容无关的通用 prompt。"
         },
         {
           "id": "generator_section_present",
+          "source": "artifact",
           "text": "3-playbook.md 包含「一、这套思维的发生器」节，其中根性镜头 ≤2 条，且每张动作卡的「从哪条根性长出」栏均指向该节中某条根性。"
         },
         {
           "id": "attribution_file_present",
+          "source": "artifact",
           "text": "产出物树中存在 4-attribution.md 文件，内容非空——验证模式 B 在有基线且用户明确要归因时产出归因层。"
         },
         {
           "id": "attribution_confidence_below_descriptive",
+          "source": "artifact",
           "text": "4-attribution.md 中每条归因层签名卡的归因层置信度均明确标注低于其对应描述层签名卡的置信度（如描述层「高」则归因层至多「暂定」；归因层不得出现「高置信」字样）。"
         },
         {
           "id": "baseline_additive_in_playbook",
+          "source": "artifact",
           "text": "3-playbook.md 中至少有一张动作卡含「别处也这么使」或同义泛化注脚，证明基线在学习层作加法样本（而非减法滤镜）。"
         },
         {
           "id": "attribution_gates_complete",
+          "source": "artifact",
           "text": "4-attribution.md 中每条存活归因签名均记录了：Patternicity（≥2 逐字实例）、Agenticity（基线减除结论）、仍存活的对立解释列表、独立对抗 pass 结果、留出验证预测与核对结果。"
         }
       ]
@@ -82,13 +96,16 @@
       "files": [
         "/Users/harveyzhang96/Projects/harveyz-skill/skills/experiment/extract-cognition-workspace/fixtures/fragment.md"
       ],
+      "frozen": "2026-08-17",
       "assertions": [
         {
           "id": "hard_stop_triggered",
+          "source": "reply",
           "text": "skill 输出中明确拒绝执行（hard stop），说明文本为片段或字数远低于约 300 字，并请求用户提供完整文本——不得仅发出警告后继续分析。"
         },
         {
           "id": "no_files_produced",
+          "source": "artifact",
           "text": "产出物树中不存在任何分析文件（1-evidence.md、2-signature.md、3-playbook.md、4-attribution.md 均不产出）——拒绝执行意味着零产物。"
         }
       ]

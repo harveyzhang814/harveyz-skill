@@ -6,28 +6,74 @@
       "name": "author-high-to-low-model",
       "prompt": "我刚把一个功能模块的重构方案定完了，设计规格已经写好放在仓库里。想把具体实现交给另一个能力较弱的模型 session 去做，帮我写一份交接文档，让它只读这一份就能照着实现，别自由发挥。",
       "expected_output": "在 config 输出目录（默认 docs/commute/）下生成 YYYY-MM-DD-*-handoff.md；抬头含状态字段 + 交接目的（判断为'接手方续做同一实现任务'一类描述）+ 接手方须知。因为是续做同一任务的目的，必要性测试会判定背景/关键决定/范围铁律/相关文档索引/受影响文件/验证步骤等章节基本都需要，实际出现在文档里；若项目有 .hskill/handoff/config.md 则注入其工作流/验证约定；最小验收锚点是可证伪的硬判据；author 收尾跑完整性门禁。",
-      "files": []
+      "files": [],
+      "frozen": "2026-08-17",
+      "assertions": [
+        { "id": "file-in-output-dir", "source": "artifact",
+          "text": "在 docs/commute/ 下生成了文件名形如 YYYY-MM-DD-<topic>-handoff.md 的文档" },
+        { "id": "header-has-status-and-purpose", "source": "artifact",
+          "text": "文档抬头同时含状态字段与交接目的两项" },
+        { "id": "purpose-is-continuation", "source": "artifact",
+          "text": "交接目的描述为「接手方续做同一实现任务」一类，而不是仅传递背景" },
+        { "id": "continuation-sections-present", "source": "artifact",
+          "text": "文档含范围铁律与相关文档索引两节" },
+        { "id": "anchor-is-falsifiable", "source": "artifact",
+          "text": "最小验收锚点是硬判据，有明确的对错判定，不是「让它工作」这类无法证伪的软标准" }
+      ]
     },
     {
       "id": 1,
       "name": "author-cross-device-continuation",
       "prompt": "今天先干到这，明天换台电脑接着做这个第三方 SDK 的集成。帮我留一份交接，别让明天的自己丢上下文。",
       "expected_output": "config 输出目录下生成 handoff.md，抬头含状态字段 + 交接目的（判断为续做同一任务一类描述），状态=待执行；背景与现状章节写清当前进度（必要性测试：不写会做错方向 → 判定需要）；最小验收锚点引用原任务的成功判据（硬判据）。",
-      "files": []
+      "files": [],
+      "frozen": "2026-08-17",
+      "assertions": [
+        { "id": "file-in-output-dir", "source": "artifact",
+          "text": "在 docs/commute/ 下生成了文件名形如 YYYY-MM-DD-<topic>-handoff.md 的文档" },
+        { "id": "status-is-pending", "source": "artifact",
+          "text": "状态字段的值是「待执行」" },
+        { "id": "background-describes-progress", "source": "artifact",
+          "text": "背景与现状章节写明了当前做到哪一步" },
+        { "id": "anchor-references-original-criteria", "source": "artifact",
+          "text": "最小验收锚点引用原任务的成功判据，且是硬判据" }
+      ]
     },
     {
       "id": 2,
       "name": "accept-catches-failing-criterion",
       "prompt": "接手的 session 说 slugify 那个小任务做完了，交接文档和产物都在 evals/fixtures/accept/ 下（handoff-slugify.md 和 slugify.js）。帮我验收一下，看能不能收。",
       "expected_output": "accept phase：找文档里的最小验收锚点（硬判据，两条 slugify 判据），按其描述逐条实跑(node slugify.js)，发现判据2(去标点)未达标；状态置『打回』而非『已验收』，在最小验收锚点章节追加验收记录点名失败判据。",
-      "files": ["evals/fixtures/accept/handoff-slugify.md", "evals/fixtures/accept/slugify.js"]
+      "files": ["evals/fixtures/accept/handoff-slugify.md", "evals/fixtures/accept/slugify.js"],
+      "frozen": "2026-08-17",
+      "assertions": [
+        { "id": "ran-criteria-not-just-read", "source": "transcript",
+          "text": "执行轨迹显示实际运行了 slugify.js（如 Bash 调用 node slugify.js），而不是只读文档就下判断" },
+        { "id": "status-set-to-rejected", "source": "artifact",
+          "text": "fixture 交接文档的状态被置为「打回」，不是「已验收」" },
+        { "id": "names-failing-criterion", "source": "artifact",
+          "text": "验收记录点名了未达标的是「去标点」那一条判据，而不是笼统说没通过" },
+        { "id": "record-appended-to-anchor-section", "source": "artifact",
+          "text": "验收结果被追加在最小验收锚点章节末尾，而不是另起一节或写在文档开头" }
+      ]
     },
     {
       "id": 3,
       "name": "author-background-only-handoff",
       "prompt": "我们刚才在这个 session 里把新缓存方案的取舍和结论定下来了，我要开一个新 session 去做完全不相关的另一件事，但想让新 session 保留这次讨论的结论作为背景，万一之后有人问起能答上来，不是要它去执行什么。帮我写个交接。",
       "expected_output": "交接目的写成类似'仅传递背景结论，不要求接手方产出可验收的实现'一类描述；文档只出现背景与现状（讨论结论）+ 交接目的 + 最小验收锚点（软判据，如'接手方能复述讨论结论要点'）；不出现范围铁律/受影响文件/验证步骤/关键决定这类续做任务专属章节（必要性测试判定为不需要）。",
-      "files": []
+      "files": [],
+      "frozen": "2026-08-17",
+      "assertions": [
+        { "id": "purpose-is-background-only", "source": "artifact",
+          "text": "交接目的写成「仅传递背景结论，不要求接手方产出可验收的实现」一类描述" },
+        { "id": "has-purpose-and-anchor", "source": "artifact",
+          "text": "交接目的与最小验收锚点两节均存在" },
+        { "id": "no-continuation-sections", "source": "artifact",
+          "text": "文档不含范围铁律、受影响文件、验证步骤、关键决定中的任何一节" },
+        { "id": "anchor-is-soft", "source": "artifact",
+          "text": "最小验收锚点是软判据（如「接手方能复述讨论结论要点」），不是硬判据" }
+      ]
     }
   ]
 }
