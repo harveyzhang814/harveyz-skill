@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { PROFILES, piProfile } from '../../tools/skill-harness/profiles.js'
+import { PROFILES } from '../../tools/skill-harness/profiles.js'
 
 // 整表 deepEqual，不是三个独立 equal。失败时一次看到全表；
 // 新增平台必然让这些断言变红，强制作者来这里登记。这是注册表守卫模式。
@@ -57,12 +57,6 @@ test('每个 profile 的字段集合一致', () => {
   assert.equal(new Set(keys).size, 1, `profiles have divergent field sets: ${keys.join(' | ')}`)
 })
 
-test('每个 profile 都要声明 artifactChannel——捞不捞得到产出物决定质量断言能不能判', () => {
-  for (const p of PROFILES) {
-    assert.ok(['jail', 'none'].includes(p.artifactChannel), `${p.id} 缺 artifactChannel`)
-  }
-})
-
-test('pi 未重定向 HOME，故 artifactChannel 为 none——产出物类断言对 pi 只能判 unavailable', () => {
-  assert.equal(piProfile.artifactChannel, 'none')
+test('L1: artifactChannel 整表——pi 认证不通不重定向 HOME，误改成 jail 必须变红，因为目前没有别的断言在读这个字段', () => {
+  assert.deepEqual(PROFILES.map(p => p.artifactChannel), ['jail', 'none', 'jail'])
 })

@@ -79,9 +79,7 @@ run 阶段                          grade 阶段（离线）              report
 
 **代价：** 每格多一次全目录遍历和一次文件拷贝，磁盘占用从两个 JSON 涨到每格一个目录。transcript 设字节上限，超限截断并在 record 里记 `truncated: true`——截断了却不说，等于把一份不完整的原料当完整的用。
 
-**前置任务：pi 必须改成重定向 HOME。** `adapters/pi.js:12` 的 `jailEnv` 直接透传环境，注释写明"无需 HOME 重定向"。测「装得上」时这无害，但本仓库的既定约定是 skill 把产出写到 `$HOME/.hskill/<skill-name>/` 和 `~/Documents/notes/`——pi 会写进真实 HOME，既污染用户环境，又让产出物根本不在 jail 里。
-
-> **未确认：** pi 在 HOME 重定向下能否完成认证，没查。若不能，pi 这一列只能靠 `reply` 判，产出物类断言对 pi 全部是 `unavailable`，且必须如实这么渲染，不能算 fail。
+**已实测：pi 不重定向 HOME。** 2026-08-17 曾把 `adapters/pi.js:12` 的 `jailEnv` 改成重定向 HOME 到 jail 目录后实测：pi 认证 minimax-cn 失败（`exitCode 1`，stderr 为 `No API key found for minimax-cn`）；同一条命令换回真实 HOME 能正常认证并拿到 reply，排除了「只是没配 key」这个混淆因素——pi 把凭证存在 `$HOME/.pi/agent/auth.json`，重定向后这份凭证读不到。本仓库既定约定是 skill 把产出写到 `$HOME/.hskill/<skill-name>/` 和 `~/Documents/notes/`——pi 保留真实 HOME 意味着这类产出物写进真实用户环境、也捞不进 jail，代价已知并接受：`piProfile.artifactChannel` 定为 `'none'`，pi 这一列只能靠 `reply` 判，产出物类断言对 pi 全部是 `unavailable`，且必须如实这么渲染，不能算 fail。
 
 ---
 
@@ -273,7 +271,7 @@ unstable assertions (2): learn-skill/closing-question@pi/native, ...
 
 **3. 稀疏矩阵被当成完整矩阵读。** 靠 `无声明 skill` 清单暴露。这是渲染纪律，没有机制强制。
 
-**4. pi 的 HOME 重定向可能做不到。** 见第 1 部分未确认项。后果是 pi 一整列降级到只判 `reply`。
+**4. pi 不重定向 HOME，产出物类断言对它全不可用。** 2026-08-17 实测确认 pi 在重定向 HOME 下认证失败（见第 1 部分），故保留真实 HOME、`artifactChannel: 'none'`。后果是 pi 一整列降级到只判 `reply`，产出物类断言对 pi 全部是 `unavailable`，不能算 fail。已知并接受。
 
 **5. 采集层的文件清单差集可能捞进平台自己写的状态文件。** 各平台在 jail 内写什么没有逐一核对。后果是 artifacts 里混入噪音，grader 判定被干扰。缓解：首轮人工看一眼捞出来的东西，按平台加排除规则。
 
