@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { selectCells, validateMatrix, PHASE1_PLATFORMS, MODES } from '../../tools/skill-harness/select.js'
+import { selectCells, selectProbeCells, validateMatrix, PHASE1_PLATFORMS, MODES, PROBE_SKILL } from '../../tools/skill-harness/select.js'
 
 const SKILLS = [
   { path: 'mint/learn-skill', bundle: 'mint' },
@@ -83,4 +83,17 @@ test('validateMatrix: platforms 必须是数组', () => {
 test('仓库自带的 matrix.json 合法', async () => {
   const { default: matrix } = await import('../../tools/skill-harness/matrix.json', { with: { type: 'json' } })
   assert.deepEqual(validateMatrix(matrix), [])
+})
+
+test('selectProbeCells: 默认 3 平台 × 2 模式 = 6 格，全部 run，skill 字段是探针身份——Phase 1 的冒烟用例本来就是六格，不是套着探针外壳的 41 行真实 skill', () => {
+  const cells = selectProbeCells()
+  assert.equal(cells.length, PHASE1_PLATFORMS.length * MODES.length)
+  assert.ok(cells.every(c => c.state === 'run'))
+  assert.ok(cells.every(c => c.skill === PROBE_SKILL))
+})
+
+test('selectProbeCells: 遵守 --platform/--mode 过滤，未选中的格子是 not-run', () => {
+  const cells = selectProbeCells({ platforms: ['pi'], modes: ['native'] })
+  assert.ok(cells.filter(c => c.platform === 'pi' && c.mode === 'native').every(c => c.state === 'run'))
+  assert.ok(cells.filter(c => !(c.platform === 'pi' && c.mode === 'native')).every(c => c.state === 'not-run'))
 })

@@ -43,11 +43,12 @@ node tools/skill-harness/cli.js coverage
 | `--model <name>` | 必填（`run`/`dry-run`），如 `MiniMax-M2.7` |
 | `--provider <name>` | 传给 `pi`/`hermes` 的 `--provider`，如 `minimax-cn` |
 | `--base-url <url>` | 让 `claude` 改走第三方端点（如 `https://api.minimaxi.com/anthropic`），配合 `--model` 实现三平台跑同一个模型 |
-| `--skill <path>` | 可重复；只影响矩阵里哪些格子标记为"本次要跑"，**不改变实际执行的 skill 内容**（见下方「重要限制」） |
-| `--bundle <name>` | 可重复；按 `skills-index.json` 的 bundle 字段筛选，同样只影响矩阵标记 |
+| `--skill <path>` | 可重复；真正决定这次 `dry-run`/`run` 实际执行、发送给平台的是哪个 skill 的内容（`skills-index.json` 里的 `path`，如 `mint/learn-skill`），同时也是矩阵/`report` 行标签的筛选条件 |
+| `--bundle <name>` | 可重复；按 `skills-index.json` 的 bundle 字段筛选 |
 | `--platform <claude\|pi\|hermes>` | 可重复；只测指定平台 |
 | `--mode <native\|inject\|both>` | 默认 `both` |
 | `--task <text>` | 自定义任务文本，默认 `run anchor probe` |
+| `--probe` | 布尔旗标；跑框架自带的锚点探针 `probe-anchor`（见下方「探针冒烟用例」），与 `--skill` 互斥 |
 
 ---
 
@@ -105,11 +106,17 @@ node tools/skill-harness/cli.js report
 
 ---
 
-## 重要限制：Phase 1 只实际执行 probe-anchor 探针 skill
+## `--skill` 与探针冒烟用例：`--probe`
 
-`--skill` / `--bundle` **只决定矩阵里哪些格子被标记为"本次运行范围"**，用于 `coverage` 记账和 `report` 的行标签——`dry-run` / `run` 实际发送给平台的 skill 内容，第一期**永远是** `tools/skill-harness/probe/probe-anchor/`（框架自带的自检探针 skill），与 `--skill` 传的值无关。
+`--skill` / `--bundle` 真正决定这次 `dry-run` / `run` 实际执行、发送给平台的是哪个 skill 的内容——`dry-run --skill mint/learn-skill` 的 argv/prompt 里就是 `skills/mint/learn-skill/SKILL.md` 的正文，`--skill mint/learn-skill --skill creative/capture-todo` 会各自用各自的正文各跑一遍，不会互相污染。
 
-也就是说，`dry-run --skill mint/learn-skill` 的输出标题会写 `mint/learn-skill`，但 argv/prompt 里实际的 skill 正文是探针 skill 的内容。这是刻意的第一期设计——"跑真实业务 skill 内容"是后续阶段的评估逻辑，第一期只验证框架本身（触发判据、jail 隔离、字段解析）能不能在三个平台上正确工作。
+框架自身还留着一期的锚点探针 `tools/skill-harness/probe/probe-anchor/`（自检用，验证触发判据、jail 隔离、字段解析在三个平台上是否work），显式用 `--probe` 旗标跑：
+
+```bash
+node tools/skill-harness/cli.js dry-run --model MiniMax-M2.7 --provider minimax-cn --probe
+```
+
+`--probe` 与 `--skill` 互斥（同时给会直接报错）——探针模式不是"选哪些 skill"，而是单独的一套 3 平台 × 2 模式 = 6 格矩阵，不会因为仓库里有 41 个 skill 就跑出 41 行。`run --probe` 落盘的 `records.json` / `cells.json` 里，这 6 格的 `skill` 字段是探针自己的身份（`probe-anchor`），`contentHash` 恒为 `null`——不会被 `coverage` 的 staleness 判定误读成"某个真实 skill 刚测过"。
 
 ---
 

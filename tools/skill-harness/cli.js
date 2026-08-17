@@ -3,7 +3,7 @@ import fs from 'fs-extra'
 import os from 'node:os'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { selectCells, validateMatrix, PHASE1_PLATFORMS, MODES } from './select.js'
+import { selectCells, selectProbeCells, validateMatrix, PHASE1_PLATFORMS, MODES } from './select.js'
 import { planCell, runMatrix, ADAPTERS } from './runner.js'
 import { loadRuns, buildCoverage, renderCoverage } from './coverage.js'
 import { renderReport } from './report.js'
@@ -168,11 +168,13 @@ async function main() {
     return
   }
 
-  const cells = selectCells({ skills: index.skills, matrix, opts })
+  // --probe：单一探针身份 × 选中的 platforms/modes（3×2=6 格），不是套着探针外壳的
+  // 41 行真实 skill——cell.skill 本身就是探针身份，record/cells.json 因此天然带着
+  // 正确的身份，不会被下游（coverage 的 staleness 判定等）当成真实 skill 跑过。
+  // 不带 --probe：按 cell.skill 逐格解析，被测 skill 由 --skill 真正决定——
+  // 这是本任务要修的缺陷：过去这里无论 --skill 传什么都硬编码成探针。
+  const cells = opts.probe ? selectProbeCells(opts) : selectCells({ skills: index.skills, matrix, opts })
 
-  // --probe：所有格子显式指向探针（一期冒烟用例）。不带 --probe：按 cell.skill
-  // 逐格解析，被测 skill 由 --skill 真正决定——这是本任务要修的缺陷：过去这里
-  // 无论 --skill 传什么都硬编码成探针。
   const readBody = p => fs.readFile(p, 'utf8')
   const skills = opts.probe
     ? await buildProbeMap(REPO_ROOT, cells, readBody)

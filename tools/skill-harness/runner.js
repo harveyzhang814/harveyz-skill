@@ -15,6 +15,14 @@ export const ADAPTERS = { claude: claudeAdapter, pi: piAdapter, hermes: hermesAd
 
 const BIN = { claude: 'claude', pi: 'pi', hermes: 'hermes' }
 
+// 打了 code: 'SKILL_NOT_FOUND' 的判据，让 runMatrix 的 worker 能只兜底这一种错误——
+// 别的异常（我们自己代码里的真 bug）必须原样冒出去，不能被读成"这格测试失败了"。
+export function skillNotFoundError(skill) {
+  const err = new Error(`no skill entry for "${skill}" in ctx.skills — refusing to fall back to the probe`)
+  err.code = 'SKILL_NOT_FOUND'
+  return err
+}
+
 export function runId() {
   const d = new Date()
   const p = n => String(n).padStart(2, '0')
@@ -30,7 +38,7 @@ export function artifactDir(id) {
 export function planCell(cell, ctx) {
   if (!ctx.model) throw new Error('model is required — refusing to fall back to the platform default, which would confound platform with model')
   const entry = ctx.skills?.get(cell.skill)
-  if (!entry) throw new Error(`no skill entry for "${cell.skill}" in ctx.skills — refusing to fall back to the probe`)
+  if (!entry) throw skillNotFoundError(cell.skill)
   const adapter = ADAPTERS[cell.platform]
   const { systemAppend, positional } = buildPrompt({
     mode: cell.mode,
@@ -111,7 +119,7 @@ async function runOne(cell, ctx, runDir) {
   // 查表放在建 jail 之前：查不到就没必要浪费一次 jail 创建，
   // 点名该 skill 抛出去，由 runMatrix 的 worker 兜底记成这一格的失败 record。
   const entry = ctx.skills?.get(cell.skill)
-  if (!entry) throw new Error(`no skill entry for "${cell.skill}" in ctx.skills — refusing to fall back to the probe`)
+  if (!entry) throw skillNotFoundError(cell.skill)
   const { dir: jailDir, cleanup } = await createJail()
   const started = Date.now()
   try {
@@ -211,12 +219,16 @@ export async function runMatrix(cells, ctx) {
   async function worker() {
     while (i < todo.length) {
       const cell = todo[i++]
-      // runOne 抛出的错误（例如 ctx.skills 里查不到 cell.skill）不能让整轮 Promise.all
-      // 崩掉——那样一个格子的问题会连累所有已经跑完/还没跑的格子。落成这一格自己的
-      // 失败 record，错误信息点名 cell.skill，其余格子照常跑。
+      // 只兜底 SKILL_NOT_FOUND（例如 ctx.skills 里查不到 cell.skill）——那是一格
+      // 自己的资格问题，落成这一格的失败 record，其余格子照常跑。别的异常必须
+      // 原样冒出去：它们经过 createJail / adapter.seedJail / adapter.install /
+      // harness 自身的 finally 清理，是我们代码里的真 bug，不是"这个平台跑这个
+      // skill 失败了"——两者若被同一个 exitCode/stderr 表示，报告和 quality-report
+      // 就无法区分，等于把本任务要修的缺陷换了个地方重犯。
       try {
         records.push(await runOne(cell, ctx, dir))
       } catch (e) {
+        if (e.code !== 'SKILL_NOT_FOUND') throw e
         records.push(makeRecord({
           platform: cell.platform, skill: cell.skill, skillName: null,
           contentHash: resolveContentHash(ctx, cell.skill),
