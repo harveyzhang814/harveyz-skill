@@ -64,7 +64,9 @@ _MULTILINE_FIXTURE_HTML = """\
 <article data-testid="tweet">
   <div data-testid="User-Name"><div>Alice Example</div><div>@alice</div></div>
   <a href="/alice/status/6001"><time datetime="2026-08-14T16:00:00.000Z">Aug 14</time></a>
-  <div data-testid="tweetText">First   line of the tweet.<br><br>Second paragraph after a blank line.</div>
+  <div data-testid="tweetText" style="white-space: pre-wrap">First   line of the tweet.
+
+Second paragraph after a blank line.</div>
 </article>
 </body>
 </html>
@@ -72,15 +74,46 @@ _MULTILINE_FIXTURE_HTML = """\
 
 
 async def test_extract_js_xcom_timeline_preserves_line_breaks_in_text():
-    """A multi-paragraph tweet must keep its line breaks — collapsing all
-    whitespace (including \\n) to a single space loses the tweet's
-    paragraph structure (see the trq212/2086931647468097932 repro)."""
+    """A multi-paragraph tweet must keep its line breaks. X embeds a real
+    tweet's paragraph breaks as literal \\n characters inside the tweetText
+    element's own text node (rendered via white-space: pre-wrap) — verified
+    against a real tweet (trq212/2086931647468097932). Collapsing all
+    whitespace (including \\n) to a single space, or reading via innerText
+    (which also swallows a plain text node's \\n unless the ancestor
+    survives layout), loses that paragraph structure."""
     result = await _evaluate_timeline_js(_MULTILINE_FIXTURE_HTML)
     tweets = result["tweets"]
     assert len(tweets) == 1
     text = tweets[0]["text"]
     assert "\n" in text
     assert text == "First line of the tweet.\n\nSecond paragraph after a blank line."
+
+
+_MENTION_DIV_FIXTURE_HTML = """\
+<!DOCTYPE html>
+<html>
+<body>
+<article data-testid="tweet">
+  <div data-testid="User-Name"><div>Alice Example</div><div>@alice</div></div>
+  <a href="/alice/status/7001"><time datetime="2026-08-14T17:00:00.000Z">Aug 14</time></a>
+  <div data-testid="tweetText"><span>credit to </span><div class="css-g5y9jx r-xoduu5"><span><a href="/bob" role="link">@bob</a></span></div><span> for the idea, it works great</span></div>
+</article>
+</body>
+</html>
+"""
+
+
+async def test_extract_js_xcom_timeline_does_not_break_line_around_mention_div():
+    """X wraps each @mention in its own <div> for unrelated layout reasons.
+    innerText synthesizes a line break around every block-level child
+    (including that div), which would wrongly split an otherwise single-line
+    tweet around each mention (see the trq212 'django (@simonw), flask
+    (@mitsuhiko)...' repro) — textContent must be used instead, since it's a
+    plain concatenation with no synthesized breaks."""
+    result = await _evaluate_timeline_js(_MENTION_DIV_FIXTURE_HTML)
+    tweets = result["tweets"]
+    assert len(tweets) == 1
+    assert tweets[0]["text"] == "credit to @bob for the idea, it works great"
 
 
 _REPOST_FIXTURE_HTML = """\
