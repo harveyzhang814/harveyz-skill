@@ -299,8 +299,8 @@ unstable assertions (2): learn-skill/closing-question@pi/native, ...
 | 项 | 档位 | 后果 |
 |---|---|---|
 | pi 在 HOME 重定向下能否认证 | 已查，认证不通 | pi 一整列降级到只判 `reply` |
-| 一次调用判整条断言清单的输出稳定性 | 没查——且发现 `--repeat` 本身是死代码（CLI 接受该 flag 但从不据其展开 cells，实测只跑出 r0），无法用当前命令行验证 unstable 计数；结论见 [measurements/2026-08-17-quality-eval-e2e.md#step-5](measurements/2026-08-17-quality-eval-e2e.md) | 若不稳，先拆小调用粒度再考虑换指标；另需先修 `--repeat` 才能回答本行 |
-| transcript 单份体积量级 | 已查，单轮单格 6.7KB~21.2KB，远小于 `TRANSCRIPT_LIMIT`（4MB），未观察到截断。见 [measurements/2026-08-17-quality-eval-e2e.md#step-6-brief-原文-transcript-体积](measurements/2026-08-17-quality-eval-e2e.md) | 决定字节上限取值；截断比例过高则 `source: transcript` 不可用——本轮样本下不成立 |
+| 一次调用判整条断言清单的输出稳定性 | 已查，`--repeat` CLI 参数本身是死代码（解析后从未被消费，实测 `--repeat 5` 只跑出 1 格），已改用「5 次独立 run 手动合并成一个 runId」的方法绕过，真实跑出 `unstable: 14`（15 个 skill×evalId×assertionId 组合里 14 个不稳，1 个稳）。归因：约 12/14 来自 5 次重复里有 1 次的模型行为本身就质变（`Skill` 工具触发但回复过短、材料不足以判），另 1 处是同一份材料仅换 eval 场景文本、grader 判定就翻面的真实量具噪声。结论见 [measurements/2026-08-17-quality-eval-e2e.md#step-5-unstable-标定](measurements/2026-08-17-quality-eval-e2e.md) | `--repeat` 死代码是新发现的阻塞项，需要单独任务修；unstable 非零，按 spec「不参与跨平台对比」处理，不加样本硬平掉 |
+| transcript 单份体积量级 | 已查，单轮单格实测范围 6.5KB（未触发的纯聊天）~ 约 260KB（触发深度多工具调查），全部远小于 `TRANSCRIPT_LIMIT`（4MB），未观察到任何截断。见 [measurements/2026-08-17-quality-eval-e2e.md#附-transcript-单份体积](measurements/2026-08-17-quality-eval-e2e.md) | 决定字节上限取值；截断比例过高则 `source: transcript` 不可用——本轮样本下不成立 |
 | hermes 的产出物是否落在 jail 内 | 推出来的 | hermes 的 isolation 含 HOME 重定向（`profiles.js:39`），据此推断产出物在 jail 内，未实测 |
 | 各平台在 jail 内自写哪些状态文件 | 没查 | 决定采集层是否需要按平台排除规则 |
 

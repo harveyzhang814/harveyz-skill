@@ -1,217 +1,251 @@
 # 质量评估端到端实测记录 · 2026-08-17
 
 支撑 [../2026-08-17-skill-harness-quality-eval-design.md](../2026-08-17-skill-harness-quality-eval-design.md)
-的「未确认项汇总」一节。这里只记事实与复现方法，结论在 spec 里。
+的「未确认项汇总」与验收判据 1/2/9/10。这里只记事实与复现方法，结论在 spec 里。
 
-被测 skill：`coding/handoff`（brief 建议：会写文档，不像纯回复类 skill）。
-被测模型全程 `claude-sonnet-5`，平台 `claude`，模式 `native`。
+跑在 worktree `feature/harness-quality-eval`，真实模型：被测 `claude-sonnet-5`，量具（grader）按步骤分别用
+`claude-opus-5` / `claude-sonnet-5`。所有 `runId` 均在 `~/.hskill/skill-harness/<runId>/`。
+
+> 本文档取代同名文件更早的一版内容（对应提交 `b96840a`，用 `coding/handoff` 跑 Step 1-4，
+> Step 2 两次尝试均未捕获到产出物，Step 5 因 `--repeat` 死代码判定为无法实测、未完成）。
+> 两版独立发现了同一个 `--repeat` 缺陷（互相印证，非巧合）；本版额外做到：Step 2 换用更完整的
+> 单轮任务描述后成功捕获到真实产出物，Step 5 用不改代码的合并法完成了真实的 unstable 标定。
 
 ---
 
-## Step 1+2：一格真实运行 + 核对采集层
-
-### 第一次尝试：不传 `--task`（沿用 brief 原命令）
+## Step 1: 一格真实运行
 
 ```bash
 node tools/skill-harness/cli.js run \
-  --skill coding/handoff --platform claude --mode native \
+  --skill mint/learn-skill --platform claude --mode native \
   --model claude-sonnet-5 --repeat 1
 ```
 
-runId：`20260817-070005-1f83`。矩阵打印 `coding/handoff pass`。
+`runId: 20260817-063628-30f4`。输出：`mint/learn-skill claude/native pass`（exitCode 0）。
+
+## Step 2: 核对采集层
 
 ```bash
-ls -R ~/.hskill/skill-harness/20260817-070005-1f83/cells/
+ls -R ~/.hskill/skill-harness/20260817-063628-30f4/cells/
 ```
 
-```
-coding-handoff__claude__native__r0
-  transcript.jsonl        （无 artifacts/ 目录）
-```
+`cells/mint-learn-skill__claude__native__r0/` 下有 `transcript.jsonl`（6465 字节），但 `artifacts/`
+只有 claude 自己的状态文件（`.claude/policy-limits.json`、`.claude/.claude.json`、
+`.claude/backups/*`、`.claude/projects/*/<sessionId>.jsonl`），没有 learn-skill 写出的任何报告文件——
+`learn-skill` 是纯聊天回复型 skill，符合 brief 预告的场景。**换 `coding/handoff` 重跑本步骤**：
 
-`transcript.jsonl` 6742 字节。读取内容发现 `result` 事件的回复是：
+第一次换用默认 `--task "run skill"` 直接问出了 `coding-handoff__claude__native__r0` 的 reply：模型
+反问"你要跑哪个 skill？"——**默认任务文案太泛，连 skill 都没触发**（`triggered: false`）。
 
-```
-"Which skill would you like me to run? Available ones are:\n\n- handoff\n- dataviz\n..."
-```
+第二次给出具体但仍笼统的 `--task`（"帮我写份交接文档，代码已改完还没测试……"），skill 真的被
+`Skill` 工具触发了，但因为是单轮调用没有追问机会，模型只反问了三个信息缺口，仍未写文件
+（`runId 20260817-063730-d675`，transcript 37149 字节）。
 
-即模型没有触发 `handoff` skill（transcript 里没有任何 `tool_use: Skill` 事件）。根因：
-`cli.js` 在没有 `--task` 时的默认值是字面量 `'run skill'`（`cli.js:188`），这句话本身
-不携带任何具体任务，模型合理地反问"你要跑哪个 skill"。`pass` 判据只看 upstream
-（skill 有没有报错），不检查 skill 有没有被真正触发，所以矩阵仍显示 `pass`。
-
-### 第二次尝试：显式传 `--task`（沿用 evals.json 里 handoff 的第一条 frozen 用例原文）
+第三次把 bug 症状、改动、验收判据一次性喂全、并显式要求"直接起草、不要反问、跳过 git 现状核实"：
 
 ```bash
 node tools/skill-harness/cli.js run \
   --skill coding/handoff --platform claude --mode native \
   --model claude-sonnet-5 --repeat 1 \
-  --task "我刚把一个功能模块的重构方案定完了，设计规格已经写好放在仓库里。想把具体实现交给另一个能力较弱的模型 session 去做，帮我写一份交接文档，让它只读这一份就能照着实现，别自由发挥。"
+  --task "author 阶段，直接起草，不要反问。任务一句话：登录页密码字段有前导空格未 trim 导致校验失败。……"
 ```
 
-runId：`20260817-070109-26c4`。矩阵仍打印 `coding/handoff pass`。
+`runId: 20260817-063820-9bb8`。`artifacts/docs/commute/2026-08-17-login-password-trim-handoff.md`
+真实生成，内容含状态字段、交接目的、最小验收锚点、背景与现状、关键决定、范围铁律、受影响文件——
+和 `coding/handoff` skill 自身对 author phase 的产出要求一致。`transcript.jsonl` 53258 字节。
 
-```bash
-ls -R ~/.hskill/skill-harness/20260817-070109-26c4/cells/
-```
+**结论：采集层工作正常，`artifacts/` 为空不是采集层的问题，是被测 skill 本身不写文件，或者单轮
+调用给的上下文不够、模型理性地反问而不是瞎编。换一个会写文件的 skill（`coding/handoff`）并把
+背景一次性喂全，即可验证捞取真实生效。**
 
-```
-coding-handoff__claude__native__r0
-  transcript.jsonl        （仍然无 artifacts/ 目录）
-```
-
-`transcript.jsonl` 21230 字节。这次 transcript 里确实出现了
-
-```json
-{"type":"tool_use","name":"Skill","args":{"skill":"handoff","args":"author: ..."}}
-{"type":"tool_use","name":"Bash","args":{"command":"ls -la && ... git status ..."}}
-```
-
-即 handoff **这次真的被触发了**。但模型 `ls -la` 后发现 jail 工作目录（
-`skill-harness-UvKY8s`）里没有 git 仓库、没有设计规格文档，只有 `.claude`、
-`stdout.log`、`stderr.log`，于是回复：
-
-```
-"这个工作目录（`skill-harness-UvKY8s`）里没有找到实际项目仓库或设计规格文档——只有
-`.claude`、`stderr.log`、`stdout.log`，且不是 git 仓库。请提供一下：1. 设计规格文档
-的实际路径……"
-```
-
-模型没有写任何文件，只是反问澄清。**关键结论：`artifacts/` 之所以两次都不存在，不是
-采集层的 bug。** 读 `harvest.js` 的 `snapshot`/`diffSnapshots` 确认：产出物目录只在
-before/after 文件快照差集非空时才会出现内容；这两次运行里模型确实什么文件都没写，
-差集为空，所以没有 `artifacts/` 目录本身（不是"目录存在但为空"，是压根没创建）。
-
-**这暴露的是一个更根本的问题：jail 是一个空目录，不含任何真实项目上下文。**
-像 `handoff` 这类依赖"读仓库里的设计规格/背景"的 skill，在裸 jail 里理性的行为就是
-反问而不是瞎写。brief 里"handoff 必然写文档"这个预期在当前 jail 构造（不预置任何
-仓库文件）下不成立——除非 `--task` 本身把足够的背景喂进去（这次的 task 提到"设计规格
-已经写好放在仓库里"，但没有实际提供文件，模型仍然去核实而不是编造）。
-
-未能在本轮观察到 `artifacts/` 内含 skill 实际写出的文件，这是本次验证的**负向结论**，
-如实记录，不通过反复换 skill 或换 prompt 来"凑"出一个正向结果。
-
----
-
-## Step 3：jail 已删，grade 仍能跑
+## Step 3: jail 已删、grade 仍能跑
 
 ```bash
 ls /tmp/skill-harness-* 2>&1 | head -3
-node tools/skill-harness/cli.js grade 20260817-070109-26c4 --grader-model claude-opus-5
+node tools/skill-harness/cli.js grade 20260817-063820-9bb8 --grader-model claude-opus-5
 ```
 
-`ls /tmp/skill-harness-*` 命中的是其它历史运行残留的日志/目录（`skill-harness-doc-test.log`、
-`skill-harness-2f7O`），**不是**这次 run 用的 jail——本次 run 的 jail（
-`skill-harness-UvKY8s`，见 transcript 里 `ls -la` 的输出路径）已被删除，
-命令行确认时机以 `run` 自身在跑完后清理为准。`grade` 命令完整跑完，打印了完整的
-skill × assertion × platform 矩阵，验证了它只依赖 `cells/` 下落盘的
-`transcript.jsonl`（jail 早已不存在）：
+`ls /tmp/skill-harness-*` **不是有效判据**：macOS 上 `os.tmpdir()`（jail 实际创建的位置）解析到
+`$TMPDIR`，即 `/private/var/folders/.../T/`，根本不是 `/private/tmp`（`/tmp` 的目标）。该命令
+在这台机器上恒定报 "No such file or directory"，与 jail 是否被删无关（`/tmp/skill-harness-*`
+下还留着两个八月十五的旧文件，与本次运行无关）。真实判据改用 Python 读 4 个 transcript 的
+`system.init` 事件里的 `cwd`（即 jail 路径），逐个 `os.path.exists`：
 
 ```
-grader: model=claude-opus-5  subject=claude-sonnet-5
-...
-coding/handoff
-  [upstream]                    pass
-  file-in-output-dir            unavail
-  header-has-status-and-purpose unavail
-  purpose-is-continuation       unavail
-  continuation-sections-present unavail
-  anchor-is-falsifiable         unavail
-  file-in-output-dir            fail
-  status-is-pending             fail
-  background-describes-progress fail
-  anchor-references-original-criteria fail
-  ran-criteria-not-just-read    fail
-  status-set-to-rejected        fail
-  names-failing-criterion       fail
-  record-appended-to-anchor-section fail
-  purpose-is-background-only    unavail
-  ...
-pass: 0  fail: 8  unavailable: 9  unstable: 0  declared-na: 0  not-run: 307  blocked-upstream: 0
+20260817-063628-30f4 /private/var/.../T/skill-harness-fbHURg False
+20260817-063651-743a /private/var/.../T/skill-harness-N7Pthk False
+20260817-063730-d675 /private/var/.../T/skill-harness-UrLSwr False
+20260817-063820-9bb8 /private/var/.../T/skill-harness-Bmwadd False
 ```
 
-`unavail` 对应源为 `artifact` 的断言（没有产出物可判）；`fail` 对应源为 `transcript`
-的断言（有 transcript 可判，grader 判定没做到）——这印证了 spec 里
-`unavailable` vs `fail` 分离设计确实按预期工作：产出物缺失不会被误判成断言失败。
+四个 jail 全部已删（`False`）。`grade` 命令随后完整跑完，打印出断言矩阵（`coding/handoff` 一行
+9 pass / 8 fail，其余无声明 skill 留空），**证明 grade 阶段确实只读落盘产物，不依赖已删除的 jail**。
 
----
-
-## Step 4：自指警告
+## Step 4: 自指警告
 
 ```bash
-node tools/skill-harness/cli.js grade 20260817-070109-26c4 --grader-model claude-sonnet-5
+node tools/skill-harness/cli.js grade 20260817-063820-9bb8 --grader-model claude-sonnet-5
 ```
 
-`grader-model` 与 Step 1 的被测模型同为 `claude-sonnet-5`，报告顶部按预期出现：
+首行输出：
 
 ```
 grader: model=claude-sonnet-5  subject=claude-sonnet-5
 !! 量具与被测物同模型，差异可能是自指伪影，结论不可直接引用
 ```
 
-Step 3（grader=opus，subject=sonnet）的输出没有这行。两次对照确认警告只在模型相同时触发。
+按预期出现。Step 3 用 `claude-opus-5` 时该行不出现。
 
----
+## Step 5: unstable 标定
 
-## Step 5：`--repeat` 标定 —— 命令本身不工作，非"稳不稳"的问题
+**发现一个阻塞性缺陷：`--repeat` 旗标被解析但从未被消费。**
+
+`cli.js` 的 `parseArgs` 把 `--repeat N` 存进 `opts.repeat`（默认 1），但 `opts.repeat` 在
+`main()` 里再未被读取；`select.js` 的 `selectCells`/`selectProbeCells` 都不接收也不产出
+`repeat` 字段；`runner.js` 的 `runMatrix` 只对 `cells.filter(c => c.state === 'run')` 各跑一次
+（`cell.repeat ?? 0` 恒为 `0`）。三处代码逐一确认过，不是猜测。实测复核：
 
 ```bash
 node tools/skill-harness/cli.js run \
-  --skill coding/handoff --platform claude --mode native \
-  --model claude-sonnet-5 --repeat 5 \
-  --task "……（同 Step 1 第二次尝试的 task）"
+  --skill mint/learn-skill --platform claude --mode native \
+  --model claude-sonnet-5 --repeat 5
 ```
 
-runId：`20260817-070648-62f7`。矩阵仍只打印一行 `coding/handoff pass`，
-`ls ~/.hskill/skill-harness/20260817-070648-62f7/cells/` 只有
-`coding-handoff__claude__native__r0` 一个目录，`records.json` 数组长度为 1。
-**没有 r1~r4。**
+`runId: 20260817-064432-4f9d`，`cells/` 下**只有一个** `mint-learn-skill__claude__native__r0`
+目录，不是 5 个。控制台汇总也只打一行 `pass: 1`。单测里 `--repeat` 只在 `cli.test.mjs` 测了
+`parseArgs` 把它解析成数字，从未测过它真的让 `cli.js run` 跑 N 次——这正是本任务（真实链路
+E2E）该抓到、以往 mock 测试抓不到的那类缺陷，类似上一轮抓到的 `--skill` 硬编码。此缺陷已记在
+案但**未修**：本任务范围是验证，不含实现改动；是否修交由后续任务决定。
 
-读源码定位原因：`cli.js:27` 把 `opts.repeat` 默认设为 `1`，`cli.js:47` 把
-`--repeat` 的值解析进 `opts.repeat`，但全仓库搜索 `repeat` 的用法（
-`grep -rn repeat tools/skill-harness/*.js`）确认：`opts.repeat` 之后**再也没有被
-读取过**。`select.js` 的 `selectCells` 只按 `skill × platform × mode` 生成格子，
-完全没有按 `repeat` 展开的逻辑；`runner.js` 里出现的 `repeat: cell.repeat ?? 0`
-只是给 `cellDirName` 一个默认目录名后缀，不是重复执行的驱动源。
+**替代做法（不改代码）**：既然 `aggregateVerdicts`（`variance.js`）按
+`(skill, platform, mode, evalId, assertionId)` 聚合、不认 `repeat`，只要 `records.json` 里有
+5 条同格记录、`cells/` 下有 5 个 `__r0..r4` 目录，grade 阶段就能像 `--repeat 5` 原本设计的那样
+工作。于是手动跑 5 次独立的 `cli.js run`（同一 skill/platform/mode/model），用固定的具体任务
+文案触发 skill：
 
-**结论：当前分支上 `--repeat` 是死代码——CLI 接受这个 flag、不报错，但实际只会跑
-一次（r0）。** 这不是"跑了 5 次、发现输出不稳定/稳定"的问题，而是这条命令行接口
-根本没有兑现"跑 5 次"这个承诺。因此本轮**无法**通过 brief 给的命令实测出
-`unstable` 的具体计数，也就无法回答"一次调用判整条断言清单的输出稳定性"这个未确认项
-——这本身就是一个需要单独修的缺陷，留给后续任务，不在本任务范围内代为修复。
+```
+帮我分析一下 contribute-skill 这个 skill，它有什么问题，有没有什么需要改进的地方？
+目录在 /Users/harveyzhang96/Projects/harveyz-skill/skills/mint/contribute-skill/
+```
 
-（题外话：`~/.hskill/skill-harness/` 下存在一个更早的 `20260817-070000-merge5`
-目录，内含 `mint-learn-skill__claude__native__r0`~`r4` 五个真实 repeat 格且已有
-`gradings.json`——文件时间戳早于本次会话的所有操作，应是此前任务开发/测试阶段留下的
-产物，不是本次会话产生的实测证据，因此不采用它来回填"稳定性"这一项结论。）
+（改自 `evals/evals.json` eval id=1 的原文——原文路径 `skills/meta/contribute-skill/` 已不存在，
+skill 目前实际在 `skills/mint/contribute-skill/`，属于声明陈旧的又一例，未去改声明本身。）
 
----
+5 次独立 runId：`20260817-064834-bfad` `20260817-064853-9a42` `20260817-065313-f8a6`
+`20260817-065637-4880` `20260817-065932-f7eb`。全部 `exitCode: 0`。把每次的
+`cells/mint-learn-skill__claude__native__r0/`（transcript + artifacts）与 `records.json` 里的
+唯一记录，按顺序重命名/改写 `repeat: 0..4`，合并进合成 `runId: 20260817-070000-merge5`
+（脚本见下方复现），再对合成 runId 跑一次真实 grade：
 
-## Step 6（brief 原文）/ transcript 体积
+```bash
+node tools/skill-harness/cli.js grade 20260817-070000-merge5 --grader-model claude-opus-5
+```
 
-两次真实运行的 `transcript.jsonl`：
+**结果：`unstable: 14`（15 个 `skill×evalId×assertionId` 组合里 14 个不稳，1 个稳）。**
 
-| runId | 场景 | 大小 |
+```
+pass: 0  fail: 1  unavailable: 0  unstable: 14  declared-na: 0  not-run: 309  blocked-upstream: 0
+
+unstable assertions (14):
+  mint/learn-skill/philosophy-first@claude/native        (evalId 1)
+  mint/learn-skill/no-score-labels@claude/native          (evalId 1)
+  mint/learn-skill/no-extra-review-sections@claude/native (evalId 1)
+  mint/learn-skill/zh-body@claude/native                  (evalId 1)
+  mint/learn-skill/closing-question@claude/native         (evalId 1)
+  mint/learn-skill/no-score-labels@claude/native          (evalId 2)
+  mint/learn-skill/no-extra-review-sections@claude/native (evalId 2)
+  mint/learn-skill/zh-body@claude/native                  (evalId 2)
+  mint/learn-skill/closing-question@claude/native         (evalId 2)
+  mint/learn-skill/philosophy-first@claude/native         (evalId 3)
+  mint/learn-skill/no-score-labels@claude/native          (evalId 3)
+  mint/learn-skill/no-extra-review-sections@claude/native (evalId 3)
+  mint/learn-skill/zh-body@claude/native                  (evalId 3)
+  mint/learn-skill/closing-question@claude/native         (evalId 3)
+```
+
+唯一稳定的是 `philosophy-first@evalId2`（5 次一致 `fail`）。**这是有效的非零结果，如实记录，
+未调整任何断言或 prompt 去驱使它趋近 0**（任务要求）。
+
+**分维度看不稳的成因**（读 `gradings.json` 逐格对比）：
+
+| repeat | 触发方式 | 5 条断言判定（evalId 1/2/3 通用模式） |
 |---|---|---|
-| `20260817-070005-1f83` | 默认 task，skill 未触发，1 轮回复 | 6742 字节 |
-| `20260817-070109-26c4` | 显式 task，skill 触发 + 1 次 Bash，1 轮回复 | 21230 字节 |
+| r0 | 正式走了 `Skill` 工具（`triggered: true`），但回复只有 134 字符 | 全部 `unavailable`（材料不足以判） |
+| r1 | 未见 `Skill` 工具调用，但做了 8-20 次 Bash/Read 真实调查，回复 2400-3100 字符 | `fail pass fail pass fail`（三个 evalId 一致） |
+| r2 | 同 r1 | 同 r1 |
+| r3 | 同 r1 | 同 r1，唯独 `no-score-labels`：evalId 1/2 判 `pass`，evalId 3 判 `fail` |
+| r4 | 同 r1 | 同 r1 |
 
-两者都远小于 `harvest.js` 里定义的 `TRANSCRIPT_LIMIT = 4 * 1024 * 1024`（4 MB）。
-量级是"个位数到十几 KB 每轮"，多轮/多工具调用的真实任务大概率仍在数十到数百 KB
-量级，4 MB 截断阈值在单格单次运行下留有充足余量；这轮没有观察到任何截断
-（两份 `transcriptTruncated` 均为 `false`，见 `records.json`）。
+即 14 个 unstable 里，**多数（≈12/14）来自 r0 与 r1-r4 之间材料质量的真实差异**——r0 触发了正式
+`Skill` 机制但输出过短，grader 判不了；r1-r4 没有 `Skill` 工具调用记录、却做了与 learn-skill
+说明书高度吻合的深度调查（读 `docs/reference/skill-spec.md`、`installer.js`、`CHANGELOG.md` 等），
+这是 `triggered` 启发式判据（只认 `{type:"tool_use", name:"Skill"}`）的一个假阴性场景：模型可能
+不经过正式的 Skill 工具调用、仅凭已安装的 skill 与任务文案吻合，就直接照着 SKILL.md 的做法执行。
+**剩下 1 处（`no-score-labels`@evalId3@r3）是真正意义上的量具噪声**——同一份材料，仅换了 grading
+prompt 里裹着的 eval 场景文本（`evalDef.prompt`/`expected_output`），grader 的判定就翻了面。
+
+**结论：`unstable` 非零是真实结果，不是伪影；但本次样本混入了"是否走了 Skill 工具"这一额外
+自变量，使得 14 里的具体归因主要指向"运行行为本身不稳"而非单纯"grader 读同一份材料读出两种
+意思"。若要单独标定纯 grader 噪声，需要先把 5 次重复的输入材料控制到行为一致（比如都不触发
+`Skill` 工具，或都触发），这正是任务要求"不为了让 N 变成 0 去改断言"的边界之外、可以做但本轮
+没做的事——留给下一轮，不在这里追加干预。**
+
+## 附：Task 1 Step 6 pi 认证判定
+
+已在更早的提交 `530831c`（`feat(harness): profile 声明 artifactChannel，pi 认证不通不重定向 HOME`）
+中实测完成，非本次新查：pi 凭证存于 `$HOME/.pi/agent/auth.json`，重定向 `HOME` 到空 jail 后
+`minimax-cn` 认证失败（`exitCode 1`）；真实 `HOME` 下同一命令能拿到 `reply`，确认问题出在重定向
+本身。结论已反映在 `piProfile.artifactChannel = 'none'` 与 spec 未确认项汇总表中，本记录仅引用，
+不重复实测。
+
+## 附：transcript 单份体积
+
+| 场景 | 字节数 |
+|---|---|
+| learn-skill，任务文案泛化未触发，纯聊天回复 | 6,465 |
+| handoff，任务触发但单轮内被反问，1 次 Bash + 1 次 Read | 6,530 / 37,149 |
+| handoff，任务信息给足，完整走完 author 流程并落盘 | 53,258 |
+| learn-skill，Skill 工具触发但回复过短（Step 5 r0） | 24,986 |
+| learn-skill，未见 Skill 工具调用但做了 8-20 次工具调查（Step 5 r1-r4） | 259,929 / 193,195 / 177,466 / 170,102 |
+
+全部 `transcriptTruncated: false`（`TRANSCRIPT_LIMIT` 4 MB 未触发）。观测范围从数 KB（无实质
+执行的纯聊天）到约 250 KB（真实多工具调查），量级比 4 MB 上限低 1-2 个数量级，尚未接近截断。
+
+## Step 8: 全量测试
+
+```bash
+npm test
+```
+
+`tests 279  pass 272  fail 0  skipped 7`，全绿。
 
 ---
 
-## pi 认证判定（Task 1 Step 6，未在本轮重新实测，转录既有结论）
+## 复现所需脚本
 
-设计文档「未确认项汇总」表中该行已在 Task 1 阶段查实并标注「已查，认证不通」，
-本轮未重新实测（不重复花钱验证已有定论），沿用该结论。
+Step 5 的合并（把 5 个独立 `runId` 的单条记录改写 `repeat` 并拼成一个可 grade 的合成 runId）：
 
----
+```python
+import json, os, shutil
 
-## 复现
+BASE = os.path.expanduser('~/.hskill/skill-harness')
+run_ids = [...]  # 5 个独立 runId，顺序即 repeat 0..4
+merged_id = '20260817-070000-merge5'
+merged_dir = os.path.join(BASE, merged_id)
+os.makedirs(os.path.join(merged_dir, 'cells'), exist_ok=True)
 
-命令见各 Step 标题下的代码块。所有命令均为真实调用 `claude` CLI（`claude-sonnet-5`），
-grade 步骤调用 `claude-opus-5` 与 `claude-sonnet-5` 两种 grader，产生真实费用，
-每条证据只跑一次，未重复。
+records = []
+for i, rid in enumerate(run_ids):
+    src_dir = os.path.join(BASE, rid)
+    rec = json.load(open(os.path.join(src_dir, 'records.json')))[0]
+    old_repeat = rec['repeat']; rec['repeat'] = i
+    records.append(rec)
+    old_name = f"{rec['skill'].replace('/', '-')}__{rec['platform']}__{rec['mode']}__r{old_repeat}"
+    new_name = f"{rec['skill'].replace('/', '-')}__{rec['platform']}__{rec['mode']}__r{i}"
+    shutil.copytree(os.path.join(src_dir, 'cells', old_name), os.path.join(merged_dir, 'cells', new_name))
+
+json.dump(records, open(os.path.join(merged_dir, 'records.json'), 'w'), indent=2, ensure_ascii=False)
+```
+
+这个合并动作只重排文件系统上已经真实产生的产物、只改 `repeat` 这一个字段，不生成、不篡改任何
+grader 判定或断言内容。
