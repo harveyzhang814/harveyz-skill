@@ -83,3 +83,15 @@ test('renderDryRun: 只渲染 state 为 run 的格子', () => {
   assert.ok(out.includes('pi/native'))
   assert.ok(!out.includes('claude/native'))
 })
+
+test('grade 缺 --grader-model 直接报错——不 pin 量具，跨平台差异就是平台⊗模型混合效应', () => {
+  assert.throws(() => parseArgs(['grade', '20260817-120000-abcd']), /grader-model/)
+})
+
+test('grade 认得 runId 与 --only', () => {
+  const { command, opts } = parseArgs(['grade', '20260817-120000-abcd', '--grader-model', 'm', '--only', 'a/x'])
+  assert.equal(command, 'grade')
+  assert.equal(opts.runId, '20260817-120000-abcd')
+  assert.equal(opts.graderModel, 'm')
+  assert.deepEqual(opts.only, ['a/x'])
+})

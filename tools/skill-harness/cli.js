@@ -9,19 +9,27 @@ import { loadRuns, buildCoverage, renderCoverage } from './coverage.js'
 import { renderReport } from './report.js'
 import { stripFrontmatter } from './prompt.js'
 import { claudeOAuthToken } from './jail.js'
+import { runGrade, invokeClaudeGrader } from './grade/index.js'
+import { loadDeclaration } from './declarations.js'
 
 const here = path.dirname(fileURLToPath(import.meta.url))
 const REPO_ROOT = path.resolve(here, '../..')
 
-const COMMANDS = new Set(['run', 'dry-run', 'report', 'coverage'])
-const REPEATABLE = { '--skill': 'skills', '--platform': 'platforms', '--bundle': 'bundles' }
+const COMMANDS = new Set(['run', 'dry-run', 'report', 'coverage', 'grade'])
+const REPEATABLE = { '--skill': 'skills', '--platform': 'platforms', '--bundle': 'bundles', '--only': 'only' }
 
 export function parseArgs(argv) {
   const command = argv[0]
   if (!COMMANDS.has(command)) throw new Error(`unknown command: ${command} (expected one of ${[...COMMANDS].join(', ')})`)
 
   const opts = { modes: [...MODES], repeat: 1 }
-  for (let i = 1; i < argv.length; i++) {
+  // grade 的第一个位置参数是 runId，不是旗标
+  let start = 1
+  if (command === 'grade' && argv[1] && !argv[1].startsWith('--')) {
+    opts.runId = argv[1]
+    start = 2
+  }
+  for (let i = start; i < argv.length; i++) {
     const flag = argv[i]
     const value = argv[++i]
     if (REPEATABLE[flag]) {
@@ -34,6 +42,7 @@ export function parseArgs(argv) {
     else if (flag === '--base-url') opts.baseUrl = value
     else if (flag === '--task') opts.task = value
     else if (flag === '--repeat') opts.repeat = Number(value)
+    else if (flag === '--grader-model') opts.graderModel = value
     else throw new Error(`unknown flag: ${flag}`)
   }
 
@@ -45,6 +54,10 @@ export function parseArgs(argv) {
   }
   if ((command === 'run' || command === 'dry-run') && !opts.model) {
     throw new Error('--model is required — falling back to each platform default would confound platform with model')
+  }
+  if (command === 'grade') {
+    if (!opts.runId) throw new Error('grade requires a runId: skill-harness grade <runId> --grader-model <model>')
+    if (!opts.graderModel) throw new Error('--grader-model is required — an unpinned grader confounds the measuring stick with the thing measured')
   }
   return { command, opts }
 }
@@ -85,6 +98,26 @@ async function main() {
   if (errors.length) {
     console.error(errors.join('\n'))
     process.exit(1)
+  }
+
+  if (command === 'grade') {
+    const runDir = path.join(os.homedir(), '.hskill/skill-harness', opts.runId)
+    const declarations = new Map()
+    for (const s of index.skills) {
+      const decl = await loadDeclaration(REPO_ROOT, s.path)
+      if (decl) declarations.set(s.path, decl)
+    }
+    const out = await runGrade({
+      runDir, graderModel: opts.graderModel, only: opts.only, declarations,
+      invoke: (prompt, model) => invokeClaudeGrader(prompt, model, {
+        source: process.env,
+        oauthToken: opts.baseUrl ? undefined : claudeOAuthToken(),
+        baseUrl: opts.baseUrl,
+        apiKey: opts.baseUrl ? process.env.MINIMAX_CN_API_KEY : undefined,
+      }),
+    })
+    console.log(`graded ${out.gradings.length} (skill, eval) pairs -> ${path.join(runDir, 'gradings.json')}`)
+    return
   }
 
   if (command === 'coverage') {
