@@ -1,5 +1,6 @@
 import { PHASE1_PLATFORMS, MODES } from './select.js'
 import { PROFILES } from './profiles.js'
+import { modelMismatchLines, unavailableFieldLines } from './attribution.js'
 
 // 三态：pass/fail 是真跑了；declared-na 是声明排除；not-run 是本次没覆盖。
 // not-run 永远不得折叠进 pass，也不得从矩阵里省略行列——
@@ -52,18 +53,8 @@ export function renderReport({ cells, records, model, provider }) {
   lines.push('')
   lines.push(`pass: ${counts.pass}  fail: ${counts.fail}  declared-na: ${counts['declared-na']}  not-run: ${counts['not-run']}`)
 
-  const mism = records.filter(r => r.modelMismatch)
-  if (mism.length) {
-    lines.push('')
-    lines.push(`model mismatch (${mism.length}): ${mism.map(r => `${r.skill}@${r.platform}`).join(', ')}`)
-  }
-
-  const un = records.filter(r => r.unavailable?.length)
-  if (un.length) {
-    lines.push('')
-    lines.push('unavailable fields:')
-    for (const r of un) lines.push(`  ${r.skill}@${r.platform}/${r.mode}: ${r.unavailable.join(', ')}`)
-  }
+  lines.push(...modelMismatchLines(records))
+  lines.push(...unavailableFieldLines(records))
 
   const na = cells.filter(c => c.state === 'declared-na')
   if (na.length) {

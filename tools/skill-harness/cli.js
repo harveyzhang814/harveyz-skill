@@ -11,6 +11,8 @@ import { stripFrontmatter } from './prompt.js'
 import { claudeOAuthToken } from './jail.js'
 import { runGrade, invokeClaudeGrader } from './grade/index.js'
 import { loadDeclaration } from './declarations.js'
+import { aggregateVerdicts } from './variance.js'
+import { renderQualityReport } from './quality-report.js'
 
 const here = path.dirname(fileURLToPath(import.meta.url))
 const REPO_ROOT = path.resolve(here, '../..')
@@ -116,7 +118,13 @@ async function main() {
         apiKey: opts.baseUrl ? process.env.MINIMAX_CN_API_KEY : undefined,
       }),
     })
-    console.log(`graded ${out.gradings.length} (skill, eval) pairs -> ${path.join(runDir, 'gradings.json')}`)
+    const verdicts = aggregateVerdicts(out.gradings)
+    console.log(renderQualityReport({
+      records: await fs.readJson(path.join(runDir, 'records.json')),
+      declarations, verdicts,
+      allSkills: index.skills.map(s => s.path),
+      graderModel: out.graderModel, subjectModel: out.subjectModel,
+    }))
     return
   }
 
