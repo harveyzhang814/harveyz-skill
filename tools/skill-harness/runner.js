@@ -120,7 +120,8 @@ async function runOne(cell, ctx, runDir) {
     const argv = [...plan.argv, ...extraArgs]
 
     // 采集故障不得判成 fail：before-snapshot 失败就没有基准去做差集，
-    // 直接记为 harvest 失败，subprocess 仍照常跑，不影响被测方的结果。
+    // 但 transcript 不依赖这个基准——错误信息留到下面并入 harvest.errors，
+    // diff 步骤退化成空 changedFiles，subprocess 仍照常跑。
     let harvestError = null
     let before = new Map()
     try {
@@ -154,23 +155,29 @@ async function runOne(cell, ctx, runDir) {
       }
     }
 
-    // 采集故障不得判成 fail：after-snapshot 或 harvestCell 本身出错，
-    // 不能让异常逃出 runOne 把整格判丢——记成 harvest 失败，格子仍正常产出 record。
-    let harvest
-    if (harvestError) {
-      harvest = { truncated: false, errors: [harvestError.message] }
-    } else {
+    // transcript 是唯一花钱重跑模型也换不回来的证据，不能因为 snapshot 失败
+    // 就连它一起丢掉：无论 before/after snapshot 是否成功，harvestCell 始终
+    // 要被调用——它内部先写 transcript，再处理 changedFiles；snapshot 拿不到
+    // 基准就退化成空 changedFiles（只丢差集，不丢 transcript），snapshot 的
+    // 错误信息并入 harvest.errors，不让异常逃出 runOne 把整格判丢。
+    const destDir = path.join(runDir, 'cells', cellDirName({ ...cell, repeat: cell.repeat ?? 0 }))
+    const snapshotErrors = harvestError ? [harvestError.message] : []
+    let changedFiles = []
+    if (!harvestError) {
       try {
         const after = await snapshot(jailDir)
-        harvest = await harvestCell({
-          jailDir,
-          destDir: path.join(runDir, 'cells', cellDirName({ ...cell, repeat: cell.repeat ?? 0 })),
-          raw,
-          changedFiles: diffSnapshots(before, after),
-        })
+        changedFiles = diffSnapshots(before, after)
       } catch (e) {
-        harvest = { truncated: false, errors: [e.message] }
+        snapshotErrors.push(e.message)
       }
+    }
+
+    let harvest
+    try {
+      const result = await harvestCell({ jailDir, destDir, raw, changedFiles })
+      harvest = { truncated: result.truncated, errors: [...snapshotErrors, ...result.errors] }
+    } catch (e) {
+      harvest = { truncated: false, errors: [...snapshotErrors, e.message] }
     }
 
     const parsed = adapter.parse(raw, { skillName: path.basename(ctx.skillPath), skillDir: ctx.skillDir })

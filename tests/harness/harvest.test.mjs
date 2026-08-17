@@ -176,13 +176,14 @@ test('采集不到的文件记进 errors 而不是抛出——采集故障不得
   await fs.remove(jail); await fs.remove(dest)
 })
 
-// 不在 brief 列表里，是 task-3 额外要求的：证明 harvest 链路能扛住失败的
-// snapshot()，而不是让异常从 runner.js 的 runOne 里逃出去，把整格判成失败。
-// runOne 本身没有导出（brief 明确不希望为了可测性而改结构），所以这里
-// 只能在 harvestCell 这一层验证——用一个已经不存在的 jailDir 模拟
-// snapshot() 早已失败、jail 已经消失之后的情形：harvestCell 仍必须
-// 完整落盘 transcript、把每个采不到的文件计入 errors，而不是抛出。
-test('jailDir 整个不存在时 harvestCell 仍不抛出——对应 runner 里 snapshot 失败后必须记录而不是让异常逃出 runOne', async () => {
+// 不在 brief 列表里，是 task-3 额外要求的：runner.js 现在无论 snapshot
+// 成不成功都会调用 harvestCell（fix 之后的行为——snapshot 失败只让
+// changedFiles 退化成空，不再跳过整个 harvestCell），这条测试证明
+// harvestCell 本身撑得住这个前提：即便 jailDir 已经整个消失，
+// 它仍然完整落盘 transcript、把每个采不到的文件计入 errors 而不抛出。
+// runOne 本身没有导出（brief 明确不希望为了可测性而改结构），这里在
+// harvestCell 这一层验证的就是 runner 依赖的这条真实生产路径的前提条件。
+test('jailDir 整个不存在时 harvestCell 仍不抛出——runner 现在无论 snapshot 是否失败都会调用它，这个前提必须扛得住', async () => {
   const missingJail = path.join(os.tmpdir(), 'harvest-jail-missing-' + Date.now())
   const dest = await fs.mkdtemp(path.join(os.tmpdir(), 'harvest-dest-'))
 
@@ -196,4 +197,29 @@ test('jailDir 整个不存在时 harvestCell 仍不抛出——对应 runner 里
   assert.match(r.errors[1], /other\.txt/)
   assert.equal(await fs.readFile(path.join(dest, 'transcript.jsonl'), 'utf8'), 'transcript-data')
   await fs.remove(dest)
+})
+
+// 覆盖本次 fix 的合并逻辑：runner.js 里 snapshot 失败时，changedFiles 退化
+// 成空数组，snapshot 的错误信息被并入 harvestCell 返回的 errors——而不是
+// 像之前那样直接跳过 harvestCell、连 transcript 一起丢掉。transcript 是
+// 唯一花钱重跑模型也换不回来的证据，snapshot 失败不该连累它。
+// runOne 未导出，这里按 runner.js 里同样的合并写法直接驱动 harvestCell，
+// 验证「snapshot 错误」与「harvestCell 自身 errors」合并后二者都在。
+test('snapshot 失败时 transcript 仍要写、snapshot 的错误要并入 errors——不能因为丢了基准就连证据一起丢', async () => {
+  const jail = await fs.mkdtemp(path.join(os.tmpdir(), 'harvest-jail-'))
+  const dest = await fs.mkdtemp(path.join(os.tmpdir(), 'harvest-dest-'))
+  await fs.outputFile(path.join(jail, 'note.md'), 'ignored because changedFiles is empty')
+
+  // 模拟 runner.js 里 snapshot() 抛出后的合并写法：snapshotErrors 先收集，
+  // changedFiles 退化为空，harvestCell 仍然被调用，两边 errors 拼在一起。
+  const snapshotErrors = ['EACCES: permission denied']
+  const result = await harvestCell({
+    jailDir: jail, destDir: dest, raw: 'transcript-survives',
+    changedFiles: [],
+  })
+  const harvest = { truncated: result.truncated, errors: [...snapshotErrors, ...result.errors] }
+
+  assert.equal(await fs.readFile(path.join(dest, 'transcript.jsonl'), 'utf8'), 'transcript-survives')
+  assert.ok(harvest.errors.includes('EACCES: permission denied'))
+  await fs.remove(jail); await fs.remove(dest)
 })
