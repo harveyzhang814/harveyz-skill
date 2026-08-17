@@ -55,10 +55,34 @@ test('不打 pass_rate——合成比率会把三态压平，且太容易被单�
   assert.ok(!/%/.test(out))
 })
 
-test('unavailable 既不渲染成 0 也不渲染成对勾', () => {
+test('unavailable 格子只能是 unavail 本身——判不了的格子不能读成通过或零', () => {
   const out = renderQualityReport(BASE)
-  assert.ok(out.includes('unavail'))
-  assert.ok(!out.includes('✓'))
+  const row = out.split('\n').find(l => l.trim().startsWith('aa'))
+  // 列宽 12，前缀宽 26（BASE 里只有 a/x 一个 skill，width = max(24, 3+4)+2 = 26），
+  // 6 列顺序 = COMBOS：claude/native claude/inject pi/native pi/inject hermes/native hermes/inject
+  const col = i => row.slice(26 + i * 12, 26 + (i + 1) * 12).trim()
+  assert.equal(col(0), 'pass')
+  assert.equal(col(1), 'unavail') // claude/inject 的 aa：这一格是本测试要守的对象
+  assert.equal(col(2), '')
+  assert.equal(col(3), '')
+  assert.equal(col(4), '.')
+  assert.equal(col(5), '')
+  for (let i = 0; i < 6; i++) {
+    assert.notEqual(col(i), '0')
+    assert.notEqual(col(i), '✓')
+  }
+})
+
+test('[upstream] 行同样按固定列宽切片——列错位会让整行的判定挂到错误平台头上', () => {
+  const out = renderQualityReport(BASE)
+  const row = out.split('\n').find(l => l.trim().startsWith('[upstream]'))
+  const col = i => row.slice(26 + i * 12, 26 + (i + 1) * 12).trim()
+  assert.equal(col(0), 'pass')   // claude/native
+  assert.equal(col(1), 'pass')   // claude/inject
+  assert.equal(col(2), '')       // pi/native：未跑
+  assert.equal(col(3), '')       // pi/inject：未跑
+  assert.equal(col(4), 'fail')   // hermes/native：exitCode 1
+  assert.equal(col(5), '')       // hermes/inject：未跑
 })
 
 test('unstable 渲染成 ~，不算 pass 也不算 fail', () => {
