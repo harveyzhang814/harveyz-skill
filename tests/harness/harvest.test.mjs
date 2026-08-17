@@ -1,4 +1,4 @@
-import { test } from 'node:test'
+import { test, mock } from 'node:test'
 import assert from 'node:assert/strict'
 import fs from 'fs-extra'
 import os from 'node:os'
@@ -80,23 +80,65 @@ test('snapshot 在路径不存在时拒绝而非返回空 Map——空 before �
   assert.ok(threw, 'snapshot should throw on nonexistent directory')
 })
 
-test('snapshot 在子目录被删除时仍成功——运行期间的删除竞态需要容忍', async () => {
+test('snapshot 在子目录 readdir 返回 ENOENT 时仍成功——运行期间目录删除竞态需要容忍', async (t) => {
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'harvest-test-'))
+  const subdir = path.join(dir, 'subdir')
+  await fs.ensureDir(subdir)
+  await fs.outputFile(path.join(subdir, 'file.txt'), 'content')
+  const topfile = path.join(dir, 'top.txt')
+  await fs.outputFile(topfile, 'top')
+
+  // Mock fs.readdir: 根目录返回真实结果，子目录递归调用抛 ENOENT
+  let callCount = 0
+  t.mock.method(fs, 'readdir', async (cur, opts) => {
+    callCount++
+    // 第一次调用是根目录，返回真实结果
+    if (callCount === 1) {
+      const realReaddir = fs.promises.readdir || (await import('fs/promises')).readdir
+      return realReaddir(cur, opts)
+    }
+    // 第二次调用是子目录，模拟竞态删除
+    const err = new Error('ENOENT: no such file or directory')
+    err.code = 'ENOENT'
+    throw err
+  })
+
+  const snap = await snapshot(dir)
+  assert.ok(snap.has('top.txt'), 'snapshot should capture top-level file')
+  assert.ok(snap instanceof Map, 'snapshot should succeed despite subdir ENOENT')
+
+  await fs.remove(dir)
+})
+
+test('snapshot 在子目录 readdir 返回 EACCES 时拒绝——不可读目录是真实故障', async (t) => {
   const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'harvest-test-'))
   const subdir = path.join(dir, 'subdir')
   await fs.ensureDir(subdir)
   await fs.outputFile(path.join(subdir, 'file.txt'), 'content')
 
-  // 创建一个先存在后删除的目标来模拟竞态——symlink 本身存在但指向已删除的目录
-  const target = path.join(dir, 'target-dir')
-  const link = path.join(dir, 'broken-link')
-  await fs.ensureDir(target)
-  await fs.symlink(target, link)
-  await fs.remove(target)
+  // Mock fs.readdir: 根目录返回真实结果，子目录递归调用抛 EACCES
+  let callCount = 0
+  t.mock.method(fs, 'readdir', async (cur, opts) => {
+    callCount++
+    // 第一次调用是根目录，返回真实结果
+    if (callCount === 1) {
+      const realReaddir = fs.promises.readdir || (await import('fs/promises')).readdir
+      return realReaddir(cur, opts)
+    }
+    // 第二次调用是子目录，模拟权限错误
+    const err = new Error('EACCES: permission denied')
+    err.code = 'EACCES'
+    throw err
+  })
 
-  // snapshot 应该在遇到已删除目标的 symlink 时仍然成功（ENOENT 容忍）
-  const snap = await snapshot(dir)
-  assert.ok(snap.has('subdir/file.txt'), 'snapshot should capture subdirectory files')
-  assert.ok(snap instanceof Map, 'snapshot should succeed and return Map')
+  let rejected = false
+  try {
+    await snapshot(dir)
+  } catch (err) {
+    rejected = true
+    assert.equal(err.code, 'EACCES')
+  }
+  assert.ok(rejected, 'snapshot should reject on EACCES, not silently skip——otherwise before-snapshot 会不完整，已存在文件被误作为 agent 产出物')
 
   await fs.remove(dir)
 })
