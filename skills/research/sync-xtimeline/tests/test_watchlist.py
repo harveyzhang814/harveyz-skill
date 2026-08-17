@@ -7,6 +7,7 @@ import pytest
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
 
 import watchlist
+from conftest import write_config
 
 SCRIPT = Path(__file__).resolve().parent.parent / "scripts" / "watchlist.py"
 
@@ -14,9 +15,11 @@ SCRIPT = Path(__file__).resolve().parent.parent / "scripts" / "watchlist.py"
 def _run(args: list[str], data_dir: Path) -> subprocess.CompletedProcess:
     import os
 
+    config_path = data_dir.parent / "config.json"
+    write_config(config_path, data_dir)
     return subprocess.run(
         [sys.executable, str(SCRIPT), *args],
-        env={**os.environ, "HSKILL_SYNC_XTIMELINE_DATA_DIR": str(data_dir)},
+        env={**os.environ, "HSKILL_SYNC_XTIMELINE_CONFIG": str(config_path)},
         capture_output=True, text=True, timeout=10,
     )
 

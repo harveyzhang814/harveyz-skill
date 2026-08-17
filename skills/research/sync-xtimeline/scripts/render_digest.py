@@ -9,15 +9,11 @@ Usage: python3 render_digest.py < report.json
 Prints EMPTY, or WRITTEN: <path>.
 """
 import json
-import os
 import sys
 from datetime import datetime
 from pathlib import Path
 
-
-def _data_dir() -> Path:
-    env_dir = os.environ.get("HSKILL_SYNC_XTIMELINE_DATA_DIR")
-    return Path(env_dir) if env_dir else Path.home() / ".hskill" / "sync-xtimeline"
+from config import get_data_dir
 
 
 def has_content(report: dict) -> bool:
@@ -81,7 +77,7 @@ def render_digest(report: dict) -> str:
 
 
 def _clear_pending() -> None:
-    pending_path = _data_dir() / "pending.json"
+    pending_path = Path(get_data_dir()) / "pending.json"
     pending_path.unlink(missing_ok=True)
 
 
@@ -92,7 +88,7 @@ def main():
         _clear_pending()
         return
 
-    digests_dir = _data_dir() / "digests"
+    digests_dir = Path(get_data_dir()) / "digests"
     digests_dir.mkdir(parents=True, exist_ok=True)
     run_time = datetime.fromisoformat(report["run_time"])
     timestamp = run_time.strftime("%Y%m%dT%H%M%S")

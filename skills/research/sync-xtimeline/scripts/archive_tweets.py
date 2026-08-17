@@ -9,18 +9,14 @@ by tweet_id, safe to re-run.
 Usage: python3 archive_tweets.py < report.json
 """
 import json
-import os
 import sys
 from pathlib import Path
 
-
-def _data_dir() -> Path:
-    env_dir = os.environ.get("HSKILL_SYNC_XTIMELINE_DATA_DIR")
-    return Path(env_dir) if env_dir else Path.home() / ".hskill" / "sync-xtimeline"
+from config import get_data_dir
 
 
 def _archive_path(handle: str) -> Path:
-    return _data_dir() / "tweets" / f"{handle}.json"
+    return Path(get_data_dir()) / "tweets" / f"{handle}.json"
 
 
 def archive_tweets(report: dict) -> None:

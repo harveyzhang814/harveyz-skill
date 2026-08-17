@@ -9,19 +9,14 @@ Usage: python3 fetch_new_tweets.py [chrome_profile]
 """
 import asyncio
 import json
-import os
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
 
 import watchlist
+from config import get_data_dir
 from mcp_timeline_client import fetch_timeline
-
-
-def _data_dir() -> Path:
-    env_dir = os.environ.get("HSKILL_SYNC_XTIMELINE_DATA_DIR")
-    return Path(env_dir) if env_dir else Path.home() / ".hskill" / "sync-xtimeline"
 
 
 def _timeline_url(profile_url: str) -> str:
@@ -65,7 +60,7 @@ def main():
     chrome_profile = sys.argv[1] if len(sys.argv) > 1 and sys.argv[1] else None
     report = asyncio.run(run(chrome_profile))
 
-    pending_path = _data_dir() / "pending.json"
+    pending_path = Path(get_data_dir()) / "pending.json"
     pending_path.parent.mkdir(parents=True, exist_ok=True)
     pending_path.write_text(json.dumps(report, ensure_ascii=False), encoding="utf-8")
 
