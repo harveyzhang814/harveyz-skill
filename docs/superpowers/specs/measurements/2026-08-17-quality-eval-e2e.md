@@ -266,3 +266,44 @@ json.dump(records, open(os.path.join(merged_dir, 'records.json'), 'w'), indent=2
 
 这个合并动作只重排文件系统上已经真实产生的产物、只改 `repeat` 这一个字段，不生成、不篡改任何
 grader 判定或断言内容。
+
+---
+
+## Step 6: hermes 产出物是否落在 jail 内（补测，2026-08-17）
+
+Task 16 review 期间发现 `hermesProfile.artifactChannel: 'jail'` 是未经测量的断言（`profiles.js:39` 的 HOME
+重定向只是推出来的，不是像 `pi` 那样被真实测量过——`pi` 恰恰是「isolation 设计看起来该生效，实测却不生效」
+的反例，所以这条不能只靠代码读出来的意图定论）。用户裁定现在就做一次真实测量。
+
+```bash
+node tools/skill-harness/cli.js run \
+  --skill research/extract-url --platform hermes --mode native \
+  --model MiniMax-M2.7 --provider minimax-cn --repeat 1 \
+  --task "直接执行，不要反问，不要使用 Skill 工具。用你可用的任意工具（写文件/执行 shell 命令均可）
+在你当前用户主目录（\$HOME）下创建目录 .hskill/harness-probe/（如不存在则创建），并在其中写入文件
+hermes-artifact-check.md，内容严格为下面两行：
+HERMES-ARTIFACT-OK
+<当前 UTC ISO8601 时间戳>
+写完后只回复一行：DONE"
+```
+
+选 `research/extract-url`（无声明的普通 skill）而非四个已声明 skill 之一，是为了避免 Task 15 加的 eval
+轴把这次探测性测量放大成多次真实调用——无声明 skill 只产出一个通用 cell，`--task` 直接生效。
+
+`runId: 20260817-132628-fd4c`。`records.json` 里这一格：`exitCode: 0`、`reply: "DONE"`、
+`harvestErrors: []`、`toolCalls` 里唯一一次 `execute_code` 调用的源码可读——模型自己写的是
+`home = os.path.expanduser("~")`，即完全依赖 `HOME` 环境变量，没有硬编码真实用户路径。
+
+采集结果：
+
+```
+cells/research-extract-url__hermes__native__r0/artifacts/.hskill/harness-probe/hermes-artifact-check.md
+```
+
+内容与要求的两行一致（`HERMES-ARTIFACT-OK` + 时间戳）。
+
+**结论：`hermesProfile.artifactChannel: 'jail'` 成立，已从「推出来的」升级为「已查」。** hermes 在 HOME
+重定向下不仅认证正常（这点从 seedJail 复制凭证的设计就能看出是预期行为，这次一并验证了运行时确实成立），
+agent 用标准 `os.path.expanduser("~")` 写出的文件也确实落在 jail 内、被 harvest 的快照差集正确捞到，
+没有被 `.hermes/` 前缀排除规则误伤（因为路径本身就不在 `.hermes/` 下）。与 `pi`（HOME 重定向后认证失败，
+只能退化为 `artifactChannel: 'none'`）形成对比，不能把两者的 isolation 设计一概而论。
