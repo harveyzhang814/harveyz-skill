@@ -4,7 +4,7 @@ import fs from 'fs-extra'
 import os from 'node:os'
 import path from 'node:path'
 import {
-  snapshot, diffSnapshots, harvestCell, capTranscript, cellDirName,
+  snapshot, diffSnapshots, harvestCell, mergeHarvest, capTranscript, cellDirName,
   TRANSCRIPT_LIMIT, HARNESS_FILES,
 } from '../../tools/skill-harness/harvest.js'
 
@@ -199,27 +199,43 @@ test('jailDir 整个不存在时 harvestCell 仍不抛出——runner 现在无�
   await fs.remove(dest)
 })
 
-// 覆盖本次 fix 的合并逻辑：runner.js 里 snapshot 失败时，changedFiles 退化
-// 成空数组，snapshot 的错误信息被并入 harvestCell 返回的 errors——而不是
-// 像之前那样直接跳过 harvestCell、连 transcript 一起丢掉。transcript 是
-// 唯一花钱重跑模型也换不回来的证据，snapshot 失败不该连累它。
-// runOne 未导出，这里按 runner.js 里同样的合并写法直接驱动 harvestCell，
-// 验证「snapshot 错误」与「harvestCell 自身 errors」合并后二者都在。
-test('snapshot 失败时 transcript 仍要写、snapshot 的错误要并入 errors——不能因为丢了基准就连证据一起丢', async () => {
+// changedFiles 为空（runner.js 在 snapshot 失败时的退化情形）不该影响
+// transcript 的落盘——transcript 是唯一花钱重跑模型也换不回来的证据，
+// snapshot 拿不到基准不该连累它。
+test('changedFiles 为空时 transcript 仍照常落盘——snapshot 失败退化成空 diff，不该连累 transcript', async () => {
   const jail = await fs.mkdtemp(path.join(os.tmpdir(), 'harvest-jail-'))
   const dest = await fs.mkdtemp(path.join(os.tmpdir(), 'harvest-dest-'))
   await fs.outputFile(path.join(jail, 'note.md'), 'ignored because changedFiles is empty')
 
-  // 模拟 runner.js 里 snapshot() 抛出后的合并写法：snapshotErrors 先收集，
-  // changedFiles 退化为空，harvestCell 仍然被调用，两边 errors 拼在一起。
-  const snapshotErrors = ['EACCES: permission denied']
   const result = await harvestCell({
     jailDir: jail, destDir: dest, raw: 'transcript-survives',
     changedFiles: [],
   })
-  const harvest = { truncated: result.truncated, errors: [...snapshotErrors, ...result.errors] }
 
+  assert.deepEqual(result.errors, [])
   assert.equal(await fs.readFile(path.join(dest, 'transcript.jsonl'), 'utf8'), 'transcript-survives')
-  assert.ok(harvest.errors.includes('EACCES: permission denied'))
   await fs.remove(jail); await fs.remove(dest)
+})
+
+// mergeHarvest 是 runner.js 里两处合并逻辑（成功路径 + harvestCell 抛出的
+// 兜底路径）唯一的实现，runner.js 不再手写 spread——测这个函数就是测
+// 生产用的那份合并逻辑，不是重新拼一遍再断言拼接本身。
+// 如果 snapshot 错误和 per-file 错误互相覆盖，采集失败要么被误判成
+// 别的原因，要么直接从 errors 里消失，人根本查不到。
+test('mergeHarvest：snapshot 错误排在前、harvestCell 自身 errors 跟在后面，谁都不能被覆盖', () => {
+  const merged = mergeHarvest(['EACCES: permission denied'], { truncated: true, errors: ['artifact a.md: ENOENT'] })
+  assert.deepEqual(merged.errors, ['EACCES: permission denied', 'artifact a.md: ENOENT'])
+  assert.equal(merged.truncated, true)
+})
+
+test('mergeHarvest：没有 snapshot 错误时 truncated 与 errors 原样来自 result', () => {
+  const merged = mergeHarvest([], { truncated: false, errors: ['artifact b.md: EACCES'] })
+  assert.deepEqual(merged.errors, ['artifact b.md: EACCES'])
+  assert.equal(merged.truncated, false)
+})
+
+test('mergeHarvest：result 缺失（harvestCell 自己抛出）时用调用方给的错误顶替，truncated 恒为 false', () => {
+  const merged = mergeHarvest(['EACCES: permission denied'], null, 'ensureDir failed: EPERM')
+  assert.deepEqual(merged.errors, ['EACCES: permission denied', 'ensureDir failed: EPERM'])
+  assert.equal(merged.truncated, false)
 })

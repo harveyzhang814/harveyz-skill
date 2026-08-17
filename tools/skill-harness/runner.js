@@ -9,7 +9,7 @@ import { hermesAdapter } from './adapters/hermes.js'
 import { buildPrompt } from './prompt.js'
 import { makeRecord } from './record.js'
 import { createJail, redactEnv } from './jail.js'
-import { snapshot, diffSnapshots, harvestCell, cellDirName } from './harvest.js'
+import { snapshot, diffSnapshots, harvestCell, cellDirName, mergeHarvest } from './harvest.js'
 
 export const ADAPTERS = { claude: claudeAdapter, pi: piAdapter, hermes: hermesAdapter }
 
@@ -175,9 +175,9 @@ async function runOne(cell, ctx, runDir) {
     let harvest
     try {
       const result = await harvestCell({ jailDir, destDir, raw, changedFiles })
-      harvest = { truncated: result.truncated, errors: [...snapshotErrors, ...result.errors] }
+      harvest = mergeHarvest(snapshotErrors, result)
     } catch (e) {
-      harvest = { truncated: false, errors: [...snapshotErrors, e.message] }
+      harvest = mergeHarvest(snapshotErrors, null, e.message)
     }
 
     const parsed = adapter.parse(raw, { skillName: path.basename(ctx.skillPath), skillDir: ctx.skillDir })

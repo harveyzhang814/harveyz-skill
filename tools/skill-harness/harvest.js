@@ -97,3 +97,14 @@ export async function harvestCell({ jailDir, destDir, raw, changedFiles }) {
 
   return { truncated, errors }
 }
+
+// snapshot 阶段的错误排在前，harvestCell 自身的 errors 紧随其后——两边都要保留，
+// 谁都不能覆盖谁。result 缺失代表 harvestCell 自己抛出了（比如 destDir 建不出来），
+// 这种情况下没有 truncated 可言，falls back to false，errors 用调用方传入的
+// fallbackError 顶替 result.errors。
+export function mergeHarvest(snapshotErrors, result, fallbackError) {
+  if (result) {
+    return { truncated: result.truncated, errors: [...snapshotErrors, ...result.errors] }
+  }
+  return { truncated: false, errors: [...snapshotErrors, fallbackError] }
+}
