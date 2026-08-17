@@ -74,6 +74,35 @@ test('未知 source 要报错，不静默当成 reply', () => {
   assert.match(errs[0], /stdout/)
 })
 
+// deferred #9：na_platforms（quality-report.js:assertionState 用它判 declared-na）
+// 过去完全没被校验——手写 "na_platforms": ["clade"]（打错平台名）不会报错，
+// 只会悄悄不生效：这条断言永远不会被判成 declared-na，照常走判定流程。
+test('deferred #9：na_platforms 是合法平台名数组时不报错', () => {
+  const errs = validateDeclaration(
+    { skill_name: 'x', evals: [{ id: 1, assertions: [{ id: 'a', text: 't', na_platforms: ['claude', 'pi'] }] }] },
+    'skills/a/x',
+  )
+  assert.deepEqual(errs, [])
+})
+
+test('deferred #9：na_platforms 含拼错的平台名要报错，消息里能看到那个错名', () => {
+  const errs = validateDeclaration(
+    { skill_name: 'x', evals: [{ id: 1, assertions: [{ id: 'a', text: 't', na_platforms: ['clade'] }] }] },
+    'skills/a/x',
+  )
+  assert.equal(errs.length, 1)
+  assert.match(errs[0], /"clade"/)
+})
+
+test('deferred #9：na_platforms 写成字符串而非数组要报错', () => {
+  const errs = validateDeclaration(
+    { skill_name: 'x', evals: [{ id: 1, assertions: [{ id: 'a', text: 't', na_platforms: 'claude' }] }] },
+    'skills/a/x',
+  )
+  assert.equal(errs.length, 1)
+  assert.match(errs[0], /必须是数组/)
+})
+
 test('合法声明零错误', () => {
   const errs = validateDeclaration(
     { skill_name: 'x', evals: [{ id: 1, frozen: '2026-08-17', assertions: [{ id: 'a', text: 't', source: 'artifact' }] }] },

@@ -1,5 +1,6 @@
 import fs from 'fs-extra'
 import path from 'node:path'
+import { PHASE1_PLATFORMS } from './select.js'
 
 // 顺序即层级，不是集合：artifact 含 reply，transcript 含前两者。
 // 这样「同时需要回复与产出物」的断言不必拆成两条，也不必把字段做成数组。
@@ -45,6 +46,17 @@ export function validateDeclaration(doc, skillPath) {
       else seen.add(a.id)
       if (a.source && !SOURCE_LEVELS.includes(a.source)) {
         errors.push(`eval ${ev.id}/${a.id}: 未知 source "${a.source}"`)
+      }
+      if (a.na_platforms !== undefined) {
+        if (!Array.isArray(a.na_platforms)) {
+          errors.push(`eval ${ev.id}/${a.id ?? '#' + i}: na_platforms 必须是数组`)
+        } else {
+          for (const p of a.na_platforms) {
+            if (!PHASE1_PLATFORMS.includes(p)) {
+              errors.push(`eval ${ev.id}/${a.id ?? '#' + i}: na_platforms 含未知平台 "${p}"`)
+            }
+          }
+        }
       }
     })
   }
