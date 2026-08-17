@@ -1,6 +1,7 @@
 export const VERDICTS = new Set(['pass', 'fail', 'unavailable'])
 
 const TAIL = 400
+export const EVIDENCE_LIMIT = 2000
 
 function tail(s) {
   const str = String(s ?? '')
@@ -10,7 +11,7 @@ function tail(s) {
 // grader 常自作主张加 ```json 围栏或前后寒暄，这里只负责把 JSON 那段抠出来。
 export function extractJson(raw) {
   const fenced = /```(?:json)?\s*([\s\S]*?)```/.exec(raw ?? '')
-  if (fenced) return fenced[1]
+  if (fenced) return fenced[1].trim()
   const s = String(raw ?? '')
   const start = s.indexOf('{')
   const end = s.lastIndexOf('}')
@@ -39,7 +40,8 @@ export function parseGraderOutput(raw, assertions) {
     if (!VERDICTS.has(got.verdict)) {
       return { id: decl.id, verdict: 'unavailable', evidence: `grader 返回了非法 verdict "${got.verdict}"` }
     }
-    return { id: decl.id, verdict: got.verdict, evidence: String(got.evidence ?? '') }
+    const evidence = String(got.evidence ?? '')
+    return { id: decl.id, verdict: got.verdict, evidence: evidence.length <= EVIDENCE_LIMIT ? evidence : evidence.slice(0, EVIDENCE_LIMIT) }
   })
 
   return { ok: true, assertions: out }
