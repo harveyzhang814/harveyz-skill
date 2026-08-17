@@ -50,5 +50,10 @@ export function validateDeclaration(doc, skillPath) {
 export async function loadDeclaration(repoRoot, skill) {
   const file = path.join(repoRoot, 'skills', skill, 'evals/evals.json')
   if (!await fs.pathExists(file)) return null
-  return fs.readJson(file)
+  const doc = await fs.readJson(file)
+  const errors = validateDeclaration(doc, skill)
+  if (errors.length) {
+    throw new Error(`${skill} 的 evals.json 格式不合法：\n  ${errors.join('\n  ')}`)
+  }
+  return doc
 }

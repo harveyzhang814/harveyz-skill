@@ -110,6 +110,45 @@ test('loadDeclaration 缺失文件返回 null——让 grader 跳过无声明的
   await fs.remove(root)
 })
 
+// I10：loadDeclaration 过去读完 JSON 直接返回，validateDeclaration 只在
+// 测试里被调用过——格式错误的 evals.json（比如漏了某条 assertion 的 id）
+// 会被原样吃进 selectCells/selectGradeCells/renderQualityReport，字段
+// 该有的地方变成 undefined，报告上印出字面量 "undefined"，而不是在加载
+// 的第一时间报错拒绝。
+test('I10：loadDeclaration 对格式不合法的 evals.json（assertion 缺 id）必须抛错，且错误信息复用 validateDeclaration 的文案', async () => {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), 'decl-test-'))
+  const skillPath = path.join(root, 'skills', 'test', 'bad-skill', 'evals')
+  await fs.ensureDir(skillPath)
+  await fs.writeJson(path.join(skillPath, 'evals.json'), {
+    skill_name: 'bad-skill',
+    evals: [{ id: 1, assertions: [{ text: '缺 id 的断言' }] }],
+  })
+
+  await assert.rejects(
+    () => loadDeclaration(root, 'test/bad-skill'),
+    err => {
+      assert.match(err.message, /bad-skill/)
+      assert.match(err.message, /assertion 缺 id/) // 复用 validateDeclaration 产出的原句，不是重新拼一句不一致的文案
+      return true
+    },
+  )
+
+  await fs.remove(root)
+})
+
+test('I10：loadDeclaration 对格式正确的 evals.json 正常返回，不抛错——回归，确认没把正常路径改坏', async () => {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), 'decl-test-'))
+  const skillPath = path.join(root, 'skills', 'test', 'good-skill', 'evals')
+  await fs.ensureDir(skillPath)
+  const evalData = { skill_name: 'good-skill', evals: [{ id: 1, assertions: [{ id: 'a', text: 't' }] }] }
+  await fs.writeJson(path.join(skillPath, 'evals.json'), evalData)
+
+  const loaded = await loadDeclaration(root, 'test/good-skill')
+  assert.deepEqual(loaded, evalData)
+
+  await fs.remove(root)
+})
+
 test('仓库里每一份 evals.json 都必须合法——这是防止声明跟着 skill 一起腐烂的闸门', async () => {
   const skillsDir = path.join(REPO_ROOT, 'skills')
   const found = []
