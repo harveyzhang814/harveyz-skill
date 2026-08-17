@@ -91,3 +91,17 @@ test('矩阵行数等于 skill 数，不省略任何行列', () => {
   const out = renderReport({ cells: CELLS, records: RECORDS, model: 'M', provider: 'P' })
   assert.equal(out.split('\n').filter(l => l.startsWith('a/x')).length, 1)
 })
+
+test('--repeat > 1 时 counts 按各自 repeat 的 record 判定，不把第一条 record 的状态套给所有 repeat 格子', () => {
+  const cells = [
+    { skill: 'a/x', platform: 'claude', mode: 'native', state: 'run', repeat: 0 },
+    { skill: 'a/x', platform: 'claude', mode: 'native', state: 'run', repeat: 1 },
+  ]
+  const records = [
+    { skill: 'a/x', platform: 'claude', mode: 'native', repeat: 0, exitCode: 0, reply: 'ok', unavailable: [] },
+    { skill: 'a/x', platform: 'claude', mode: 'native', repeat: 1, exitCode: 1, reply: null, unavailable: [] },
+  ]
+  const out = renderReport({ cells, records, model: 'M', provider: 'P' })
+  assert.ok(out.includes('pass: 1'))
+  assert.ok(out.includes('fail: 1'))
+})

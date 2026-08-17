@@ -44,7 +44,11 @@ export function parseArgs(argv) {
     else if (flag === '--provider') opts.provider = value
     else if (flag === '--base-url') opts.baseUrl = value
     else if (flag === '--task') opts.task = value
-    else if (flag === '--repeat') opts.repeat = Number(value)
+    else if (flag === '--repeat') {
+      const n = Number(value)
+      if (!Number.isInteger(n) || n < 1) throw new Error(`--repeat must be a positive integer, got: ${value}`)
+      opts.repeat = n
+    }
     else if (flag === '--grader-model') opts.graderModel = value
     else throw new Error(`unknown flag: ${flag}`)
   }

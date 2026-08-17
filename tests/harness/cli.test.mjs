@@ -38,6 +38,13 @@ test('parseArgs: --repeat 转成数字，缺省为 1', () => {
   assert.equal(parseArgs(['run', '--model', 'M']).opts.repeat, 1)
 })
 
+test('parseArgs: --repeat 为 0、负数、小数或非数字直接报错——不产生空矩阵或诡异行为', () => {
+  assert.throws(() => parseArgs(['run', '--model', 'M', '--repeat', '0']), /--repeat/)
+  assert.throws(() => parseArgs(['run', '--model', 'M', '--repeat', '-1']), /--repeat/)
+  assert.throws(() => parseArgs(['run', '--model', 'M', '--repeat', '1.5']), /--repeat/)
+  assert.throws(() => parseArgs(['run', '--model', 'M', '--repeat', 'abc']), /--repeat/)
+})
+
 test('parseArgs: run 缺 --model 抛错，不静默用平台默认值', () => {
   assert.throws(() => parseArgs(['run']), /--model is required/)
 })

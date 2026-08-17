@@ -111,6 +111,14 @@ test('量具与被测物同模型要打警告——否则差异可能只是自�
   assert.ok(!/自指/.test(diff))
 })
 
+test('upstreamStatus: --repeat > 1 时任一 repeat 上游失败即整格判 fail——不能被别的 repeat 的成功盖过去', () => {
+  const records = [
+    { skill: 'a/x', platform: 'claude', mode: 'native', repeat: 0, exitCode: 0, reply: 'ok' },
+    { skill: 'a/x', platform: 'claude', mode: 'native', repeat: 1, exitCode: 1, reply: null },
+  ]
+  assert.equal(upstreamStatus('a/x', 'claude', 'native', records), 'fail')
+})
+
 test('未冻结的声明要警告——冻结前不得据其下平台结论', () => {
   const unfrozen = new Map([['a/x', { ...DECL, evals: [{ id: 1, assertions: DECL.evals[0].assertions }] }]])
   const out = renderQualityReport({ ...BASE, declarations: unfrozen })

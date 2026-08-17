@@ -11,7 +11,11 @@ import { modelMismatchLines, unavailableFieldLines } from './attribution.js'
 function cellStatus(cell, records) {
   if (cell.state === 'declared-na') return 'declared-na'
   if (cell.state === 'not-run') return 'not-run'
-  const rec = records.find(r => r.skill === cell.skill && r.platform === cell.platform && r.mode === cell.mode)
+  // 按 repeat 精确匹配——不然 --repeat > 1 时同一个 skill/platform/mode 下有
+  // 多条 record，.find 只会命中第一条，其余 repeat 格子的计数会被这一条顶替，
+  // 在 counts 汇总里悄悄重复计数。
+  const rec = records.find(r => r.skill === cell.skill && r.platform === cell.platform &&
+    r.mode === cell.mode && (r.repeat ?? 0) === (cell.repeat ?? 0))
   if (!rec) return 'not-run'
   if (rec.exitCode !== 0) return 'fail'
   if (rec.reply === null || rec.reply === undefined) return 'fail'

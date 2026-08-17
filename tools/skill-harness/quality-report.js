@@ -10,12 +10,17 @@ const LABEL = {
   unstable: '~', 'declared-na': 'n/a', 'blocked-upstream': '.', 'not-run': '',
 }
 
+// --repeat > 1 时同一个 (skill, platform, mode) 下有多条 record（每个 repeat 一条）。
+// upstream 这一行没有 repeat 维度可画，只能收敛成一个格子——不能像 .find 那样
+// 任取命中的第一条（等于随机拿一个 repeat 的结果代表全部），否则某个 repeat
+// 真的跑挂了会被别的 repeat 的成功悄悄盖过去。收敛规则是"任一 repeat 失败即算
+// 失败"：与 variance.js 的"不稳不取多数决"同一个哲学——不确定的东西不该被
+// 平滑成一个好看的结论。
 export function upstreamStatus(skill, platform, mode, records) {
-  const rec = records.find(r => r.skill === skill && r.platform === platform && r.mode === mode)
-  if (!rec) return 'not-run'
-  if (rec.exitCode !== 0) return 'fail'
-  if (rec.reply === null || rec.reply === undefined) return 'fail'
-  return 'pass'
+  const matches = records.filter(r => r.skill === skill && r.platform === platform && r.mode === mode)
+  if (!matches.length) return 'not-run'
+  const failed = matches.some(r => r.exitCode !== 0 || r.reply === null || r.reply === undefined)
+  return failed ? 'fail' : 'pass'
 }
 
 function assertionState({ skill, platform, mode, evalId, assertionId, assertion, verdicts, upstream }) {

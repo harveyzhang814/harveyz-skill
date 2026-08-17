@@ -30,6 +30,8 @@ export function selectCells({ skills, matrix = { overrides: [] }, opts = {} }) {
   const wantModes = new Set(opts.modes ?? MODES)
   const explicitPlatform = Array.isArray(opts.platforms)
   const noSkillFilter = wantSkills.size === 0 && wantBundles.size === 0
+  // --repeat 缺省为 1：今天的行为——每个组合一格，repeat: 0。
+  const repeat = opts.repeat ?? 1
 
   const cells = []
   for (const s of skills) {
@@ -52,7 +54,13 @@ export function selectCells({ skills, matrix = { overrides: [] }, opts = {} }) {
         } else {
           cell.state = 'run'
         }
-        cells.push(cell)
+        // 只有真的会跑的格子才按 --repeat 展开——declared-na/not-run 重复是纯噪声，
+        // 会在矩阵里制造从未执行过的"格子"。
+        if (cell.state === 'run') {
+          for (let r = 0; r < repeat; r++) cells.push({ ...cell, repeat: r })
+        } else {
+          cells.push({ ...cell, repeat: 0 })
+        }
       }
     }
   }
@@ -67,14 +75,16 @@ export function selectCells({ skills, matrix = { overrides: [] }, opts = {} }) {
 export function selectProbeCells(opts = {}) {
   const wantPlatforms = new Set(opts.platforms ?? PHASE1_PLATFORMS)
   const wantModes = new Set(opts.modes ?? MODES)
+  const repeat = opts.repeat ?? 1
   const cells = []
   for (const platform of PHASE1_PLATFORMS) {
     for (const mode of MODES) {
-      cells.push({
-        skill: PROBE_SKILL, bundle: 'probe', platform, mode,
-        overridesDeclaration: false, reason: null,
-        state: wantPlatforms.has(platform) && wantModes.has(mode) ? 'run' : 'not-run',
-      })
+      const base = { skill: PROBE_SKILL, bundle: 'probe', platform, mode, overridesDeclaration: false, reason: null }
+      if (wantPlatforms.has(platform) && wantModes.has(mode)) {
+        for (let r = 0; r < repeat; r++) cells.push({ ...base, state: 'run', repeat: r })
+      } else {
+        cells.push({ ...base, state: 'not-run', repeat: 0 })
+      }
     }
   }
   return cells
