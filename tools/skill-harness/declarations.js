@@ -31,18 +31,22 @@ export function validateDeclaration(doc, skillPath) {
   }
   for (const ev of doc?.evals ?? []) {
     const seen = new Set()
-    for (const a of ev.assertions ?? []) {
+    // 带下标迭代：同一个 eval 里两条断言都是裸字符串，或者都缺 id，产出的
+    // 错误消息如果只写 eval id 会长得一模一样——在几十条断言的大文件里，
+    // 看到这条错误也定位不到是第几条。下标从 0 开始就行，这是给人看的
+    // 定位线索，不是面向用户的文案。
+    ev.assertions?.forEach((a, i) => {
       if (typeof a === 'string') {
-        errors.push(`eval ${ev.id}: assertion 仍是裸字符串，缺稳定 id`)
-        continue
+        errors.push(`eval ${ev.id} assertion #${i}: 仍是裸字符串，缺稳定 id`)
+        return
       }
-      if (!a.id) errors.push(`eval ${ev.id}: assertion 缺 id`)
+      if (!a.id) errors.push(`eval ${ev.id} assertion #${i}: 缺 id`)
       else if (seen.has(a.id)) errors.push(`eval ${ev.id}: assertion id 重复 "${a.id}"`)
       else seen.add(a.id)
       if (a.source && !SOURCE_LEVELS.includes(a.source)) {
         errors.push(`eval ${ev.id}/${a.id}: 未知 source "${a.source}"`)
       }
-    }
+    })
   }
   return errors
 }

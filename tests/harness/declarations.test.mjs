@@ -42,6 +42,20 @@ test('裸字符串断言要报错——没有稳定 id 就无法跨 runId 对齐
   assert.match(errs[0], /裸字符串/)
 })
 
+// deferred #4：同一个 eval 里有两条断言都是裸字符串（或都缺 id），产出的
+// 错误消息如果只写 eval id、不写第几条断言，两条错误字符串会完全相同——
+// 在几十条断言的大文件里，看到这条错误也定位不到是第几条。
+test('deferred #4：同一 eval 内两条裸字符串断言各自带不同下标，错误消息不相同', () => {
+  const errs = validateDeclaration(
+    { skill_name: 'x', evals: [{ id: 1, assertions: ['断言A', '断言B'] }] },
+    'skills/a/x',
+  )
+  assert.equal(errs.length, 2)
+  assert.notEqual(errs[0], errs[1])
+  assert.match(errs[0], /#0/)
+  assert.match(errs[1], /#1/)
+})
+
 test('同一 eval 内 id 重复要报错——重复 id 会让两条断言在矩阵里抢同一行', () => {
   const errs = validateDeclaration(
     { skill_name: 'x', evals: [{ id: 1, assertions: [{ id: 'a', text: 't' }, { id: 'a', text: 'u' }] }] },
@@ -128,7 +142,7 @@ test('I10：loadDeclaration 对格式不合法的 evals.json（assertion 缺 id�
     () => loadDeclaration(root, 'test/bad-skill'),
     err => {
       assert.match(err.message, /bad-skill/)
-      assert.match(err.message, /assertion 缺 id/) // 复用 validateDeclaration 产出的原句，不是重新拼一句不一致的文案
+      assert.match(err.message, /缺 id/) // 复用 validateDeclaration 产出的原句，不是重新拼一句不一致的文案
       return true
     },
   )
