@@ -122,7 +122,18 @@ run 阶段                          grade 阶段（离线）              report
 
 **代价：** 声明格式变了，已有 4 个文件要迁移，且迁移是人工的——`id` 只能由人或 LM 生成一次后冻结，没有自动化路径。
 
-**迁移时要修的腐烂：** `skills/mint/learn-skill/evals/evals.json` 的 `skill_name` 写的是 `inspect-skill`，与目录名对不上，是改名前留下的。同一份文件里 3 个 eval 的 5 条断言完全重复——**不做 `$ref` 共享机制**，重复几十行 JSON 不是问题，为它造引用机制才是过度设计。
+**四份已有声明的实际状态各不相同**，迁移工作量差别很大：
+
+| 文件 | 现状 | 要做的 |
+|---|---|---|
+| `research/extract-cognition` | `skill_name` 正确，`assertions` 已是带 `id` 的对象数组 | 只补 `source` 与 `frozen` |
+| `mint/learn-skill` | `skill_name` 腐烂成 `inspect-skill`；`assertions` 是裸字符串数组 | 改名 + 包成对象 + 补字段 |
+| `coding/setup-debug` | `skill_name` 腐烂成 `full-stack-debug-env`；无 `assertions` | 改名 + 新写断言 |
+| `coding/handoff` | `skill_name` 正确；四个 eval 全无 `assertions`，只有整段 `expected_output` | 新写断言 |
+
+两处 `skill_name` 腐烂都是改名后没同步声明留下的，正是「声明会跟着 skill 一起腐烂」的实例。
+
+`learn-skill` 那份里 3 个 eval 的 5 条断言完全重复——**不做 `$ref` 共享机制**，重复几十行 JSON 不是问题，为它造引用机制才是过度设计。断言 `id` 的唯一性只在单个 eval 内要求，跨 eval 同名不冲突（`extract-cognition` 已经在这么用）。
 
 **不引入 fixture seed 机制。** 现有 `files` 和 prompt 里写的是宿主机绝对路径。jail 只重定向 HOME，不挡文件系统读取，所以照样读得到。只做一件事：**把 `files` 列的文件纳入该 eval 的 contentHash**，被测输入一变就判 stale。代价是 eval 绑死在这台机器的路径上，换机器要改；换来的是零新机制解决了「评的是移动靶」。
 
@@ -308,5 +319,7 @@ unstable assertions (2): learn-skill/closing-question@pi/native, ...
 | `tools/skill-harness/report.js:10` | `cellStatus`，现有三态判定 |
 | `tools/skill-harness/report.js:68` | `declared-na` 的现有渲染 |
 | `tools/skill-harness/profiles.js` | 平台能力差异表 |
-| `skills/mint/learn-skill/evals/evals.json` | 迁移样例，含 `skill_name` 腐烂 |
+| `skills/mint/learn-skill/evals/evals.json` | 裸字符串断言 + `skill_name` 腐烂 |
+| `skills/research/extract-cognition/evals/evals.json` | 已是对象数组，迁移的正面样例 |
+| `skills/coding/handoff/evals/evals.json` | 只有整段 `expected_output`，决定 4 要改掉的形态 |
 | `docs/explanation/skill-creator-testing-system.md` | 字段名来源 |
