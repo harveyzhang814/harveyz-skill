@@ -87,7 +87,9 @@ test('[upstream] 行同样按固定列宽切片——列错位会让整行的判
 
 test('unstable 渲染成 ~，不算 pass 也不算 fail', () => {
   const out = renderQualityReport(BASE)
-  assert.ok(/~/.test(out))
+  const row = out.split('\n').find(l => l.trim().startsWith('bb'))
+  const col = i => row.slice(26 + i * 12, 26 + (i + 1) * 12).trim()
+  assert.equal(col(1), '~') // claude/inject 的 bb：VERDICTS 里标为 unstable，这才是本测试真正要守的格子
   assert.ok(out.includes('unstable: 1'))
 })
 
