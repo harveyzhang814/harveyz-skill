@@ -13,6 +13,14 @@ const PROFILE_BY_ID = new Map(PROFILES.map(p => [p.id, p]))
 
 // 只评「上游 pass 且有声明」的格子。上游没跑通时没有可判的东西——
 // 那是装不上，不是做得差，混为一谈会把安装失败伪装成质量问题。
+//
+// 一条 record 只产出一份 grading——按 record.evalId 从声明里找回它当时是为
+// 哪个 eval 场景跑的，只判那一个。过去这里是 `for (const evalDef of
+// decl.evals ?? [])`，不看 record 到底是为哪个场景跑的，把声明里全部 eval
+// 的断言都扣到同一次运行上；这正是本任务要修的缺陷——run 阶段过去没有 eval
+// 轴，一次 `run skill` 通用任务的结果被拿去回答四个不同场景的断言。
+// evalId 在声明里找不到（比如声明后来把这个 eval 删了，或者 record 压根
+// 没有 evalId——无声明 skill 的格子）就跳过，不瞎判。
 export function selectGradeCells({ records, declarations, only }) {
   const out = []
   for (const rec of records) {
@@ -21,12 +29,12 @@ export function selectGradeCells({ records, declarations, only }) {
     if (rec.reply === null || rec.reply === undefined) continue
     const decl = declarations.get(rec.skill)
     if (!decl) continue
-    for (const evalDef of decl.evals ?? []) {
-      out.push({
-        skill: rec.skill, platform: rec.platform, mode: rec.mode,
-        repeat: rec.repeat ?? 0, evalDef, reply: rec.reply,
-      })
-    }
+    const evalDef = (decl.evals ?? []).find(e => e.id === rec.evalId)
+    if (!evalDef) continue
+    out.push({
+      skill: rec.skill, platform: rec.platform, mode: rec.mode,
+      repeat: rec.repeat ?? 0, evalId: rec.evalId, evalDef, reply: rec.reply, task: rec.task,
+    })
   }
   return out
 }
@@ -124,7 +132,7 @@ export async function runGrade({ runDir, graderModel, only, invoke, declarations
     const level = maxSourceLevel(c.evalDef.assertions)
     const cellDir = path.join(runDir, 'cells', cellDirName(c))
     const materials = await readMaterials(cellDir, level, c.reply)
-    const prompt = buildGradePrompt({ evalDef: c.evalDef, materials })
+    const prompt = buildGradePrompt({ evalDef: c.evalDef, materials, task: c.task })
 
     // 重试一次：量具偶发不吐 JSON 是常见的，重试成本远低于把整格记成 unavailable。
     let parsed = parseGraderOutput(await safeInvoke(invoke, prompt, graderModel), c.evalDef.assertions)

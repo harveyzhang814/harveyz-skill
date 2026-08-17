@@ -40,13 +40,15 @@ export function planCell(cell, ctx) {
   const entry = ctx.skills?.get(cell.skill)
   if (!entry) throw skillNotFoundError(cell.skill)
   const adapter = ADAPTERS[cell.platform]
+  // cell.task 优先——每个 eval 场景带着自己的 prompt；ctx.task 只是没有
+  // cell.task 时的兜底（探针格子、老测试手搭的 cell）。
   const { systemAppend, positional } = buildPrompt({
     mode: cell.mode,
     injection: adapter.profile.injection,
     skillBody: entry.skillBody,
     skillDir: entry.skillDir,
     compensation: adapter.compensation,
-    task: ctx.task,
+    task: cell.task ?? ctx.task,
   })
 
   const env = adapter.jailEnv({
@@ -198,7 +200,10 @@ async function runOne(cell, ctx, runDir) {
     return makeRecord({
       platform: cell.platform, skill: cell.skill, skillName: path.basename(entry.skillPath),
       contentHash: resolveContentHash(ctx, cell.skill),
-      task: ctx.task, repeat: cell.repeat ?? 0, mode: cell.mode,
+      // task/evalId 来自 cell，不是 ctx：这一格实际收到的任务文案就是它自己
+      // 的 eval prompt（或没有声明时的默认任务），record 必须如实记它，grade
+      // 阶段拼 prompt 时才不用回头猜"当时到底给了什么任务"。
+      task: cell.task ?? ctx.task, evalId: cell.evalId, repeat: cell.repeat ?? 0, mode: cell.mode,
       requestedModel: ctx.model, durationMs: Date.now() - started,
       exitCode, stderr, parsed, harvest,
     })
@@ -232,7 +237,7 @@ export async function runMatrix(cells, ctx) {
         records.push(makeRecord({
           platform: cell.platform, skill: cell.skill, skillName: null,
           contentHash: resolveContentHash(ctx, cell.skill),
-          task: ctx.task, repeat: cell.repeat ?? 0, mode: cell.mode,
+          task: cell.task ?? ctx.task, evalId: cell.evalId, repeat: cell.repeat ?? 0, mode: cell.mode,
           requestedModel: ctx.model, durationMs: 0,
           exitCode: 1, stderr: e.message, parsed: null, harvest: null,
         }))

@@ -81,6 +81,23 @@ node tools/skill-harness/cli.js grade 20260817-063820-9bb8 --grader-model claude
 四个 jail 全部已删（`False`）。`grade` 命令随后完整跑完，打印出断言矩阵（`coding/handoff` 一行
 9 pass / 8 fail，其余无声明 skill 留空），**证明 grade 阶段确实只读落盘产物，不依赖已删除的 jail**。
 
+> **2026-08-17 事后作废声明（task-15）**：上面「9 pass / 8 fail」这个具体计数是
+> 一个已确认缺陷的产物，不是真实测量结果——**Step 3 本身要验证的结论（grade
+> 阶段不依赖已删除的 jail）依然成立**，作废的只是这个计数的数值。
+> 根因：`coding/handoff` 声明了 4 个 eval 场景（各自独立的 prompt + 断言），
+> 但 run 阶段在这次实测时没有 eval 维度——整个 skill 只跑了 `runId
+> 20260817-063820-9bb8` 这一次运行（`--task` 手填的那句 author 阶段任务）。
+> `grade/index.js` 的 `selectGradeCells` 却对每条 record 循环声明里的全部
+> `evals[]`（`for (const evalDef of decl.evals ?? [])`），把 4 个场景共 17
+> 条断言（5+4+4+4）全部扣到这唯一一次运行的产出物上去判——包括另外三个从未
+> 被执行过的场景（跨设备续做、验收打回、纯背景交接）。"9 pass / 8 fail" 因此
+> 是"用一次 author 场景的产物去回答四个场景的断言"拼出来的数字，不是四个场景
+> 各自真实运行后的结果。已在同任务里修复：run 阶段现在按声明的 eval 数量展开
+> cell（每个场景一次独立运行、自己的 prompt），`selectGradeCells` 只判
+> record 自己实际运行的那个 evalId，不再逐条 record 循环全部声明的 eval。
+> 本记录只重跑代码，不重跑真实模型（本任务禁止真实模型调用），因此没有可
+> 替换的新计数——留空比编一个数字更诚实。
+
 ## Step 4: 自指警告
 
 ```bash

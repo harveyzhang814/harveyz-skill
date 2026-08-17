@@ -3,7 +3,7 @@ import fs from 'fs-extra'
 import os from 'node:os'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { selectCells, selectProbeCells, validateMatrix, PHASE1_PLATFORMS, MODES } from './select.js'
+import { selectCells, selectProbeCells, validateMatrix, PHASE1_PLATFORMS, MODES, DEFAULT_TASK } from './select.js'
 import { planCell, runMatrix, ADAPTERS } from './runner.js'
 import { loadRuns, buildCoverage, renderCoverage } from './coverage.js'
 import { renderReport } from './report.js'
@@ -129,6 +129,18 @@ export async function buildProbeMap(repoRoot, cells, readBody) {
   return skills
 }
 
+// run/dry-run 与 grade 都要读 evals.json——run 阶段现在要按声明的 eval 数量
+// 展开 cell（本任务修的缺陷本身），grade 阶段要读回声明去核对 record.evalId。
+// 两处共用一份加载逻辑，避免各写一份、字段选取悄悄分岔。
+async function loadAllDeclarations(repoRoot, indexSkills) {
+  const declarations = new Map()
+  for (const s of indexSkills) {
+    const decl = await loadDeclaration(repoRoot, s.path)
+    if (decl) declarations.set(s.path, decl)
+  }
+  return declarations
+}
+
 async function main() {
   const { command, opts } = parseArgs(process.argv.slice(2))
   const index = await fs.readJson(path.join(REPO_ROOT, 'skills-index.json'))
@@ -142,11 +154,7 @@ async function main() {
 
   if (command === 'grade') {
     const runDir = path.join(os.homedir(), '.hskill/skill-harness', opts.runId)
-    const declarations = new Map()
-    for (const s of index.skills) {
-      const decl = await loadDeclaration(REPO_ROOT, s.path)
-      if (decl) declarations.set(s.path, decl)
-    }
+    const declarations = await loadAllDeclarations(REPO_ROOT, index.skills)
     const out = await runGrade({
       runDir, graderModel: opts.graderModel, only: opts.only, declarations,
       invoke: (prompt, model) => invokeClaudeGrader(prompt, model, {
@@ -175,9 +183,16 @@ async function main() {
   // --probe：单一探针身份 × 选中的 platforms/modes（3×2=6 格），不是套着探针外壳的
   // 41 行真实 skill——cell.skill 本身就是探针身份，record/cells.json 因此天然带着
   // 正确的身份，不会被下游（coverage 的 staleness 判定等）当成真实 skill 跑过。
+  // 探针没有声明、有自己的身份（brief 第 7 条），不吃 eval 轴，selectProbeCells
+  // 原样不动。
   // 不带 --probe：按 cell.skill 逐格解析，被测 skill 由 --skill 真正决定——
   // 这是本任务要修的缺陷：过去这里无论 --skill 传什么都硬编码成探针。
-  const cells = opts.probe ? selectProbeCells(opts) : selectCells({ skills: index.skills, matrix, opts })
+  // declarations 传给 selectCells 是 eval 轴的另一半（本任务要修的缺陷本身）：
+  // 有声明的 skill 现在按声明的 eval 数量展开 cell，各自带自己的 prompt。
+  const declarations = opts.probe ? new Map() : await loadAllDeclarations(REPO_ROOT, index.skills)
+  const cells = opts.probe
+    ? selectProbeCells(opts)
+    : selectCells({ skills: index.skills, matrix, opts, declarations })
 
   const readBody = p => fs.readFile(p, 'utf8')
   const skills = opts.probe
@@ -189,7 +204,10 @@ async function main() {
     provider: opts.provider,
     baseUrl: opts.baseUrl,
     apiKey: opts.baseUrl ? process.env.MINIMAX_CN_API_KEY : undefined,
-    task: opts.task ?? (opts.probe ? 'run anchor probe' : 'run skill'),
+    // 只在 cell 自己没带 task 时才用得到（探针格子、或没有声明的 skill 走的兜底
+    // 默认值）——有声明的 skill 的 cell 已经带着自己 eval 的 prompt，这里的
+    // ctx.task 对它们不生效，不会静默盖过某个 eval 的 prompt（brief 第 8 条）。
+    task: opts.task ?? (opts.probe ? 'run anchor probe' : DEFAULT_TASK),
     skills,
     // 每个 skill 有自己的 contentHash——全量跑时 opts.skills 是 undefined，
     // 单个值在这里没有意义，必须查表；查表逻辑在 runner.js 的 resolveContentHash。

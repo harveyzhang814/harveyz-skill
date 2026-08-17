@@ -12,11 +12,22 @@ const DECL = {
     assertions: [{ id: 'a', text: 'A', source: 'artifact' }] }],
 }
 
+// 两条 eval 的声明——专门用来暴露"一个 record 只产出一份 grading"这条不变式：
+// 老代码 `for (const evalDef of decl.evals ?? [])` 不看 record 到底是为哪个
+// evalId 跑的，会把声明里全部 eval 的断言都扣到同一条 record 上。
+const DECL_MULTI = {
+  skill_name: 'x',
+  evals: [
+    { id: 1, prompt: 'do A', frozen: '2026-08-17', assertions: [{ id: 'a', text: 'A', source: 'artifact' }] },
+    { id: 2, prompt: 'do B', frozen: '2026-08-17', assertions: [{ id: 'b', text: 'B', source: 'artifact' }] },
+  ],
+}
+
 test('只评上游 pass 的格子——上游装不上就没有可判的东西，不是质量差', () => {
   const records = [
-    { skill: 'a/x', platform: 'claude', mode: 'native', repeat: 0, exitCode: 0, reply: 'ok' },
-    { skill: 'a/x', platform: 'pi', mode: 'native', repeat: 0, exitCode: 1, reply: null },
-    { skill: 'a/x', platform: 'hermes', mode: 'native', repeat: 0, exitCode: 0, reply: null },
+    { skill: 'a/x', platform: 'claude', mode: 'native', repeat: 0, exitCode: 0, reply: 'ok', evalId: 1 },
+    { skill: 'a/x', platform: 'pi', mode: 'native', repeat: 0, exitCode: 1, reply: null, evalId: 1 },
+    { skill: 'a/x', platform: 'hermes', mode: 'native', repeat: 0, exitCode: 0, reply: null, evalId: 1 },
   ]
   const cells = selectGradeCells({ records, declarations: new Map([['a/x', DECL]]) })
   assert.equal(cells.length, 1)
@@ -24,9 +35,32 @@ test('只评上游 pass 的格子——上游装不上就没有可判的东西�
 })
 
 test('没有声明的 skill 不评，也不报错——按需增量下这是常态', () => {
-  const records = [{ skill: 'a/y', platform: 'claude', mode: 'native', repeat: 0, exitCode: 0, reply: 'ok' }]
+  const records = [{ skill: 'a/y', platform: 'claude', mode: 'native', repeat: 0, exitCode: 0, reply: 'ok', evalId: 1 }]
   const cells = selectGradeCells({ records, declarations: new Map() })
   assert.deepEqual(cells, [])
+})
+
+test('record.evalId 在声明里找不到对应的 eval（比如声明后来把它删了）就跳过，不瞎判成别的场景', () => {
+  const records = [{ skill: 'a/x', platform: 'claude', mode: 'native', repeat: 0, exitCode: 0, reply: 'ok', evalId: 99 }]
+  const cells = selectGradeCells({ records, declarations: new Map([['a/x', DECL]]) })
+  assert.deepEqual(cells, [])
+})
+
+// 回归本任务要修的缺陷：一个 record 只产出一份 grading，不是按声明里的 eval
+// 数量翻倍——两条 record 分别为 evalId 1、2 跑的，selectGradeCells 必须各自
+// 只找回它自己对应的那个 evalDef，产出恰好 2 份 grading（等于 record 数），
+// 不是 2 record × 2 eval = 4 份。把这处改动还原（selectGradeCells 改回
+// `for (const evalDef of decl.evals ?? [])`），这条测试必须失败——
+// 那才是「revert 后必须失败」的判据本身。
+test('selectGradeCells：grading 数量等于 record 数，不是 record 数 × 声明的 eval 数——一个 record 只判它自己实际运行的那个 eval 场景', () => {
+  const records = [
+    { skill: 'a/x', platform: 'claude', mode: 'native', repeat: 0, exitCode: 0, reply: 'ok A', evalId: 1 },
+    { skill: 'a/x', platform: 'pi', mode: 'native', repeat: 0, exitCode: 0, reply: 'ok B', evalId: 2 },
+  ]
+  const cells = selectGradeCells({ records, declarations: new Map([['a/x', DECL_MULTI]]) })
+  assert.equal(cells.length, records.length)
+  assert.equal(cells.find(c => c.platform === 'claude').evalDef.id, 1)
+  assert.equal(cells.find(c => c.platform === 'pi').evalDef.id, 2)
 })
 
 test('读材料时缺产出物不抛错——采集失败的格子要能一路走到 unavailable', async () => {
@@ -59,7 +93,7 @@ test('reply 级不读产出物和轨迹——成本闸门要在读盘这一层�
 
 test('grader 首次输出坏掉时重试一次；两次都坏才判 unavailable', async () => {
   const runDir = await fs.mkdtemp(path.join(os.tmpdir(), 'grade-run-'))
-  const rec = { skill: 'a/x', platform: 'claude', mode: 'native', repeat: 0, exitCode: 0, reply: 'ok' }
+  const rec = { skill: 'a/x', platform: 'claude', mode: 'native', repeat: 0, exitCode: 0, reply: 'ok', evalId: 1 }
   await fs.writeJson(path.join(runDir, 'records.json'), [rec])
   await fs.outputFile(path.join(runDir, 'cells', cellDirName(rec), 'artifacts/a.md'), 'AAA')
 
@@ -81,7 +115,7 @@ test('grader 首次输出坏掉时重试一次；两次都坏才判 unavailable'
 
 test('两次都解析失败就判 unavailable，且 gradings.json 头部记下 grader 模型', async () => {
   const runDir = await fs.mkdtemp(path.join(os.tmpdir(), 'grade-run-'))
-  const rec = { skill: 'a/x', platform: 'claude', mode: 'native', repeat: 0, exitCode: 0, reply: 'ok' }
+  const rec = { skill: 'a/x', platform: 'claude', mode: 'native', repeat: 0, exitCode: 0, reply: 'ok', evalId: 1 }
   await fs.writeJson(path.join(runDir, 'records.json'), [rec])
 
   const out = await runGrade({
@@ -97,8 +131,8 @@ test('两次都解析失败就判 unavailable，且 gradings.json 头部记下 g
 
 test('invoke 抛异常不炸掉整轮——已判完的格子必须留在 gradings.json 里', async () => {
   const runDir = await fs.mkdtemp(path.join(os.tmpdir(), 'grade-run-'))
-  const recA = { skill: 'a/x', platform: 'claude', mode: 'native', repeat: 0, exitCode: 0, reply: 'ok' }
-  const recB = { skill: 'a/x', platform: 'hermes', mode: 'native', repeat: 0, exitCode: 0, reply: 'ok' }
+  const recA = { skill: 'a/x', platform: 'claude', mode: 'native', repeat: 0, exitCode: 0, reply: 'ok', evalId: 1 }
+  const recB = { skill: 'a/x', platform: 'hermes', mode: 'native', repeat: 0, exitCode: 0, reply: 'ok', evalId: 1 }
   await fs.writeJson(path.join(runDir, 'records.json'), [recA, recB])
 
   let calls = 0
@@ -127,7 +161,7 @@ test('invoke 抛异常不炸掉整轮——已判完的格子必须留在 gradin
 
 test('pi 的 artifact 断言即使 grader 判 pass 也被强制改判 unavailable——artifactChannel 为 none 时产出物出不了 jail，不能信任 grader 自证材料齐全', async () => {
   const runDir = await fs.mkdtemp(path.join(os.tmpdir(), 'grade-run-'))
-  const rec = { skill: 'a/x', platform: 'pi', mode: 'native', repeat: 0, exitCode: 0, reply: 'ok' }
+  const rec = { skill: 'a/x', platform: 'pi', mode: 'native', repeat: 0, exitCode: 0, reply: 'ok', evalId: 1 }
   await fs.writeJson(path.join(runDir, 'records.json'), [rec])
   // 故意不写 artifacts 目录：pi 平台本来就拿不到产出物，材料恒为空
 

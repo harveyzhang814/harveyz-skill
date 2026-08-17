@@ -67,7 +67,7 @@ run 阶段                          grade 阶段（离线）              report
 ~/.hskill/skill-harness/<runId>/
   records.json          # 不变
   cells.json            # 不变
-  cells/<skill>__<platform>__<mode>__r<repeat>/
+  cells/<skill>__<platform>__<mode>__eval<evalId>__r<repeat>/   # 无声明/探针格子省略 __eval<evalId> 段
     transcript.jsonl    # adapter 拿到的 raw，含 hermes 从 collect 通道 export 回来的那份
     stdout.log  stderr.log
     artifacts/          # agent 在 jail 里产出的文件
@@ -76,6 +76,8 @@ run 阶段                          grade 阶段（离线）              report
 **产出物靠文件清单差集识别，不用启发式。** `install` 之后、spawn 之前对 jail 做一次快照（路径 + mtime + size），跑完取差集，只捞新增和修改的。这样内置 skill 的副本、session 目录、认证文件都不会被抄出来。
 
 **时序**：采集必须在 `runner.js` 那个 `finally` 之前完成。此时被测运行已结束，所以采集异常**不得把该格判成 fail**——采集不到就在 record 里记明，该格的产出物类断言后续判为 `unavailable`。把采集故障记成被测方的质量问题，正是这套框架最该避免的那类伪影。
+
+**run 阶段带 eval 轴（设计订正）：** 声明一个 skill 的多个 `evals[]` 场景，各自有自己的 `prompt` 与断言，`(cell, eval)` 是判定单位（见第 3 部分「调用粒度」）——这要求**运行**也按 eval 展开，否则多个场景的断言会被拿去判同一次通用运行的产出物，得到一个假前提下的判定。有声明的 skill 因此按声明的 eval 数量展开 cell，每个 cell 带自己的 `evalId` 与 `task`（= 该 eval 的 `prompt`）；`record.evalId` 落盘，`grade` 阶段只判该 record 自己实际运行的那个场景。没有声明的 skill（或探针）退化成单格，`evalId` 为 `null`，任务文案取 `--task`（缺省 `run skill`）。
 
 **代价：** 每格多一次全目录遍历和一次文件拷贝，磁盘占用从两个 JSON 涨到每格一个目录。transcript 设字节上限，超限截断并在 record 里记 `truncated: true`——截断了却不说，等于把一份不完整的原料当完整的用。
 
@@ -155,7 +157,9 @@ node tools/skill-harness/cli.js grade <runId> [--grader-model M] [--only <skill>
 
 **代价（明说）：** 复用 claude CLI 意味着 claude 既是被测平台之一，又是量具。CLI 层的耦合退不掉：claude CLI 挂了，三个平台一起判不了。换来的是零新代码——不必写 HTTP client 和 key 管理。模型层的耦合靠上面那条 pin 退掉，这是这个选择唯一能对冲的部分。
 
-**调用粒度**：一个 `(cell, eval)` 一次调用，一次判完该 eval 的全部断言。按断言逐次调用会把成本乘上断言条数。
+**调用粒度**：一个 `(cell, eval)` 一次调用，一次判完该 eval 的全部断言。按断言逐次调用会把成本乘上断言条数。这要求 run 阶段本身也按 `(cell, eval)` 展开（见第 1 部分「run 阶段带 eval 轴」）——`grade` 只判某条 record 自己实际运行的那个 `evalId`，不会把同一 skill 其他场景的断言错扣到它头上。
+
+**prompt 里「交给被测方的任务」取 record 落盘的 `task`，不重新读 `evalDef.prompt`。** grade 常常发生在 run 之后，`evals.json` 完全可能在此期间被改过；用「声明现在写的是什么」冒充「当时实际发给被测方的是什么」，grader 判定的前提就是假的。`evalDef.prompt` 仅在 `record.task` 缺失（极老的 record）时兜底。
 
 **输出契约：**
 
@@ -299,7 +303,7 @@ unstable assertions (2): learn-skill/closing-question@pi/native, ...
 | 项 | 档位 | 后果 |
 |---|---|---|
 | pi 在 HOME 重定向下能否认证 | 已查，认证不通 | pi 一整列降级到只判 `reply` |
-| 一次调用判整条断言清单的输出稳定性 | 已查，`--repeat` CLI 参数本身是死代码（解析后从未被消费，实测 `--repeat 5` 只跑出 1 格），已改用「5 次独立 run 手动合并成一个 runId」的方法绕过，真实跑出 `unstable: 14`（15 个 skill×evalId×assertionId 组合里 14 个不稳，1 个稳）。归因：约 12/14 来自 5 次重复里有 1 次的模型行为本身就质变（`Skill` 工具触发但回复过短、材料不足以判），另 1 处是同一份材料仅换 eval 场景文本、grader 判定就翻面的真实量具噪声。结论见 [measurements/2026-08-17-quality-eval-e2e.md#step-5-unstable-标定](measurements/2026-08-17-quality-eval-e2e.md) | `--repeat` 死代码是新发现的阻塞项，需要单独任务修；unstable 非零，按 spec「不参与跨平台对比」处理，不加样本硬平掉 |
+| 一次调用判整条断言清单的输出稳定性 | **没查（该测量已作废，需重测）**。`--repeat` CLI 参数曾是死代码（解析后从未被消费），已改用「5 次独立 run 手动合并成一个 runId」的方法绕过，跑出过 `unstable: 14`（15 个 skill×evalId×assertionId 组合里 14 个不稳，1 个稳）。**事后发现该次测量的全部 5 轮 run 都跑在「run 阶段没有 eval 轴」的缺陷（C1）修复之前**：当时一个 skill 的多个 eval 场景共享同一次运行的产出物，`grade` 阶段却把每个场景的断言都拿去判这唯一一次运行——原先记的「同一份材料仅换 eval 场景文本、grader 判定就翻面」不是量具噪声，就是 C1 本身在数据里的样子。这意味着 `unstable: 14/15` 里有多少是真实模型/量具波动、多少是 C1 的伪影，本次测量分不清楚，整个数字连同"约 12/14 来自模型本身"的归因一并作废。C1 已修（`selectGradeCells` 现在按 `record.evalId` 只判该 record 实际运行的那个场景），`--repeat` 也已接线，但尚未在此修复之后重新真实跑过。见 [measurements/2026-08-17-quality-eval-e2e.md](measurements/2026-08-17-quality-eval-e2e.md) 里的作废声明 | 结论不可用；**验收判据 8（稳定性标定）在 C1 修复后需重新真实测量一遍才能下结论**，不得沿用这次的数字 |
 | transcript 单份体积量级 | 已查，单轮单格实测范围 6.5KB（未触发的纯聊天）~ 约 260KB（触发深度多工具调查），全部远小于 `TRANSCRIPT_LIMIT`（4MB），未观察到任何截断。见 [measurements/2026-08-17-quality-eval-e2e.md#附-transcript-单份体积](measurements/2026-08-17-quality-eval-e2e.md) | 决定字节上限取值；截断比例过高则 `source: transcript` 不可用——本轮样本下不成立 |
 | hermes 的产出物是否落在 jail 内 | 推出来的 | hermes 的 isolation 含 HOME 重定向（`profiles.js:39`），据此推断产出物在 jail 内，未实测 |
 | 各平台在 jail 内自写哪些状态文件 | 已查（claude 实测，hermes/pi 据代码推断） | claude 在 jail 内写 `.claude/policy-limits.json`、`.claude/remote-settings.json`、`.claude/.claude.json`、`.claude/.last-cleanup`、`.claude/backups/*`、`.claude/projects/<jail 路径>/<sessionId>.jsonl`——`CLAUDE_CONFIG_DIR` 指向 jail 内，且这些文件写在 before 快照之后，故全部落入差集、被当成 skill 产出物。**Risk 5 已被证实**，实测捕获见 [measurements/2026-08-17-quality-eval-e2e.md](measurements/2026-08-17-quality-eval-e2e.md)。已按平台加前缀排除规则（claude `.claude/`、hermes `.hermes/`、pi `sessions/`），排除表在 `harvest.js`。修复后的采集行为**尚未经真实运行验证**——所有 E2E 运行都早于该修复。 |

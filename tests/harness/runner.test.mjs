@@ -70,6 +70,21 @@ test('planCell: cell.skill 在 ctx.skills 里查不到时点名抛错，不回�
   )
 })
 
+test('planCell: cell.task 优先于 ctx.task——被测方收到的是这一格自己的 eval prompt，不是全局任务', () => {
+  const cell = { platform: 'hermes', mode: 'inject', skill: 'probe-anchor', task: '这是这一格自己的 eval prompt' }
+  const { argv } = planCell(cell, CTX)
+  const z = argv[argv.indexOf('-z') + 1]
+  assert.ok(z.trimEnd().endsWith('这是这一格自己的 eval prompt'))
+  assert.ok(!z.includes(CTX.task))
+})
+
+test('planCell: cell 没有 task 字段时兜底用 ctx.task——探针格子与老测试手搭的 cell 靠这条兼容', () => {
+  const cell = { platform: 'hermes', mode: 'inject', skill: 'probe-anchor' }
+  const { argv } = planCell(cell, CTX)
+  const z = argv[argv.indexOf('-z') + 1]
+  assert.ok(z.trimEnd().endsWith(CTX.task))
+})
+
 test('planCell 是纯函数：两次调用 argv deepEqual', () => {
   const cell = { platform: 'pi', mode: 'inject', skill: 'probe-anchor' }
   assert.deepEqual(planCell(cell, CTX).argv, planCell(cell, CTX).argv)

@@ -135,6 +135,32 @@ test('cell 目录名把 skill 路径里的斜杠压掉——否则会在 cells/ 
   )
 })
 
+test('cell 目录名带 evalId 时追加 __eval<id> 段，让同一 skill 的两个 eval 场景不共享目录', () => {
+  assert.equal(
+    cellDirName({ skill: 'coding/handoff', platform: 'claude', mode: 'native', repeat: 0, evalId: 0 }),
+    'coding-handoff__claude__native__eval0__r0',
+  )
+  assert.equal(
+    cellDirName({ skill: 'coding/handoff', platform: 'claude', mode: 'native', repeat: 0, evalId: 1 }),
+    'coding-handoff__claude__native__eval1__r0',
+  )
+  assert.notEqual(
+    cellDirName({ skill: 'coding/handoff', platform: 'claude', mode: 'native', repeat: 0, evalId: 0 }),
+    cellDirName({ skill: 'coding/handoff', platform: 'claude', mode: 'native', repeat: 0, evalId: 1 }),
+  )
+})
+
+test('cell 目录名不带 evalId（null/undefined）时保持旧格式——探针与无声明 skill 的目录名字节级不变', () => {
+  assert.equal(
+    cellDirName({ skill: 'mint/learn-skill', platform: 'pi', mode: 'native', repeat: 0, evalId: null }),
+    'mint-learn-skill__pi__native__r0',
+  )
+  assert.equal(
+    cellDirName({ skill: 'mint/learn-skill', platform: 'pi', mode: 'native', repeat: 0 }),
+    'mint-learn-skill__pi__native__r0',
+  )
+})
+
 test('snapshot 在路径不存在时拒绝而非返回空 Map——空 before 会让所有预先存在的文件看起来像 agent 产出物', async () => {
   const nonexistentDir = path.join(os.tmpdir(), 'harvest-test-nonexistent-' + Date.now())
   let threw = false

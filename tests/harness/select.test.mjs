@@ -1,7 +1,8 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { selectCells, selectProbeCells, validateMatrix, PHASE1_PLATFORMS, MODES, PROBE_SKILL } from '../../tools/skill-harness/select.js'
+import { selectCells, selectProbeCells, validateMatrix, PHASE1_PLATFORMS, MODES, PROBE_SKILL, DEFAULT_TASK } from '../../tools/skill-harness/select.js'
 import { aggregateVerdicts } from '../../tools/skill-harness/variance.js'
+import { cellDirName } from '../../tools/skill-harness/harvest.js'
 
 const SKILLS = [
   { path: 'mint/learn-skill', bundle: 'mint' },
@@ -140,6 +141,91 @@ test('selectProbeCells 同样遵守 --repeat：run 的格子按 repeat 展开，
   assert.deepEqual(run.map(c => c.repeat).sort(), [0, 1, 2, 3])
   const notRun = cells.filter(c => c.state === 'not-run')
   assert.ok(notRun.every(c => c.repeat === 0))
+})
+
+// --- eval 轴：run 阶段过去没有 eval 维度，一个 skill 声明的多个场景全部
+// 挂在同一次 `run skill` 通用任务的运行结果上，是本任务要修的缺陷本身。
+// 以下测试锁定「有声明的 skill 按 eval 数量展开 cell，每格带自己的 prompt」。
+
+const DECL_TWO_EVALS = {
+  skill_name: 'learn-skill',
+  evals: [
+    { id: 0, prompt: '分析这个 skill：xxx', assertions: [{ id: 'a', text: 'A' }] },
+    { id: 1, prompt: '换个场景，帮我改进这个 skill', assertions: [{ id: 'b', text: 'B' }] },
+  ],
+}
+const DECLARATIONS = new Map([['mint/learn-skill', DECL_TWO_EVALS]])
+
+test('有声明的 skill 按 eval 数量展开 cell：两个 eval 各产出一格，evalId 不同', () => {
+  const cells = selectCells({
+    skills: SKILLS, matrix: EMPTY, declarations: DECLARATIONS,
+    opts: { skills: ['mint/learn-skill'], platforms: ['claude'], modes: ['native'] },
+  })
+  const mine = cells.filter(c => c.skill === 'mint/learn-skill' && c.state === 'run')
+  assert.equal(mine.length, 2)
+  assert.deepEqual(mine.map(c => c.evalId).sort(), [0, 1])
+})
+
+test('每个 cell 的 task 是它自己那条 eval 的 prompt，不是全局任务字符串', () => {
+  const cells = selectCells({
+    skills: SKILLS, matrix: EMPTY, declarations: DECLARATIONS,
+    opts: { skills: ['mint/learn-skill'], platforms: ['claude'], modes: ['native'], task: '全局任务，应被忽略' },
+  })
+  const mine = cells.filter(c => c.skill === 'mint/learn-skill' && c.state === 'run')
+  assert.equal(mine.find(c => c.evalId === 0).task, '分析这个 skill：xxx')
+  assert.equal(mine.find(c => c.evalId === 1).task, '换个场景，帮我改进这个 skill')
+  assert.ok(mine.every(c => c.task !== '全局任务，应被忽略'), '--task 不得静默盖过某个 eval 自己的 prompt')
+})
+
+test('两个 eval 的 cell 喂给 cellDirName 产出不同目录名——同名会让第二个 eval 的 transcript 覆盖第一个', () => {
+  const cells = selectCells({
+    skills: SKILLS, matrix: EMPTY, declarations: DECLARATIONS,
+    opts: { skills: ['mint/learn-skill'], platforms: ['claude'], modes: ['native'] },
+  })
+  const mine = cells.filter(c => c.skill === 'mint/learn-skill' && c.state === 'run')
+  const names = new Set(mine.map(c => cellDirName(c)))
+  assert.equal(names.size, mine.length, '每个 eval 场景必须有自己独立的产物目录')
+})
+
+test('没有声明的 skill 仍产出可跑的 cell（evalId 为 null），--task 缺省时用 DEFAULT_TASK', () => {
+  const cells = selectCells({
+    skills: SKILLS, matrix: EMPTY, declarations: DECLARATIONS,
+    opts: { skills: ['research/extract-url'], platforms: ['claude'], modes: ['native'] },
+  })
+  const mine = cells.filter(c => c.skill === 'research/extract-url' && c.state === 'run')
+  assert.equal(mine.length, 1)
+  assert.equal(mine[0].evalId, null)
+  assert.equal(mine[0].task, DEFAULT_TASK)
+})
+
+test('--task 只对没有声明的 skill 生效——同一次选择里，有声明的 skill 用自己的 prompt，没声明的用 --task', () => {
+  const cells = selectCells({
+    skills: SKILLS, matrix: EMPTY, declarations: DECLARATIONS,
+    opts: { skills: ['mint/learn-skill', 'research/extract-url'], platforms: ['claude'], modes: ['native'], task: '自定义任务' },
+  })
+  const declared = cells.filter(c => c.skill === 'mint/learn-skill' && c.state === 'run')
+  const undeclared = cells.filter(c => c.skill === 'research/extract-url' && c.state === 'run')
+  assert.ok(declared.every(c => c.task !== '自定义任务'))
+  assert.ok(undeclared.every(c => c.task === '自定义任务'))
+})
+
+test('--repeat 叠在 eval 轴之上：每个 (platform, mode, evalId) 组合各自按 repeat 展开，不是被 eval 数量吃掉', () => {
+  const cells = selectCells({
+    skills: SKILLS, matrix: EMPTY, declarations: DECLARATIONS,
+    opts: { skills: ['mint/learn-skill'], platforms: ['claude'], modes: ['native'], repeat: 3 },
+  })
+  const mine = cells.filter(c => c.skill === 'mint/learn-skill' && c.state === 'run')
+  assert.equal(mine.length, 2 * 3, '2 个 eval × 3 次 repeat')
+  for (const evalId of [0, 1]) {
+    const group = mine.filter(c => c.evalId === evalId)
+    assert.deepEqual(group.map(c => c.repeat).sort(), [0, 1, 2])
+  }
+})
+
+test('没有声明或声明 evals 为空时退化成过去的单格行为——不因为加了 eval 轴就多跑格子', () => {
+  const cells = selectCells({ skills: SKILLS, matrix: EMPTY })
+  assert.equal(cells.length, 3 * PHASE1_PLATFORMS.length * MODES.length)
+  assert.ok(cells.every(c => c.evalId === null))
 })
 
 test('payoff：--repeat 展开出的 cells 能喂给 aggregateVerdicts 并真的测出 grader 判定不稳——修复前这条能力从 CLI 不可达', () => {

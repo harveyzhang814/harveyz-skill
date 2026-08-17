@@ -90,8 +90,13 @@ export function capTranscript(raw, limit = TRANSCRIPT_LIMIT) {
   return { text: raw.slice(0, limit), truncated: true }
 }
 
-export function cellDirName({ skill, platform, mode, repeat }) {
-  return `${String(skill).replace(/\//g, '-')}__${platform}__${mode}__r${repeat ?? 0}`
+// evalId 缺省（null/undefined）时不加段——与旧目录名保持字节级兼容（探针、
+// 无声明 skill）。带 evalId 时必须加段：同一个 skill 在同一 platform/mode
+// 下的两个 eval 场景若共享目录名，第二个的 transcript/artifacts 会直接覆盖
+// 第一个已落盘的证据，这是本任务要修的缺陷本身在磁盘上的翻版。
+export function cellDirName({ skill, platform, mode, repeat, evalId }) {
+  const evalPart = evalId === undefined || evalId === null ? '' : `__eval${evalId}`
+  return `${String(skill).replace(/\//g, '-')}__${platform}__${mode}${evalPart}__r${repeat ?? 0}`
 }
 
 // 每个错误单独 catch 并收集，不中断后续采集：

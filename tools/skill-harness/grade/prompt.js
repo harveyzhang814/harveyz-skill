@@ -13,14 +13,19 @@ const HEADER = `你是判定器。逐条判定下面每一条断言，只依据�
 输出格式：
 {"assertions":[{"id":"<断言 id>","verdict":"pass|fail|unavailable","evidence":"<原文片段，或缺失说明>"}]}`
 
-export function buildGradePrompt({ evalDef, materials }) {
+// task 必须是记录里实际发给被测方的那句话（record.task，run 时就地落盘），
+// 不是重新去读 evalDef.prompt——grade 常常发生在 run 之后、evals.json 可能
+// 已经被改过；用「现在的声明文本」冒充「当时真给的任务」，grader 判定的就是
+// 一个假前提，这正是本任务要修的缺陷之一。evalDef.prompt 仅在 task 缺失
+// （比如极老的 record 没有这个字段）时兜底。
+export function buildGradePrompt({ evalDef, materials, task }) {
   const parts = [HEADER, '', '## 断言', '']
   for (const a of evalDef.assertions) {
     parts.push(`- id: ${a.id}`)
     parts.push(`  ${a.text}`)
   }
 
-  parts.push('', '## 材料', '', '### 交给被测方的任务', evalDef.prompt ?? '(缺失)')
+  parts.push('', '## 材料', '', '### 交给被测方的任务', task ?? evalDef.prompt ?? '(缺失)')
   parts.push('', '### 被测方的回复', materials.reply ?? '(缺失)')
 
   const level = maxSourceLevel(evalDef.assertions)
