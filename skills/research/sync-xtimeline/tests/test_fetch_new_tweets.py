@@ -16,15 +16,18 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
 
 import fetch_new_tweets
 import watchlist
+from conftest import write_config
 
 SCRIPT = Path(__file__).resolve().parent.parent / "scripts" / "fetch_new_tweets.py"
 
 
 def test_empty_watchlist_produces_empty_report(tmp_path):
     data_dir = tmp_path / "data"
+    config_path = tmp_path / "config.json"
+    write_config(config_path, data_dir)
     result = subprocess.run(
         [sys.executable, str(SCRIPT)],
-        env={**os.environ, "HSKILL_SYNC_XTIMELINE_DATA_DIR": str(data_dir),
+        env={**os.environ, "HSKILL_SYNC_XTIMELINE_CONFIG": str(config_path),
              "BROWSER_FETCH_MCP_DATA_DIR": str(tmp_path / "bfm-data")},
         capture_output=True, text=True, timeout=30,
     )
@@ -38,9 +41,11 @@ def test_empty_watchlist_produces_empty_report(tmp_path):
 
 def test_pending_json_written_with_report_content(tmp_path):
     data_dir = tmp_path / "data"
+    config_path = tmp_path / "config.json"
+    write_config(config_path, data_dir)
     result = subprocess.run(
         [sys.executable, str(SCRIPT)],
-        env={**os.environ, "HSKILL_SYNC_XTIMELINE_DATA_DIR": str(data_dir),
+        env={**os.environ, "HSKILL_SYNC_XTIMELINE_CONFIG": str(config_path),
              "BROWSER_FETCH_MCP_DATA_DIR": str(tmp_path / "bfm-data")},
         capture_output=True, text=True, timeout=30,
     )

@@ -9,13 +9,13 @@ Usage: python3 render_view.py
 Prints EMPTY, or WRITTEN: <path>.
 """
 import json
-import os
 import sys
 from datetime import datetime, timezone
 from html import escape
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+from config import get_data_dir
 from render_digest import _type_suffix  # noqa: E402
 
 # X-style palette used for avatar placeholders (no external images).
@@ -124,13 +124,8 @@ article.tweet { border-bottom: 1px solid var(--border); padding: 0.7rem 0; }
 """
 
 
-def _data_dir() -> Path:
-    env_dir = os.environ.get("HSKILL_SYNC_XTIMELINE_DATA_DIR")
-    return Path(env_dir) if env_dir else Path.home() / ".hskill" / "sync-xtimeline"
-
-
 def _tweets_dir() -> Path:
-    return _data_dir() / "tweets"
+    return Path(get_data_dir()) / "tweets"
 
 
 def load_archives() -> dict[str, list[dict]]:
@@ -258,7 +253,7 @@ def main():
     if not any(archives.values()):
         print("EMPTY")
         return
-    data_dir = _data_dir()
+    data_dir = Path(get_data_dir())
     data_dir.mkdir(parents=True, exist_ok=True)
     view_path = data_dir / "view.html"
     view_path.write_text(render_view(archives), encoding="utf-8")

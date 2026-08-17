@@ -7,14 +7,17 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
 
 from render_view import load_archives, render_view
+from conftest import write_config, set_config_path
 
 SCRIPT = Path(__file__).resolve().parent.parent / "scripts" / "render_view.py"
 
 
 def _run(data_dir: Path) -> subprocess.CompletedProcess:
+    config_path = data_dir.parent / "config.json"
+    write_config(config_path, data_dir)
     return subprocess.run(
         [sys.executable, str(SCRIPT)],
-        env={**os.environ, "HSKILL_SYNC_XTIMELINE_DATA_DIR": str(data_dir)},
+        env={**os.environ, "HSKILL_SYNC_XTIMELINE_CONFIG": str(config_path)},
         capture_output=True, text=True, timeout=10,
     )
 
@@ -26,13 +29,16 @@ def _write_archive(data_dir: Path, handle: str, tweets: list[dict]) -> None:
 
 
 def test_load_archives_empty_when_no_tweets_dir(tmp_path, monkeypatch):
-    monkeypatch.setenv("HSKILL_SYNC_XTIMELINE_DATA_DIR", str(tmp_path / "data"))
+    data_dir = tmp_path / "data"
+    write_config(tmp_path / "config.json", data_dir)
+    set_config_path(monkeypatch, tmp_path / "config.json")
     assert load_archives() == {}
 
 
 def test_load_archives_sorts_newest_first_by_tweet_id(tmp_path, monkeypatch):
     data_dir = tmp_path / "data"
-    monkeypatch.setenv("HSKILL_SYNC_XTIMELINE_DATA_DIR", str(data_dir))
+    write_config(tmp_path / "config.json", data_dir)
+    set_config_path(monkeypatch, tmp_path / "config.json")
     _write_archive(data_dir, "alice", [
         {"tweet_id": "1", "url": "u1", "text": "old", "timestamp": "t1"},
         {"tweet_id": "3", "url": "u3", "text": "new", "timestamp": "t3"},

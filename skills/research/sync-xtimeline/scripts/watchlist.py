@@ -10,19 +10,15 @@ Usage:
   python3 watchlist.py list
 """
 import json
-import os
 import sys
 from pathlib import Path
 from typing import Optional
 
-
-def _data_dir() -> Path:
-    env_dir = os.environ.get("HSKILL_SYNC_XTIMELINE_DATA_DIR")
-    return Path(env_dir) if env_dir else Path.home() / ".hskill" / "sync-xtimeline"
+from config import get_data_dir
 
 
 def _watchlist_path() -> Path:
-    return _data_dir() / "watchlist.json"
+    return Path(get_data_dir()) / "watchlist.json"
 
 
 def load_watchlist() -> list[dict]:
