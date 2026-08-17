@@ -55,10 +55,30 @@ export async function snapshot(dir) {
   return out
 }
 
-export function diffSnapshots(before, after) {
+// 各平台把自己的配置/会话状态目录钉在 jail 内的哪个前缀——诊断自一次真实
+// 采集：claude 靠 CLAUDE_CONFIG_DIR 把状态放进 .claude/（见 adapters/claude.js
+// jailEnv），hermes 靠 HOME 重定向叠加 seedJail/install 把状态放进 .hermes/
+// （见 adapters/hermes.js），pi 不重定向 HOME，但把会话目录钉在
+// --session-dir 指向的 sessions/（见 adapters/pi.js args()）。这些目录下的
+// 文件由平台自己在运行期间写出，必然出现在 before/after 差集里——不排除
+// 就会被当成 skill 的产出物喂给 grader，浪费评分的 token 还污染判断。
+// 前缀匹配而非精确文件名：真实采集到的路径里带时间戳/多变的会话 id
+// （如 backups/....backup.1786959592650、projects/<jail-path>/<uuid>.jsonl），
+// 固定列表枚举不完。
+// 只排除平台自己的状态目录，不是整个 HOME——skill 写到 $HOME/.hskill/ 和
+// ~/Documents/notes/ 这些路径必须原样留在差集里，那才是我们要采集的东西。
+export const PLATFORM_STATE_PREFIXES = {
+  claude: ['.claude/'],
+  hermes: ['.hermes/'],
+  pi: ['sessions/'],
+}
+
+export function diffSnapshots(before, after, platform) {
+  const statePrefixes = PLATFORM_STATE_PREFIXES[platform] ?? []
   const changed = []
   for (const [rel, sig] of after) {
     if (HARNESS_FILES.has(rel)) continue
+    if (statePrefixes.some(prefix => rel.startsWith(prefix))) continue
     if (before.get(rel) !== sig) changed.push(rel)
   }
   return changed.sort()

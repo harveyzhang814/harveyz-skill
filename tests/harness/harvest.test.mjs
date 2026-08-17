@@ -5,7 +5,7 @@ import os from 'node:os'
 import path from 'node:path'
 import {
   snapshot, diffSnapshots, harvestCell, mergeHarvest, capTranscript, cellDirName,
-  TRANSCRIPT_LIMIT, HARNESS_FILES,
+  TRANSCRIPT_LIMIT, HARNESS_FILES, PLATFORM_STATE_PREFIXES,
 } from '../../tools/skill-harness/harvest.js'
 
 test('差集只留 agent 真正写的东西——跑之前就在的内置 skill 副本不该被当成产出物', async () => {
@@ -44,6 +44,73 @@ test('harness 自己写的 stdout.log 不是 agent 的产出物，必须排除',
   assert.deepEqual(diffSnapshots(before, after), ['out.md'])
   assert.ok(HARNESS_FILES.has('stdout.log'))
   await fs.remove(dir)
+})
+
+// task-13：真实一次采集里 artifacts/ 下只有 claude 平台自己的配置状态
+// （CLAUDE_CONFIG_DIR 指向 jail 内的 .claude/），没有一个是 skill 产出物。
+// 这些路径带时间戳的 backup 文件名和多变的 session jsonl，任何固定列表都
+// 枚不完，必须靠前缀匹配把整个 .claude/ 都摘掉——同时 sibling 的 skill
+// 产出物必须原样留下，证明摘的是平台目录，不是整个 jail。
+test('claude 平台自己的 .claude/ 状态目录被前缀排除，agent 写的产出物原样保留', async () => {
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'harvest-test-'))
+  const before = await snapshot(dir)
+
+  await fs.outputFile(path.join(dir, '.claude/policy-limits.json'), '{}')
+  await fs.outputFile(
+    path.join(dir, '.claude/backups/.claude.json.backup.1786959592650'),
+    'backup',
+  )
+  await fs.outputFile(
+    path.join(dir, '.claude/projects/some-jail-path/00000000-0000-0000-0000-000000000000.jsonl'),
+    '{}',
+  )
+  await fs.outputFile(path.join(dir, 'Documents/notes/report.md'), 'agent wrote this')
+  const after = await snapshot(dir)
+
+  assert.deepEqual(diffSnapshots(before, after, 'claude'), ['Documents/notes/report.md'])
+  await fs.remove(dir)
+})
+
+// task-13：排除必须按平台隔离——claude 的 .claude/ 前缀不能把 hermes 的
+// .hermes/ 状态也捎带排除掉（反之亦然）。同一份 after 快照，只换 platform
+// 参数，排除结果必须跟着变，证明查的是对应平台自己的前缀表，不是笼统摘掉
+// 所有「看起来像平台目录」的东西。
+test('平台状态前缀互相隔离——claude 的排除规则不会误吃 hermes 的状态目录', async () => {
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'harvest-test-'))
+  const before = await snapshot(dir)
+
+  await fs.outputFile(path.join(dir, '.hermes/sessions/x.json'), '{}')
+  await fs.outputFile(path.join(dir, 'Documents/notes/report.md'), 'agent wrote this')
+  const after = await snapshot(dir)
+
+  // 按 claude 的排除表看，.hermes/ 不是它的状态目录，必须原样出现在差集里
+  assert.deepEqual(
+    diffSnapshots(before, after, 'claude'),
+    ['.hermes/sessions/x.json', 'Documents/notes/report.md'],
+  )
+  // 按 hermes 自己的排除表看，.hermes/ 才会被摘掉
+  assert.deepEqual(diffSnapshots(before, after, 'hermes'), ['Documents/notes/report.md'])
+  await fs.remove(dir)
+})
+
+// task-13：pi 不重定向 HOME，但 --session-dir 把会话钉在 jail 内的
+// sessions/ 下——这不是 skill 产出物，是 pi 自己的运行状态，同样要按前缀排除。
+test('pi 平台的 sessions/ 会话目录被前缀排除', async () => {
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'harvest-test-'))
+  const before = await snapshot(dir)
+
+  await fs.outputFile(path.join(dir, 'sessions/run-1/transcript.json'), '{}')
+  await fs.outputFile(path.join(dir, '.hskill/some-skill/out.md'), 'agent wrote this')
+  const after = await snapshot(dir)
+
+  assert.deepEqual(diffSnapshots(before, after, 'pi'), ['.hskill/some-skill/out.md'])
+  await fs.remove(dir)
+})
+
+test('PLATFORM_STATE_PREFIXES 三个平台都各自登记了自己的状态目录前缀', () => {
+  assert.deepEqual(PLATFORM_STATE_PREFIXES.claude, ['.claude/'])
+  assert.deepEqual(PLATFORM_STATE_PREFIXES.hermes, ['.hermes/'])
+  assert.deepEqual(PLATFORM_STATE_PREFIXES.pi, ['sessions/'])
 })
 
 test('transcript 截断了必须说——把不完整的原料当完整的用，比没有原料更危险', () => {

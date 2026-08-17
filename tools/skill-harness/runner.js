@@ -180,7 +180,7 @@ async function runOne(cell, ctx, runDir) {
     if (!harvestError) {
       try {
         const after = await snapshot(jailDir)
-        changedFiles = diffSnapshots(before, after)
+        changedFiles = diffSnapshots(before, after, cell.platform)
       } catch (e) {
         snapshotErrors.push(e.message)
       }
