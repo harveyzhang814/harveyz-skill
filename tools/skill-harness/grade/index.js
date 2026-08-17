@@ -102,6 +102,18 @@ function applyArtifactChannelOverride(assertions, declaredAssertions, platform) 
   })
 }
 
+// invoke 本身可能抛出（比如 CLI 里 claudeOAuthToken() 读 keychain 失败）——
+// 不是只有「返回了坏文本」这一种坏法。抛出必须和坏文本走同一条路：
+// 吞掉、留痕、让 parseGraderOutput 判 unavailable，不能让异常逃出格子的循环，
+// 否则一次 keychain 抖动就会把已经判完的格子全部陪葬。
+async function safeInvoke(invoke, prompt, model) {
+  try {
+    return await invoke(prompt, model)
+  } catch (e) {
+    return `grader invocation threw: ${e.message}`
+  }
+}
+
 export async function runGrade({ runDir, graderModel, only, invoke, declarations }) {
   if (!graderModel) throw new Error('--grader-model is required — an unpinned grader confounds the measuring stick with the thing measured')
   const records = await fs.readJson(path.join(runDir, 'records.json'))
@@ -115,9 +127,9 @@ export async function runGrade({ runDir, graderModel, only, invoke, declarations
     const prompt = buildGradePrompt({ evalDef: c.evalDef, materials })
 
     // 重试一次：量具偶发不吐 JSON 是常见的，重试成本远低于把整格记成 unavailable。
-    let parsed = parseGraderOutput(await invoke(prompt, graderModel), c.evalDef.assertions)
+    let parsed = parseGraderOutput(await safeInvoke(invoke, prompt, graderModel), c.evalDef.assertions)
     if (!parsed.ok) {
-      parsed = parseGraderOutput(await invoke(prompt, graderModel), c.evalDef.assertions)
+      parsed = parseGraderOutput(await safeInvoke(invoke, prompt, graderModel), c.evalDef.assertions)
     }
 
     const assertions = applyArtifactChannelOverride(parsed.assertions, c.evalDef.assertions, c.platform)

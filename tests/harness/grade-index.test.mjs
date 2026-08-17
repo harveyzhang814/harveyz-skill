@@ -95,6 +95,36 @@ test('两次都解析失败就判 unavailable，且 gradings.json 头部记下 g
   await fs.remove(runDir)
 })
 
+test('invoke 抛异常不炸掉整轮——已判完的格子必须留在 gradings.json 里', async () => {
+  const runDir = await fs.mkdtemp(path.join(os.tmpdir(), 'grade-run-'))
+  const recA = { skill: 'a/x', platform: 'claude', mode: 'native', repeat: 0, exitCode: 0, reply: 'ok' }
+  const recB = { skill: 'a/x', platform: 'hermes', mode: 'native', repeat: 0, exitCode: 0, reply: 'ok' }
+  await fs.writeJson(path.join(runDir, 'records.json'), [recA, recB])
+
+  let calls = 0
+  const invoke = async () => {
+    calls++
+    // 前两次调用（第一个格子的首次 + 重试）都抛异常，模拟 keychain 中途失效；
+    // 第三次调用（第二个格子）恢复正常，返回真实判定。
+    if (calls <= 2) throw new Error(`keychain unreadable (attempt ${calls})`)
+    return '{"assertions":[{"id":"a","verdict":"pass","evidence":"真实材料"}]}'
+  }
+
+  const out = await runGrade({
+    runDir, graderModel: 'grader-m', invoke,
+    declarations: new Map([['a/x', DECL]]),
+  })
+
+  assert.equal(out.gradings.length, 2)
+  assert.equal(out.gradings[0].platform, 'claude')
+  assert.equal(out.gradings[0].assertions[0].verdict, 'unavailable')
+  assert.match(out.gradings[0].assertions[0].evidence, /keychain unreadable/)
+  assert.equal(out.gradings[1].platform, 'hermes')
+  assert.equal(out.gradings[1].assertions[0].verdict, 'pass')
+  assert.equal(out.gradings[1].assertions[0].evidence, '真实材料')
+  await fs.remove(runDir)
+})
+
 test('pi 的 artifact 断言即使 grader 判 pass 也被强制改判 unavailable——artifactChannel 为 none 时产出物出不了 jail，不能信任 grader 自证材料齐全', async () => {
   const runDir = await fs.mkdtemp(path.join(os.tmpdir(), 'grade-run-'))
   const rec = { skill: 'a/x', platform: 'pi', mode: 'native', repeat: 0, exitCode: 0, reply: 'ok' }
