@@ -43,16 +43,21 @@ test('不同平台不聚合到一起——聚合键必须含 platform 和 mode',
 })
 
 test('assertion id 含 | 分隔符不能与其他 id 意外合并——聚合键不安全会制造假的分歧', () => {
-  // 在 JSON.stringify 之前，id 'a|b' 和这样的 evalId 布局会产生冲突
-  // 比如 evalId 1, id 'a|b' vs evalId 'a', id 'b' 在字符串拼接中会变成相同字符串
+  // 字符串拼接方案：`x|pi|native|1|a|b` 和 `x|pi|native|1|a|b` 相同
+  // 第一条：evalId='1', id='a|b' → x|pi|native|1|a|b
+  // 第二条：evalId='1|a', id='b' → x|pi|native|1|a|b
+  // 在旧方案下这两个不同的 assertion 会错误地合并成一组
+  // 因为 verdict 不同（pass vs fail），合并会产生假的 unstable
   // JSON.stringify 确保任何字符都能安全区分
   const out = aggregateVerdicts([
-    { skill: 'x', platform: 'pi', mode: 'native', evalId: 1, repeat: 0, assertions: [{ id: 'a|b', verdict: 'pass' }] },
-    { skill: 'x', platform: 'pi', mode: 'native', evalId: 'a', repeat: 0, assertions: [{ id: 'b', verdict: 'fail' }] },
+    { skill: 'x', platform: 'pi', mode: 'native', evalId: '1', repeat: 0, assertions: [{ id: 'a|b', verdict: 'pass' }] },
+    { skill: 'x', platform: 'pi', mode: 'native', evalId: '1|a', repeat: 0, assertions: [{ id: 'b', verdict: 'fail' }] },
   ])
-  assert.equal(out.length, 2)
-  assert.equal(out[0].unstable, false)
-  assert.equal(out[1].unstable, false)
+  assert.equal(out.length, 2, '两个不同 assertion 不应该合并')
+  assert.equal(out[0].verdict, 'pass', '第一个 assertion 的 verdict 应该是 pass')
+  assert.equal(out[0].unstable, false, '单个 verdict 应该是稳定的')
+  assert.equal(out[1].verdict, 'fail', '第二个 assertion 的 verdict 应该是 fail')
+  assert.equal(out[1].unstable, false, '单个 verdict 应该是稳定的')
 })
 
 test('空 gradings 数组返回空数组', () => {
