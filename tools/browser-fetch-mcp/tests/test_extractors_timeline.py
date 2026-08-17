@@ -57,6 +57,32 @@ async def test_extract_js_xcom_timeline_collects_cards_and_skips_promoted():
         assert t["quotedTimestamp"] is None
 
 
+_MULTILINE_FIXTURE_HTML = """\
+<!DOCTYPE html>
+<html>
+<body>
+<article data-testid="tweet">
+  <div data-testid="User-Name"><div>Alice Example</div><div>@alice</div></div>
+  <a href="/alice/status/6001"><time datetime="2026-08-14T16:00:00.000Z">Aug 14</time></a>
+  <div data-testid="tweetText">First   line of the tweet.<br><br>Second paragraph after a blank line.</div>
+</article>
+</body>
+</html>
+"""
+
+
+async def test_extract_js_xcom_timeline_preserves_line_breaks_in_text():
+    """A multi-paragraph tweet must keep its line breaks — collapsing all
+    whitespace (including \\n) to a single space loses the tweet's
+    paragraph structure (see the trq212/2086931647468097932 repro)."""
+    result = await _evaluate_timeline_js(_MULTILINE_FIXTURE_HTML)
+    tweets = result["tweets"]
+    assert len(tweets) == 1
+    text = tweets[0]["text"]
+    assert "\n" in text
+    assert text == "First line of the tweet.\n\nSecond paragraph after a blank line."
+
+
 _REPOST_FIXTURE_HTML = """\
 <!DOCTYPE html>
 <html>

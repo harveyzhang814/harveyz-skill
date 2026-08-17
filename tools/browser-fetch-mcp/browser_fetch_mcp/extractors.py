@@ -687,8 +687,14 @@ EXTRACT_JS_XCOM_TIMELINE = r"""() => {
             authorHandle = handleLine || '';
         }
 
+        // [^\S\n] (not-a-non-newline-whitespace, i.e. whitespace except \n)
+        // collapses runs of spaces/tabs but leaves \n alone — a plain \s+
+        // collapse would flatten a multi-paragraph tweet's line breaks into
+        // spaces and lose its paragraph structure (verified against a real
+        // multi-line tweet: X renders each paragraph as a separate line
+        // joined by \n in innerText).
         const textEl = article.querySelector('[data-testid="tweetText"]');
-        const text = textEl ? textEl.innerText.replace(/\s+/g, ' ').trim() : '';
+        const text = textEl ? textEl.innerText.replace(/[^\S\n]+/g, ' ').trim() : '';
 
         // Type classification: repost > quote > reply > post — the most
         // "outer" signal wins, since that's why the card is showing up on
@@ -742,7 +748,7 @@ EXTRACT_JS_XCOM_TIMELINE = r"""() => {
             type = 'quote';
             quotedAuthor = otherAuthorHandle;
             const quotedTextEl = quoteWrapper.querySelector('[data-testid="tweetText"]');
-            quotedText = quotedTextEl ? quotedTextEl.innerText.replace(/\s+/g, ' ').trim() : null;
+            quotedText = quotedTextEl ? quotedTextEl.innerText.replace(/[^\S\n]+/g, ' ').trim() : null;
             const quotedTimeEl = quoteWrapper.querySelector('time');
             quotedTimestamp = quotedTimeEl ? quotedTimeEl.getAttribute('datetime') : null;
         } else if (replyingToMatch) {
