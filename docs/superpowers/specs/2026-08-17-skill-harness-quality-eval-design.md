@@ -302,7 +302,7 @@ unstable assertions (2): learn-skill/closing-question@pi/native, ...
 | 一次调用判整条断言清单的输出稳定性 | 已查，`--repeat` CLI 参数本身是死代码（解析后从未被消费，实测 `--repeat 5` 只跑出 1 格），已改用「5 次独立 run 手动合并成一个 runId」的方法绕过，真实跑出 `unstable: 14`（15 个 skill×evalId×assertionId 组合里 14 个不稳，1 个稳）。归因：约 12/14 来自 5 次重复里有 1 次的模型行为本身就质变（`Skill` 工具触发但回复过短、材料不足以判），另 1 处是同一份材料仅换 eval 场景文本、grader 判定就翻面的真实量具噪声。结论见 [measurements/2026-08-17-quality-eval-e2e.md#step-5-unstable-标定](measurements/2026-08-17-quality-eval-e2e.md) | `--repeat` 死代码是新发现的阻塞项，需要单独任务修；unstable 非零，按 spec「不参与跨平台对比」处理，不加样本硬平掉 |
 | transcript 单份体积量级 | 已查，单轮单格实测范围 6.5KB（未触发的纯聊天）~ 约 260KB（触发深度多工具调查），全部远小于 `TRANSCRIPT_LIMIT`（4MB），未观察到任何截断。见 [measurements/2026-08-17-quality-eval-e2e.md#附-transcript-单份体积](measurements/2026-08-17-quality-eval-e2e.md) | 决定字节上限取值；截断比例过高则 `source: transcript` 不可用——本轮样本下不成立 |
 | hermes 的产出物是否落在 jail 内 | 推出来的 | hermes 的 isolation 含 HOME 重定向（`profiles.js:39`），据此推断产出物在 jail 内，未实测 |
-| 各平台在 jail 内自写哪些状态文件 | 没查 | 决定采集层是否需要按平台排除规则 |
+| 各平台在 jail 内自写哪些状态文件 | 已查（claude 实测，hermes/pi 据代码推断） | claude 在 jail 内写 `.claude/policy-limits.json`、`.claude/remote-settings.json`、`.claude/.claude.json`、`.claude/.last-cleanup`、`.claude/backups/*`、`.claude/projects/<jail 路径>/<sessionId>.jsonl`——`CLAUDE_CONFIG_DIR` 指向 jail 内，且这些文件写在 before 快照之后，故全部落入差集、被当成 skill 产出物。**Risk 5 已被证实**，实测捕获见 [measurements/2026-08-17-quality-eval-e2e.md](measurements/2026-08-17-quality-eval-e2e.md)。已按平台加前缀排除规则（claude `.claude/`、hermes `.hermes/`、pi `sessions/`），排除表在 `harvest.js`。修复后的采集行为**尚未经真实运行验证**——所有 E2E 运行都早于该修复。 |
 
 ---
 
