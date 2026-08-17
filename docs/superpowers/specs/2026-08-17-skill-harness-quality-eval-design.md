@@ -300,7 +300,7 @@ unstable assertions (2): learn-skill/closing-question@pi/native, ...
 
 | 项 | 档位 | 后果 |
 |---|---|---|
-| pi 在 HOME 重定向下能否认证 | 没查 | pi 一整列降级到只判 `reply` |
+| pi 在 HOME 重定向下能否认证 | 已查，认证不通 | pi 一整列降级到只判 `reply` |
 | 一次调用判整条断言清单的输出稳定性 | 没查 | 若不稳，先拆小调用粒度再考虑换指标 |
 | transcript 单份体积量级 | 没查 | 决定字节上限取值；截断比例过高则 `source: transcript` 不可用 |
 | hermes 的产出物是否落在 jail 内 | 推出来的 | hermes 的 isolation 含 HOME 重定向（`profiles.js:39`），据此推断产出物在 jail 内，未实测 |
