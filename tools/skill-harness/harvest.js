@@ -10,6 +10,7 @@ export const HARNESS_FILES = new Set([
   'stdout.log', 'stderr.log',
   'hermes-list-stdout.log', 'hermes-list-stderr.log',
   'hermes-export-stdout.log', 'hermes-export-stderr.log',
+  'usage.json',
 ])
 
 // 签名带 mtime 与 size 两项：只比 size 会漏掉「改写成等长内容」，

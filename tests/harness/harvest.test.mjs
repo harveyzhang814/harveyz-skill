@@ -20,6 +20,22 @@ test('差集只留 agent 真正写的东西——跑之前就在的内置 skill 
   await fs.remove(dir)
 })
 
+// I4：hermes 的 --usage-file <jailDir>/usage.json 是 harness 自己要 hermes 写的
+// 用量统计文件，落在 jail 根目录，不带 .hermes/ 前缀、也不在旧的 HARNESS_FILES
+// 列表里——Task 13 的排除修复因此不完整，usage.json 每次都被当成 skill 产出物捞走。
+test('I4：usage.json 是 harness 自建的用量统计文件，必须被排除，不出现在差集里', async () => {
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'harvest-test-'))
+  await fs.outputFile(path.join(dir, 'usage.json'), '')
+  const before = await snapshot(dir)
+  await fs.outputFile(path.join(dir, 'usage.json'), '{"tokens":123}')
+  await fs.outputFile(path.join(dir, 'out.md'), 'agent')
+  const after = await snapshot(dir)
+
+  assert.deepEqual(diffSnapshots(before, after, 'hermes'), ['out.md'])
+  assert.ok(HARNESS_FILES.has('usage.json'))
+  await fs.remove(dir)
+})
+
 test('内容变了但大小相同的文件也要被认出来——只比 size 会漏掉原地改写', async () => {
   const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'harvest-test-'))
   const f = path.join(dir, 'a.txt')
