@@ -8,8 +8,7 @@ const CTX = {
   model: 'MiniMax-M2.7',
   provider: 'minimax-cn',
   task: 'run anchor probe',
-  skillBody: 'BODY TEXT',
-  skillDir: '/abs/probe-anchor',
+  skills: new Map([['probe-anchor', { skillPath: '/abs/probe-anchor', skillDir: '/abs/probe-anchor', skillBody: 'BODY TEXT' }]]),
   source: { PATH: '/usr/bin' },
   oauthToken: 'tok',
   jailDir: '/tmp/skill-harness-x',
@@ -59,6 +58,13 @@ test('planCell: 模型缺失时抛错，不静默用平台默认值', () => {
   assert.throws(
     () => planCell({ platform: 'claude', mode: 'native', skill: 'probe-anchor' }, { ...CTX, model: undefined }),
     /model/,
+  )
+})
+
+test('planCell: cell.skill 在 ctx.skills 里查不到时点名抛错，不回落到探针', () => {
+  assert.throws(
+    () => planCell({ platform: 'claude', mode: 'native', skill: 'mint/does-not-exist' }, CTX),
+    /mint\/does-not-exist/,
   )
 })
 

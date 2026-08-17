@@ -33,6 +33,7 @@ export function parseArgs(argv) {
   }
   for (let i = start; i < argv.length; i++) {
     const flag = argv[i]
+    if (flag === '--probe') { opts.probe = true; continue }
     const value = argv[++i]
     if (REPEATABLE[flag]) {
       const key = REPEATABLE[flag]
@@ -57,6 +58,9 @@ export function parseArgs(argv) {
   if ((command === 'run' || command === 'dry-run') && !opts.model) {
     throw new Error('--model is required — falling back to each platform default would confound platform with model')
   }
+  if (opts.probe && (opts.skills?.length ?? 0) > 0) {
+    throw new Error('--probe and --skill are mutually exclusive — say which one you mean, guessing recreates the defect this flag exists to fix')
+  }
   if (command === 'grade') {
     if (!opts.runId) throw new Error('grade requires a runId: skill-harness grade <runId> --grader-model <model>')
     if (!opts.graderModel) throw new Error('--grader-model is required — an unpinned grader confounds the measuring stick with the thing measured')
@@ -70,6 +74,7 @@ export function renderDryRun(cells, ctx) {
     if (cell.state !== 'run') continue
     const adapter = ADAPTERS[cell.platform]
     const plan = planCell(cell, ctx)
+    const entry = ctx.skills.get(cell.skill)
     out.push(`=== ${cell.platform}/${cell.mode} · ${cell.skill} ===`)
     out.push('argv:')
     out.push(plan.argv.map(a => `  ${a}`).join('\n'))
@@ -77,7 +82,7 @@ export function renderDryRun(cells, ctx) {
     out.push(Object.entries(plan.redactedEnv).map(([k, v]) => `  ${k}=${v}`).join('\n'))
     if (cell.mode === 'native') {
       const dest = adapter.profile.skillChannel === 'skill-dir'
-        ? path.join(ctx.jailDir, cell.platform === 'claude' ? '.claude/skills' : '.hermes/skills', path.basename(ctx.skillPath))
+        ? path.join(ctx.jailDir, cell.platform === 'claude' ? '.claude/skills' : '.hermes/skills', path.basename(entry.skillPath))
         : '(none — loaded via explicit flag)'
       out.push(`jail writes: ${dest}`)
       out.push('skill body: not in the prompt — loaded natively by the platform')
@@ -89,6 +94,35 @@ export function renderDryRun(cells, ctx) {
     out.push('')
   }
   return out.join('\n')
+}
+
+// 纯函数（readBody 注入，测试不必读真盘）。只为 cells 里实际要跑（state === 'run'）
+// 的 skill 建条目——不把全仓库 41 个 SKILL.md 都读进来。键是 cell.skill，
+// 即 skills-index.json 里的 path（如 'mint/learn-skill'）。
+export async function buildSkillMap(repoRoot, cells, readBody) {
+  const skills = new Map()
+  for (const cell of cells) {
+    if (cell.state !== 'run') continue
+    if (skills.has(cell.skill)) continue
+    const skillPath = path.join(repoRoot, 'skills', cell.skill)
+    const skillBody = stripFrontmatter(await readBody(path.join(skillPath, 'SKILL.md')))
+    skills.set(cell.skill, { skillPath, skillDir: skillPath, skillBody })
+  }
+  return skills
+}
+
+// 纯函数（readBody 注入），与 buildSkillMap 对称。--probe：一期锚点探针冒烟用例，
+// 所有 state === 'run' 的格子显式指向同一个探针目录，而不是按 cell.skill 解析。
+export async function buildProbeMap(repoRoot, cells, readBody) {
+  const probePath = path.join(repoRoot, 'tools/skill-harness/probe/probe-anchor')
+  const skillBody = stripFrontmatter(await readBody(path.join(probePath, 'SKILL.md')))
+  const entry = { skillPath: probePath, skillDir: probePath, skillBody }
+  const skills = new Map()
+  for (const cell of cells) {
+    if (cell.state !== 'run') continue
+    skills.set(cell.skill, entry)
+  }
+  return skills
 }
 
 async function main() {
@@ -135,16 +169,22 @@ async function main() {
   }
 
   const cells = selectCells({ skills: index.skills, matrix, opts })
-  const skillPath = path.join(REPO_ROOT, 'tools/skill-harness/probe/probe-anchor')
+
+  // --probe：所有格子显式指向探针（一期冒烟用例）。不带 --probe：按 cell.skill
+  // 逐格解析，被测 skill 由 --skill 真正决定——这是本任务要修的缺陷：过去这里
+  // 无论 --skill 传什么都硬编码成探针。
+  const readBody = p => fs.readFile(p, 'utf8')
+  const skills = opts.probe
+    ? await buildProbeMap(REPO_ROOT, cells, readBody)
+    : await buildSkillMap(REPO_ROOT, cells, readBody)
+
   const ctx = {
     model: opts.model,
     provider: opts.provider,
     baseUrl: opts.baseUrl,
     apiKey: opts.baseUrl ? process.env.MINIMAX_CN_API_KEY : undefined,
-    task: opts.task ?? 'run anchor probe',
-    skillPath,
-    skillDir: skillPath,
-    skillBody: stripFrontmatter(await fs.readFile(path.join(skillPath, 'SKILL.md'), 'utf8')),
+    task: opts.task ?? (opts.probe ? 'run anchor probe' : 'run skill'),
+    skills,
     // 每个 skill 有自己的 contentHash——全量跑时 opts.skills 是 undefined，
     // 单个值在这里没有意义，必须查表；查表逻辑在 runner.js 的 resolveContentHash。
     contentHashMap: new Map(index.skills.map(s => [s.path, s.contentHash])),

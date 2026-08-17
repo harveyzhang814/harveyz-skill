@@ -29,12 +29,14 @@ export function artifactDir(id) {
 // 纯函数。dry-run 直接消费它，因此不许有任何副作用。
 export function planCell(cell, ctx) {
   if (!ctx.model) throw new Error('model is required — refusing to fall back to the platform default, which would confound platform with model')
+  const entry = ctx.skills?.get(cell.skill)
+  if (!entry) throw new Error(`no skill entry for "${cell.skill}" in ctx.skills — refusing to fall back to the probe`)
   const adapter = ADAPTERS[cell.platform]
   const { systemAppend, positional } = buildPrompt({
     mode: cell.mode,
     injection: adapter.profile.injection,
-    skillBody: ctx.skillBody,
-    skillDir: ctx.skillDir,
+    skillBody: entry.skillBody,
+    skillDir: entry.skillDir,
     compensation: adapter.compensation,
     task: ctx.task,
   })
@@ -106,6 +108,10 @@ function runCaptured(bin, argv, { cwd, env, timeoutMs, outPath, errPath }) {
 
 async function runOne(cell, ctx, runDir) {
   const adapter = ADAPTERS[cell.platform]
+  // 查表放在建 jail 之前：查不到就没必要浪费一次 jail 创建，
+  // 点名该 skill 抛出去，由 runMatrix 的 worker 兜底记成这一格的失败 record。
+  const entry = ctx.skills?.get(cell.skill)
+  if (!entry) throw new Error(`no skill entry for "${cell.skill}" in ctx.skills — refusing to fall back to the probe`)
   const { dir: jailDir, cleanup } = await createJail()
   const started = Date.now()
   try {
@@ -113,7 +119,7 @@ async function runOne(cell, ctx, runDir) {
       await adapter.seedJail({ jailDir, hermesHome: path.join(ctx.source.HOME ?? os.homedir(), '.hermes') })
     }
     const extraArgs = cell.mode === 'native'
-      ? await adapter.install({ jailDir, skillPath: ctx.skillPath })
+      ? await adapter.install({ jailDir, skillPath: entry.skillPath })
       : []
 
     const plan = planCell(cell, { ...ctx, jailDir })
@@ -180,9 +186,9 @@ async function runOne(cell, ctx, runDir) {
       harvest = mergeHarvest(snapshotErrors, null, e.message)
     }
 
-    const parsed = adapter.parse(raw, { skillName: path.basename(ctx.skillPath), skillDir: ctx.skillDir })
+    const parsed = adapter.parse(raw, { skillName: path.basename(entry.skillPath), skillDir: entry.skillDir })
     return makeRecord({
-      platform: cell.platform, skill: cell.skill, skillName: path.basename(ctx.skillPath),
+      platform: cell.platform, skill: cell.skill, skillName: path.basename(entry.skillPath),
       contentHash: resolveContentHash(ctx, cell.skill),
       task: ctx.task, repeat: cell.repeat ?? 0, mode: cell.mode,
       requestedModel: ctx.model, durationMs: Date.now() - started,
@@ -205,7 +211,20 @@ export async function runMatrix(cells, ctx) {
   async function worker() {
     while (i < todo.length) {
       const cell = todo[i++]
-      records.push(await runOne(cell, ctx, dir))
+      // runOne 抛出的错误（例如 ctx.skills 里查不到 cell.skill）不能让整轮 Promise.all
+      // 崩掉——那样一个格子的问题会连累所有已经跑完/还没跑的格子。落成这一格自己的
+      // 失败 record，错误信息点名 cell.skill，其余格子照常跑。
+      try {
+        records.push(await runOne(cell, ctx, dir))
+      } catch (e) {
+        records.push(makeRecord({
+          platform: cell.platform, skill: cell.skill, skillName: null,
+          contentHash: resolveContentHash(ctx, cell.skill),
+          task: ctx.task, repeat: cell.repeat ?? 0, mode: cell.mode,
+          requestedModel: ctx.model, durationMs: 0,
+          exitCode: 1, stderr: e.message, parsed: null, harvest: null,
+        }))
+      }
     }
   }
   await Promise.all(Array.from({ length: Math.min(limit, todo.length) }, worker))
