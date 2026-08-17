@@ -16,27 +16,42 @@ export const HARNESS_FILES = new Set([
 // 只比 mtime 会被时钟精度坑到。
 export async function snapshot(dir) {
   const out = new Map()
-  async function walk(cur) {
-    let entries
-    try {
-      entries = await fs.readdir(cur, { withFileTypes: true })
-    } catch {
-      return
-    }
+
+  // 根目录 readdir 失败必须抛错——空 snapshot 会让所有已存在文件看起来像 agent 产出物
+  const rootEntries = await fs.readdir(dir, { withFileTypes: true })
+
+  async function walk(cur, entries) {
     for (const e of entries) {
       const full = path.join(cur, e.name)
-      if (e.isDirectory()) await walk(full)
-      else if (e.isFile()) {
+      if (e.isDirectory()) {
+        // 递归遍历子目录，仅容忍运行期间删除的竞态
+        try {
+          const subEntries = await fs.readdir(full, { withFileTypes: true })
+          await walk(full, subEntries)
+        } catch (err) {
+          if (err.code === 'ENOENT') {
+            // 子目录在列举与遍历之间被删掉——竞态可容忍
+            continue
+          }
+          throw err
+        }
+      } else if (e.isFile()) {
+        // 对单个文件 stat，仅容忍运行期间删除的竞态
         try {
           const st = await fs.stat(full)
           out.set(path.relative(dir, full), `${st.mtimeMs}:${st.size}`)
-        } catch {
-          // 运行期间文件可能被删掉，忽略即可
+        } catch (err) {
+          if (err.code === 'ENOENT') {
+            // 文件在遍历期间被删掉——竞态可容忍
+            continue
+          }
+          throw err
         }
       }
     }
   }
-  await walk(dir)
+
+  await walk(dir, rootEntries)
   return out
 }
 

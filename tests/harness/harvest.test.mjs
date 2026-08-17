@@ -67,3 +67,36 @@ test('cell 目录名把 skill 路径里的斜杠压掉——否则会在 cells/ 
     'a-b__claude__inject__r0',
   )
 })
+
+test('snapshot 在路径不存在时拒绝而非返回空 Map——空 before 会让所有预先存在的文件看起来像 agent 产出物', async () => {
+  const nonexistentDir = path.join(os.tmpdir(), 'harvest-test-nonexistent-' + Date.now())
+  let threw = false
+  try {
+    await snapshot(nonexistentDir)
+  } catch (err) {
+    threw = true
+    assert.equal(err.code, 'ENOENT')
+  }
+  assert.ok(threw, 'snapshot should throw on nonexistent directory')
+})
+
+test('snapshot 在子目录被删除时仍成功——运行期间的删除竞态需要容忍', async () => {
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'harvest-test-'))
+  const subdir = path.join(dir, 'subdir')
+  await fs.ensureDir(subdir)
+  await fs.outputFile(path.join(subdir, 'file.txt'), 'content')
+
+  // 创建一个先存在后删除的目标来模拟竞态——symlink 本身存在但指向已删除的目录
+  const target = path.join(dir, 'target-dir')
+  const link = path.join(dir, 'broken-link')
+  await fs.ensureDir(target)
+  await fs.symlink(target, link)
+  await fs.remove(target)
+
+  // snapshot 应该在遇到已删除目标的 symlink 时仍然成功（ENOENT 容忍）
+  const snap = await snapshot(dir)
+  assert.ok(snap.has('subdir/file.txt'), 'snapshot should capture subdirectory files')
+  assert.ok(snap instanceof Map, 'snapshot should succeed and return Map')
+
+  await fs.remove(dir)
+})
