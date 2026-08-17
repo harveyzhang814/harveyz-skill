@@ -73,3 +73,27 @@ export function capTranscript(raw, limit = TRANSCRIPT_LIMIT) {
 export function cellDirName({ skill, platform, mode, repeat }) {
   return `${String(skill).replace(/\//g, '-')}__${platform}__${mode}__r${repeat ?? 0}`
 }
+
+// 每个错误单独 catch 并收集，不中断后续采集：
+// 少捞到一个文件，剩下的仍有价值；抛出去则整格白跑。
+export async function harvestCell({ jailDir, destDir, raw, changedFiles }) {
+  const errors = []
+  await fs.ensureDir(destDir)
+
+  const { text, truncated } = capTranscript(raw)
+  try {
+    await fs.writeFile(path.join(destDir, 'transcript.jsonl'), text)
+  } catch (e) {
+    errors.push(`transcript: ${e.message}`)
+  }
+
+  for (const rel of changedFiles ?? []) {
+    try {
+      await fs.copy(path.join(jailDir, rel), path.join(destDir, 'artifacts', rel))
+    } catch (e) {
+      errors.push(`artifact ${rel}: ${e.message}`)
+    }
+  }
+
+  return { truncated, errors }
+}

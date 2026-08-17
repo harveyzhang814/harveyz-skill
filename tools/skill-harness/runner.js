@@ -9,6 +9,7 @@ import { hermesAdapter } from './adapters/hermes.js'
 import { buildPrompt } from './prompt.js'
 import { makeRecord } from './record.js'
 import { createJail, redactEnv } from './jail.js'
+import { snapshot, diffSnapshots, harvestCell, cellDirName } from './harvest.js'
 
 export const ADAPTERS = { claude: claudeAdapter, pi: piAdapter, hermes: hermesAdapter }
 
@@ -103,7 +104,7 @@ function runCaptured(bin, argv, { cwd, env, timeoutMs, outPath, errPath }) {
   })
 }
 
-async function runOne(cell, ctx) {
+async function runOne(cell, ctx, runDir) {
   const adapter = ADAPTERS[cell.platform]
   const { dir: jailDir, cleanup } = await createJail()
   const started = Date.now()
@@ -117,6 +118,16 @@ async function runOne(cell, ctx) {
 
     const plan = planCell(cell, { ...ctx, jailDir })
     const argv = [...plan.argv, ...extraArgs]
+
+    // 采集故障不得判成 fail：before-snapshot 失败就没有基准去做差集，
+    // 直接记为 harvest 失败，subprocess 仍照常跑，不影响被测方的结果。
+    let harvestError = null
+    let before = new Map()
+    try {
+      before = await snapshot(jailDir)
+    } catch (e) {
+      harvestError = e
+    }
 
     const r = await runCaptured(BIN[cell.platform], argv, {
       cwd: jailDir, env: plan.env, timeoutMs: ctx.timeoutMs ?? 300000,
@@ -143,13 +154,32 @@ async function runOne(cell, ctx) {
       }
     }
 
+    // 采集故障不得判成 fail：after-snapshot 或 harvestCell 本身出错，
+    // 不能让异常逃出 runOne 把整格判丢——记成 harvest 失败，格子仍正常产出 record。
+    let harvest
+    if (harvestError) {
+      harvest = { truncated: false, errors: [harvestError.message] }
+    } else {
+      try {
+        const after = await snapshot(jailDir)
+        harvest = await harvestCell({
+          jailDir,
+          destDir: path.join(runDir, 'cells', cellDirName({ ...cell, repeat: cell.repeat ?? 0 })),
+          raw,
+          changedFiles: diffSnapshots(before, after),
+        })
+      } catch (e) {
+        harvest = { truncated: false, errors: [e.message] }
+      }
+    }
+
     const parsed = adapter.parse(raw, { skillName: path.basename(ctx.skillPath), skillDir: ctx.skillDir })
     return makeRecord({
       platform: cell.platform, skill: cell.skill, skillName: path.basename(ctx.skillPath),
       contentHash: resolveContentHash(ctx, cell.skill),
       task: ctx.task, repeat: cell.repeat ?? 0, mode: cell.mode,
       requestedModel: ctx.model, durationMs: Date.now() - started,
-      exitCode, stderr, parsed,
+      exitCode, stderr, parsed, harvest,
     })
   } finally {
     await cleanup()
@@ -159,19 +189,20 @@ async function runOne(cell, ctx) {
 export async function runMatrix(cells, ctx) {
   const todo = cells.filter(c => c.state === 'run')
   const limit = ctx.concurrency ?? 3
+  const id = ctx.runId ?? runId()
+  const dir = artifactDir(id)
+  await fs.ensureDir(dir)
+
   const records = []
   let i = 0
   async function worker() {
     while (i < todo.length) {
       const cell = todo[i++]
-      records.push(await runOne(cell, ctx))
+      records.push(await runOne(cell, ctx, dir))
     }
   }
   await Promise.all(Array.from({ length: Math.min(limit, todo.length) }, worker))
 
-  const id = ctx.runId ?? runId()
-  const dir = artifactDir(id)
-  await fs.ensureDir(dir)
   await fs.writeJson(path.join(dir, 'records.json'), records, { spaces: 2 })
   await fs.writeJson(path.join(dir, 'cells.json'), cells, { spaces: 2 })
   return { runId: id, dir, records }

@@ -4,7 +4,7 @@ import fs from 'fs-extra'
 import os from 'node:os'
 import path from 'node:path'
 import {
-  snapshot, diffSnapshots, capTranscript, cellDirName,
+  snapshot, diffSnapshots, harvestCell, capTranscript, cellDirName,
   TRANSCRIPT_LIMIT, HARNESS_FILES,
 } from '../../tools/skill-harness/harvest.js'
 
@@ -141,4 +141,59 @@ test('snapshot 在子目录 readdir 返回 EACCES 时拒绝——不可读目录
   assert.ok(rejected, 'snapshot should reject on EACCES, not silently skip——otherwise before-snapshot 会不完整，已存在文件被误作为 agent 产出物')
 
   await fs.remove(dir)
+})
+
+test('产出物按原相对路径落到 artifacts/ 下——扁平化会让同名文件互相覆盖', async () => {
+  const jail = await fs.mkdtemp(path.join(os.tmpdir(), 'harvest-jail-'))
+  const dest = await fs.mkdtemp(path.join(os.tmpdir(), 'harvest-dest-'))
+  await fs.outputFile(path.join(jail, 'Documents/notes/a.md'), 'AAA')
+  await fs.outputFile(path.join(jail, '.hskill/x/a.md'), 'BBB')
+
+  const r = await harvestCell({
+    jailDir: jail, destDir: dest, raw: '{"k":1}\n',
+    changedFiles: ['Documents/notes/a.md', '.hskill/x/a.md'],
+  })
+
+  assert.deepEqual(r.errors, [])
+  assert.equal(await fs.readFile(path.join(dest, 'artifacts/Documents/notes/a.md'), 'utf8'), 'AAA')
+  assert.equal(await fs.readFile(path.join(dest, 'artifacts/.hskill/x/a.md'), 'utf8'), 'BBB')
+  assert.equal(await fs.readFile(path.join(dest, 'transcript.jsonl'), 'utf8'), '{"k":1}\n')
+  await fs.remove(jail); await fs.remove(dest)
+})
+
+test('采集不到的文件记进 errors 而不是抛出——采集故障不得让整格运行失败', async () => {
+  const jail = await fs.mkdtemp(path.join(os.tmpdir(), 'harvest-jail-'))
+  const dest = await fs.mkdtemp(path.join(os.tmpdir(), 'harvest-dest-'))
+
+  const r = await harvestCell({
+    jailDir: jail, destDir: dest, raw: 'x',
+    changedFiles: ['does/not/exist.md'],
+  })
+
+  assert.equal(r.errors.length, 1)
+  assert.match(r.errors[0], /does\/not\/exist\.md/)
+  assert.equal(await fs.readFile(path.join(dest, 'transcript.jsonl'), 'utf8'), 'x')
+  await fs.remove(jail); await fs.remove(dest)
+})
+
+// 不在 brief 列表里，是 task-3 额外要求的：证明 harvest 链路能扛住失败的
+// snapshot()，而不是让异常从 runner.js 的 runOne 里逃出去，把整格判成失败。
+// runOne 本身没有导出（brief 明确不希望为了可测性而改结构），所以这里
+// 只能在 harvestCell 这一层验证——用一个已经不存在的 jailDir 模拟
+// snapshot() 早已失败、jail 已经消失之后的情形：harvestCell 仍必须
+// 完整落盘 transcript、把每个采不到的文件计入 errors，而不是抛出。
+test('jailDir 整个不存在时 harvestCell 仍不抛出——对应 runner 里 snapshot 失败后必须记录而不是让异常逃出 runOne', async () => {
+  const missingJail = path.join(os.tmpdir(), 'harvest-jail-missing-' + Date.now())
+  const dest = await fs.mkdtemp(path.join(os.tmpdir(), 'harvest-dest-'))
+
+  const r = await harvestCell({
+    jailDir: missingJail, destDir: dest, raw: 'transcript-data',
+    changedFiles: ['some/file.md', 'other.txt'],
+  })
+
+  assert.equal(r.errors.length, 2)
+  assert.match(r.errors[0], /some\/file\.md/)
+  assert.match(r.errors[1], /other\.txt/)
+  assert.equal(await fs.readFile(path.join(dest, 'transcript.jsonl'), 'utf8'), 'transcript-data')
+  await fs.remove(dest)
 })

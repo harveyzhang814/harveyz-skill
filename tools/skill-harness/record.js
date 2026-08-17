@@ -11,7 +11,7 @@ export function tailBytes(s, limit = STDERR_LIMIT) {
 // unavailable 对应 QM 的 residual：没有 residual 的归因表一定在撒谎。
 export function makeRecord({
   platform, skill, skillName, contentHash, task, repeat, mode,
-  requestedModel, durationMs, exitCode, stderr, parsed,
+  requestedModel, durationMs, exitCode, stderr, parsed, harvest,
 }) {
   const p = parsed ?? {}
   const unavailable = []
@@ -45,6 +45,8 @@ export function makeRecord({
     durationMs,
     exitCode,
     stderr: tailBytes(stderr ?? ''),
+    transcriptTruncated: Boolean(harvest?.truncated),
+    harvestErrors: harvest?.errors ?? [],
     unavailable,
   }
 }
