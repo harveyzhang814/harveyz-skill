@@ -5,7 +5,7 @@ export function aggregateVerdicts(gradings) {
   const groups = new Map()
   for (const g of gradings ?? []) {
     for (const a of g.assertions ?? []) {
-      const key = `${g.skill}|${g.platform}|${g.mode}|${g.evalId}|${a.id}`
+      const key = JSON.stringify([g.skill, g.platform, g.mode, g.evalId, a.id])
       if (!groups.has(key)) {
         groups.set(key, {
           skill: g.skill, platform: g.platform, mode: g.mode,

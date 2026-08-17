@@ -41,3 +41,35 @@ test('不同平台不聚合到一起——聚合键必须含 platform 和 mode',
   assert.equal(out.length, 3)
   assert.ok(out.every(x => x.unstable === false))
 })
+
+test('assertion id 含 | 分隔符不能与其他 id 意外合并——聚合键不安全会制造假的分歧', () => {
+  // 在 JSON.stringify 之前，id 'a|b' 和这样的 evalId 布局会产生冲突
+  // 比如 evalId 1, id 'a|b' vs evalId 'a', id 'b' 在字符串拼接中会变成相同字符串
+  // JSON.stringify 确保任何字符都能安全区分
+  const out = aggregateVerdicts([
+    { skill: 'x', platform: 'pi', mode: 'native', evalId: 1, repeat: 0, assertions: [{ id: 'a|b', verdict: 'pass' }] },
+    { skill: 'x', platform: 'pi', mode: 'native', evalId: 'a', repeat: 0, assertions: [{ id: 'b', verdict: 'fail' }] },
+  ])
+  assert.equal(out.length, 2)
+  assert.equal(out[0].unstable, false)
+  assert.equal(out[1].unstable, false)
+})
+
+test('空 gradings 数组返回空数组', () => {
+  const out = aggregateVerdicts([])
+  assert.deepEqual(out, [])
+})
+
+test('空 assertions 数组的 grading 不贡献任何组', () => {
+  const out = aggregateVerdicts([
+    { skill: 'x', platform: 'pi', mode: 'native', evalId: 1, repeat: 0, assertions: [] },
+  ])
+  assert.deepEqual(out, [])
+})
+
+test('没有 assertions 键的 grading 不抛错', () => {
+  const out = aggregateVerdicts([
+    { skill: 'x', platform: 'pi', mode: 'native', evalId: 1, repeat: 0 },
+  ])
+  assert.deepEqual(out, [])
+})
