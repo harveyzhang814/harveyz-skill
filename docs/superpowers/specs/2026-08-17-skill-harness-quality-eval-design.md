@@ -299,8 +299,8 @@ unstable assertions (2): learn-skill/closing-question@pi/native, ...
 | 项 | 档位 | 后果 |
 |---|---|---|
 | pi 在 HOME 重定向下能否认证 | 已查，认证不通 | pi 一整列降级到只判 `reply` |
-| 一次调用判整条断言清单的输出稳定性 | 没查 | 若不稳，先拆小调用粒度再考虑换指标 |
-| transcript 单份体积量级 | 没查 | 决定字节上限取值；截断比例过高则 `source: transcript` 不可用 |
+| 一次调用判整条断言清单的输出稳定性 | 没查——且发现 `--repeat` 本身是死代码（CLI 接受该 flag 但从不据其展开 cells，实测只跑出 r0），无法用当前命令行验证 unstable 计数；结论见 [measurements/2026-08-17-quality-eval-e2e.md#step-5](measurements/2026-08-17-quality-eval-e2e.md) | 若不稳，先拆小调用粒度再考虑换指标；另需先修 `--repeat` 才能回答本行 |
+| transcript 单份体积量级 | 已查，单轮单格 6.7KB~21.2KB，远小于 `TRANSCRIPT_LIMIT`（4MB），未观察到截断。见 [measurements/2026-08-17-quality-eval-e2e.md#step-6-brief-原文-transcript-体积](measurements/2026-08-17-quality-eval-e2e.md) | 决定字节上限取值；截断比例过高则 `source: transcript` 不可用——本轮样本下不成立 |
 | hermes 的产出物是否落在 jail 内 | 推出来的 | hermes 的 isolation 含 HOME 重定向（`profiles.js:39`），据此推断产出物在 jail 内，未实测 |
 | 各平台在 jail 内自写哪些状态文件 | 没查 | 决定采集层是否需要按平台排除规则 |
 
