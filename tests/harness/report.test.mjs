@@ -92,7 +92,7 @@ test('矩阵行数等于 skill 数，不省略任何行列', () => {
   assert.equal(out.split('\n').filter(l => l.startsWith('a/x')).length, 1)
 })
 
-test('--repeat > 1 时 counts 按各自 repeat 的 record 判定，不把第一条 record 的状态套给所有 repeat 格子', () => {
+test('--repeat > 1 时同一格的多个 repeat 收敛成一个三态结果，不把 pass 和 fail 分别计数——一格里既有成功又有失败的 repeat 时是独立的 partial，不是 pass+1 且 fail+1', () => {
   const cells = [
     { skill: 'a/x', platform: 'claude', mode: 'native', state: 'run', repeat: 0 },
     { skill: 'a/x', platform: 'claude', mode: 'native', state: 'run', repeat: 1 },
@@ -102,6 +102,7 @@ test('--repeat > 1 时 counts 按各自 repeat 的 record 判定，不把第一�
     { skill: 'a/x', platform: 'claude', mode: 'native', repeat: 1, exitCode: 1, reply: null, unavailable: [] },
   ]
   const out = renderReport({ cells, records, model: 'M', provider: 'P' })
-  assert.ok(out.includes('pass: 1'))
-  assert.ok(out.includes('fail: 1'))
+  assert.ok(out.includes('partial: 1'))
+  assert.ok(!out.includes('pass: 1'))
+  assert.ok(!/\bfail: 1\b/.test(out))
 })
