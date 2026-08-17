@@ -1,8 +1,11 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
+import fs from 'fs-extra'
+import os from 'node:os'
+import path from 'node:path'
 import {
   SOURCE_LEVELS, sourceIncludes, maxSourceLevel,
-  validateDeclaration, isFrozen,
+  validateDeclaration, isFrozen, loadDeclaration,
 } from '../../tools/skill-harness/declarations.js'
 
 test('source 是累进层级不是互斥集合——artifact 含 reply，否则同时要两者的断言得拆成两条', () => {
@@ -66,4 +69,40 @@ test('未冻结的声明认得出来——冻结前不得据其下平台结论',
   assert.equal(isFrozen({ frozen: '2026-08-17' }), true)
   assert.equal(isFrozen({}), false)
   assert.equal(isFrozen({ frozen: '' }), false)
+})
+
+test('断言 id 在不同 eval 中可以重复——seen 在 eval 循环内声明，只需同一 eval 内唯一', () => {
+  const errs = validateDeclaration(
+    {
+      skill_name: 'extract-cognition',
+      evals: [
+        { id: 0, assertions: [{ id: 'every_move_has_anchor', text: 't1' }, { id: 'moves_are_transferable', text: 't2' }] },
+        { id: 1, assertions: [{ id: 'every_move_has_anchor', text: 't3' }, { id: 'generator_section_present', text: 't4' }] },
+      ],
+    },
+    'skills/research/extract-cognition',
+  )
+  assert.deepEqual(errs, [])
+})
+
+test('loadDeclaration 从磁盘加载合法 JSON——路径不存在时返回 null 而非抛出', async () => {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), 'decl-test-'))
+  const skillPath = path.join(root, 'skills', 'test', 'skill-name', 'evals')
+  await fs.ensureDir(skillPath)
+  const evalData = { skill_name: 'skill-name', evals: [{ id: 1, assertions: [] }] }
+  await fs.writeJson(path.join(skillPath, 'evals.json'), evalData)
+
+  const loaded = await loadDeclaration(root, 'test/skill-name')
+  assert.deepEqual(loaded, evalData)
+
+  await fs.remove(root)
+})
+
+test('loadDeclaration 缺失文件返回 null——让 grader 跳过无声明的 skill', async () => {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), 'decl-test-'))
+
+  const result = await loadDeclaration(root, 'nonexistent/skill')
+  assert.equal(result, null)
+
+  await fs.remove(root)
 })
