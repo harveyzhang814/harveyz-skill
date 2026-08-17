@@ -3,10 +3,13 @@ import assert from 'node:assert/strict'
 import fs from 'fs-extra'
 import os from 'node:os'
 import path from 'node:path'
+import { fileURLToPath } from 'node:url'
 import {
   SOURCE_LEVELS, sourceIncludes, maxSourceLevel,
   validateDeclaration, isFrozen, loadDeclaration,
 } from '../../tools/skill-harness/declarations.js'
+
+const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..')
 
 test('source 是累进层级不是互斥集合——artifact 含 reply，否则同时要两者的断言得拆成两条', () => {
   assert.equal(sourceIncludes('artifact', 'reply'), true)
@@ -105,4 +108,23 @@ test('loadDeclaration 缺失文件返回 null——让 grader 跳过无声明的
   assert.equal(result, null)
 
   await fs.remove(root)
+})
+
+test('仓库里每一份 evals.json 都必须合法——这是防止声明跟着 skill 一起腐烂的闸门', async () => {
+  const skillsDir = path.join(REPO_ROOT, 'skills')
+  const found = []
+  for (const cat of await fs.readdir(skillsDir)) {
+    const catDir = path.join(skillsDir, cat)
+    if (!(await fs.stat(catDir)).isDirectory()) continue
+    for (const name of await fs.readdir(catDir)) {
+      const file = path.join(catDir, name, 'evals/evals.json')
+      if (await fs.pathExists(file)) found.push({ file, skillPath: path.join(catDir, name) })
+    }
+  }
+
+  assert.ok(found.length >= 4, `预期至少 4 份 evals.json，实际找到 ${found.length}`)
+  for (const { file, skillPath } of found) {
+    const errs = validateDeclaration(await fs.readJson(file), skillPath)
+    assert.deepEqual(errs, [], `${path.relative(REPO_ROOT, file)}:\n  ${errs.join('\n  ')}`)
+  }
 })
