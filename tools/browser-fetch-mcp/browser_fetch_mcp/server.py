@@ -6,7 +6,9 @@ see docs/superpowers/specs/2026-08-08-browser-fetch-mcp-xcom-extraction-design.m
 import asyncio
 import hashlib
 import os
+import random
 import sys
+import time
 from pathlib import Path
 from typing import Literal, Optional
 from urllib.parse import urlparse
@@ -26,13 +28,14 @@ from browser_fetch_mcp.extractors import (
 )
 from browser_fetch_mcp.images import download_images
 from browser_fetch_mcp.profiles import list_chrome_profiles as _list_chrome_profiles
-from browser_fetch_mcp import config, markdown
+from browser_fetch_mcp import config, markdown, pacing
 
 mcp = MCPServer("browser-fetch-mcp")
 
 ANON_KEY = "__anon__"
 
 _state = {"playwright": None, "contexts": {}}
+_rng = random.Random()
 
 
 def _data_dir() -> Path:
@@ -143,28 +146,38 @@ async def _xcom_scrape_timeline(
     once. Stops early once max_tweets are collected, or after
     _TIMELINE_STALL_LIMIT consecutive scroll passes yield no new tweets
     (the account has fewer than max_tweets total, or the feed stopped
-    loading more)."""
+    loading more).
+
+    Scroll choreography uses page.mouse.wheel (a trusted, CDP-dispatched
+    input event) broken into several small ticks with randomized gaps,
+    occasional backscroll, and randomized read pauses — see
+    docs/superpowers/specs/2026-08-17-xtimeline-human-pacing-design.md.
+    A backscroll pass is expected to yield zero new tweets (the viewport
+    moves back over already-collected cards) and must not count toward
+    stalls, or it gets misread as "reached the end of the feed"."""
     async with async_playwright() as p:
         browser = await p.chromium.launch(
             headless=headless,
             args=["--disable-blink-features=AutomationControlled"],
         )
         try:
+            viewport = pacing.pick_viewport(_rng)
             ctx_kwargs = {
                 "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
                 "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36",
+                "viewport": viewport,
             }
-            if not headless:
-                ctx_kwargs["viewport"] = {"width": 1280, "height": 900}
 
             ctx = await browser.new_context(**ctx_kwargs)
             await ctx.add_cookies(pw_cookies)
             page = await ctx.new_page()
             await page.goto(profile_url, timeout=60000, wait_until="domcontentloaded")
             await page.wait_for_selector('article[data-testid="tweet"]', timeout=60000)
+            await page.wait_for_timeout(pacing.pick_initial_dwell(_rng) * 1000)
 
             collected: dict[str, dict] = {}
             stalls = 0
+            backscrolled = False
             for _ in range(_TIMELINE_MAX_SCROLL_ITERATIONS):
                 result = await page.evaluate(EXTRACT_JS_XCOM_TIMELINE)
                 before = len(collected)
@@ -174,14 +187,24 @@ async def _xcom_scrape_timeline(
                 if len(collected) >= max_tweets:
                     break
                 if len(collected) == before:
-                    stalls += 1
-                    if stalls >= _TIMELINE_STALL_LIMIT:
-                        break
+                    if backscrolled:
+                        pass
+                    else:
+                        stalls += 1
+                        if stalls >= _TIMELINE_STALL_LIMIT:
+                            break
                 else:
                     stalls = 0
 
-                await page.evaluate("window.scrollBy(0, window.innerHeight * 3)")
-                await page.wait_for_timeout(800)
+                x, y, steps = pacing.plan_mouse_move(_rng, viewport)
+                await page.mouse.move(x, y, steps=steps)
+
+                backscrolled = pacing.should_backscroll(_rng)
+                for delta, gap in pacing.plan_scroll_burst(_rng, backward=backscrolled):
+                    await page.mouse.wheel(0, delta)
+                    await page.wait_for_timeout(gap * 1000)
+
+                await page.wait_for_timeout(pacing.pick_read_pause(_rng) * 1000)
 
             tweets = sorted(collected.values(), key=lambda t: int(t["tweetId"]), reverse=True)
             return {"tweets": tweets[:max_tweets]}
