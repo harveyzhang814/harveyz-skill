@@ -23,3 +23,20 @@ def get_default_chrome_profile(data_dir: Path) -> Optional[str]:
 def set_default_chrome_profile(data_dir: Path, profile_path: str) -> None:
     path = _config_file(data_dir)
     path.write_text(json.dumps({"default_chrome_profile": profile_path}), encoding="utf-8")
+
+
+def _pace_file(data_dir: Path) -> Path:
+    return data_dir / "timeline_pace.json"
+
+
+def get_last_timeline_fetch_at(data_dir: Path) -> Optional[float]:
+    path = _pace_file(data_dir)
+    if not path.exists():
+        return None
+    data = json.loads(path.read_text(encoding="utf-8"))
+    return data.get("last_timeline_fetch_at")
+
+
+def set_last_timeline_fetch_at(data_dir: Path, ts: float) -> None:
+    path = _pace_file(data_dir)
+    path.write_text(json.dumps({"last_timeline_fetch_at": ts}), encoding="utf-8")
