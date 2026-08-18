@@ -531,20 +531,30 @@ async def fetch_user_timeline(
         for k, v in cookies_dict.items()
     ]
 
+    now = time.time()
+    last = config.get_last_timeline_fetch_at(_data_dir())
+    if last is not None:
+        remaining = pacing.pick_cooldown(_rng) - (now - last)
+        if remaining > 0:
+            await asyncio.sleep(remaining)
+
     try:
-        result = await _xcom_scrape_timeline(profile_url, pw_cookies, headless=False, max_tweets=max_tweets)
-    except Exception as e:
-        print(
-            f"[browser-fetch-mcp] headed timeline scrape failed ({e}); "
-            f"falling back to headless (lower fidelity)",
-            file=sys.stderr,
-        )
         try:
-            result = await _xcom_scrape_timeline(profile_url, pw_cookies, headless=True, max_tweets=max_tweets)
+            result = await _xcom_scrape_timeline(profile_url, pw_cookies, headless=False, max_tweets=max_tweets)
         except Exception as e:
-            raise RuntimeError(
-                f"fetch_user_timeline failed for {profile_url} (headed and headless both failed): {e}"
-            ) from e
+            print(
+                f"[browser-fetch-mcp] headed timeline scrape failed ({e}); "
+                f"falling back to headless (lower fidelity)",
+                file=sys.stderr,
+            )
+            try:
+                result = await _xcom_scrape_timeline(profile_url, pw_cookies, headless=True, max_tweets=max_tweets)
+            except Exception as e:
+                raise RuntimeError(
+                    f"fetch_user_timeline failed for {profile_url} (headed and headless both failed): {e}"
+                ) from e
+    finally:
+        config.set_last_timeline_fetch_at(_data_dir(), now)
 
     tweets = [
         {
