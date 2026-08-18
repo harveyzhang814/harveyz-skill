@@ -2,7 +2,7 @@
 
 **日期**：2026-08-18
 **author 模型**：Opus 5
-**状态**：待执行 <!-- 待执行 → 执行中 → 待验收 → 已验收 / 打回 -->
+**状态**：已验收 <!-- 待执行 → 执行中 → 待验收 → 已验收 / 打回 -->
 **交接目的**：设计已定稿并提交，接手方按 spec 把拟人化抓取节奏实现出来——先用 writing-plans 拆成可执行计划，再按 TDD 落地。
 
 > **接手方须知**：你正在接手一个任务。本文档是完整交接与唯一权威入口：从头读到尾，若文档里有「工作流约定」章节按其开工，没有就直接开工，完成后等原 session 按「最小验收锚点」验收。
@@ -18,6 +18,18 @@
 3. **skill 侧零改动**：`git diff staging --stat -- skills/` 输出为空。
 4. **节奏可确定性复现**：`pacing.py` 的每个函数传入同一 `random.Random(seed)` 两次调用返回相同结果，且该性质有对应单测覆盖。
 5. **测试不真 sleep**：新增的 `tests/test_pacing.py` 单独跑在 **2 秒内**完成（只断言返回的计划与时长数值，不执行等待）。
+
+### 验收结果（2026-08-18，accept 阶段，同一 session 内完成 author→execute→accept）
+
+逐条实跑，全绿：
+
+1. PASS — `uv run pytest -q`：**99 passed** in 60.32s（> 86 ✓）。
+2. PASS — `uv run pytest tests/test_fetch_user_timeline.py -q`：**4 passed in 1.90s**（< 5s ✓，与基线 1.86s 相当，冷却确认在校验之后）。
+3. PASS — `git diff staging --stat -- skills/`：输出为空。
+4. PASS — `tests/test_pacing.py::test_same_seed_produces_same_results_for_every_function` 覆盖全部 7 个函数 + `plan_mouse_move`，单独运行 PASSED。
+5. PASS — `uv run pytest tests/test_pacing.py -q`：**9 passed in 0.01s**（< 2s ✓，不真 sleep）。
+
+**状态：已验收。**
 
 ## 背景与现状
 
