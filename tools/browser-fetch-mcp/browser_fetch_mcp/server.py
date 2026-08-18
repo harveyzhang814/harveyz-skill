@@ -568,30 +568,59 @@ async def fetch_user_timeline(
         for k, v in cookies_dict.items()
     ]
 
+    run_id = uuid.uuid4().hex[:12]
+
     now = time.time()
     last = config.get_last_timeline_fetch_at(_data_dir())
     if last is not None:
-        remaining = pacing.pick_cooldown(_rng) - (now - last)
+        planned_cooldown = pacing.pick_cooldown(_rng)
+        remaining = planned_cooldown - (now - last)
+        waited = max(remaining, 0.0)
+        pacing_log.append_event(
+            _data_dir(), "cooldown", run_id=run_id, profile_url=profile_url, last_fetch_at=last,
+            planned_cooldown_s=round(planned_cooldown, 2), waited_s=round(waited, 2),
+        )
         if remaining > 0:
             await asyncio.sleep(remaining)
+    else:
+        pacing_log.append_event(
+            _data_dir(), "cooldown_skipped", run_id=run_id, profile_url=profile_url, reason="no_previous_fetch",
+        )
 
+    scrape_start = time.time()
+    result = None
+    error_msg = None
+    headless_fallback = False
     try:
         try:
-            result = await _xcom_scrape_timeline(profile_url, pw_cookies, headless=False, max_tweets=max_tweets)
+            result = await _xcom_scrape_timeline(
+                profile_url, pw_cookies, headless=False, max_tweets=max_tweets, run_id=run_id
+            )
         except Exception as e:
+            headless_fallback = True
             print(
                 f"[browser-fetch-mcp] headed timeline scrape failed ({e}); "
                 f"falling back to headless (lower fidelity)",
                 file=sys.stderr,
             )
             try:
-                result = await _xcom_scrape_timeline(profile_url, pw_cookies, headless=True, max_tweets=max_tweets)
-            except Exception as e:
+                result = await _xcom_scrape_timeline(
+                    profile_url, pw_cookies, headless=True, max_tweets=max_tweets, run_id=run_id
+                )
+            except Exception as e2:
+                error_msg = str(e2)
                 raise RuntimeError(
-                    f"fetch_user_timeline failed for {profile_url} (headed and headless both failed): {e}"
-                ) from e
+                    f"fetch_user_timeline failed for {profile_url} (headed and headless both failed): {e2}"
+                ) from e2
     finally:
         config.set_last_timeline_fetch_at(_data_dir(), now)
+        pacing_log.append_event(
+            _data_dir(), "fetch_end", run_id=run_id, profile_url=profile_url,
+            total_tweets=len(result["tweets"]) if result is not None else 0,
+            headless_fallback=headless_fallback,
+            duration_s=round(time.time() - scrape_start, 2),
+            error=error_msg,
+        )
 
     tweets = [
         {
