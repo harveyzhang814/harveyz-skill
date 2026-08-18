@@ -9,6 +9,7 @@ import os
 import random
 import sys
 import time
+import uuid
 from pathlib import Path
 from typing import Literal, Optional
 from urllib.parse import urlparse
@@ -28,7 +29,7 @@ from browser_fetch_mcp.extractors import (
 )
 from browser_fetch_mcp.images import download_images
 from browser_fetch_mcp.profiles import list_chrome_profiles as _list_chrome_profiles
-from browser_fetch_mcp import config, markdown, pacing
+from browser_fetch_mcp import config, markdown, pacing, pacing_log
 
 mcp = MCPServer("browser-fetch-mcp")
 
@@ -136,7 +137,7 @@ async def _xcom_scrape(url: str, pw_cookies: list[dict], headless: bool) -> dict
 
 
 async def _xcom_scrape_timeline(
-    profile_url: str, pw_cookies: list[dict], headless: bool, max_tweets: int
+    profile_url: str, pw_cookies: list[dict], headless: bool, max_tweets: int, run_id: str
 ) -> dict:
     """One-off browser launch for an x.com/twitter.com profile timeline —
     same lifecycle model as _xcom_scrape (never reuses the warm persistent
@@ -160,8 +161,13 @@ async def _xcom_scrape_timeline(
             headless=headless,
             args=["--disable-blink-features=AutomationControlled"],
         )
+        attempt = "headless" if headless else "headed"
         try:
             viewport = pacing.pick_viewport(_rng)
+            pacing_log.append_event(
+                _data_dir(), "viewport", run_id=run_id, attempt=attempt,
+                width=viewport["width"], height=viewport["height"],
+            )
             ctx_kwargs = {
                 "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
                 "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36",
@@ -173,18 +179,27 @@ async def _xcom_scrape_timeline(
             page = await ctx.new_page()
             await page.goto(profile_url, timeout=60000, wait_until="domcontentloaded")
             await page.wait_for_selector('article[data-testid="tweet"]', timeout=60000)
-            await page.wait_for_timeout(pacing.pick_initial_dwell(_rng) * 1000)
+            initial_dwell = pacing.pick_initial_dwell(_rng)
+            pacing_log.append_event(
+                _data_dir(), "initial_dwell", run_id=run_id, attempt=attempt,
+                dwell_s=round(initial_dwell, 2),
+            )
+            await page.wait_for_timeout(initial_dwell * 1000)
 
             collected: dict[str, dict] = {}
             stalls = 0
             backscrolled = False
-            for _ in range(_TIMELINE_MAX_SCROLL_ITERATIONS):
+            stopped_reason = "iteration_limit"
+            iterations_run = 0
+            for i in range(_TIMELINE_MAX_SCROLL_ITERATIONS):
+                iterations_run = i + 1
                 result = await page.evaluate(EXTRACT_JS_XCOM_TIMELINE)
                 before = len(collected)
                 for tweet in result["tweets"]:
                     collected[tweet["tweetId"]] = tweet
 
                 if len(collected) >= max_tweets:
+                    stopped_reason = "max_tweets"
                     break
                 if len(collected) == before:
                     if backscrolled:
@@ -192,22 +207,44 @@ async def _xcom_scrape_timeline(
                     else:
                         stalls += 1
                         if stalls >= _TIMELINE_STALL_LIMIT:
+                            stopped_reason = "stall_limit"
                             break
                 else:
                     stalls = 0
+
+                pacing_log.append_event(
+                    _data_dir(), "scroll_pass_start", run_id=run_id, attempt=attempt,
+                    iteration=i, tweets_before=before, stalls=stalls,
+                )
 
                 x, y, steps = pacing.plan_mouse_move(_rng, viewport)
                 await page.mouse.move(x, y, steps=steps)
 
                 backscrolled = pacing.should_backscroll(_rng)
-                for delta, gap in pacing.plan_scroll_burst(_rng, backward=backscrolled):
+                for tick_index, (delta, gap) in enumerate(pacing.plan_scroll_burst(_rng, backward=backscrolled)):
                     await page.mouse.wheel(0, delta)
                     await page.wait_for_timeout(gap * 1000)
+                    pacing_log.append_event(
+                        _data_dir(), "wheel_tick", run_id=run_id, attempt=attempt,
+                        iteration=i, tick_index=tick_index, delta=delta, gap_s=round(gap, 3),
+                    )
 
-                await page.wait_for_timeout(pacing.pick_read_pause(_rng) * 1000)
+                read_pause = pacing.pick_read_pause(_rng)
+                await page.wait_for_timeout(read_pause * 1000)
+
+                pacing_log.append_event(
+                    _data_dir(), "scroll_pass_end", run_id=run_id, attempt=attempt,
+                    iteration=i, tweets_after=len(collected), backscroll=backscrolled,
+                    mouse_move={"x": x, "y": y, "steps": steps}, read_pause_s=round(read_pause, 2),
+                )
 
             tweets = sorted(collected.values(), key=lambda t: int(t["tweetId"]), reverse=True)
-            return {"tweets": tweets[:max_tweets]}
+            tweets = tweets[:max_tweets]
+            pacing_log.append_event(
+                _data_dir(), "scrape_attempt_end", run_id=run_id, attempt=attempt,
+                total_tweets=len(tweets), iterations_run=iterations_run, stopped_reason=stopped_reason,
+            )
+            return {"tweets": tweets}
         finally:
             await browser.close()
 
