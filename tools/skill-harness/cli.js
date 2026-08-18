@@ -252,7 +252,12 @@ async function main() {
   }
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+// process.argv[1] 是被调用的路径本身——通过 npm 全局 bin 的符号链接调用时，
+// 它是符号链接路径，不是 import.meta.url 解析出的真实文件路径，直接比较
+// 永远不相等，main() 会被静默跳过（不报错、不输出，退出码却是 0）。
+// realpath 先把符号链接解出来再比较。
+const invokedPath = process.argv[1] ? fs.realpathSync(process.argv[1]) : null
+if (invokedPath && import.meta.url === `file://${invokedPath}`) {
   main().catch(e => {
     console.error(e.message)
     process.exit(1)

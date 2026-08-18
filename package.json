@@ -4,7 +4,8 @@
   "description": "Skill manager for Claude Code, Cursor, Codex, OpenClaw, Hermes, OpenCode, and Pi",
   "type": "module",
   "bin": {
-    "hskill": "bin/cli.js"
+    "hskill": "bin/cli.js",
+    "skill-harness": "tools/skill-harness/cli.js"
   },
   "scripts": {
     "prepack": "node scripts/generate-npmignore.js",
@@ -13,6 +14,7 @@
   "files": [
     "bin/",
     "lib/",
+    "tools/skill-harness/",
     "bundles.json",
     "skills-index.json",
     "CHANGELOG.md",
