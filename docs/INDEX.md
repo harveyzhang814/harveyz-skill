@@ -65,3 +65,10 @@ methodology: diataxis
 | [explanation/cognitive-signature-philosophy.md](explanation/cognitive-signature-philosophy.md) | extract-cognition 背后的哲学：隐含作者、法证 vs 教学两种目的、为何先学发生器、warrant 即地基、防鸡汤锁、该学/该防、无基线不归因 |
 | [explanation/pbpe-methodology.md](explanation/pbpe-methodology.md) | PBPE 方法论：从同质制品归纳设计哲学、反推规则的归纳—演绎闭环方法（Phase 0–4 完整流程、偏差对冲机制） |
 | [explanation/skill-hotfix-lifecycle.md](explanation/skill-hotfix-lifecycle.md) | Skill 热修补丁生命周期管理设计原理：速度与完整性的张力、两层同步机制（HOTFIXES.md + 全文件 diff 安全网）、差异分类系统的设计决策 |
+| [explanation/permission-research/00-overview.md](explanation/permission-research/00-overview.md) | **总纲**：六家 agent 系统权限模块横向调研——分歧点矩阵、决策单元 × 生命周期定位图、泛化机制谱系、6 个可复用模式（模式 8–13）、对 Canvas Pilot 的启示与 Feature Card |
+| &nbsp;&nbsp;├ [explanation/permission-research/01-claude-code-cli.md](explanation/permission-research/01-claude-code-cli.md) | Claude Code CLI 权限机制：四层 settings、deny>ask>allow 跨层合并、Bash 与路径两套规则语法、复合命令拆分与壳层剥离 |
+| &nbsp;&nbsp;├ [explanation/permission-research/02-claude-agent-sdk.md](explanation/permission-research/02-claude-agent-sdk.md) | Claude Agent SDK 权限机制：宿主与 SDK 的职责分界、`canUseTool` 的 `suggestions`/`updatedPermissions`/五种 destination、回调无超时的永久挂起 |
+| &nbsp;&nbsp;├ [explanation/permission-research/03-codex-cli.md](explanation/permission-research/03-codex-cli.md) | Codex CLI 权限机制：trust_level 只门配置加载不门执行、approval_policy 四档、prefix_rule 前缀泛化、headless 默认不问人但沙箱兜底 |
+| &nbsp;&nbsp;├ [explanation/permission-research/04-hermes-agent.md](explanation/permission-research/04-hermes-agent.md) | Hermes Agent 权限机制：两套互不感知的系统、约 30 条正则的类别级决策单元、只挂 terminal 一个工具、非四种模式即 fail-open |
+| &nbsp;&nbsp;├ [explanation/permission-research/05-openclaw.md](explanation/permission-research/05-openclaw.md) | OpenClaw 权限机制：allow-always 捕获精确二进制路径且参数不限、逐段白名单、转发前剥离与重绑定、默认 security=full 的 fail-open |
+| &nbsp;&nbsp;└ [explanation/permission-research/06-pi.md](explanation/permission-research/06-pi.md) | Pi 权限机制：框架内核零拦截、权限委托给扩展层、`tool_call` hook 暴露的原语边界、无跨会话扩展存储 |
