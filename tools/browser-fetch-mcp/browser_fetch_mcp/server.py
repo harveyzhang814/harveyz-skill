@@ -23,9 +23,14 @@ from browser_fetch_mcp.extractors import (
     EXTRACT_JS_XCOM_HEADED,
     EXTRACT_JS_XCOM_HEADLESS,
     EXTRACT_JS_XCOM_TIMELINE,
+    EXTRACT_JS_YOUTUBE_CHANNEL,
+    build_channel_video_list,
     dispatch_site,
     is_thin,
+    normalize_youtube_channel_url,
+    parse_youtube_rss,
     wechat_publish_date_from_ct,
+    youtube_feed_url,
 )
 from browser_fetch_mcp.images import download_images
 from browser_fetch_mcp.profiles import list_chrome_profiles as _list_chrome_profiles
@@ -638,6 +643,93 @@ async def fetch_user_timeline(
         for t in result["tweets"]
     ]
     return {"tweets": tweets}
+
+
+@mcp.tool()
+async def fetch_channel_videos(
+    channel_url: str,
+    chrome_profile: Optional[str] = None,
+    max_videos: int = 30,
+) -> dict:
+    """List the most recent uploads on a YouTube channel — title, canonical
+    watch URL and publish date per video, nothing else. This is a listing
+    tool: it never downloads a video, transcript or description.
+
+    channel_url may be any channel URL form (/@handle, /channel/UCxxx, /c/,
+    /user/, with or without a tab suffix); it is normalized to the Videos tab
+    before fetching. Returns videos newest-first, in the order YouTube's
+    uploads grid renders them, capped at max_videos (~30 fit on the first
+    render — the grid is not scrolled).
+
+    Each video carries `published_text` (the grid's relative date, e.g.
+    "2 weeks ago") and `published_at` (an exact ISO 8601 timestamp taken from
+    the channel's Atom uploads feed). The feed only covers the ~15 newest
+    uploads, so `published_at` is None for anything older — use
+    `published_text` as the fallback. `url` is the canonical
+    https://www.youtube.com/watch?v=<id> form, stable enough to use as a
+    video's unique key.
+
+    chrome_profile (falling back to the persisted default) supplies youtube.com
+    cookies so the page renders as the signed-in user. Unlike
+    fetch_user_timeline it is optional: channel pages are publicly viewable, so
+    a missing profile degrades to an anonymous fetch rather than an error.
+
+    Raises ValueError if channel_url's scheme isn't http/https or it isn't a
+    YouTube channel URL, and RuntimeError if the page renders without
+    ytInitialData (consent wall, bot check, or a YouTube layout change).
+    """
+    parsed_url = urlparse(channel_url)
+    if parsed_url.scheme not in ("http", "https") or not parsed_url.netloc:
+        raise ValueError(f"Rejected URL with scheme '{parsed_url.scheme}' — only http/https allowed")
+
+    videos_url = normalize_youtube_channel_url(channel_url)
+
+    effective_chrome_profile = chrome_profile or config.get_default_chrome_profile(_data_dir())
+    if effective_chrome_profile:
+        ctx = await _get_context(_profile_key(effective_chrome_profile))
+        cookies_dict = await asyncio.to_thread(
+            extract_cookies, "https://www.youtube.com", effective_chrome_profile
+        )
+        if cookies_dict:
+            await ctx.add_cookies([
+                {"name": k, "value": v, "domain": ".youtube.com", "path": "/", "secure": True}
+                for k, v in cookies_dict.items()
+            ])
+    else:
+        ctx = await _get_context(ANON_KEY)
+
+    page = await ctx.new_page()
+    try:
+        await page.goto(videos_url, wait_until="domcontentloaded", timeout=60000)
+        result = await page.evaluate(EXTRACT_JS_YOUTUBE_CHANNEL)
+    finally:
+        await page.close()
+
+    if result.get("error"):
+        raise RuntimeError(f"fetch_channel_videos failed for {videos_url}: {result['error']}")
+
+    # Exact publish timestamps live only in the uploads feed; a failure here
+    # costs precision (published_at stays None), not the whole result.
+    published_by_id: dict[str, str] = {}
+    feed_url = youtube_feed_url(result.get("channelId", ""))
+    if feed_url:
+        try:
+            response = await ctx.request.get(feed_url, timeout=30000)
+            if response.ok:
+                published_by_id = parse_youtube_rss(await response.text())
+        except Exception as e:
+            print(
+                f"[browser-fetch-mcp] uploads feed fetch failed for {feed_url} ({e}); "
+                f"falling back to relative dates only",
+                file=sys.stderr,
+            )
+
+    return {
+        "channel_url": videos_url,
+        "channel_id": result.get("channelId", ""),
+        "channel_title": result.get("channelTitle", ""),
+        "videos": build_channel_video_list(result["videos"], published_by_id, max_videos),
+    }
 
 
 @mcp.tool()

@@ -117,6 +117,13 @@
       "contentVersion": "0.2.0"
     },
     {
+      "path": "research/sync-ytchannel",
+      "bundle": "research",
+      "installScope": "project",
+      "contentHash": "499303d99ab89a93",
+      "contentVersion": "0.1.0"
+    },
+    {
       "path": "creative/capture-todo",
       "bundle": "creative",
       "installScope": "essential",

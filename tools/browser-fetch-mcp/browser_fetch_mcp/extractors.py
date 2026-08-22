@@ -10,6 +10,7 @@ other three sites share — lives in server.py, since it needs a different
 lifecycle than everything else this module's dispatch_site() routes to.
 See docs/superpowers/specs/2026-08-08-browser-fetch-mcp-xcom-extraction-design.md.
 """
+import xml.etree.ElementTree as ET
 from datetime import datetime, timedelta, timezone
 from urllib.parse import urlparse
 
@@ -767,3 +768,170 @@ EXTRACT_JS_XCOM_TIMELINE = r"""() => {
     }
     return {tweets};
 }"""
+
+
+_YOUTUBE_HOSTS = {"youtube.com", "www.youtube.com", "m.youtube.com"}
+_YOUTUBE_CHANNEL_PREFIXES = ("/@", "/channel/", "/c/", "/user/")
+_YOUTUBE_TABS = {
+    "videos", "featured", "streams", "shorts", "playlists", "community", "about", "podcasts",
+}
+
+
+def _youtube_channel_root(url: str) -> str:
+    """The `/@handle`-style channel root of `url`, or "" if it isn't one."""
+    parsed = urlparse(url)
+    if parsed.scheme not in ("http", "https") or (parsed.hostname or "") not in _YOUTUBE_HOSTS:
+        return ""
+    path = (parsed.path or "").rstrip("/")
+    if not path.startswith(_YOUTUBE_CHANNEL_PREFIXES):
+        return ""
+    segments = path.lstrip("/").split("/")
+    # /@handle -> 1 segment; /channel/UCxxx -> 2. Anything beyond that is a tab.
+    keep = 1 if path.startswith("/@") else 2
+    if len(segments) < keep:
+        return ""
+    if len(segments) > keep and segments[keep].lower() not in _YOUTUBE_TABS:
+        return ""
+    return f"https://www.youtube.com/{'/'.join(segments[:keep])}"
+
+
+def is_youtube_channel_url(url: str) -> bool:
+    """True if `url` points at a YouTube channel (any of its tabs)."""
+    return bool(_youtube_channel_root(url))
+
+
+def normalize_youtube_channel_url(url: str) -> str:
+    """Canonicalize any YouTube channel URL to its Videos tab, dropping the
+    query string and any other tab segment — the uploads grid is the only
+    page fetch_channel_videos reads.
+
+    Raises ValueError if `url` isn't a YouTube channel URL.
+    """
+    root = _youtube_channel_root(url)
+    if not root:
+        raise ValueError(f"Not a YouTube channel URL: {url}")
+    return f"{root}/videos"
+
+
+def youtube_feed_url(channel_id: str) -> str | None:
+    """The Atom uploads feed for a channel id, or None if the id is unknown."""
+    if not channel_id:
+        return None
+    return f"https://www.youtube.com/feeds/videos.xml?channel_id={channel_id}"
+
+
+_ATOM_NS = "{http://www.w3.org/2005/Atom}"
+_YT_NS = "{http://www.youtube.com/xml/schemas/2015}"
+
+
+def parse_youtube_rss(xml_text: str) -> dict[str, str]:
+    """Map {video_id: ISO 8601 publish timestamp} from a YouTube channel feed
+    (https://www.youtube.com/feeds/videos.xml?channel_id=...).
+
+    The uploads grid only carries relative dates ("2 weeks ago"); this feed is
+    the one place YouTube hands out exact publish timestamps without opening
+    each watch page. It only covers the ~15 most recent uploads, so callers
+    treat a missing id as "no exact date" rather than an error — and a feed
+    that fails to fetch or parse degrades to {} for the same reason.
+    """
+    try:
+        root = ET.fromstring(xml_text)
+    except ET.ParseError:
+        return {}
+
+    published_by_id = {}
+    for entry in root.iter(f"{_ATOM_NS}entry"):
+        video_id = entry.findtext(f"{_YT_NS}videoId")
+        published = entry.findtext(f"{_ATOM_NS}published")
+        if video_id and published:
+            published_by_id[video_id] = published
+    return published_by_id
+
+
+# Reads the uploads grid out of window.ytInitialData rather than the DOM:
+# YouTube's rendered markup is virtualized and heavily obfuscated, while
+# ytInitialData is inlined in the HTML response and already holds every field
+# we want. Walks for `lockupViewModel` nodes instead of following the
+# tabs[].tabRenderer.content.richGridRenderer.contents path, so a layout
+# reshuffle above the item level doesn't break extraction.
+EXTRACT_JS_YOUTUBE_CHANNEL = r"""() => {
+    const data = window.ytInitialData;
+    if (!data) return {error: 'no ytInitialData (consent wall or layout change?)', videos: []};
+
+    const lockups = [];
+    const walk = (node, depth) => {
+        if (depth > 30 || node === null || typeof node !== 'object') return;
+        if (Array.isArray(node)) {
+            for (const child of node) walk(child, depth + 1);
+            return;
+        }
+        for (const key of Object.keys(node)) {
+            if (key === 'lockupViewModel') {
+                lockups.push(node[key]);
+                continue;
+            }
+            walk(node[key], depth + 1);
+        }
+    };
+    walk(data, 0);
+
+    const videos = [];
+    const seen = new Set();
+    for (const lockup of lockups) {
+        if (lockup.contentType !== 'LOCKUP_CONTENT_TYPE_VIDEO') continue;
+        const videoId = lockup.contentId;
+        if (!videoId || seen.has(videoId)) continue;
+
+        const meta = lockup.metadata && lockup.metadata.lockupMetadataViewModel;
+        const title = meta && meta.title && meta.title.content;
+        if (!title) continue;
+
+        const parts = [];
+        const rows = (meta.metadata && meta.metadata.contentMetadataViewModel
+            && meta.metadata.contentMetadataViewModel.metadataRows) || [];
+        for (const row of rows) {
+            for (const part of (row.metadataParts || [])) {
+                if (part && part.text && part.text.content) parts.push(part.text.content);
+            }
+        }
+        // "129K views" / "2 weeks ago": the date is the part saying "ago",
+        // falling back to the last part for non-English locales.
+        const publishedText = parts.find(p => /\bago\b/i.test(p)) || parts[parts.length - 1] || '';
+
+        seen.add(videoId);
+        videos.push({
+            videoId,
+            url: 'https://www.youtube.com/watch?v=' + videoId,
+            title,
+            publishedText,
+        });
+    }
+
+    const channelMeta = (data.metadata && data.metadata.channelMetadataRenderer) || {};
+    return {
+        error: null,
+        channelId: channelMeta.externalId || '',
+        channelTitle: channelMeta.title || '',
+        videos,
+    };
+}"""
+
+
+def build_channel_video_list(
+    raw_videos: list[dict], published_by_id: dict[str, str], max_videos: int
+) -> list[dict]:
+    """Shape EXTRACT_JS_YOUTUBE_CHANNEL's output into the tool's return format,
+    attaching each video's exact publish timestamp from the feed where the feed
+    covers it (`published_at` stays None otherwise — `published_text` always
+    carries the grid's relative date as a fallback)."""
+    selected = raw_videos[:max_videos] if max_videos > 0 else raw_videos
+    return [
+        {
+            "video_id": video["videoId"],
+            "url": video["url"],
+            "title": video["title"],
+            "published_text": video.get("publishedText", ""),
+            "published_at": published_by_id.get(video["videoId"]),
+        }
+        for video in selected
+    ]
