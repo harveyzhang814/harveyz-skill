@@ -72,3 +72,5 @@ methodology: diataxis
 | &nbsp;&nbsp;├ [explanation/permission-research/04-hermes-agent.md](explanation/permission-research/04-hermes-agent.md) | Hermes Agent 权限机制：两套互不感知的系统、约 30 条正则的类别级决策单元、只挂 terminal 一个工具、非四种模式即 fail-open |
 | &nbsp;&nbsp;├ [explanation/permission-research/05-openclaw.md](explanation/permission-research/05-openclaw.md) | OpenClaw 权限机制：allow-always 捕获精确二进制路径且参数不限、逐段白名单、转发前剥离与重绑定、默认 security=full 的 fail-open |
 | &nbsp;&nbsp;└ [explanation/permission-research/06-pi.md](explanation/permission-research/06-pi.md) | Pi 权限机制：框架内核零拦截、权限委托给扩展层、`tool_call` hook 暴露的原语边界、无跨会话扩展存储 |
+| [explanation/cron-research/01-hermes-openclaw.md](explanation/cron-research/01-hermes-openclaw.md) | Hermes / OpenClaw 定时任务机制详解：调度语义与至多一次保证、两种执行路径、组装后注入扫描、cron 自限权、投递与静默协议、重试退避、失败态汇总与代价对照 |
+| [explanation/cron-research/02-pi-mvp.md](explanation/cron-research/02-pi-mvp.md) | 在 Pi 上做定时任务：Pi 能力盘点与三处明确缺失、宿主形态三选一、子进程+SDK 的分界、MVP 八项功能（含验收与代价）、明确不做清单与实施顺序 |
