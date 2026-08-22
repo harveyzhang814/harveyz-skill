@@ -9,7 +9,30 @@ user_invocable: true
 
 批量追更一批 YouTube 频道，每次运行只报告上次运行之后新上传的视频，产出一份 Markdown 更新日志。抓取字段只有三个：**标题 / 发布日期 / URL**，URL 是唯一键。下文脚本路径均相对本 SKILL.md 所在目录。
 
-数据固定落在 `~/.hskill/sync-ytchannel/`（`watchlist.json` + `digests/`），没有初始化步骤。
+## 初始化（run first）
+
+**检查配置文件**
+
+```bash
+ls ~/.hskill/sync-ytchannel/config.json 2>/dev/null && echo "EXISTS" || echo "NOT_FOUND"
+```
+
+**若输出 `NOT_FOUND`，进行初始化：**
+
+1. 询问用户更新日志和关注列表要保存到哪个目录（`DATA_DIR`，必须由用户手动提供，不得猜测或自动选择）；若用户没有偏好，可建议默认值 `~/.hskill/sync-ytchannel`。
+2. 用 Python 写入配置（避免 shell 注入，将 `<DATA_DIR>` 替换为用户输入的路径）：
+   ```python
+   import json
+   from pathlib import Path
+   cfg_path = Path.home() / '.hskill' / 'sync-ytchannel' / 'config.json'
+   cfg_path.parent.mkdir(parents=True, exist_ok=True)
+   cfg_path.write_text(json.dumps({
+       'DATA_DIR': '<DATA_DIR>',
+   }, indent=2, ensure_ascii=False), encoding='utf-8')
+   print(f"配置已保存：{cfg_path}")
+   ```
+
+`DATA_DIR` 由 `scripts/config.py` 在运行时读取，之后 `watchlist.json` 和 `digests/` 都落在这个目录下，脚本自身不内置默认路径。配置文件本身的位置是固定的，只有它指向的数据目录可配。
 
 ## 用法
 
@@ -52,7 +75,7 @@ user_invocable: true
 
 | 文件 | 用途 |
 |------|------|
-| `scripts/config.py` | 数据目录解析（`~/.hskill/sync-ytchannel/`，可用 `HSKILL_SYNC_YTCHANNEL_DIR` 覆盖） |
+| `scripts/config.py` | 配置读写：从 `~/.hskill/sync-ytchannel/config.json` 读取 `DATA_DIR`（数据目录），供其余脚本统一调用 |
 | `scripts/browser_fetch_mcp_locate.py` | 定位 browser-fetch-mcp launcher（跟 clip-url 同款，独立副本） |
 | `scripts/watchlist.py` | 关注列表持久化（增/删/查）+ URL→handle 解析 + 纯函数游标 diff（`compute_update`），也是 `add`/`remove`/`list` 子命令的 CLI 入口 |
 | `scripts/mcp_channel_client.py` | 调用 browser-fetch-mcp 的 `fetch_channel_videos` MCP 工具（解析逻辑全在 MCP 侧） |

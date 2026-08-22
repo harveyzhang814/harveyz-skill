@@ -136,7 +136,7 @@ def main():
                 seen = e["seen_urls"]
                 cursor = "(none)" if seen is None else f"{len(seen)} videos"
                 print(f"@{e['handle']}  {e['channel_url']}  seen={cursor}")
-    except ValueError as e:
+    except (ValueError, FileNotFoundError) as e:
         print(str(e), file=sys.stderr)
         sys.exit(1)
 
