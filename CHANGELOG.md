@@ -16,7 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - **升级路径**：跑一次 `manage-roster` 的初始化流程，它会引导完成迁移。迁移后每个 handle 各自是一个人，同一个人的 X 和 YouTube 需要手动 `merge` 合并——判断"这两个 handle 是同一个人"不能自动化。旧的 `~/.hskill/sync-xtimeline/config.json` 和 `~/.hskill/sync-ytchannel/config.json` 作废但不会被自动删除
 
 ### Fixed
-- `scripts/run-skill-tests.sh`：此前对 `skills/*/*/tests/*.py` 执行 `python3 <file>`，而它们是 pytest 文件——直接执行只 import 模块然后退出 0，一个测试都不跑，`npm test` 一直把"没跑"报成"通过"。改为按 `tests/` 目录调 pytest，并纳入 `tools/*/tests/`。修复后 `npm test` 真正执行 665 个此前从未跑过的 pytest。归档代码（`*/archived/*`）排除在测试范围外；工具套件优先用自己的 `.venv`（仅当该 venv 装了 pytest）
+- `scripts/run-skill-tests.sh`：此前对 `skills/*/*/tests/*.py` 执行 `python3 <file>`，而它们是 pytest 文件——直接执行只 import 模块然后退出 0，一个测试都不跑，`npm test` 一直把"没跑"报成"通过"。改为按 `tests/` 目录调 pytest，并纳入 `tools/*/tests/`。修复后 `npm test` 真正执行 10 个套件共 655 个 pytest，其中 282 个是本次改动之前就存在、却从未被 CI 执行过的。归档代码（`*/archived/*`）排除在测试范围外；工具套件优先用自己的 `.venv`（仅当该 venv 装了 pytest）
 
 ## [0.28.0] - 2026-08-15
 
