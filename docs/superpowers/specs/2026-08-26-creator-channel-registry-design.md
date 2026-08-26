@@ -207,7 +207,7 @@ updated_at: 2026-08-26
 | 子命令 | 行为 |
 |---|---|
 | `add <url>` | 解析出 platform + handle，自动建占位人（`display_name` 从 handle 推、`placeholder: true`），挂上渠道 |
-| `merge <id-a> <id-b>` | 两个人合并成一个，渠道归并，画像文件按观察时间归并 |
+| `merge <id-a> <id-b>` | 两个人合并成一个：保留 `<id-a>` 的 `id` 和 `display_name`，`<id-b>` 的 `id` 落入 `aliases`（旧引用仍可查到），渠道归并，两份画像的「观察」段按日期归并、「当前判断」置空待重算 |
 | `rename <id> <display_name>` | 填正式名字，清 `placeholder` 标记 |
 | `remove <id>` \| `remove <platform>:<handle>` | 删人或只删一个渠道。**画像不删，移到 `profiles/archived/`** |
 | `list` | join 三份文件展示：人 → 渠道 → 游标状态 → 画像是否存在 |
