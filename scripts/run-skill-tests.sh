@@ -4,7 +4,7 @@
 #
 # Patterns discovered:
 #   skills/*/*/tests/*.bats  → run with bats
-#   skills/*/*/tests/*.py    → run with python3
+#   skills/*/*/tests/ 与 tools/*/tests/ → 用 pytest 按目录运行
 #
 # tools/p-launch/tests/ is already covered by `npm test` (bats tests/ tools/p-launch/tests/)
 # so it is intentionally excluded here.
@@ -33,11 +33,11 @@ _run_bats() {
   fi
 }
 
-_run_python() {
-  local file="$1"
+_run_pytest_dir() {
+  local dir="$1"
   found=$((found + 1))
-  echo "── python3: ${file#"${REPO_ROOT}/"}"
-  if python3 "${file}"; then
+  echo "── pytest: ${dir#"${REPO_ROOT}/"}"
+  if (cd "$(dirname "${dir}")" && python3 -m pytest tests/ -q); then
     passed=$((passed + 1))
   else
     failed=$((failed + 1))
@@ -49,9 +49,23 @@ while IFS= read -r -d '' bats_file; do
   _run_bats "${bats_file}"
 done < <(find "${REPO_ROOT}/skills" -path "*/tests/*.bats" -print0 2>/dev/null | sort -z)
 
-while IFS= read -r -d '' py_file; do
-  _run_python "${py_file}"
-done < <(find "${REPO_ROOT}/skills" -path "*/tests/*.py" -print0 2>/dev/null | sort -z)
+# skills/<category>/<skill>/tests/ 与 tools/<tool>/tests/，任一含 test_*.py 即视为 pytest 套件
+#
+# tools/browser-fetch-mcp/tests/ 单独排除：该工具用 uv 管理自己的 .venv，
+# 其 mcp SDK 版本与系统 python3 site-packages 里的不兼容，用系统 python3 跑
+# 会得到 31 failed（ImportError: cannot import name 'MCPServer'），但用它自己的
+# .venv 跑是 124 passed 全绿。这是脚本调用方式导致的环境问题，不是代码问题，
+# 排除以避免误报；如需验证，运行：
+#   cd tools/browser-fetch-mcp && .venv/bin/python3 -m pytest tests/
+while IFS= read -r -d '' tests_dir; do
+  if compgen -G "${tests_dir}/test_*.py" > /dev/null; then
+    _run_pytest_dir "${tests_dir}"
+  fi
+done < <(find "${REPO_ROOT}/skills" "${REPO_ROOT}/tools" \
+           -type d -name tests \
+           -not -path "*/.venv/*" -not -path "*/node_modules/*" \
+           -not -path "*/tools/browser-fetch-mcp/tests" \
+           -print0 2>/dev/null | sort -z)
 
 if [ "${found}" -eq 0 ]; then
   echo "(no custom skill tests)"
