@@ -48,7 +48,12 @@ _run_pytest_dir() {
   local rel="${tool_dir#"${REPO_ROOT}/"}"
   local python_bin="python3"
   local label=""
-  if [ -x "${tool_dir}/.venv/bin/python" ]; then
+  # 只有当 .venv 自己装了 pytest 才用它。有些工具的 dev venv 只装了运行时依赖
+  # （tools/roster 的 roster.sh 就是 pip install -e . 不带 dev extra），那种情况
+  # 退回系统 python3——venv 优先是为了拿到正确的依赖，不是让一个跑不了 pytest
+  # 的 venv 把整个套件卡住。
+  if [ -x "${tool_dir}/.venv/bin/python" ] \
+     && "${tool_dir}/.venv/bin/python" -c "import pytest" 2>/dev/null; then
     python_bin="${tool_dir}/.venv/bin/python"
     label=" (.venv)"
   fi

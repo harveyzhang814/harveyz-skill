@@ -1,7 +1,7 @@
 {
   "toolBundleMeta": {
     "tools": "开发者 OS 工具（hub — 项目管理 + git 状态 + 任务跟踪；sync — Syncthing 守护进程管理）",
-    "research-tools": "研究抓取后端（browser-fetch-mcp — clip-url/extract-url 共用的认证浏览器抓取 MCP server）"
+    "research-tools": "研究抓取后端（browser-fetch-mcp — clip-url/extract-url 共用的认证浏览器抓取 MCP server；roster — sync-* 共用的人与渠道名册）"
   },
   "tools": [
     {
@@ -19,6 +19,11 @@
     {
       "name": "browser-fetch-mcp",
       "path": "tools/browser-fetch-mcp",
+      "bundle": "research-tools"
+    },
+    {
+      "name": "roster",
+      "path": "tools/roster",
       "bundle": "research-tools"
     }
   ],
