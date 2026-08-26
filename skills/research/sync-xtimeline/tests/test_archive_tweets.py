@@ -18,7 +18,7 @@ def _run(report: dict, data_dir: Path) -> subprocess.CompletedProcess:
     return subprocess.run(
         [sys.executable, str(SCRIPT)],
         input=json.dumps(report),
-        env={**os.environ, "HSKILL_SYNC_XTIMELINE_CONFIG": str(config_path)},
+        env={**os.environ, "HSKILL_ROSTER_CONFIG": str(config_path)},
         capture_output=True, text=True, timeout=10,
     )
 

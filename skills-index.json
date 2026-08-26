@@ -1,7 +1,7 @@
 {
   "toolBundleMeta": {
     "tools": "开发者 OS 工具（hub — 项目管理 + git 状态 + 任务跟踪；sync — Syncthing 守护进程管理）",
-    "research-tools": "研究抓取后端（browser-fetch-mcp — clip-url/extract-url 共用的认证浏览器抓取 MCP server）"
+    "research-tools": "研究抓取后端（browser-fetch-mcp — clip-url/extract-url 共用的认证浏览器抓取 MCP server；roster — sync-* 共用的人与渠道名册）"
   },
   "tools": [
     {
@@ -20,10 +20,15 @@
       "name": "browser-fetch-mcp",
       "path": "tools/browser-fetch-mcp",
       "bundle": "research-tools"
+    },
+    {
+      "name": "roster",
+      "path": "tools/roster",
+      "bundle": "research-tools"
     }
   ],
   "bundleMeta": {
-    "research": "研究工具（extract-url + learn-video + extract-vision + survey-skillrepo + learn-paper + extract-cognition + probe-session + clip-url + fetch-paper）",
+    "research": "研究工具（extract-url + learn-video + extract-vision + survey-skillrepo + learn-paper + extract-cognition + probe-session + clip-url + fetch-paper + manage-roster）",
     "creative": "创意工具（capture-todo + capture-insight）",
     "coding": "程序工具（init-workflow + setup-debug + init-goal + question-me + capture-vocab + rephrase + explain-pm）",
     "writing": "写作工具（forge-doc + draw-diagram + manage-dir + migrate-spec）",
@@ -324,6 +329,11 @@
       "bundle": "coding",
       "contentHash": "e853463d770ce355",
       "contentVersion": "1.1.0"
+    },
+    {
+      "path": "research/manage-roster",
+      "bundle": "research",
+      "installScope": "project"
     }
   ],
   "hooks": [

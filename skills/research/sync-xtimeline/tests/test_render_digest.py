@@ -18,7 +18,7 @@ def _run(report: dict, data_dir: Path) -> subprocess.CompletedProcess:
     return subprocess.run(
         [sys.executable, str(SCRIPT)],
         input=json.dumps(report),
-        env={**os.environ, "HSKILL_SYNC_XTIMELINE_CONFIG": str(config_path)},
+        env={**os.environ, "HSKILL_ROSTER_CONFIG": str(config_path)},
         capture_output=True, text=True, timeout=10,
     )
 
@@ -195,6 +195,20 @@ def test_cli_nonempty_report_writes_timestamped_file(tmp_path):
     assert written_path.exists()
     assert written_path.name == "20260815T090000--digest.md"
     assert "@carol" in written_path.read_text(encoding="utf-8")
+
+
+def test_cli_digest_lands_under_the_platform_subdirectory(tmp_path):
+    """两个 sync skill 共用同一个 DATA_DIR，同一天两份 digest 会撞名，
+    所以各落各的平台子目录。"""
+    data_dir = tmp_path / "data"
+    report = {
+        "run_time": "2026-08-15T09:00:00+00:00",
+        "new": {}, "baselines": {"carol": 3}, "failures": {},
+    }
+    result = _run(report, data_dir)
+    assert result.returncode == 0, result.stderr
+    written_path = Path(result.stdout.strip().split("WRITTEN: ", 1)[1])
+    assert written_path.parent == data_dir / "digests" / "x"
 
 
 def test_cli_empty_report_removes_pending_json(tmp_path):
