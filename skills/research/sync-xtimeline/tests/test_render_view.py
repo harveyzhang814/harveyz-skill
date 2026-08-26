@@ -17,7 +17,7 @@ def _run(data_dir: Path) -> subprocess.CompletedProcess:
     write_config(config_path, data_dir)
     return subprocess.run(
         [sys.executable, str(SCRIPT)],
-        env={**os.environ, "HSKILL_SYNC_XTIMELINE_CONFIG": str(config_path)},
+        env={**os.environ, "HSKILL_ROSTER_CONFIG": str(config_path)},
         capture_output=True, text=True, timeout=10,
     )
 
