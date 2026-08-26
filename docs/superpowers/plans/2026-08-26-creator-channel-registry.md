@@ -3373,7 +3373,13 @@ async def run(chrome_profile: Optional[str]) -> dict:
     }
 ```
 
-**3f.** `scripts/render_digest.py`：digest 落点加平台子目录。找到写 `DATA_DIR/digests` 的那处，改为 `get_data_dir() / "digests" / "x"`。
+**3f.** `scripts/render_digest.py:91`：digest 落点加平台子目录。
+
+```python
+    digests_dir = Path(get_data_dir()) / "digests" / "x"
+```
+
+（原文是 `Path(get_data_dir()) / "digests"`，只加末尾一段。第 92、95 行不动。）
 
 **3g.** `tests/conftest.py` 全文替换：
 
