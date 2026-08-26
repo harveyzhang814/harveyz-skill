@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """The `run` subcommand for sync-ytchannel: for every watched channel, call
 fetch_channel_videos via mcp_channel_client, diff against that channel's
-seen-URL cursor (watchlist.compute_update), write a Markdown update log, and
+seen-URL cursor (cursor.compute_update, read from the roster), write a Markdown update log, and
 only then persist the advanced cursors.
 
 That ordering is the point of keeping fetch/render/persist in one script: if
@@ -17,24 +17,25 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
 
+import cursor as cursor_mod
 import digest
-import watchlist
+import roster_client
 from config import get_data_dir
 from mcp_channel_client import fetch_channel_videos
 
 
 async def _collect(chrome_profile: Optional[str]) -> tuple[dict, list[tuple[str, list[str]]]]:
-    entries = watchlist.load_watchlist()
+    run_time = datetime.now(timezone.utc).isoformat()
     new: dict[str, list[dict]] = {}
     baselines: dict[str, int] = {}
     failures: dict[str, str] = {}
     pending_cursors: list[tuple[str, list[str]]] = []
 
-    for entry in entries:
-        handle = entry["handle"]
+    for channel in roster_client.channels():
+        handle = channel["handle"]
         try:
-            videos = await fetch_channel_videos(entry["channel_url"], chrome_profile)
-            kind, data = watchlist.compute_update(entry, videos)
+            videos = await fetch_channel_videos(channel["url"], chrome_profile)
+            kind, data = cursor_mod.compute_update(roster_client.get_cursor(handle), videos)
             if kind == "none":
                 continue
             if kind == "baseline":
@@ -44,10 +45,11 @@ async def _collect(chrome_profile: Optional[str]) -> tuple[dict, list[tuple[str,
             pending_cursors.append((handle, data["seen_urls"]))
         except Exception as e:
             failures[handle] = str(e)
+            roster_client.set_error(handle, str(e), run_time)
             continue
 
     report = {
-        "run_time": datetime.now(timezone.utc).isoformat(),
+        "run_time": run_time,
         "new": new,
         "baselines": baselines,
         "failures": failures,
@@ -60,7 +62,7 @@ def collect(chrome_profile: Optional[str] = None) -> tuple[dict, list[tuple[str,
 
 
 def write_digest(report: dict) -> Path:
-    digests_dir = get_data_dir() / "digests"
+    digests_dir = get_data_dir() / "digests" / "youtube"
     digests_dir.mkdir(parents=True, exist_ok=True)
     run_time = datetime.fromisoformat(report["run_time"])
     digest_path = digests_dir / f"{run_time.strftime('%Y%m%dT%H%M%S')}--digest.md"
@@ -78,7 +80,7 @@ def main():
 
     digest_path = write_digest(report)
     for handle, seen_urls in pending_cursors:
-        watchlist.set_seen_urls(handle, seen_urls)
+        roster_client.set_cursor(handle, seen_urls, report["run_time"])
     print(f"WRITTEN: {digest_path}")
 
 

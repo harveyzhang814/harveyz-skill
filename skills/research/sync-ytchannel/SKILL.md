@@ -1,7 +1,7 @@
 ---
 name: sync-ytchannel
-version: "0.1.0"
-description: "Batch-watch a fixed set of YouTube channels for newly uploaded videos and write a Markdown update log listing each new video's title, publish date and URL. Trigger phrases: 'watch this YouTube channel', '/sync-ytchannel add <channel_url>', '/sync-ytchannel list', '/sync-ytchannel remove <handle>', '/sync-ytchannel run', or a request to run sync-ytchannel on a schedule via /loop or schedule. Listing only — never downloads a video, transcript or description, and never ingests into Obsidian (use clip-url or learn-video for a single video)."
+version: "0.2.0"
+description: "Run one incremental fetch over every YouTube channel on the roster and write a Markdown update log listing each new video's title, publish date and URL. Trigger phrases: '/sync-ytchannel run', '/sync-ytchannel', 'check my YouTube channels for new videos', or a request to run sync-ytchannel on a schedule via /loop or schedule. Adding or removing a watched channel is manage-roster, not this skill. Listing only — never downloads a video, transcript or description, and never ingests into Obsidian (use clip-url or learn-video for a single video)."
 user_invocable: true
 ---
 
@@ -9,47 +9,25 @@ user_invocable: true
 
 批量追更一批 YouTube 频道，每次运行只报告上次运行之后新上传的视频，产出一份 Markdown 更新日志。抓取字段只有三个：**标题 / 发布日期 / URL**，URL 是唯一键。下文脚本路径均相对本 SKILL.md 所在目录。
 
+**关注哪些频道由 [manage-roster](../manage-roster/) 维护，不在这里改。** 本 skill 只负责跑一次增量抓取：从名册读渠道列表，回写游标。
+
 ## 初始化（run first）
 
-**检查配置文件**
+本 skill 自己没有配置。数据目录归 roster 名册持有，检查它在不在：
 
 ```bash
-ls ~/.hskill/sync-ytchannel/config.json 2>/dev/null && echo "EXISTS" || echo "NOT_FOUND"
+python3 scripts/roster_locate.py
 ```
 
-**若输出 `NOT_FOUND`，进行初始化：**
-
-1. 询问用户更新日志和关注列表要保存到哪个目录（`DATA_DIR`，必须由用户手动提供，不得猜测或自动选择）；若用户没有偏好，可建议默认值 `~/.hskill/sync-ytchannel`。
-2. 用 Python 写入配置（避免 shell 注入，将 `<DATA_DIR>` 替换为用户输入的路径）：
-   ```python
-   import json
-   from pathlib import Path
-   cfg_path = Path.home() / '.hskill' / 'sync-ytchannel' / 'config.json'
-   cfg_path.parent.mkdir(parents=True, exist_ok=True)
-   cfg_path.write_text(json.dumps({
-       'DATA_DIR': '<DATA_DIR>',
-   }, indent=2, ensure_ascii=False), encoding='utf-8')
-   print(f"配置已保存：{cfg_path}")
-   ```
-
-`DATA_DIR` 由 `scripts/config.py` 在运行时读取，之后 `watchlist.json` 和 `digests/` 都落在这个目录下，脚本自身不内置默认路径。配置文件本身的位置是固定的，只有它指向的数据目录可配。
+若输出 `NOT_FOUND: <error>`（exit 1），向用户报告"roster tool 未安装：{error}"，流程终止。若从未初始化过名册（`~/.hskill/roster/config.json` 不存在），让用户先跑一次 [manage-roster](../manage-roster/)。
 
 ## 用法
 
-四个子命令：
+只有一个子命令：
 
-- `/sync-ytchannel add <channel_url>` — 关注一个频道
-- `/sync-ytchannel remove <handle>` — 取消关注
-- `/sync-ytchannel list` — 查看当前关注列表和游标
 - `/sync-ytchannel run`（或无参数默认）— 跑一次增量抓取，产出更新日志
 
-### add / remove / list
-
-直接调用 `scripts/watchlist.py`，handle 由脚本从 URL 里解析，不需要在这一步额外处理：
-
-- `add`：运行 `python3 scripts/watchlist.py add <channel_url>`。`<channel_url>` 支持 `/@handle`、`/channel/UCxxx`、`/c/xxx`、`/user/xxx` 各种形式，带不带 `/videos` 后缀都行。输出 `OK @<handle>` 表示已加入关注；失败（已在关注中、或不是频道 URL）原样报告 stderr。
-- `remove`：运行 `python3 scripts/watchlist.py remove <handle>`，同样原样报告结果。
-- `list`：运行 `python3 scripts/watchlist.py list`，原样展示给用户（每行是 `@handle  channel_url  seen=<N videos 或 (none)>`，或 `EMPTY`）。
+`add` / `remove` / `list` 已迁到 [manage-roster](../manage-roster/)。
 
 ### run（支持 /loop、schedule 无人值守调用，过程中不能有需要用户回答的交互）
 
@@ -67,17 +45,19 @@ ls ~/.hskill/sync-ytchannel/config.json 2>/dev/null && echo "EXISTS" || echo "NO
 
 ## 边界
 
-只做"有没有新视频"这一件事：不下载视频、不抓字幕、不抽正文、不进 Obsidian、不打标。单个视频要精读走 [learn-video](../learn-video/)，单篇入库走 [clip-url](../clip-url/)。跟 [sync-xtimeline](../sync-xtimeline/) 是同一套架构的两个独立实例，互不共享数据。
+只做"有没有新视频"这一件事：不下载视频、不抓字幕、不抽正文、不进 Obsidian、不打标。单个视频要精读走 [learn-video](../learn-video/)，单篇入库走 [clip-url](../clip-url/)。跟 [sync-xtimeline](../sync-xtimeline/) 共用同一份 roster 名册和同一个数据目录，digest 各落各的平台子目录（本 skill 落 `digests/youtube/`）。
 
-游标是"已报告过的 URL 集合"，不是 sync-xtimeline 那种单个 last_seen id——X 的 snowflake tweet id 按时间递增，可以比大小；YouTube 的 video id 是不透明的，只能判断"见过没有"。
+游标存在名册的 `state.json` 里，是"已报告过的 URL 集合"，不是 sync-xtimeline 那种单个 last_seen id——X 的 snowflake tweet id 按时间递增，可以比大小；YouTube 的 video id 是不透明的，只能判断"见过没有"。
 
 ## 参考文件
 
 | 文件 | 用途 |
 |------|------|
-| `scripts/config.py` | 配置读写：从 `~/.hskill/sync-ytchannel/config.json` 读取 `DATA_DIR`（数据目录），供其余脚本统一调用 |
+| `scripts/config.py` | 数据目录：运行时向 roster 要，本 skill 不再自持 `DATA_DIR` |
 | `scripts/browser_fetch_mcp_locate.py` | 定位 browser-fetch-mcp launcher（跟 clip-url 同款，独立副本） |
-| `scripts/watchlist.py` | 关注列表持久化（增/删/查）+ URL→handle 解析 + 纯函数游标 diff（`compute_update`），也是 `add`/`remove`/`list` 子命令的 CLI 入口 |
+| `scripts/roster_locate.py` | 定位 roster launcher（跟 `browser_fetch_mcp_locate.py` 同款，独立副本） |
+| `scripts/roster_client.py` | 与名册的桥：读本平台渠道列表、读写游标。只调 `registry channels` 和 `state`，绝不写 registry |
+| `scripts/cursor.py` | 纯函数游标 diff（`compute_update`），不碰磁盘不碰网络 |
 | `scripts/mcp_channel_client.py` | 调用 browser-fetch-mcp 的 `fetch_channel_videos` MCP 工具（解析逻辑全在 MCP 侧） |
 | `scripts/digest.py` | 纯函数：把报告渲染成 Markdown 更新日志 |
 | `scripts/sync_channels.py` | `run` 子命令：抓取 → 对比 → 写更新日志 → 推进游标（写盘成功才推进游标） |
