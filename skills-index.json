@@ -119,15 +119,15 @@
       "path": "feed/sync-xtimeline",
       "bundle": "feed",
       "installScope": "project",
-      "contentHash": "5f394cefd3b6fc3b",
-      "contentVersion": "0.2.0"
+      "contentHash": "a72bfc5b5a4390cd",
+      "contentVersion": "0.3.0"
     },
     {
       "path": "feed/sync-ytchannel",
       "bundle": "feed",
       "installScope": "project",
-      "contentHash": "499303d99ab89a93",
-      "contentVersion": "0.1.0"
+      "contentHash": "6252108e24bdd0b8",
+      "contentVersion": "0.2.0"
     },
     {
       "path": "creative/capture-todo",
@@ -334,7 +334,9 @@
     {
       "path": "feed/manage-roster",
       "bundle": "feed",
-      "installScope": "project"
+      "installScope": "project",
+      "contentHash": "fbb7672833c65712",
+      "contentVersion": "0.1.0"
     }
   ],
   "hooks": [
