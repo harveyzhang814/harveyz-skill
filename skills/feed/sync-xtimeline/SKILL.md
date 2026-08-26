@@ -52,7 +52,7 @@ python3 scripts/roster_locate.py
 
 ## 边界
 
-跟 [clip-url](../clip-url/) 的单篇入库流程完全独立：不进 Obsidian、不打标、不下载图片、不展开长线程。跟 [sync-ytchannel](../sync-ytchannel/) 共用同一份 roster 名册和同一个数据目录，digest 各落各的平台子目录（本 skill 落 `digests/x/`）。设计文档：`docs/superpowers/specs/2026-08-15-watch-x-design.md`（历史文档，写作时 skill 还叫 watch-x，之后改名为 sync-xtimeline，内容仍然适用）。
+跟 [clip-url](../../research/clip-url/) 的单篇入库流程完全独立：不进 Obsidian、不打标、不下载图片、不展开长线程。跟 [sync-ytchannel](../sync-ytchannel/) 共用同一份 roster 名册和同一个数据目录，digest 各落各的平台子目录（本 skill 落 `digests/x/`）。设计文档：`docs/superpowers/specs/2026-08-15-watch-x-design.md`（历史文档，写作时 skill 还叫 watch-x，之后改名为 sync-xtimeline，内容仍然适用）。
 
 ## 参考文件
 

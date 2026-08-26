@@ -29,8 +29,8 @@
     "skills/research/probe-session/",
     "skills/research/pdf-math-translate/",
     "skills/research/clip-url/",
-    "skills/research/sync-xtimeline/",
-    "skills/research/sync-ytchannel/",
+    "skills/feed/sync-xtimeline/",
+    "skills/feed/sync-ytchannel/",
     "skills/creative/capture-todo/",
     "skills/creative/capture-insight/",
     "skills/coding/init-workflow/",
@@ -60,9 +60,11 @@
     "skills/meta/sync-hotfix/",
     "skills/meta/sync-agent/",
     "skills/coding/handoff/",
+    "skills/feed/manage-roster/",
     "tools/hub/",
     "tools/sync-agent/",
     "tools/browser-fetch-mcp/",
+    "tools/roster/",
     "hooks/check-similar-branch/"
   ],
   "engines": {

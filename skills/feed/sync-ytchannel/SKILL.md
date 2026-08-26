@@ -45,7 +45,7 @@ python3 scripts/roster_locate.py
 
 ## 边界
 
-只做"有没有新视频"这一件事：不下载视频、不抓字幕、不抽正文、不进 Obsidian、不打标。单个视频要精读走 [learn-video](../learn-video/)，单篇入库走 [clip-url](../clip-url/)。跟 [sync-xtimeline](../sync-xtimeline/) 共用同一份 roster 名册和同一个数据目录，digest 各落各的平台子目录（本 skill 落 `digests/youtube/`）。
+只做"有没有新视频"这一件事：不下载视频、不抓字幕、不抽正文、不进 Obsidian、不打标。单个视频要精读走 [learn-video](../../research/learn-video/)，单篇入库走 [clip-url](../../research/clip-url/)。跟 [sync-xtimeline](../sync-xtimeline/) 共用同一份 roster 名册和同一个数据目录，digest 各落各的平台子目录（本 skill 落 `digests/youtube/`）。
 
 游标存在名册的 `state.json` 里，是"已报告过的 URL 集合"，不是 sync-xtimeline 那种单个 last_seen id——X 的 snowflake tweet id 按时间递增，可以比大小；YouTube 的 video id 是不透明的，只能判断"见过没有"。
 

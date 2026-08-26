@@ -59,7 +59,7 @@ ls ~/.hskill/roster/config.json 2>/dev/null && echo "EXISTS" || echo "NOT_FOUND"
 
 ## 边界
 
-不抓取、不翻译、不写画像、不进 Obsidian。跑一次增量抓取走 [sync-xtimeline](../sync-xtimeline/) 或 [sync-ytchannel](../sync-ytchannel/)。单条物料入库走 [clip-url](../clip-url/)，单个视频精读走 [learn-video](../learn-video/)。
+不抓取、不翻译、不写画像、不进 Obsidian。跑一次增量抓取走 [sync-xtimeline](../sync-xtimeline/) 或 [sync-ytchannel](../sync-ytchannel/)。单条物料入库走 [clip-url](../../research/clip-url/)，单个视频精读走 [learn-video](../../research/learn-video/)。
 
 设计文档：`docs/superpowers/specs/2026-08-26-creator-channel-registry-design.md`。
 

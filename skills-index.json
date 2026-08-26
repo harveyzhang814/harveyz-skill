@@ -116,14 +116,14 @@
       "contentVersion": "0.7.5"
     },
     {
-      "path": "research/sync-xtimeline",
+      "path": "feed/sync-xtimeline",
       "bundle": "feed",
       "installScope": "project",
       "contentHash": "5f394cefd3b6fc3b",
       "contentVersion": "0.2.0"
     },
     {
-      "path": "research/sync-ytchannel",
+      "path": "feed/sync-ytchannel",
       "bundle": "feed",
       "installScope": "project",
       "contentHash": "499303d99ab89a93",
@@ -332,7 +332,7 @@
       "contentVersion": "1.1.0"
     },
     {
-      "path": "research/manage-roster",
+      "path": "feed/manage-roster",
       "bundle": "feed",
       "installScope": "project"
     }
