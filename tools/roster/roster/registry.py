@@ -96,3 +96,31 @@ def remove_channel(reg: dict, platform: str, handle: str) -> None:
         raise ValueError(f"名册里没有 {platform}:{handle}")
     creator, channel = found
     creator["channels"].remove(channel)
+
+
+def rename_creator(reg: dict, creator_id: str, display_name: str) -> None:
+    creator = find_creator(reg, creator_id)
+    if creator is None:
+        raise ValueError(f"名册里没有 {creator_id}")
+    creator["display_name"] = display_name
+    creator["placeholder"] = False
+
+
+def merge_creators(reg: dict, id_a: str, id_b: str) -> None:
+    """b 并入 a。a 的 id 和 display_name 胜出，b 的 id 落进 a 的 aliases，
+    这样外部对 b 的旧引用仍然解析得到。"""
+    a = find_creator(reg, id_a)
+    b = find_creator(reg, id_b)
+    if a is None:
+        raise ValueError(f"名册里没有 {id_a}")
+    if b is None:
+        raise ValueError(f"名册里没有 {id_b}")
+    if a is b:
+        raise ValueError("不能合并到自己")
+
+    for alias in [b["id"], *b.get("aliases", [])]:
+        if alias not in a["aliases"]:
+            a["aliases"].append(alias)
+    a["channels"].extend(b["channels"])
+    a["placeholder"] = a["placeholder"] and b["placeholder"]
+    reg["creators"].remove(b)
