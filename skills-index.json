@@ -28,7 +28,7 @@
     }
   ],
   "bundleMeta": {
-    "research": "研究工具（extract-url + learn-video + extract-vision + survey-skillrepo + learn-paper + extract-cognition + probe-session + clip-url + fetch-paper）",
+    "research": "研究工具（extract-url + learn-video + extract-vision + survey-skillrepo + learn-paper + extract-cognition + probe-session + clip-url + fetch-paper + manage-roster）",
     "creative": "创意工具（capture-todo + capture-insight）",
     "coding": "程序工具（init-workflow + setup-debug + init-goal + question-me + capture-vocab + rephrase + explain-pm）",
     "writing": "写作工具（forge-doc + draw-diagram + manage-dir + migrate-spec）",
@@ -329,6 +329,11 @@
       "bundle": "coding",
       "contentHash": "e853463d770ce355",
       "contentVersion": "1.1.0"
+    },
+    {
+      "path": "research/manage-roster",
+      "bundle": "research",
+      "installScope": "project"
     }
   ],
   "hooks": [
