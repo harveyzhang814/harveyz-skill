@@ -9,7 +9,8 @@
 import argparse
 import json
 import sys
-from datetime import date
+from datetime import date, datetime
+from pathlib import Path
 
 from . import config, profiles, registry, state
 from .urls import parse_channel_url
@@ -27,6 +28,30 @@ def _split_ref(ref: str) -> tuple[str, str]:
 def _cmd_init(args) -> int:
     config.set_config("DATA_DIR", args.data_dir)
     print(f"OK {args.data_dir}")
+    return 0
+
+
+def _cmd_migrate(args) -> int:
+    from . import migrate
+
+    def _read(path: str | None) -> list[dict] | None:
+        if path is None:
+            return None
+        p = Path(path)
+        if not p.exists():
+            raise FileNotFoundError(f"找不到旧 watchlist：{path}")
+        return json.loads(p.read_text(encoding="utf-8"))
+
+    data_dir = config.get_data_dir()
+    result = migrate.from_watchlists(
+        data_dir,
+        _read(args.from_xtimeline),
+        _read(args.from_ytchannel),
+        date.today().isoformat(),
+        datetime.now().astimezone().isoformat(timespec="seconds"),
+    )
+    print(f"OK creators={result['creators']} channels={result['channels']} "
+          f"cursors={result['cursors']}")
     return 0
 
 
@@ -178,6 +203,11 @@ def _build_parser() -> argparse.ArgumentParser:
     p_init = groups.add_parser("init", help="设置数据目录")
     p_init.add_argument("data_dir")
     p_init.set_defaults(func=_cmd_init)
+
+    p_mig = groups.add_parser("migrate", help="从旧 watchlist.json 迁移（一次性，幂等）")
+    p_mig.add_argument("--from-xtimeline", dest="from_xtimeline", default=None)
+    p_mig.add_argument("--from-ytchannel", dest="from_ytchannel", default=None)
+    p_mig.set_defaults(func=_cmd_migrate)
 
     groups.add_parser("data-dir", help="打印数据目录").set_defaults(func=_cmd_data_dir)
 
