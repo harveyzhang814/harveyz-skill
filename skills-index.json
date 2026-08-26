@@ -28,7 +28,8 @@
     }
   ],
   "bundleMeta": {
-    "research": "研究工具（extract-url + learn-video + extract-vision + survey-skillrepo + learn-paper + extract-cognition + probe-session + clip-url + fetch-paper + manage-roster）",
+    "research": "研究工具（extract-url + learn-video + extract-vision + survey-skillrepo + learn-paper + extract-cognition + probe-session + clip-url + fetch-paper）",
+    "feed": "追更工具（manage-roster — 人与渠道名册；sync-xtimeline + sync-ytchannel — 按名册跑增量抓取）",
     "creative": "创意工具（capture-todo + capture-insight）",
     "coding": "程序工具（init-workflow + setup-debug + init-goal + question-me + capture-vocab + rephrase + explain-pm）",
     "writing": "写作工具（forge-doc + draw-diagram + manage-dir + migrate-spec）",
@@ -116,14 +117,14 @@
     },
     {
       "path": "research/sync-xtimeline",
-      "bundle": "research",
+      "bundle": "feed",
       "installScope": "project",
       "contentHash": "5f394cefd3b6fc3b",
       "contentVersion": "0.2.0"
     },
     {
       "path": "research/sync-ytchannel",
-      "bundle": "research",
+      "bundle": "feed",
       "installScope": "project",
       "contentHash": "499303d99ab89a93",
       "contentVersion": "0.1.0"
@@ -332,7 +333,7 @@
     },
     {
       "path": "research/manage-roster",
-      "bundle": "research",
+      "bundle": "feed",
       "installScope": "project"
     }
   ],
