@@ -8,9 +8,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- `roster`：新增 tool，人（creator）与渠道（channel）名册。三份数据、三个写入方：`registry.json`（人与渠道定义，归 manage-roster）、`state.json`（游标与失败态，归 sync-*）、`profiles/*.md`（画像，归 note-creator）。CLI 按同样的三组划分。渠道数据可重建，画像不可重建——删除操作一律归档而非删除
+- `roster`：新增 tool，人（creator）与渠道（channel）名册。三份数据、三个写入方：`registry.json`（人与渠道定义，归 manage-roster）、`state.json`（游标与失败态，归 sync-*）、`profiles/*.md`（画像，归 capture-creator）。CLI 按同样的三组划分。渠道数据可重建，画像不可重建——删除操作一律归档而非删除
 - `manage-roster`：新增 skill，名册的人机入口（`add` / `list` / `merge` / `rename` / `remove`），含旧 watchlist 的一次性幂等迁移
-- `note-creator`：新增 skill，认知层的人工输入口。你口述对某个博主的判断，它归纳成要点、盖上当前时间戳、回显确认后追加进 `profiles/<id>.md`。判断由人出，agent 只做整理，未经确认不写盘
+- `capture-creator`：新增 skill，认知层的人工输入口。你口述对某个博主的判断，它归纳成要点、盖上当前时间戳、回显确认后追加进 `profiles/<id>.md`。判断由人出，agent 只做整理，未经确认不写盘
 
 ### Changed
 - `roster profile append`：`--source`（依据）改为可选，省略时记为 `人工`——这个值同时就是作者标记，用来区分本人下的判断和 agent 从物料推的观察。正文可以省略 `--body` 改从 stdin 读，多行 Markdown 不再受命令行引号和换行的折磨。观察条目的时间戳支持可选的 `HH:MM`（一天记好几条时需要分先后），纯日期的旧条目不需要迁移

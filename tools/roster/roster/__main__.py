@@ -2,7 +2,7 @@
 
   roster registry ...   registry.json    manage-roster skill
   roster state ...      state.json       sync-* skill
-  roster profile ...    profiles/*.md    note-creator skill
+  roster profile ...    profiles/*.md    capture-creator skill
 
 读跨组允许（registry list 要读 state 展示游标），写不允许。
 """
