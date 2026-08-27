@@ -1,4 +1,4 @@
-"""定位 roster launcher（跟 browser_fetch_mcp_locate.py 同款，独立副本）。
+"""定位 roster launcher（跟 browser_fetch_locate.py 同款，独立副本）。
 
 两种布局：
 - Dev 模式：本 skill 跑在 harveyz-skill 的 checkout 里，

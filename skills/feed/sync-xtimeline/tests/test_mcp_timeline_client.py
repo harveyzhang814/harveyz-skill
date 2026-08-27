@@ -1,10 +1,3 @@
-"""Real browser-fetch-mcp subprocess, real MCP stdio protocol — no mocks.
-Only covers the deterministic validation-error paths that don't need a
-real, logged-in X session (same scope as clip-url's xcom-adjacent tests).
-
-Run: python3 -m pytest skills/research/sync-xtimeline/tests/ -v
-"""
-import asyncio
 import sys
 from pathlib import Path
 
@@ -12,19 +5,40 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
 
-from mcp_timeline_client import fetch_timeline
+import browser_fetch_cli  # noqa: E402
+import mcp_timeline_client  # noqa: E402
 
 
-@pytest.fixture(autouse=True)
-def isolated_data_dir(tmp_path, monkeypatch):
-    monkeypatch.setenv("BROWSER_FETCH_MCP_DATA_DIR", str(tmp_path / "data"))
+def test_fetch_timeline_builds_cli_args(monkeypatch):
+    seen = {}
+
+    def fake_call(*args):
+        seen["args"] = args
+        return {"tweets": [{"tweet_id": "1"}]}
+
+    monkeypatch.setattr(browser_fetch_cli, "call", fake_call)
+    import asyncio
+    tweets = asyncio.run(mcp_timeline_client.fetch_timeline(
+        "https://x.com/someone", chrome_profile="/tmp/P", max_tweets=5))
+
+    assert tweets == [{"tweet_id": "1"}]
+    assert seen["args"] == (
+        "timeline", "https://x.com/someone", "--max", "5", "--chrome-profile", "/tmp/P")
 
 
-def test_fetch_timeline_without_chrome_profile_raises():
-    with pytest.raises(RuntimeError, match="chrome_profile is required"):
-        asyncio.run(fetch_timeline("https://x.com/someuser"))
+def test_fetch_timeline_omits_profile_when_absent(monkeypatch):
+    seen = {}
+    monkeypatch.setattr(browser_fetch_cli, "call",
+                        lambda *a: (seen.update(args=a), {"tweets": []})[1])
+    import asyncio
+    asyncio.run(mcp_timeline_client.fetch_timeline("https://x.com/someone"))
+    assert "--chrome-profile" not in seen["args"]
 
 
-def test_fetch_timeline_rejects_non_xcom_url():
-    with pytest.raises(RuntimeError, match="only supports x.com/twitter.com URLs"):
-        asyncio.run(fetch_timeline("https://example.com/someuser", chrome_profile="/tmp/fake-profile"))
+def test_fetch_timeline_propagates_cli_failure(monkeypatch):
+    def boom(*args):
+        raise RuntimeError("timeline failed: cookie 失效")
+    monkeypatch.setattr(browser_fetch_cli, "call", boom)
+    import asyncio
+    with pytest.raises(RuntimeError, match="cookie 失效"):
+        asyncio.run(mcp_timeline_client.fetch_timeline("https://x.com/someone"))

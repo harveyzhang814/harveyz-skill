@@ -42,3 +42,21 @@ def test_get_article_paths_layout(isolated_vault_config):
     url_hash = get_url_hash(url)
     assert paths["article_dir"] == Path("/fake/vault") / url_hash
     assert paths["meta_path"] == Path("/fake/vault") / url_hash / "meta.json"
+
+
+def test_missing_config_error_points_at_clip_url_not_extract_url(isolated_vault_config):
+    import vault_config
+    with pytest.raises(FileNotFoundError) as e:
+        vault_config.get_vault_path()
+    msg = str(e.value)
+    assert "extract-url" not in msg
+    assert "clip-url" in msg
+
+
+def test_missing_vault_path_key_error_points_at_clip_url(isolated_vault_config):
+    import json
+    import vault_config
+    isolated_vault_config.write_text(json.dumps({}), encoding="utf-8")
+    with pytest.raises(KeyError) as e:
+        vault_config.get_vault_path()
+    assert "extract-url" not in str(e.value)
