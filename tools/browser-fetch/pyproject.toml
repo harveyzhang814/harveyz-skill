@@ -1,0 +1,25 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "browser-fetch"
+version = "0.2.0"
+requires-python = ">=3.11"
+dependencies = [
+    "playwright>=1.45",
+    "pycookiecheat>=0.7",
+]
+
+[project.scripts]
+browser-fetch = "browser_fetch.cli:main"
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0", "pytest-asyncio>=0.23"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["browser_fetch"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
