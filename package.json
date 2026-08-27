@@ -65,6 +65,7 @@
     "tools/hub/",
     "tools/sync-agent/",
     "tools/browser-fetch-mcp/",
+    "tools/browser-fetch/",
     "tools/roster/",
     "hooks/check-similar-branch/"
   ],

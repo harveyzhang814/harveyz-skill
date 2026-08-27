@@ -1,0 +1,8 @@
+{
+  "name": "browser-fetch",
+  "version": "0.2.0",
+  "description": "Shared CLI for authenticated headless browser fetches (Chrome cookie injection, site-aware article/timeline/channel extraction)",
+  "extraPaths": ["browser_fetch", "pyproject.toml"],
+  "uninstallPaths": ["~/.hskill/tools/browser-fetch/venv", "~/.hskill/tools/browser-fetch"],
+  "configPaths": ["~/.hskill/browser-fetch"]
+}

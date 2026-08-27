@@ -22,6 +22,11 @@
       "bundle": "research-tools"
     },
     {
+      "name": "browser-fetch",
+      "path": "tools/browser-fetch",
+      "bundle": "research-tools"
+    },
+    {
       "name": "roster",
       "path": "tools/roster",
       "bundle": "research-tools"

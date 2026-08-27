@@ -82,7 +82,7 @@ async def _xcom_scrape(url: str, pw_cookies: list[dict], headless: bool) -> dict
     Always closes the browser in a finally block. The original CLI script
     (playwright_xcom.py) had no such guard — a leaked browser process there
     was harmless because the whole process exited right after each run.
-    browser-fetch-mcp is long-lived, so an unguarded leak here would
+    browser-fetch is long-lived, so an unguarded leak here would
     accumulate zombie Chrome processes over the server's lifetime.
     """
     async with async_playwright() as p:
@@ -401,7 +401,7 @@ async def fetch_article(
             result = await _xcom_scrape(url, pw_cookies, headless=False)
         except Exception as e:
             print(
-                f"[browser-fetch-mcp] headed x.com scrape failed ({e}); "
+                f"[browser-fetch] headed x.com scrape failed ({e}); "
                 f"falling back to headless (lower fidelity)",
                 file=sys.stderr,
             )
@@ -595,7 +595,7 @@ async def fetch_user_timeline(
         except Exception as e:
             headless_fallback = True
             print(
-                f"[browser-fetch-mcp] headed timeline scrape failed ({e}); "
+                f"[browser-fetch] headed timeline scrape failed ({e}); "
                 f"falling back to headless (lower fidelity)",
                 file=sys.stderr,
             )
@@ -709,7 +709,7 @@ async def fetch_channel_videos(
                 published_by_id = parse_youtube_rss(await response.text())
         except Exception as e:
             print(
-                f"[browser-fetch-mcp] uploads feed fetch failed for {feed_url} ({e}); "
+                f"[browser-fetch] uploads feed fetch failed for {feed_url} ({e}); "
                 f"falling back to relative dates only",
                 file=sys.stderr,
             )
