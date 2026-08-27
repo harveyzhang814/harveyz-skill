@@ -39,7 +39,7 @@ migrated: false
 
 ## CLI 接口面
 
-七个 MCP 工具一对一映射成子命令。不合并、不重新设计参数语义——重设计会让三个 skill 的改造从"换调用方式"变成"换行为"，风险不成比例。
+八个 MCP 工具一对一映射成子命令。不合并、不重新设计参数语义——重设计会让三个 skill 的改造从"换调用方式"变成"换行为"，风险不成比例。
 
 ```
 browser-fetch article  <url> --out <dir> [--chrome-profile P] [--format path|json]
@@ -92,7 +92,7 @@ tools/browser-fetch/
   tests/
 ```
 
-**剥离动作比听起来小。** server.py 783 行里，七个工具函数上面只有一个 `@mcp.tool()` 装饰器，函数体本身完全不知道 MCP 的存在；辅助函数（warm context 管理、profile key 哈希、x.com 抓取）也是纯 Python。剥离 = 去掉装饰器、删掉 `mcp` 的 import 和 `main()`、改模块名。真正新写的代码只有 `cli.py`。
+**剥离动作比听起来小。** server.py 783 行里，八个工具函数上面只有一个 `@mcp.tool()` 装饰器，函数体本身完全不知道 MCP 的存在；辅助函数（warm context 管理、profile key 哈希、x.com 抓取）也是纯 Python。剥离 = 去掉装饰器、删掉 `mcp` 的 import 和 `main()`、改模块名。真正新写的代码只有 `cli.py`。
 
 删掉 `mcp>=2.0.0` 依赖顺带解决一个既有尴尬：clip-url 的 wrapper 跑在 ambient python 的 mcp 1.28.1 上（字段 camelCase），tool 自己的 venv 是 mcp 2.0（字段 snake_case），两边命名不一致需要各自适配。这类问题整个消失。
 
@@ -172,7 +172,7 @@ clip-url 的 `vault_config.py` 读 `~/.hskill/url-extract/config.json`，且配�
 顺序不是任意的，三处有硬依赖：
 
 1. **先建 `tools/browser-fetch/`**（剥 core、写 cli、改包名、迁数据目录、改造测试），此阶段 MCP server 仍在旧目录存活，三个 skill 不受影响。
-2. **再逐个迁 wrapper**（clip-url → sync-xtimeline → sync-ytchannel），每迁完一个跑一次该 skill 的测试。clip-url 排第一是因为它的四个 wrapper 覆盖了全部七个子命令，能最早暴露 CLI 接口面的问题。
+2. **再逐个迁 wrapper**（clip-url → sync-xtimeline → sync-ytchannel），每迁完一个跑一次该 skill 的测试。clip-url 排第一是因为它的四个 wrapper 覆盖了全部八个业务函数，能最早暴露 CLI 接口面的问题。
 3. **确认三个 skill 全绿后，才删 `tools/browser-fetch-mcp/`。** 提前删会让回退失去参照。
 4. **抢救 `platforms/` 四份补丁到 clip-url，并补上 clip-url 自己的初始化流程**——必须在归档之前完成，否则唯一的多平台派发资产和用户的初始化路径同时断掉。
 5. **最后归档 extract-url。**

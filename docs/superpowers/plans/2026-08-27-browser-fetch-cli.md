@@ -17,7 +17,7 @@
 - 环境变量改名：`BROWSER_FETCH_MCP_DATA_DIR` → `BROWSER_FETCH_DATA_DIR`；`BROWSER_FETCH_MCP_CHROME_BASE` → `BROWSER_FETCH_CHROME_BASE`。
 - 数据目录：`~/.hskill/browser-fetch-mcp/` → `~/.hskill/browser-fetch/`，由 `browser-fetch.sh` 做一次性幂等 `mv`。
 - 退出码契约：`0` 成功（stdout 为一行 compact JSON）；`2` 调用方用法错（core 抛 `ValueError`）；`1` 运行时失败（其他异常）。失败时 stdout 必须为空，错误消息走 stderr。
-- 七个子命令的参数名与返回 dict 字段**逐字沿用**原 MCP 工具，不重命名、不合并。
+- 六个顶层子命令的参数名与返回 dict 字段**逐字沿用**原 MCP 工具，不重命名、不合并。
 - 内部继续用 `playwright.async_api`，不改回 sync。CLI 入口用 `asyncio.run()` 包一层。
 - 六个 wrapper 的对外函数签名与返回值不变。
 - 平台补丁只做四个：`claude` / `codex` / `hermes` / `pi`。`codex` 和 `hermes` 是诚实占位，必须写明"未在该平台验证过，subagent 派发语法待补"。
@@ -27,7 +27,7 @@
 
 | 文件 | 职责 |
 |---|---|
-| `tools/browser-fetch/browser_fetch/core.py` | 七个业务函数，零 MCP 依赖。从 `server.py` 剥出，函数体不动 |
+| `tools/browser-fetch/browser_fetch/core.py` | 八个业务函数，零 MCP 依赖。从 `server.py` 剥出，函数体不动 |
 | `tools/browser-fetch/browser_fetch/cli.py` | argparse 子命令 → core → JSON stdout；退出码分档 |
 | `tools/browser-fetch/browser_fetch/{config,cookies,extractors,images,markdown,pacing,pacing_log,profiles}.py` | 原样迁移，仅改包名 import |
 | `tools/browser-fetch/browser-fetch.sh` | venv 自愈安装 + 一次性数据目录迁移 |
@@ -48,7 +48,7 @@
 - Test: `tools/browser-fetch/tests/test_core_import.py`
 
 **Interfaces:**
-- Produces: `browser_fetch.core` 暴露七个 async 函数，签名逐字沿用原 MCP 工具——
+- Produces: `browser_fetch.core` 暴露八个 async 函数，签名逐字沿用原 MCP 工具——
   `fetch_page(url: str, use_auth: bool = False, chrome_profile: Optional[str] = None) -> dict`
   `get_default_chrome_profile() -> dict`
   `set_default_chrome_profile(profile_path: str) -> dict`
@@ -86,7 +86,7 @@ grep -rl 'browser_fetch_mcp\|BROWSER_FETCH_MCP_' browser_fetch tests \
 
 1. 删掉 `from mcp.server import MCPServer` 这一行。
 2. 删掉 `mcp = MCPServer("browser-fetch-mcp")` 这一行。
-3. 删掉全部七处 `@mcp.tool()` 装饰器（函数体一行不动）。
+3. 删掉全部八处 `@mcp.tool()` 装饰器（函数体一行不动）。
 4. 把文件末尾的 `main()` 和 `if __name__ == "__main__":` 整块删掉：
 
 ```python
@@ -324,7 +324,7 @@ Expected: FAIL with "not implemented yet"
 Replace `tools/browser-fetch/browser_fetch/cli.py`:
 
 ```python
-"""browser-fetch CLI —— 七个子命令，stdout 一行 compact JSON。
+"""browser-fetch CLI —— 六个顶层子命令，stdout 一行 compact JSON。
 
 退出码：0 成功；2 调用方用法错（core 抛 ValueError）；1 运行时失败。
 失败时 stdout 保持空，消息走 stderr。
@@ -871,7 +871,7 @@ git commit -m "feat(browser-fetch): 启动器、tool 注册与数据目录迁移
 - Create: `tools/browser-fetch/tests/conftest.py`
 
 **Interfaces:**
-- Consumes: 七个子命令（Task 2-4）
+- Consumes: 六个顶层子命令（Task 2-4）
 - Produces: `conftest.py` 的 `run_cli` fixture，供四份集成测试共用
 
 注：旧包的 `test_server.py` 只测 `fetch_page` 和 profile 三件事，已被 Task 2/3 的 `test_cli.py` + `test_cli_page_eval.py` 完整覆盖，**不迁移，直接丢弃**。
@@ -949,7 +949,7 @@ git commit -m "test(browser-fetch): 集成测试改由 CLI 驱动"
 
 ### Task 7: clip-url 四个 wrapper 迁移
 
-clip-url 排在三个 skill 的第一个，因为它的四个 wrapper 覆盖了全部七个子命令，能最早暴露 CLI 接口面的问题。
+clip-url 排在三个 skill 的第一个，因为它的四个 wrapper 覆盖了全部八个业务函数，能最早暴露 CLI 接口面的问题。
 
 **Files:**
 - Create: `skills/research/clip-url/scripts/browser_fetch_locate.py`
