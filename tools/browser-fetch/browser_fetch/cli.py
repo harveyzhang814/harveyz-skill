@@ -16,6 +16,15 @@ def _emit(payload: dict) -> None:
     sys.stdout.write("\n")
 
 
+def _read_js(js_file: str) -> str:
+    """JS 走文件或 stdin，不走 argv——自优化 subagent 迭代的是多行 JS，
+    塞进命令行参数是引号地狱。"""
+    if js_file == "-":
+        return sys.stdin.read()
+    with open(js_file, encoding="utf-8") as f:
+        return f.read()
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="browser-fetch")
     sub = parser.add_subparsers(dest="command", required=True)
@@ -34,6 +43,18 @@ def build_parser() -> argparse.ArgumentParser:
     p_list.add_argument("--host-key", action="append", default=[], dest="host_keys")
     p_list.add_argument("--cookie-name", action="append", default=[], dest="cookie_names")
     p_list.set_defaults(handler=lambda a: core.list_chrome_profiles(a.host_keys, a.cookie_names))
+
+    p_page = sub.add_parser("page", help="抓原始 HTML")
+    p_page.add_argument("url")
+    p_page.add_argument("--auth", action="store_true")
+    p_page.add_argument("--chrome-profile", default=None)
+    p_page.set_defaults(handler=lambda a: core.fetch_page(a.url, a.auth, a.chrome_profile))
+
+    p_eval = sub.add_parser("eval", help="在页面上执行 JS（调试用）")
+    p_eval.add_argument("url")
+    p_eval.add_argument("--js-file", required=True, help="JS 源文件路径，'-' 表示读 stdin")
+    p_eval.add_argument("--chrome-profile", default=None)
+    p_eval.set_defaults(handler=lambda a: core.evaluate_js(a.url, _read_js(a.js_file), a.chrome_profile))
 
     return parser
 
