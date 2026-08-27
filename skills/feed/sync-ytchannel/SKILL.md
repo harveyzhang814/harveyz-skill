@@ -31,13 +31,13 @@ python3 scripts/roster_locate.py
 
 ### run（支持 /loop、schedule 无人值守调用，过程中不能有需要用户回答的交互）
 
-1. 运行 `python3 scripts/browser_fetch_mcp_locate.py`。若输出 `FOUND: <path>`，继续步骤 2；若输出 `NOT_FOUND: <error>`（exit code 1），向用户报告"browser-fetch-mcp 未安装或未找到：{error}。在本仓库 checkout 内运行会自动定位；若通过 `hskill install` 安装到别处运行，需要先运行 `hskill install --tool browser-fetch-mcp`"，流程终止，不再执行后续步骤。
+1. 运行 `python3 scripts/browser_fetch_locate.py`。若输出 `FOUND: <path>`，继续步骤 2；若输出 `NOT_FOUND: <error>`（exit code 1），向用户报告"browser-fetch 未安装或未找到：{error}。在本仓库 checkout 内运行会自动定位；若通过 `hskill install` 安装到别处运行，需要先运行 `hskill install --tool browser-fetch`"，流程终止，不再执行后续步骤。
 2. 运行 `python3 scripts/sync_channels.py`。这一步自己完成抓取、增量对比、渲染更新日志、推进游标，中间不需要任何介入（视频标题不翻译）。
 3. 根据输出：
    - `EMPTY`：向用户报告"本次没有新视频，未生成更新日志"。
    - `WRITTEN: <path>`：向用户报告更新日志路径，并简述本次涵盖了哪些频道的新视频（每个频道几个）、哪些频道是首次建立基线、哪些频道抓取失败。
 
-`chrome_profile` 不由本 skill 单独配置，直接读取 browser-fetch-mcp 里持久化的默认值（跟 clip-url、sync-xtimeline 共用同一份配置），用它带上 YouTube 登录态。频道页本身是公开的，所以没配过也能跑，只是不是登录态视角。
+`chrome_profile` 不由本 skill 单独配置，直接读取 browser-fetch 里持久化的默认值（跟 clip-url、sync-xtimeline 共用同一份配置），用它带上 YouTube 登录态。频道页本身是公开的，所以没配过也能跑，只是不是登录态视角。
 
 ## 日期精度
 
@@ -54,10 +54,10 @@ python3 scripts/roster_locate.py
 | 文件 | 用途 |
 |------|------|
 | `scripts/config.py` | 数据目录：运行时向 roster 要，本 skill 不再自持 `DATA_DIR` |
-| `scripts/browser_fetch_mcp_locate.py` | 定位 browser-fetch-mcp launcher（跟 clip-url 同款，独立副本） |
-| `scripts/roster_locate.py` | 定位 roster launcher（跟 `browser_fetch_mcp_locate.py` 同款，独立副本） |
+| `scripts/browser_fetch_locate.py` | 定位 browser-fetch launcher（跟 clip-url 同款，独立副本） |
+| `scripts/roster_locate.py` | 定位 roster launcher（跟 `browser_fetch_locate.py` 同款，独立副本） |
 | `scripts/roster_client.py` | 与名册的桥：读本平台渠道列表、读写游标。只调 `registry channels` 和 `state`，绝不写 registry |
 | `scripts/cursor.py` | 纯函数游标 diff（`compute_update`），不碰磁盘不碰网络 |
-| `scripts/mcp_channel_client.py` | 调用 browser-fetch-mcp 的 `fetch_channel_videos` MCP 工具（解析逻辑全在 MCP 侧） |
+| `scripts/mcp_channel_client.py` | 调用 browser-fetch 的 `channel` 子命令（解析逻辑全在 CLI 侧） |
 | `scripts/digest.py` | 纯函数：把报告渲染成 Markdown 更新日志 |
 | `scripts/sync_channels.py` | `run` 子命令：抓取 → 对比 → 写更新日志 → 推进游标（写盘成功才推进游标） |
