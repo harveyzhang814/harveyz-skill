@@ -56,6 +56,29 @@ def build_parser() -> argparse.ArgumentParser:
     p_eval.add_argument("--chrome-profile", default=None)
     p_eval.set_defaults(handler=lambda a: core.evaluate_js(a.url, _read_js(a.js_file), a.chrome_profile))
 
+    p_article = sub.add_parser("article", help="站点感知的结构化文章抽取")
+    p_article.add_argument("url")
+    p_article.add_argument("--out", required=True, dest="output_dir")
+    p_article.add_argument("--chrome-profile", default=None)
+    p_article.add_argument("--format", choices=("path", "json"), default="path",
+                           dest="output_format")
+    p_article.set_defaults(handler=lambda a: core.fetch_article(
+        a.url, a.output_dir, a.chrome_profile, a.output_format))
+
+    p_timeline = sub.add_parser("timeline", help="X.com 账号时间线批量列表")
+    p_timeline.add_argument("profile_url")
+    p_timeline.add_argument("--max", type=int, default=20, dest="max_tweets")
+    p_timeline.add_argument("--chrome-profile", default=None)
+    p_timeline.set_defaults(handler=lambda a: core.fetch_user_timeline(
+        a.profile_url, a.chrome_profile, a.max_tweets))
+
+    p_channel = sub.add_parser("channel", help="YouTube 频道最新上传列表")
+    p_channel.add_argument("channel_url")
+    p_channel.add_argument("--max", type=int, default=30, dest="max_videos")
+    p_channel.add_argument("--chrome-profile", default=None)
+    p_channel.set_defaults(handler=lambda a: core.fetch_channel_videos(
+        a.channel_url, a.chrome_profile, a.max_videos))
+
     return parser
 
 
