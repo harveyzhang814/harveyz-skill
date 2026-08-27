@@ -1,15 +1,23 @@
-from browser_fetch.cli import build_parser
+import subprocess
+import sys
 
 
 def test_fetch_channel_videos_is_registered():
     """No CLI equivalent of MCP's session.list_tools() exists — the closest
-    functional analog is checking the subcommand is wired into the argparse
-    parser, i.e. `browser-fetch channel ...` is a real, dispatchable command."""
-    parser = build_parser()
-    command_action = next(
-        a for a in parser._subparsers._group_actions if a.dest == "command"
+    functional analog is checking `channel` is a real, dispatchable subcommand:
+    an unregistered name would make argparse fail with "invalid choice" at the
+    top-level command dest instead of reaching this subcommand's own --help.
+
+    Runs the real CLI process directly (not the run_cli fixture) because
+    --help writes plain usage text to stdout, not JSON — run_cli's payload
+    decoding assumes success (returncode 0) means JSON on stdout, which
+    doesn't hold here."""
+    proc = subprocess.run(
+        [sys.executable, "-m", "browser_fetch.cli", "channel", "--help"],
+        capture_output=True, text=True,
     )
-    assert "channel" in command_action.choices
+    assert proc.returncode == 0
+    assert "channel_url" in proc.stdout
 
 
 def test_fetch_channel_videos_rejects_non_youtube_url(run_cli):
