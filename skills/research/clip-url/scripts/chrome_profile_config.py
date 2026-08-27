@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
-"""Thin MCP-client CLI for reading/writing browser-fetch-mcp's persisted
-default Chrome profile (get_default_chrome_profile / set_default_chrome_profile
-tools). Written from scratch, same stdio_client pattern as mcp_fetch_client.py
-and detect_xcom_chrome_profile.py.
+"""Thin CLI wrapper for reading/writing browser-fetch's persisted default
+Chrome profile (`profile get` / `profile set` subcommands). Written from
+scratch, same browser_fetch_cli.call() pattern as mcp_fetch_client.py and
+detect_xcom_chrome_profile.py.
 
-Also tracks, purely locally (no MCP call involved), whether clip-url has
-already asked the user about chrome_profile once — so SKILL.md's step 2
-only prompts on the very first run, regardless of whether the user set a
-profile or declined, instead of re-prompting on every run until a profile
-happens to get set.
+Also tracks, purely locally (no browser-fetch call involved), whether
+clip-url has already asked the user about chrome_profile once — so
+SKILL.md's step 2 only prompts on the very first run, regardless of
+whether the user set a profile or declined, instead of re-prompting on
+every run until a profile happens to get set.
 
 Usage:
   python3 chrome_profile_config.py get
@@ -22,18 +22,11 @@ exits 1 (e.g. profile_path doesn't exist or isn't a directory).
 prompted prints "YES" or "NO".
 mark-prompted records that the user has been asked and prints "OK".
 """
-import asyncio
-import json
 import os
 import sys
 from pathlib import Path
 
-from mcp import ClientSession, StdioServerParameters
-from mcp.client.stdio import stdio_client
-
-from browser_fetch_mcp_locate import find_browser_fetch_mcp
-
-BROWSER_FETCH_MCP_SH = find_browser_fetch_mcp()
+import browser_fetch_cli
 
 
 def _prompted_marker_path() -> Path:
@@ -52,34 +45,15 @@ def mark_prompted() -> None:
     marker.write_text("", encoding="utf-8")
 
 
-async def _get() -> str:
-    server_params = StdioServerParameters(
-        command=str(BROWSER_FETCH_MCP_SH), args=[], env=dict(os.environ)
-    )
-    async with stdio_client(server_params) as (read, write):
-        async with ClientSession(read, write) as session:
-            await session.initialize()
-            result = await session.call_tool("get_default_chrome_profile", {})
-            if result.isError:
-                raise RuntimeError(f"get_default_chrome_profile failed: {result.content[0].text}")
-            payload = result.structuredContent or json.loads(result.content[0].text)
-            profile_path = payload["profile_path"]
-            return f"CONFIGURED: {profile_path}" if profile_path else "NOT_CONFIGURED"
+def _get() -> str:
+    payload = browser_fetch_cli.call("profile", "get")
+    profile_path = payload["profile_path"]
+    return f"CONFIGURED: {profile_path}" if profile_path else "NOT_CONFIGURED"
 
 
-async def _set(profile_path: str) -> str:
-    server_params = StdioServerParameters(
-        command=str(BROWSER_FETCH_MCP_SH), args=[], env=dict(os.environ)
-    )
-    async with stdio_client(server_params) as (read, write):
-        async with ClientSession(read, write) as session:
-            await session.initialize()
-            result = await session.call_tool(
-                "set_default_chrome_profile", {"profile_path": profile_path}
-            )
-            if result.isError:
-                raise RuntimeError(f"set_default_chrome_profile failed: {result.content[0].text}")
-            return "OK"
+def _set(profile_path: str) -> str:
+    browser_fetch_cli.call("profile", "set", profile_path)
+    return "OK"
 
 
 def main():
@@ -92,7 +66,7 @@ def main():
         sys.exit(1)
 
     if sys.argv[1] == "get":
-        print(asyncio.run(_get()))
+        print(_get())
         return
 
     if sys.argv[1] == "prompted":
@@ -109,7 +83,7 @@ def main():
         sys.exit(1)
 
     try:
-        print(asyncio.run(_set(sys.argv[2])))
+        print(_set(sys.argv[2]))
     except RuntimeError as e:
         print(str(e), file=sys.stderr)
         sys.exit(1)
