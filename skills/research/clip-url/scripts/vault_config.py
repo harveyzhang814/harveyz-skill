@@ -8,6 +8,7 @@ Written from scratch — does not import extract-url's config.py.
 import hashlib
 import json
 import os
+import sys
 from pathlib import Path
 
 
@@ -53,7 +54,6 @@ def get_article_paths(url: str) -> dict:
 
 
 def main():
-    import sys
     if len(sys.argv) > 1 and sys.argv[1] == "check":
         try:
             print(f"OK: {get_vault_path()}")

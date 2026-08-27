@@ -13,6 +13,15 @@ user_invocable: true
 
 ## 初始化（run first）
 
+**① 加载平台补丁**
+
+根据当前执行平台读取对应补丁：Claude Code → `platforms/SKILL.claude.md`；
+Codex → `platforms/SKILL.codex.md`；Hermes → `platforms/SKILL.hermes.md`；
+Pi → `platforms/SKILL.pi.md`。若补丁顶部带「⚠️ 未在本平台实测」标注，
+先告知用户再继续。
+
+**② 检查 roster 名册**
+
 本 skill 自己没有配置。数据目录归 roster 名册持有，检查它在不在：
 
 ```bash
