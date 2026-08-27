@@ -37,9 +37,9 @@ _run_bats() {
 
 # 每个 tool/skill 目录优先用自己的 .venv 解释器（若存在），否则退回系统
 # python3。原因：工具会用 uv/venv 钉住自己的依赖版本，这些版本可能与系统
-# site-packages 不兼容（实例：tools/browser-fetch 的 mcp SDK 版本与系统
-# python3 装的 mcp 不兼容，直接用系统 python3 跑会得到一堆和代码无关的
-# ImportError；用它自己的 .venv 跑是 124 passed 全绿）。优先用 .venv 能让
+# site-packages 不兼容（实例：tools/browser-fetch 靠自己 venv 里钉住的
+# playwright 版本运行，系统 python3 没装 playwright，直接用系统 python3 跑
+# 会得到一堆和代码无关的 ImportError；用它自己的 .venv 跑是全绿）。优先用 .venv 能让
 # 这类套件按其真实状态被评估，而不是被解释器不匹配误报成失败。
 _run_pytest_dir() {
   local dir="$1"

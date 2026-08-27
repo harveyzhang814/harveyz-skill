@@ -105,22 +105,22 @@
       "path": "research/clip-url",
       "bundle": "research",
       "installScope": "project",
-      "contentHash": "46e5edd59daaa755",
-      "contentVersion": "0.7.5"
+      "contentHash": "4d25c27b6f6d3d4b",
+      "contentVersion": "0.8.0"
     },
     {
       "path": "feed/sync-xtimeline",
       "bundle": "feed",
       "installScope": "project",
-      "contentHash": "a72bfc5b5a4390cd",
-      "contentVersion": "0.3.0"
+      "contentHash": "951a41ae53856ec8",
+      "contentVersion": "0.4.0"
     },
     {
       "path": "feed/sync-ytchannel",
       "bundle": "feed",
       "installScope": "project",
-      "contentHash": "6252108e24bdd0b8",
-      "contentVersion": "0.2.0"
+      "contentHash": "108c0c5e3168b670",
+      "contentVersion": "0.3.0"
     },
     {
       "path": "creative/capture-todo",

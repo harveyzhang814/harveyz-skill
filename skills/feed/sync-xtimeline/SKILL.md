@@ -1,6 +1,6 @@
 ---
 name: sync-xtimeline
-version: "0.3.0"
+version: "0.4.0"
 description: "Run one incremental fetch over every X (Twitter) account on the roster, produce a translated Markdown digest of what is new since last run, and build a cumulative static HTML view of every tweet archived so far. Trigger phrases: '/sync-xtimeline run', '/sync-xtimeline', '/sync-xtimeline view', 'check my X accounts for new tweets', or a request to run sync-xtimeline on a schedule via /loop or schedule. Adding or removing a watched account is manage-roster, not this skill. Not for saving a single article or tweet to Obsidian (use clip-url for that) — this skill never ingests into Obsidian, never tags, never downloads images, and only reports incremental new tweets, not full thread content."
 user_invocable: true
 ---
@@ -67,8 +67,10 @@ python3 scripts/roster_locate.py
 
 | 文件 | 用途 |
 |------|------|
+| `platforms/` | 各平台的补丁文件（`SKILL.claude.md`/`SKILL.codex.md`/`SKILL.hermes.md`/`SKILL.pi.md`），初始化步骤①读取 |
 | `scripts/config.py` | 数据目录：运行时向 roster 要，本 skill 不再自持 `DATA_DIR` |
 | `scripts/browser_fetch_locate.py` | 定位 browser-fetch launcher（跟 clip-url 同款，独立副本） |
+| `scripts/browser_fetch_cli.py` | browser-fetch CLI 调用层（跟 clip-url 同款，独立副本），被 `mcp_timeline_client.py` 调用 |
 | `scripts/roster_locate.py` | 定位 roster launcher（跟 `browser_fetch_locate.py` 同款，独立副本） |
 | `scripts/roster_client.py` | 与名册的桥：读本平台渠道列表、读写游标。只调 `registry channels` 和 `state`，绝不写 registry |
 | `scripts/cursor.py` | 纯函数游标 diff（`compute_update`），不碰磁盘不碰网络 |

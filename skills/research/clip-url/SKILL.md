@@ -1,6 +1,6 @@
 ---
 name: clip-url
-version: "0.7.5"
+version: "0.8.0"
 description: "Use this the instant a URL is shared with any intent to save, archive, clip, or translate-and-keep it in Obsidian — a bare link with no comment, \"save this\", \"archive this\", \"clip this\", \"add to obsidian\", \"存一下\", \"存到 vault/obsidian\", \"留个档\", \"翻译一下存\", \"帮我存/抓一下这个链接\", or a request to fetch a page via browser-fetch. Covers arXiv papers, WeChat/公众号 posts, X/Twitter threads, Hacker News links, blog posts, news articles, and general webpages — including sites needing special handling (login walls, images, JS-rendered content). Do not use for translate-or-summarize-only requests with no save intent, in-page actions like clicking buttons or filling forms, retagging or fixing metadata on an article already saved, links shared purely for reaction or jokes, or topic searches with no specific URL given."
 user_invocable: true
 ---
@@ -173,6 +173,7 @@ result = subprocess.run(
 
 | 文件 | 用途 |
 |------|------|
+| `platforms/` | 各平台的补丁文件（`SKILL.claude.md`/`SKILL.codex.md`/`SKILL.hermes.md`/`SKILL.pi.md`），初始化步骤①读取 |
 | `references/subagent1-fetch-prompt.md` | Subagent 1（CLI 抓取）派发 prompt 模板，含去重检查 |
 | `references/subagent2-tag-translate-prompt.md` | Subagent 2（两阶段打标 + 翻译）派发 prompt 模板 |
 | `references/subagent-self-optimize-prompt.md` | Subagent 3（自优化，抓取失败/过薄时触发）派发 prompt 模板 |

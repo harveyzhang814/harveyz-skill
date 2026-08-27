@@ -1,6 +1,6 @@
 """Persisted default Chrome profile — a single JSON file in the server's
 data dir, {"default_chrome_profile": "<path>"}. Read/write here is pure
-I/O; the caller (server.py) owns resolving `data_dir` (BROWSER_FETCH_DATA_DIR
+I/O; the caller (core.py) owns resolving `data_dir` (BROWSER_FETCH_DATA_DIR
 override for tests) and validating the path before calling set().
 """
 import json

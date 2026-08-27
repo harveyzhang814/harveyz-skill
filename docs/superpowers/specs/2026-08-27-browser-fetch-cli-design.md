@@ -68,7 +68,9 @@ CLI 化必须新增的东西。MCP 侧原本靠抛异常 + `isError` 一档处�
 
 两种失败都往 stderr 写人类可读消息，stdout 保持空。
 
-这一档区分让 sync-xtimeline 的批量循环能正确决定"跳过这个账号继续下一个"还是"整批中止"——今天做不到。
+这一档区分理论上能让 sync-xtimeline 的批量循环正确决定"跳过这个账号继续下一个"还是"整批中止"——但**消费端尚未接入**：`browser_fetch_cli.call()` 目前把退出码 1 和 2 统一抬成 `RuntimeError`（这是 plan 明文要求的"保持各 client 原有异常契约不变"），而 `fetch_new_tweets.py` 与 `sync_channels.py` 的批量循环都是 `except Exception: continue`，对所有失败一律"跳过这个账号"。因此"批量循环能区分跳过与中止"这项收益**当前尚未兑现**，留作后续独立任务（改变批量循环运行时行为需要单独设计与测试，不适合塞进本次实现）。
+
+后续实现的可行路径（供参考，不是承诺）：让 `call()` 在退出码 2 时抛一个 `RuntimeError` 的子类，使现有 `except RuntimeError` 行为不变，再让批量循环单独捕获它以决定中止整批。
 
 ### 明确不做
 

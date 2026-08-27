@@ -26,9 +26,9 @@ fi
 if [ -d "${SCRIPT_DIR}/browser_fetch" ] && [ -f "${SCRIPT_DIR}/pyproject.toml" ]; then
   DEV_VENV="${SCRIPT_DIR}/.venv"
   if [ ! -x "${DEV_VENV}/bin/browser-fetch" ]; then
-    python3 -m venv "${DEV_VENV}"
-    "${DEV_VENV}/bin/pip" install -q -e "${SCRIPT_DIR}"
-    "${DEV_VENV}/bin/python3" -m playwright install chromium
+    python3 -m venv "${DEV_VENV}" >&2
+    "${DEV_VENV}/bin/pip" install -q -e "${SCRIPT_DIR}" >&2
+    "${DEV_VENV}/bin/python3" -m playwright install chromium >&2
   fi
   exec "${DEV_VENV}/bin/browser-fetch" "$@"
 fi
@@ -46,9 +46,9 @@ _hash_source() {
 CURRENT_HASH=$(_hash_source)
 
 if [ ! -x "${VENV_DIR}/bin/browser-fetch" ] || [ "$(cat "${HASH_FILE}" 2>/dev/null)" != "${CURRENT_HASH}" ]; then
-  python3 -m venv "${VENV_DIR}"
-  "${VENV_DIR}/bin/pip" install -q --upgrade "${INSTALL_DIR}"
-  "${VENV_DIR}/bin/python3" -m playwright install chromium
+  python3 -m venv "${VENV_DIR}" >&2
+  "${VENV_DIR}/bin/pip" install -q --upgrade "${INSTALL_DIR}" >&2
+  "${VENV_DIR}/bin/python3" -m playwright install chromium >&2
   echo "${CURRENT_HASH}" > "${HASH_FILE}"
 fi
 

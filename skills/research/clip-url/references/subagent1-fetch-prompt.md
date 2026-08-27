@@ -1,6 +1,6 @@
 # Subagent 1 派发 prompt（CLI 抓取）
 
-由主 session 读取本文件，将 `<URL>` 替换为净化后的 url_safe，`<CHROME_PROFILE>` 替换为空（不留任何字符）——browser-fetch 的 `fetch_article` 会自己解析已持久化的默认 chrome_profile，不需要这里显式传值，替换后按平台的 subagent 派发机制原样作为任务内容派发。
+由主 session 读取本文件，将 `<URL>` 替换为净化后的 url_safe，`<CHROME_PROFILE>` 替换为空（不留任何字符）——browser-fetch 的 `article` 子命令会自己解析已持久化的默认 chrome_profile，不需要这里显式传值，替换后按平台的 subagent 派发机制原样作为任务内容派发。
 
 ---
 

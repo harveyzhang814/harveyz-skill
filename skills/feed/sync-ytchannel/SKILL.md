@@ -1,6 +1,6 @@
 ---
 name: sync-ytchannel
-version: "0.2.0"
+version: "0.3.0"
 description: "Run one incremental fetch over every YouTube channel on the roster and write a Markdown update log listing each new video's title, publish date and URL. Trigger phrases: '/sync-ytchannel run', '/sync-ytchannel', 'check my YouTube channels for new videos', or a request to run sync-ytchannel on a schedule via /loop or schedule. Adding or removing a watched channel is manage-roster, not this skill. Listing only — never downloads a video, transcript or description, and never ingests into Obsidian (use clip-url or learn-video for a single video)."
 user_invocable: true
 ---
@@ -62,8 +62,10 @@ python3 scripts/roster_locate.py
 
 | 文件 | 用途 |
 |------|------|
+| `platforms/` | 各平台的补丁文件（`SKILL.claude.md`/`SKILL.codex.md`/`SKILL.hermes.md`/`SKILL.pi.md`），初始化步骤①读取 |
 | `scripts/config.py` | 数据目录：运行时向 roster 要，本 skill 不再自持 `DATA_DIR` |
 | `scripts/browser_fetch_locate.py` | 定位 browser-fetch launcher（跟 clip-url 同款，独立副本） |
+| `scripts/browser_fetch_cli.py` | browser-fetch CLI 调用层（跟 clip-url 同款，独立副本），被 `mcp_channel_client.py` 调用 |
 | `scripts/roster_locate.py` | 定位 roster launcher（跟 `browser_fetch_locate.py` 同款，独立副本） |
 | `scripts/roster_client.py` | 与名册的桥：读本平台渠道列表、读写游标。只调 `registry channels` 和 `state`，绝不写 registry |
 | `scripts/cursor.py` | 纯函数游标 diff（`compute_update`），不碰磁盘不碰网络 |
