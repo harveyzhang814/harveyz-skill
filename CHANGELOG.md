@@ -8,15 +8,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- `roster`：新增 tool，人（creator）与渠道（channel）名册。三份数据、三个写入方：`registry.json`（人与渠道定义，归 manage-roster）、`state.json`（游标与失败态，归 sync-*）、`profiles/*.md`（画像，归后续的认知层）。CLI 按同样的三组划分。渠道数据可重建，画像不可重建——删除操作一律归档而非删除
+- `roster`：新增 tool，人（creator）与渠道（channel）名册。三份数据、三个写入方：`registry.json`（人与渠道定义，归 manage-roster）、`state.json`（游标与失败态，归 sync-*）、`profiles/*.md`（画像，归 note-creator）。CLI 按同样的三组划分。渠道数据可重建，画像不可重建——删除操作一律归档而非删除
 - `manage-roster`：新增 skill，名册的人机入口（`add` / `list` / `merge` / `rename` / `remove`），含旧 watchlist 的一次性幂等迁移
+- `note-creator`：新增 skill，认知层的人工输入口。你口述对某个博主的判断，它归纳成要点、盖上当前时间戳、回显确认后追加进 `profiles/<id>.md`。判断由人出，agent 只做整理，未经确认不写盘
 
 ### Changed
+- `roster profile append`：`--source`（依据）改为可选，省略时记为 `人工`——这个值同时就是作者标记，用来区分本人下的判断和 agent 从物料推的观察。正文可以省略 `--body` 改从 stdin 读，多行 Markdown 不再受命令行引号和换行的折磨。观察条目的时间戳支持可选的 `HH:MM`（一天记好几条时需要分先后），纯日期的旧条目不需要迁移
+- `roster profile append` / `summary`：写入前校验 `creator_id` 在名册里存在（接受 merge 后的 alias）。此前手打错一个字母会安静地建出一个没人引用、`registry remove` 也不会归档的孤儿画像
 - **破坏性变更** `sync-xtimeline` / `sync-ytchannel`：移除 `add` / `remove` / `list` 三个子命令，关注列表迁到 `manage-roster`。两个 skill 退化为纯执行器，只保留 `run`（sync-xtimeline 另留 `view`）。两者不再各持一份 `DATA_DIR`，改为共用名册的数据目录，digest 各落各的平台子目录（`digests/x/`、`digests/youtube/`）
   - **升级路径**：跑一次 `manage-roster` 的初始化流程，它会引导完成迁移。迁移后每个 handle 各自是一个人，同一个人的 X 和 YouTube 需要手动 `merge` 合并——判断"这两个 handle 是同一个人"不能自动化。旧的 `~/.hskill/sync-xtimeline/config.json` 和 `~/.hskill/sync-ytchannel/config.json` 作废但不会被自动删除
 
 ### Fixed
-- `scripts/run-skill-tests.sh`：此前对 `skills/*/*/tests/*.py` 执行 `python3 <file>`，而它们是 pytest 文件——直接执行只 import 模块然后退出 0，一个测试都不跑，`npm test` 一直把"没跑"报成"通过"。改为按 `tests/` 目录调 pytest，并纳入 `tools/*/tests/`。修复后 `npm test` 真正执行 10 个套件共 655 个 pytest，其中 282 个是本次改动之前就存在、却从未被 CI 执行过的。归档代码（`*/archived/*`）排除在测试范围外；工具套件优先用自己的 `.venv`（仅当该 venv 装了 pytest）
+- `scripts/run-skill-tests.sh`：此前对 `skills/*/*/tests/*.py` 执行 `python3 <file>`，而它们是 pytest 文件——直接执行只 import 模块然后退出 0，一个测试都不跑，`npm test` 一直把"没跑"报成"通过"。改为按 `tests/` 目录调 pytest，并纳入 `tools/*/tests/`。修复后 `npm test` 真正执行 10 个套件共 665 个 pytest，其中 282 个是本次改动之前就存在、却从未被 CI 执行过的。归档代码（`*/archived/*`）排除在测试范围外；工具套件优先用自己的 `.venv`（仅当该 venv 装了 pytest）
 
 ## [0.28.0] - 2026-08-15
 

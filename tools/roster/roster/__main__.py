@@ -2,7 +2,7 @@
 
   roster registry ...   registry.json    manage-roster skill
   roster state ...      state.json       sync-* skill
-  roster profile ...    profiles/*.md    认知层 skill
+  roster profile ...    profiles/*.md    note-creator skill
 
 读跨组允许（registry list 要读 state 展示游标），写不允许。
 """
@@ -176,17 +176,41 @@ def _cmd_state_fail(args) -> int:
     return 0
 
 
+MANUAL_SOURCE = "人工"
+
+
+def _resolve_creator(data_dir, creator_id: str) -> str:
+    """画像文件名必须对应名册里真实存在的人。人工输入是手打 id，打错一个字母
+    就会建出一个没人引用、`registry remove` 也不会归档的孤儿画像。返回正规 id，
+    所以 merge 之后用旧 id（alias）记录也会落到同一个人身上。"""
+    creator = registry.find_creator(registry.load(data_dir), creator_id)
+    if creator is None:
+        raise ValueError(f"名册里没有这个人：{creator_id}（先用 manage-roster 把渠道加进来）")
+    return creator["id"]
+
+
+def _body_of(args) -> str:
+    """--body 省略时从 stdin 读：归纳重写后的正文是多行 Markdown，走命令行参数
+    会被引号和换行折磨。"""
+    body = args.body if args.body is not None else sys.stdin.read()
+    if not body.strip():
+        raise ValueError("观察正文为空")
+    return body
+
+
 def _cmd_profile_append(args) -> int:
     data_dir = config.get_data_dir()
-    profiles.append_observation(data_dir, args.creator_id, args.date, args.source, args.body)
-    print(f"OK {profiles.profile_path(data_dir, args.creator_id)}")
+    creator_id = _resolve_creator(data_dir, args.creator_id)
+    profiles.append_observation(data_dir, creator_id, args.date, args.source, _body_of(args))
+    print(f"OK {profiles.profile_path(data_dir, creator_id)}")
     return 0
 
 
 def _cmd_profile_summary(args) -> int:
     data_dir = config.get_data_dir()
-    profiles.set_summary(data_dir, args.creator_id, args.text, args.updated_at)
-    print(f"OK {profiles.profile_path(data_dir, args.creator_id)}")
+    creator_id = _resolve_creator(data_dir, args.creator_id)
+    profiles.set_summary(data_dir, creator_id, args.text, args.updated_at)
+    print(f"OK {profiles.profile_path(data_dir, creator_id)}")
     return 0
 
 
@@ -246,9 +270,10 @@ def _build_parser() -> argparse.ArgumentParser:
 
     p = prof_sub.add_parser("append")
     p.add_argument("creator_id")
-    p.add_argument("--date", required=True)
-    p.add_argument("--source", required=True)
-    p.add_argument("--body", required=True)
+    p.add_argument("--date", required=True, help="YYYY-MM-DD 或 YYYY-MM-DD HH:MM")
+    p.add_argument("--source", default=MANUAL_SOURCE,
+                   help=f"依据来源；省略即 {MANUAL_SOURCE}，这个值同时就是作者标记")
+    p.add_argument("--body", default=None, help="省略则从 stdin 读")
     p.set_defaults(func=_cmd_profile_append)
     p = prof_sub.add_parser("summary")
     p.add_argument("creator_id")
