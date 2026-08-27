@@ -9,6 +9,30 @@ user_invocable: true
 
 这是 [browser-fetch](../../../tools/browser-fetch/) 的验证性消费者，做"抓取（CLI，经 browser-fetch article 做站点感知抽取）→ 打标 + 翻译 → 存文件"两阶段流程，跟 extract-url 的 Subagent 1/2 结构对齐。下文脚本路径均相对本 SKILL.md 所在目录。
 
+## 初始化（run first）
+
+**① 加载平台补丁**
+
+根据当前执行平台，读取对应补丁文件，了解**补丁①**（Subagent 派发）与**补丁②**（变量来源）的具体语法：
+
+| 平台 | 补丁文件 |
+|------|----------|
+| Claude Code | `platforms/SKILL.claude.md` |
+| Codex | `platforms/SKILL.codex.md` |
+| Hermes | `platforms/SKILL.hermes.md` |
+| Pi | `platforms/SKILL.pi.md` |
+
+若补丁文件顶部带「⚠️ 未验证」标注，必须先按该标注要求告知用户，再决定是否继续。
+
+以下流程中凡标注「**补丁①**」处，均使用对应平台补丁中定义的调用语法替换。
+
+**② 检查共享配置**
+
+运行 `python3 scripts/vault_config.py check`。若报缺失，引导用户提供 Obsidian Vault
+绝对路径，写入 `~/.hskill/url-extract/config.json` 的 `VAULT_PATH` 字段，并在同目录
+创建空的 `fixed_tags.txt`。配置目录名 `url-extract` 是历史遗留，clip-url 沿用同一份
+配置，以便与历史抓取记录互相去重。
+
 ## 执行流程
 
 流程概览（各步骤的判断条件和细节以下方对应小节为准，这里只做路线图）：
@@ -63,7 +87,7 @@ result = subprocess.run(
 )
 ```
 
-- 若 `result.returncode != 0`（`config.json` 不存在，或存在但缺 `VAULT_PATH` 字段）：向用户报告"请先运行 extract-url skill 完成初始化（配置 Obsidian Vault 路径和固定标签词表），再回来使用本 skill"，流程终止。
+- 若 `result.returncode != 0`（`config.json` 不存在，或存在但缺 `VAULT_PATH` 字段）：向用户报告"共享配置缺失，请先完成本文档「初始化」小节的 ② 检查共享配置，再回来使用本 skill"，流程终止。
 - 若 `result.returncode == 0`：再检查 `~/.hskill/url-extract/fixed_tags.txt` 是否存在：
   ```bash
   ls ~/.hskill/url-extract/fixed_tags.txt 2>/dev/null && echo "EXISTS" || echo "NOT_FOUND"
@@ -72,7 +96,7 @@ result = subprocess.run(
 
 ### 步骤 3：派发 Subagent 1（CLI 抓取）
 
-读取 `references/subagent1-fetch-prompt.md`，将其中 `<URL>` 替换为 url_safe，`<CHROME_PROFILE>` 替换为空（不留任何字符）——browser-fetch 的 `article` 子命令会自己解析已持久化的默认 chrome_profile，不需要这里显式传值，按当前平台的 subagent 派发机制派发。文章存储目录由 Subagent 1 内部通过共享的 VAULT_PATH 自动计算，不再需要这里传参。
+读取 `references/subagent1-fetch-prompt.md`，将其中 `<URL>` 替换为 url_safe，`<CHROME_PROFILE>` 替换为空（不留任何字符）——browser-fetch 的 `article` 子命令会自己解析已持久化的默认 chrome_profile，不需要这里显式传值，按**补丁①**派发。文章存储目录由 Subagent 1 内部通过共享的 VAULT_PATH 自动计算，不再需要这里传参。
 
 ### 步骤 4：等待 Subagent 1 完成，判断是否需要自优化
 
@@ -84,14 +108,14 @@ result = subprocess.run(
 
 ### 步骤 4.5：派发 Subagent 3（自优化，仅在步骤 4 判定需要时执行）
 
-读取 `references/subagent-self-optimize-prompt.md`，把 `<URL>` 替换为 url_safe，`<CHROME_PROFILE>` 替换为已持久化的默认 chrome_profile（没有则留空，不留任何字符），其余占位符（`<SITE>`/`<BLOCK_COUNT>`/`<CHAR_COUNT>`/`<CONTENT_THIN>`/`<THIN_RETRY_USED>`/`<ERROR>`）替换为 Subagent 1 报告里对应字段的值（`RESULT: FAILED` 时 `<SITE>`/`<BLOCK_COUNT>`/`<CHAR_COUNT>`/`<CONTENT_THIN>`/`<THIN_RETRY_USED>` 全部替换为 `N/A`，`<ERROR>` 替换为 Subagent 1 报告里 `ERROR:` 那行的实际内容；`RESULT: OK` 时 `<ERROR>` 替换为空），按平台的 subagent 派发机制派发。
+读取 `references/subagent-self-optimize-prompt.md`，把 `<URL>` 替换为 url_safe，`<CHROME_PROFILE>` 替换为已持久化的默认 chrome_profile（没有则留空，不留任何字符），其余占位符（`<SITE>`/`<BLOCK_COUNT>`/`<CHAR_COUNT>`/`<CONTENT_THIN>`/`<THIN_RETRY_USED>`/`<ERROR>`）替换为 Subagent 1 报告里对应字段的值（`RESULT: FAILED` 时 `<SITE>`/`<BLOCK_COUNT>`/`<CHAR_COUNT>`/`<CONTENT_THIN>`/`<THIN_RETRY_USED>` 全部替换为 `N/A`，`<ERROR>` 替换为 Subagent 1 报告里 `ERROR:` 那行的实际内容；`RESULT: OK` 时 `<ERROR>` 替换为空），按**补丁①**派发。
 
 - Subagent 3 报告 `RESULT: SOLIDIFIED`：记下 `BRANCH:` 的值（步骤 6 汇报要用），重新派发 Subagent 1（同一个 url_safe），回到步骤 4 重新判断一次——若此次判断仍然需要自优化，直接终止并向用户输出「失败」卡片，不再进入步骤 4.5。
 - Subagent 3 报告 `RESULT: GAVE_UP`，或重试后 Subagent 1 仍然满足步骤 4 的自优化触发条件：向用户输出「失败」卡片（步骤 6 卡片格式，原因附上 Subagent 1 最新的诊断信息，以及 Subagent 3 报告里的 `ATTEMPTS`/`DIAGNOSIS`，如果有），流程终止，不再派发 Subagent 2。
 
 ### 步骤 5：派发 Subagent 2（打标 + 翻译）
 
-读取 `references/subagent2-tag-translate-prompt.md`，将其中 `<URL>` 替换为 url_safe，`<ORIGIN_PATH>` 替换为上一步的 origin_path，`<CATEGORY>` 替换为调用方提供的分类标签（没有则留空，不留任何字符——人工直接调用本 skill 时通常没有，主要供未来批量/自动化调用方透传），`<FETCH_TYPE>` 替换为调用方提供的抓取类型（没有则留空，不留任何字符，Subagent 2 会按 `manual` 处理），按当前平台的 subagent 派发机制派发。
+读取 `references/subagent2-tag-translate-prompt.md`，将其中 `<URL>` 替换为 url_safe，`<ORIGIN_PATH>` 替换为上一步的 origin_path，`<CATEGORY>` 替换为调用方提供的分类标签（没有则留空，不留任何字符——人工直接调用本 skill 时通常没有，主要供未来批量/自动化调用方透传），`<FETCH_TYPE>` 替换为调用方提供的抓取类型（没有则留空，不留任何字符，Subagent 2 会按 `manual` 处理），按**补丁①**派发。
 
 ### 步骤 6：向用户输出完成卡片
 
