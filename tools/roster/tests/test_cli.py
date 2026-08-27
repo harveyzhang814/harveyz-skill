@@ -1,3 +1,4 @@
+import io
 import json
 
 from roster.__main__ import main
@@ -161,6 +162,7 @@ def test_state_fail_keeps_cursor(data_dir, capsys):
 
 
 def test_profile_append_and_show(data_dir, capsys):
+    _run(capsys, "registry", "add", "https://x.com/karpathy")
     code, out, _ = _run(capsys, "profile", "append", "karpathy",
                         "--date", "2026-08-26", "--source", "12 条推文", "--body", "观察正文")
     assert code == 0
@@ -176,6 +178,7 @@ def test_profile_show_missing_is_empty(data_dir, capsys):
 
 
 def test_profile_summary_replaces(data_dir, capsys):
+    _run(capsys, "registry", "add", "https://x.com/k")
     _run(capsys, "profile", "summary", "k", "--text", "第一版", "--updated-at", "2026-08-26")
     _run(capsys, "profile", "summary", "k", "--text", "第二版", "--updated-at", "2026-08-27")
     _, out, _ = _run(capsys, "profile", "show", "k")
@@ -201,3 +204,67 @@ def test_bad_channel_ref_exits_1(data_dir, capsys):
     code, _, err = _run(capsys, "state", "get", "no-colon-here")
     assert code == 1
     assert "platform:handle" in err
+
+
+# —— 人工输入路径：依据默认「人工」、正文走 stdin、id 必须在名册里 ——
+
+def _add_karpathy(capsys):
+    _run(capsys, "registry", "add", "https://x.com/karpathy")
+
+
+def test_profile_append_defaults_source_to_manual(data_dir, capsys):
+    """人工记录时不填依据——`人工` 这个值同时就是作者标记。"""
+    _add_karpathy(capsys)
+    code, _, _ = _run(capsys, "profile", "append", "karpathy",
+                      "--date", "2026-08-27 14:32", "--body", "我的看法")
+    assert code == 0
+    _, shown, _ = _run(capsys, "profile", "show", "karpathy")
+    assert "### 2026-08-27 14:32 · 依据：人工" in shown
+
+
+def test_profile_append_reads_body_from_stdin(data_dir, capsys, monkeypatch):
+    """归纳重写后的正文是多行 Markdown，塞命令行参数会被引号和换行折磨。"""
+    _add_karpathy(capsys)
+    monkeypatch.setattr("sys.stdin", io.StringIO("**关注领域**：agent memory\n\n分歧：重算成本\n"))
+    code, _, _ = _run(capsys, "profile", "append", "karpathy", "--date", "2026-08-27 14:32")
+    assert code == 0
+    _, shown, _ = _run(capsys, "profile", "show", "karpathy")
+    assert "**关注领域**：agent memory" in shown
+    assert "分歧：重算成本" in shown
+
+
+def test_profile_append_explicit_body_wins_over_stdin(data_dir, capsys, monkeypatch):
+    _add_karpathy(capsys)
+    monkeypatch.setattr("sys.stdin", io.StringIO("来自 stdin"))
+    _run(capsys, "profile", "append", "karpathy",
+         "--date", "2026-08-27 14:32", "--body", "来自参数")
+    _, shown, _ = _run(capsys, "profile", "show", "karpathy")
+    assert "来自参数" in shown and "来自 stdin" not in shown
+
+
+def test_profile_append_unknown_creator_exits_1(data_dir, capsys):
+    """手打 id 打错一个字母，不能安静地建出一个没人引用的孤儿画像。"""
+    code, _, err = _run(capsys, "profile", "append", "karpthy",
+                        "--date", "2026-08-27 14:32", "--body", "观察")
+    assert code == 1
+    assert "karpthy" in err
+    assert not (data_dir / "profiles" / "karpthy.md").exists()
+
+
+def test_profile_append_accepts_alias(data_dir, capsys):
+    """merge 之后旧 id 进了 aliases，用旧 id 记录仍要能落到同一个人身上。"""
+    _add_karpathy(capsys)
+    _run(capsys, "registry", "add", "https://www.youtube.com/@AndrejKarpathy")
+    _run(capsys, "registry", "merge", "karpathy", "andrejkarpathy")
+    code, _, _ = _run(capsys, "profile", "append", "andrejkarpathy",
+                      "--date", "2026-08-27 14:32", "--body", "用旧 id 记的")
+    assert code == 0
+    _, shown, _ = _run(capsys, "profile", "show", "karpathy")
+    assert "用旧 id 记的" in shown
+
+
+def test_profile_summary_unknown_creator_exits_1(data_dir, capsys):
+    code, _, err = _run(capsys, "profile", "summary", "nobody",
+                        "--text", "判断", "--updated-at", "2026-08-27")
+    assert code == 1
+    assert "nobody" in err

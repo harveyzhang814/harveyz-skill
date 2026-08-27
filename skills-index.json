@@ -29,7 +29,7 @@
   ],
   "bundleMeta": {
     "research": "研究工具（extract-url + learn-video + extract-vision + survey-skillrepo + learn-paper + extract-cognition + probe-session + clip-url + fetch-paper）",
-    "feed": "追更工具（manage-roster — 人与渠道名册；sync-xtimeline + sync-ytchannel — 按名册跑增量抓取）",
+    "feed": "追更工具（manage-roster — 人与渠道名册；sync-xtimeline + sync-ytchannel — 按名册跑增量抓取；capture-creator — 给人记一笔判断）",
     "creative": "创意工具（capture-todo + capture-insight）",
     "coding": "程序工具（init-workflow + setup-debug + init-goal + question-me + capture-vocab + rephrase + explain-pm）",
     "writing": "写作工具（forge-doc + draw-diagram + manage-dir + migrate-spec）",
@@ -336,6 +336,13 @@
       "bundle": "feed",
       "installScope": "project",
       "contentHash": "fbb7672833c65712",
+      "contentVersion": "0.1.0"
+    },
+    {
+      "path": "feed/capture-creator",
+      "bundle": "feed",
+      "installScope": "project",
+      "contentHash": "57c4a5af03982093",
       "contentVersion": "0.1.0"
     }
   ],

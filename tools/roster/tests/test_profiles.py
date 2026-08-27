@@ -128,3 +128,40 @@ def test_merge_when_a_has_no_profile_adopts_b(data_dir):
     profiles.merge(data_dir, "a", "b", D3)
     assert "观察 b" in profiles.read(data_dir, "a")
     assert "creator_id: a" in profiles.read(data_dir, "a")
+
+
+# —— 带时分的时间戳（人工输入：一天可能记好几条）——
+
+TS1, TS2 = "2026-08-27 09:15", "2026-08-27 21:40"
+
+
+def test_append_accepts_timestamp_with_time(data_dir):
+    profiles.append_observation(data_dir, "k", TS2, "人工", "晚上想到的")
+    text = profiles.read(data_dir, "k")
+    assert "### 2026-08-27 21:40 · 依据：人工" in text
+    assert f"updated_at: {TS2}" in text
+
+
+def test_timestamped_observation_parses_back(data_dir):
+    profiles.append_observation(data_dir, "k", TS1, "人工", "第一条")
+    profiles.append_observation(data_dir, "k", TS2, "人工", "第二条")
+    text = profiles.read(data_dir, "k")
+    assert text.index("第二条") < text.index("第一条")
+    assert "第一条" in text
+
+
+def test_date_only_observations_survive_a_timestamped_append(data_dir):
+    """旧格式条目不做迁移，追加新格式时不能被吃掉。"""
+    profiles.append_observation(data_dir, "k", D1, "sync-xtimeline", "旧格式观察")
+    profiles.append_observation(data_dir, "k", TS2, "人工", "新格式观察")
+    text = profiles.read(data_dir, "k")
+    assert "### 2026-08-19 · 依据：sync-xtimeline\n\n旧格式观察" in text
+    assert "### 2026-08-27 21:40 · 依据：人工\n\n新格式观察" in text
+
+
+def test_merge_sorts_mixed_granularity_by_time(data_dir):
+    profiles.append_observation(data_dir, "a", "2026-08-27 21:40", "人工", "a 晚上")
+    profiles.append_observation(data_dir, "b", "2026-08-19", "源", "b 更早")
+    profiles.merge(data_dir, "a", "b", TS2)
+    text = profiles.read(data_dir, "a")
+    assert text.index("a 晚上") < text.index("b 更早")

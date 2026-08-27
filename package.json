@@ -61,6 +61,7 @@
     "skills/meta/sync-agent/",
     "skills/coding/handoff/",
     "skills/feed/manage-roster/",
+    "skills/feed/capture-creator/",
     "tools/hub/",
     "tools/sync-agent/",
     "tools/browser-fetch-mcp/",
