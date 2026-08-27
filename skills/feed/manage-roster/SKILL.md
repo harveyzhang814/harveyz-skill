@@ -67,4 +67,4 @@ ls ~/.hskill/roster/config.json 2>/dev/null && echo "EXISTS" || echo "NOT_FOUND"
 
 | 文件 | 用途 |
 |------|------|
-| `scripts/roster_locate.py` | 定位 roster launcher（跟 `browser_fetch_mcp_locate.py` 同款，独立副本） |
+| `scripts/roster_locate.py` | 定位 roster launcher（跟 `browser_fetch_locate.py` 同款，独立副本） |

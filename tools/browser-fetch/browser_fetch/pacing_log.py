@@ -23,6 +23,6 @@ def append_event(data_dir: Path, event: str, *, now: Optional[datetime] = None, 
             f.write(json.dumps(entry) + "\n")
     except OSError as e:
         print(
-            f"[browser-fetch-mcp] pacing log write failed ({e}); continuing without logging this event",
+            f"[browser-fetch] pacing log write failed ({e}); continuing without logging this event",
             file=sys.stderr,
         )
