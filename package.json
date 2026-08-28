@@ -1,10 +1,11 @@
 {
   "name": "harveyz-skill",
-  "version": "0.28.0",
+  "version": "0.29.0",
   "description": "Skill manager for Claude Code, Cursor, Codex, OpenClaw, Hermes, OpenCode, and Pi",
   "type": "module",
   "bin": {
-    "hskill": "bin/cli.js"
+    "hskill": "bin/cli.js",
+    "skill-harness": "tools/skill-harness/cli.js"
   },
   "scripts": {
     "prepack": "node scripts/generate-npmignore.js",
@@ -13,11 +14,11 @@
   "files": [
     "bin/",
     "lib/",
+    "tools/skill-harness/",
     "bundles.json",
     "skills-index.json",
     "CHANGELOG.md",
     "skills/mint/learn-skill/",
-    "skills/research/extract-url/",
     "skills/research/extract-vision/",
     "skills/research/learn-video/",
     "skills/research/survey-skillrepo/",
@@ -27,7 +28,8 @@
     "skills/research/probe-session/",
     "skills/research/pdf-math-translate/",
     "skills/research/clip-url/",
-    "skills/research/sync-xtimeline/",
+    "skills/feed/sync-xtimeline/",
+    "skills/feed/sync-ytchannel/",
     "skills/creative/capture-todo/",
     "skills/creative/capture-insight/",
     "skills/coding/init-workflow/",
@@ -57,9 +59,12 @@
     "skills/meta/sync-hotfix/",
     "skills/meta/sync-agent/",
     "skills/coding/handoff/",
+    "skills/feed/manage-roster/",
+    "skills/feed/capture-creator/",
     "tools/hub/",
     "tools/sync-agent/",
-    "tools/browser-fetch-mcp/",
+    "tools/browser-fetch/",
+    "tools/roster/",
     "hooks/check-similar-branch/"
   ],
   "engines": {

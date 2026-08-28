@@ -1,0 +1,21 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "roster"
+version = "0.2.0"
+requires-python = ">=3.11"
+dependencies = []
+
+[project.scripts]
+roster = "roster.__main__:main"
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["roster"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

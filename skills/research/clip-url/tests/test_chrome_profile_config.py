@@ -1,6 +1,6 @@
-"""Tests for chrome_profile_config.py — real browser-fetch-mcp
-subprocess, real MCP stdio protocol, BROWSER_FETCH_MCP_DATA_DIR pointed
-at an isolated tmp_path (never touches the real ~/.hskill config).
+"""Tests for chrome_profile_config.py — real browser-fetch CLI
+subprocess, BROWSER_FETCH_DATA_DIR pointed at an isolated tmp_path
+(never touches the real ~/.hskill config).
 
 Run: python3 -m pytest skills/research/clip-url/tests/ -v
 """
@@ -15,7 +15,7 @@ SCRIPT = Path(__file__).resolve().parents[1] / "scripts" / "chrome_profile_confi
 def _run(args: list[str], data_dir: Path) -> subprocess.CompletedProcess:
     return subprocess.run(
         [sys.executable, str(SCRIPT), *args],
-        env={**os.environ, "BROWSER_FETCH_MCP_DATA_DIR": str(data_dir)},
+        env={**os.environ, "BROWSER_FETCH_DATA_DIR": str(data_dir)},
         capture_output=True, text=True, timeout=30,
     )
 
@@ -51,7 +51,7 @@ def _run_prompted(args: list[str], data_dir: Path, clip_url_dir: Path) -> subpro
         [sys.executable, str(SCRIPT), *args],
         env={
             **os.environ,
-            "BROWSER_FETCH_MCP_DATA_DIR": str(data_dir),
+            "BROWSER_FETCH_DATA_DIR": str(data_dir),
             "HSKILL_CLIP_URL_DATA_DIR": str(clip_url_dir),
         },
         capture_output=True, text=True, timeout=30,

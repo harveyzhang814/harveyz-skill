@@ -1,13 +1,38 @@
 ---
 name: clip-url
-version: "0.7.5"
-description: "Use this the instant a URL is shared with any intent to save, archive, clip, or translate-and-keep it in Obsidian — a bare link with no comment, \"save this\", \"archive this\", \"clip this\", \"add to obsidian\", \"存一下\", \"存到 vault/obsidian\", \"留个档\", \"翻译一下存\", \"帮我存/抓一下这个链接\", or a request to fetch a page via browser-fetch-mcp. Covers arXiv papers, WeChat/公众号 posts, X/Twitter threads, Hacker News links, blog posts, news articles, and general webpages — including sites needing special handling (login walls, images, JS-rendered content). Do not use for translate-or-summarize-only requests with no save intent, in-page actions like clicking buttons or filling forms, retagging or fixing metadata on an article already saved, links shared purely for reaction or jokes, or topic searches with no specific URL given."
+version: "0.8.0"
+description: "Use this the instant a URL is shared with any intent to save, archive, clip, or translate-and-keep it in Obsidian — a bare link with no comment, \"save this\", \"archive this\", \"clip this\", \"add to obsidian\", \"存一下\", \"存到 vault/obsidian\", \"留个档\", \"翻译一下存\", \"帮我存/抓一下这个链接\", or a request to fetch a page via browser-fetch. Covers arXiv papers, WeChat/公众号 posts, X/Twitter threads, Hacker News links, blog posts, news articles, and general webpages — including sites needing special handling (login walls, images, JS-rendered content). Do not use for translate-or-summarize-only requests with no save intent, in-page actions like clicking buttons or filling forms, retagging or fixing metadata on an article already saved, links shared purely for reaction or jokes, or topic searches with no specific URL given."
 user_invocable: true
 ---
 
-# clip-url（Stage 4，验证性构建）
+# clip-url
 
-这是 [browser-fetch-mcp](../../../tools/browser-fetch-mcp/) 的验证性消费者，做"抓取（MCP，经 fetch_article 做站点感知抽取）→ 打标 + 翻译 → 存文件"两阶段流程，跟 extract-url 的 Subagent 1/2 结构对齐。下文脚本路径均相对本 SKILL.md 所在目录。
+这是 [browser-fetch](../../../tools/browser-fetch/) 的消费者，做"抓取（CLI，经 browser-fetch article 做站点感知抽取）→ 打标 + 翻译 → 存文件"两阶段流程。下文脚本路径均相对本 SKILL.md 所在目录。
+
+## 初始化（run first）
+
+**① 加载平台补丁**
+
+根据当前执行平台，读取对应补丁文件，了解**补丁①**（Subagent 派发）与**补丁②**（变量来源）的具体语法：
+
+| 平台 | 补丁文件 |
+|------|----------|
+| Claude Code | `platforms/SKILL.claude.md` |
+| Codex | `platforms/SKILL.codex.md` |
+| Hermes | `platforms/SKILL.hermes.md` |
+| Pi | `platforms/SKILL.pi.md` |
+
+若补丁文件顶部带「⚠️ 未验证」标注，必须先按该标注要求告知用户，再决定是否继续。
+
+以下流程中凡标注「**补丁①**」处，均使用对应平台补丁中定义的调用语法替换。
+
+**② 检查共享配置**
+
+运行 `python3 scripts/vault_config.py check`。若报缺失，引导用户提供 Obsidian Vault
+绝对路径。写入前先确保目录存在（`mkdir -p ~/.hskill/url-extract/`），再写入
+`~/.hskill/url-extract/config.json` 的 `VAULT_PATH` 字段，并在同目录创建空的
+`fixed_tags.txt`。配置目录名 `url-extract` 是历史遗留，clip-url 沿用同一份
+配置，以便与历史抓取记录互相去重。
 
 ## 执行流程
 
@@ -16,7 +41,7 @@ user_invocable: true
 1. 净化 URL
 2. 确认默认 chrome_profile（只在第一次使用本 skill 时问一次）
 2.5. 确认共享配置存在（VAULT_PATH / 固定词表）
-3. 派发 Subagent 1：MCP 抓取
+3. 派发 Subagent 1：CLI 抓取
 4. 判断抓取结果，决定是否需要自优化
 4.5. 派发 Subagent 3：自优化（仅在步骤 4 判定需要时）
 5. 派发 Subagent 2：打标 + 翻译
@@ -29,12 +54,12 @@ import re
 url_safe = re.sub(r'[\x00-\x1f\x7f]', '', url).strip()[:2048]
 ```
 
-### 步骤 1.5：确认 browser-fetch-mcp 可用
+### 步骤 1.5：确认 browser-fetch 可用
 
-运行 `python3 scripts/browser_fetch_mcp_locate.py`。
+运行 `python3 scripts/browser_fetch_locate.py`。
 
 - 若输出 `FOUND: <path>`：继续步骤 2。
-- 若输出 `NOT_FOUND: <error>`（exit code 1）：向用户报告"browser-fetch-mcp 未安装或未找到：{error}。若在本仓库 checkout 内运行，请确认 `tools/browser-fetch-mcp/browser-fetch-mcp.sh` 存在；若是通过 `hskill install` 安装的 skill 副本，请先运行 `hskill install --tool browser-fetch-mcp`"，流程终止，不再执行后续步骤。
+- 若输出 `NOT_FOUND: <error>`（exit code 1）：向用户报告"browser-fetch 未安装或未找到：{error}。若在本仓库 checkout 内运行，请确认 `tools/browser-fetch/browser-fetch.sh` 存在；若是通过 `hskill install` 安装的 skill 副本，请先运行 `hskill install --tool browser-fetch`"，流程终止，不再执行后续步骤。
 
 ### 步骤 2：确认默认 chrome_profile（只在第一次使用本 skill 时问一次，之后不再询问）
 
@@ -63,16 +88,16 @@ result = subprocess.run(
 )
 ```
 
-- 若 `result.returncode != 0`（`config.json` 不存在，或存在但缺 `VAULT_PATH` 字段）：向用户报告"请先运行 extract-url skill 完成初始化（配置 Obsidian Vault 路径和固定标签词表），再回来使用本 skill"，流程终止。
+- 若 `result.returncode != 0`（`config.json` 不存在，或存在但缺 `VAULT_PATH` 字段）：向用户报告"共享配置缺失，请先完成本文档「初始化」小节的 ② 检查共享配置，再回来使用本 skill"，流程终止。
 - 若 `result.returncode == 0`：再检查 `~/.hskill/url-extract/fixed_tags.txt` 是否存在：
   ```bash
   ls ~/.hskill/url-extract/fixed_tags.txt 2>/dev/null && echo "EXISTS" || echo "NOT_FOUND"
   ```
   不存在也不阻断流程——固定标签匹配会自动跳过（`tags` 恒为空列表，只有 `candidate_tags` 生效），但要提示用户一句"固定词表文件不存在，本次抓取只会生成候选标签，不会匹配固定标签"。继续步骤 3。
 
-### 步骤 3：派发 Subagent 1（MCP 抓取）
+### 步骤 3：派发 Subagent 1（CLI 抓取）
 
-读取 `references/subagent1-fetch-prompt.md`，将其中 `<URL>` 替换为 url_safe，`<CHROME_PROFILE>` 替换为空（不留任何字符）——browser-fetch-mcp 的 `fetch_article` 会自己解析已持久化的默认 chrome_profile，不需要这里显式传值，按当前平台的 subagent 派发机制派发。文章存储目录由 Subagent 1 内部通过共享的 VAULT_PATH 自动计算，不再需要这里传参。
+读取 `references/subagent1-fetch-prompt.md`，将其中 `<URL>` 替换为 url_safe，`<CHROME_PROFILE>` 替换为空（不留任何字符）——browser-fetch 的 `article` 子命令会自己解析已持久化的默认 chrome_profile，不需要这里显式传值，按**补丁①**派发。文章存储目录由 Subagent 1 内部通过共享的 VAULT_PATH 自动计算，不再需要这里传参。
 
 ### 步骤 4：等待 Subagent 1 完成，判断是否需要自优化
 
@@ -84,14 +109,14 @@ result = subprocess.run(
 
 ### 步骤 4.5：派发 Subagent 3（自优化，仅在步骤 4 判定需要时执行）
 
-读取 `references/subagent-self-optimize-prompt.md`，把 `<URL>` 替换为 url_safe，`<CHROME_PROFILE>` 替换为已持久化的默认 chrome_profile（没有则留空，不留任何字符），其余占位符（`<SITE>`/`<BLOCK_COUNT>`/`<CHAR_COUNT>`/`<CONTENT_THIN>`/`<THIN_RETRY_USED>`/`<ERROR>`）替换为 Subagent 1 报告里对应字段的值（`RESULT: FAILED` 时 `<SITE>`/`<BLOCK_COUNT>`/`<CHAR_COUNT>`/`<CONTENT_THIN>`/`<THIN_RETRY_USED>` 全部替换为 `N/A`，`<ERROR>` 替换为 Subagent 1 报告里 `ERROR:` 那行的实际内容；`RESULT: OK` 时 `<ERROR>` 替换为空），按平台的 subagent 派发机制派发。
+读取 `references/subagent-self-optimize-prompt.md`，把 `<URL>` 替换为 url_safe，`<CHROME_PROFILE>` 替换为已持久化的默认 chrome_profile（没有则留空，不留任何字符），其余占位符（`<SITE>`/`<BLOCK_COUNT>`/`<CHAR_COUNT>`/`<CONTENT_THIN>`/`<THIN_RETRY_USED>`/`<ERROR>`）替换为 Subagent 1 报告里对应字段的值（`RESULT: FAILED` 时 `<SITE>`/`<BLOCK_COUNT>`/`<CHAR_COUNT>`/`<CONTENT_THIN>`/`<THIN_RETRY_USED>` 全部替换为 `N/A`，`<ERROR>` 替换为 Subagent 1 报告里 `ERROR:` 那行的实际内容；`RESULT: OK` 时 `<ERROR>` 替换为空），按**补丁①**派发。
 
 - Subagent 3 报告 `RESULT: SOLIDIFIED`：记下 `BRANCH:` 的值（步骤 6 汇报要用），重新派发 Subagent 1（同一个 url_safe），回到步骤 4 重新判断一次——若此次判断仍然需要自优化，直接终止并向用户输出「失败」卡片，不再进入步骤 4.5。
 - Subagent 3 报告 `RESULT: GAVE_UP`，或重试后 Subagent 1 仍然满足步骤 4 的自优化触发条件：向用户输出「失败」卡片（步骤 6 卡片格式，原因附上 Subagent 1 最新的诊断信息，以及 Subagent 3 报告里的 `ATTEMPTS`/`DIAGNOSIS`，如果有），流程终止，不再派发 Subagent 2。
 
 ### 步骤 5：派发 Subagent 2（打标 + 翻译）
 
-读取 `references/subagent2-tag-translate-prompt.md`，将其中 `<URL>` 替换为 url_safe，`<ORIGIN_PATH>` 替换为上一步的 origin_path，`<CATEGORY>` 替换为调用方提供的分类标签（没有则留空，不留任何字符——人工直接调用本 skill 时通常没有，主要供未来批量/自动化调用方透传），`<FETCH_TYPE>` 替换为调用方提供的抓取类型（没有则留空，不留任何字符，Subagent 2 会按 `manual` 处理），按当前平台的 subagent 派发机制派发。
+读取 `references/subagent2-tag-translate-prompt.md`，将其中 `<URL>` 替换为 url_safe，`<ORIGIN_PATH>` 替换为上一步的 origin_path，`<CATEGORY>` 替换为调用方提供的分类标签（没有则留空，不留任何字符——人工直接调用本 skill 时通常没有，主要供未来批量/自动化调用方透传），`<FETCH_TYPE>` 替换为调用方提供的抓取类型（没有则留空，不留任何字符，Subagent 2 会按 `manual` 处理），按**补丁①**派发。
 
 ### 步骤 6：向用户输出完成卡片
 
@@ -142,21 +167,23 @@ result = subprocess.run(
 
 ## 边界
 
-仍不是 extract-url 的完全等价替代，只用于验证 MCP 抓取链路能否支撑一个完整的两阶段 skill 流程并逐步对齐生产行为。跟 extract-url 共用同一份存储与去重索引：URL 去重和固定标签词表读同一份 `~/.hskill/url-extract/config.json`（`VAULT_PATH`）和 `fixed_tags.txt`；抓取产出的原文文件名与 extract-url 一致，按标题命名（`Origin/<标题>.md`，Translation 沿用同一文件名），两者共存于同一个 `<hash8>/` 目录下，去重判定只看 `meta.json` 的 `source_url`，不受文件名影响——两边抓过的文章互相认得出"已抓取"。
+沿用与已归档的 extract-url 相同的存储布局与去重索引，因此历史抓取记录仍然有效：URL 去重和固定标签词表读同一份 `~/.hskill/url-extract/config.json`（`VAULT_PATH`）和 `fixed_tags.txt`；抓取产出的原文文件名沿用同一命名规则，按标题命名（`Origin/<标题>.md`，Translation 沿用同一文件名），两者共存于同一个 `<hash8>/` 目录下，去重判定只看 `meta.json` 的 `source_url`，不受文件名影响——历史抓取记录与新抓取的文章互相认得出"已抓取"。
 
 ## 参考文件
 
 | 文件 | 用途 |
 |------|------|
-| `references/subagent1-fetch-prompt.md` | Subagent 1（MCP 抓取）派发 prompt 模板，含去重检查 |
+| `platforms/` | 各平台的补丁文件（`SKILL.claude.md`/`SKILL.codex.md`/`SKILL.hermes.md`/`SKILL.pi.md`），初始化步骤①读取 |
+| `references/subagent1-fetch-prompt.md` | Subagent 1（CLI 抓取）派发 prompt 模板，含去重检查 |
 | `references/subagent2-tag-translate-prompt.md` | Subagent 2（两阶段打标 + 翻译）派发 prompt 模板 |
 | `references/subagent-self-optimize-prompt.md` | Subagent 3（自优化，抓取失败/过薄时触发）派发 prompt 模板 |
-| `scripts/browser_fetch_mcp_locate.py` | 步骤 1.5 前置检测：定位 browser-fetch-mcp launcher（dev-mode 优先，已安装模式兜底），也被下面几个 MCP client 脚本共用 |
+| `scripts/browser_fetch_locate.py` | 步骤 1.5 前置检测：定位 browser-fetch launcher（dev-mode 优先，已安装模式兜底），也被 `browser_fetch_cli.py` 共用 |
+| `scripts/browser_fetch_cli.py` | browser-fetch CLI 调用层，四个 client 共用 |
 | `scripts/vault_config.py` | 读共享 `VAULT_PATH`（`~/.hskill/url-extract/config.json`），计算文章路径 |
 | `scripts/dedup_check.py` | URL 去重检查（读 `<hash8>/meta.json`） |
 | `scripts/article_meta.py` | 去重索引写入 + 固定词表兜底移位（纯函数库） |
 | `scripts/write_meta_and_separate.py` | Subagent 2 用的 CLI 包装，调用 `article_meta` 写 meta.json + 移位 |
-| `scripts/mcp_fetch_client.py` | 核心脚本：真实 MCP client，调用 browser-fetch-mcp 的 `fetch_article`，`fetch_and_report` 额外返回诊断字段 |
-| `scripts/mcp_debug_client.py` | 自优化 subagent 用的调试客户端，包装 browser-fetch-mcp 的 `fetch_page`/`evaluate_js` |
-| `scripts/detect_xcom_chrome_profile.py` | 通过 browser-fetch-mcp 的 `list_chrome_profiles` MCP 工具检测哪些 Chrome profile 登录了 x.com，仅供用户确认用，不自动使用检测结果 |
-| `scripts/chrome_profile_config.py` | 读写 browser-fetch-mcp 持久化的默认 chrome_profile（`get`/`set` 子命令），以及本地记录"是否已问过一次"的标记（`prompted`/`mark-prompted` 子命令） |
+| `scripts/mcp_fetch_client.py` | 核心脚本：调用 browser-fetch 的 `article` 子命令，`fetch_and_report` 额外返回诊断字段（`mcp_` 前缀为历史遗留，见模块 docstring） |
+| `scripts/mcp_debug_client.py` | 自优化 subagent 用的调试客户端，包装 browser-fetch 的 `page`/`eval` 子命令（`mcp_` 前缀为历史遗留，见模块 docstring） |
+| `scripts/detect_xcom_chrome_profile.py` | 通过 browser-fetch 的 `profile list` 子命令检测哪些 Chrome profile 登录了 x.com，仅供用户确认用，不自动使用检测结果 |
+| `scripts/chrome_profile_config.py` | 读写 browser-fetch 持久化的默认 chrome_profile（`get`/`set` 子命令，对应 browser-fetch 的 `profile get`/`profile set`），以及本地记录"是否已问过一次"的标记（`prompted`/`mark-prompted` 子命令） |

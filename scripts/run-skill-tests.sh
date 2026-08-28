@@ -4,10 +4,12 @@
 #
 # Patterns discovered:
 #   skills/*/*/tests/*.bats  → run with bats
-#   skills/*/*/tests/*.py    → run with python3
+#   skills/*/*/tests/ 与 tools/*/tests/ → 用 pytest 按目录运行
 #
-# tools/p-launch/tests/ is already covered by `npm test` (bats tests/ tools/p-launch/tests/)
-# so it is intentionally excluded here.
+# */archived/* 整体排除（bats 与 pytest 两条扫描都排除）：archived 下的代码
+# 已退役，不在 shipping 集合里（例如 tools/archived/todo-tool 不在
+# skills-index.json 注册，且带一个没人维护的真实语法错误）。让已退役代码
+# 挡住 npm test 没有意义，所以在发现阶段就直接排除，不是「跑了但放过」。
 #
 # Exit codes:
 #   0  all tests passed (or no tests found)
@@ -33,11 +35,31 @@ _run_bats() {
   fi
 }
 
-_run_python() {
-  local file="$1"
+# 每个 tool/skill 目录优先用自己的 .venv 解释器（若存在），否则退回系统
+# python3。原因：工具会用 uv/venv 钉住自己的依赖版本，这些版本可能与系统
+# site-packages 不兼容（实例：tools/browser-fetch 靠自己 venv 里钉住的
+# playwright 版本运行，系统 python3 没装 playwright，直接用系统 python3 跑
+# 会得到一堆和代码无关的 ImportError；用它自己的 .venv 跑是全绿）。优先用 .venv 能让
+# 这类套件按其真实状态被评估，而不是被解释器不匹配误报成失败。
+_run_pytest_dir() {
+  local dir="$1"
+  local tool_dir
+  tool_dir="$(dirname "${dir}")"
+  local rel="${tool_dir#"${REPO_ROOT}/"}"
+  local python_bin="python3"
+  local label=""
+  # 只有当 .venv 自己装了 pytest 才用它。有些工具的 dev venv 只装了运行时依赖
+  # （tools/roster 的 roster.sh 就是 pip install -e . 不带 dev extra），那种情况
+  # 退回系统 python3——venv 优先是为了拿到正确的依赖，不是让一个跑不了 pytest
+  # 的 venv 把整个套件卡住。
+  if [ -x "${tool_dir}/.venv/bin/python" ] \
+     && "${tool_dir}/.venv/bin/python" -c "import pytest" 2>/dev/null; then
+    python_bin="${tool_dir}/.venv/bin/python"
+    label=" (.venv)"
+  fi
   found=$((found + 1))
-  echo "── python3: ${file#"${REPO_ROOT}/"}"
-  if python3 "${file}"; then
+  echo "── pytest: ${rel}${label}"
+  if (cd "${tool_dir}" && "${python_bin}" -m pytest tests/ -q); then
     passed=$((passed + 1))
   else
     failed=$((failed + 1))
@@ -47,11 +69,20 @@ _run_python() {
 # Discover skill custom tests (two levels deep: skills/<category>/<skill>/tests/)
 while IFS= read -r -d '' bats_file; do
   _run_bats "${bats_file}"
-done < <(find "${REPO_ROOT}/skills" -path "*/tests/*.bats" -print0 2>/dev/null | sort -z)
+done < <(find "${REPO_ROOT}/skills" -path "*/tests/*.bats" \
+           -not -path "*/archived/*" \
+           -print0 2>/dev/null | sort -z)
 
-while IFS= read -r -d '' py_file; do
-  _run_python "${py_file}"
-done < <(find "${REPO_ROOT}/skills" -path "*/tests/*.py" -print0 2>/dev/null | sort -z)
+# skills/<category>/<skill>/tests/ 与 tools/<tool>/tests/，任一含 test_*.py 即视为 pytest 套件
+while IFS= read -r -d '' tests_dir; do
+  if compgen -G "${tests_dir}/test_*.py" > /dev/null; then
+    _run_pytest_dir "${tests_dir}"
+  fi
+done < <(find "${REPO_ROOT}/skills" "${REPO_ROOT}/tools" \
+           -type d -name tests \
+           -not -path "*/.venv/*" -not -path "*/node_modules/*" \
+           -not -path "*/archived/*" \
+           -print0 2>/dev/null | sort -z)
 
 if [ "${found}" -eq 0 ]; then
   echo "(no custom skill tests)"

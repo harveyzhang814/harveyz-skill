@@ -1,7 +1,7 @@
 ---
 name: handoff
 description: Use when handing a task across sessions — writing a self-contained handoff doc for a fresh session to pick up (author), sanity-checking an inbound handoff before starting (verify), or accepting completed work against the criteria agreed at handoff time (accept). Triggers on phrases like "write a handoff", "hand this off", "pick up this task", "sign off on this work". Generic skill — project-specific conventions are read from .hskill/handoff/config.md.
-version: "1.1.0"
+version: "1.2.0"
 user_invocable: true
 ---
 
@@ -53,8 +53,8 @@ user_invocable: true
 
 ## Phase 3 — accept（原 session 验收）
 
-1. 找文档里的**最小验收锚点**——这是唯一固定依据。硬判据（逐条对/错）→ 按其描述**逐条实跑**（单测/E2E/核验）；软判据（定性描述）→ 按其描述做定性判断。
-2. 把验收结果（每条 pass/fail，或整体达成/未达成）追加记录到最小验收锚点所在章节末尾。
+1. 找文档里的**最小验收锚点**——这是唯一固定依据。**接手方自填的结论一律不采信，逐条自己跑**：验证产物"存在"不等于"跑得过"，点得出脚本名不等于那个脚本此刻是绿的。硬判据（逐条对/错）→ 按其描述**逐条实跑**（单测/E2E/核验）；软判据（定性描述）→ 按其描述做定性判断。
+2. 把验收结果（每条 pass/fail，或整体达成/未达成）追加记录到最小验收锚点所在章节末尾。**接手方若已自填过验收记录，另起小节并列，不覆盖也不合并**——两份并排放着，后来人才看得出哪些结论被第二方复核过。其中若有与实跑不符的陈述，**显式写出更正**，不要静默改掉：静默改掉等于把同一个错误留给下一次。
 3. 达成 → 状态置 `已验收`；未达成 → 状态置 `打回` 并写明哪里没达成、为什么，退回接手方。
 4. **达成才算真正完成**（硬判据要求逐条全绿；软判据按其描述定性判断是否达成）。
 
@@ -63,3 +63,9 @@ user_invocable: true
 `待执行`（author 写完）→ `执行中`（verify 通过 / 接手方开工）→ `待验收`（接手方回报完成）→ `已验收`（accept 判定达成）/ `打回`（accept 判定未达成，退回执行中）。
 
 状态字段是三 phase 间唯一协调锚点，无需外部状态存储。
+
+**写入权按 phase 分：接手方最多只能把状态推到「待验收」。`已验收` / `打回` 只能由原 session 在 accept 之后写。**
+
+这条不是流程洁癖。「已验收」的全部信息量就是**做事的人之外的另一方查过**；做事的人一旦能自己写它，它就退化成「做事的人说做完了」——而这个信息「待验收」里已经有了，两个状态变成同义词，字段失效。风险还会反向放大：一份自填的「已验收」通常附着一张全 PASS 的表，比没有记录更难被怀疑。
+
+接手方若跳档自填，accept 方**按未验收处理**，照常逐条重跑。

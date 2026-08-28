@@ -222,3 +222,17 @@ _uninstall() {
   [ -f "${MOCK_HOME}/.claude/skills/sync-hotfix/SKILL.md" ]
   [ "$(_skill_version "${MOCK_HOME}/.claude/skills/sync-hotfix/SKILL.md")" = "1.1.1" ]
 }
+
+@test "install --tool: roster lands a launcher and its package" {
+  _install --tool roster --force
+  [ -x "${MOCK_HOME}/.local/bin/roster" ]
+  [ -f "${MOCK_HOME}/.hskill/tools/roster.json" ]
+  [ -d "${MOCK_HOME}/.hskill/tools/roster/roster" ]
+  [ -f "${MOCK_HOME}/.hskill/tools/roster/pyproject.toml" ]
+}
+
+@test "install --tool: roster does not declare DATA_DIR as an uninstall path" {
+  # 画像不可重建，卸载 tool 绝不能把它带走
+  run grep -c "DATA_DIR" tools/roster/tool.json
+  [ "$status" -ne 0 ]
+}

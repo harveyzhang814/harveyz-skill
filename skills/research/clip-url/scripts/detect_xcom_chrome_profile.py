@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """
 Detect which Chrome profile(s) are logged into X.com (Twitter), via
-browser-fetch-mcp's list_chrome_profiles MCP tool — no direct sqlite
-access here anymore; the cookie-scanning logic now lives in
-tools/browser-fetch-mcp/browser_fetch_mcp/profiles.py.
+browser-fetch's `profile list` subcommand — no direct sqlite access here
+anymore; the cookie-scanning logic now lives in
+tools/browser-fetch/browser_fetch/profiles.py.
 
 Usage: python3 detect_xcom_chrome_profile.py
 Prints a human-readable comparison table, then one line:
@@ -15,44 +15,24 @@ This script only reports candidates — it never picks one automatically
 for a caller. Detection and use MUST stay separated: whoever calls this
 script must show the result to a human and get explicit confirmation
 before persisting a profile via chrome_profile_config.py.
-
-NOTE ON mcp SDK VERSION: see mcp_fetch_client.py's docstring — this
-script runs under the ambient system Python (mcp 1.28.1, camelCase
-isError/structuredContent), same as mcp_fetch_client.py.
 """
-import asyncio
-import json
-import os
-
-from mcp import ClientSession, StdioServerParameters
-from mcp.client.stdio import stdio_client
-
-from browser_fetch_mcp_locate import find_browser_fetch_mcp
-
-BROWSER_FETCH_MCP_SH = find_browser_fetch_mcp()
+import browser_fetch_cli
 
 HOST_KEYS = [".x.com", ".twitter.com"]
 COOKIE_NAMES = ["auth_token", "ct0", "twid"]
 
 
-async def _list_profiles() -> list[dict]:
-    server_params = StdioServerParameters(
-        command=str(BROWSER_FETCH_MCP_SH), args=[], env=dict(os.environ)
-    )
-    async with stdio_client(server_params) as (read, write):
-        async with ClientSession(read, write) as session:
-            await session.initialize()
-            result = await session.call_tool(
-                "list_chrome_profiles", {"host_keys": HOST_KEYS, "cookie_names": COOKIE_NAMES}
-            )
-            if result.isError:
-                raise RuntimeError(f"list_chrome_profiles failed: {result.content[0].text}")
-            payload = result.structuredContent or json.loads(result.content[0].text)
-            return payload["profiles"]
+def _list_profiles() -> list[dict]:
+    args = ["profile", "list"]
+    for h in HOST_KEYS:
+        args += ["--host-key", h]
+    for c in COOKIE_NAMES:
+        args += ["--cookie-name", c]
+    return browser_fetch_cli.call(*args)["profiles"]
 
 
 def main():
-    profiles = asyncio.run(_list_profiles())
+    profiles = _list_profiles()
 
     if not profiles:
         print("No Chrome profiles found.")

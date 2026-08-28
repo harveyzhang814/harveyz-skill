@@ -2,7 +2,7 @@
 
 **日期**：2026-08-14
 **author 模型**：claude-opus-5
-**状态**：已验收 <!-- 待执行 → 执行中 → 待验收 → 已验收 / 打回 -->
+**状态**：已验收（2026-08-15 由 author session 独立实跑复核确认，见「原 session 独立复核」） <!-- 待执行 → 执行中 → 待验收 → 已验收 / 打回 -->
 **交接目的**：spec 与实施计划已由用户批准并提交，接手方按计划逐 task 实现第一期代码，原 session 按最小验收锚点验收。
 
 > **接手方须知**：你正在接手一个任务。本文档是完整交接与唯一权威入口：从头读到尾，按「工作流约定」开工，完成后等原 session 按「最小验收锚点」验收。
@@ -41,6 +41,40 @@
 - `hermesProfile.capabilities`（Task 3 的 L1 快照）把 `usage` 列为 hermes 能力之一，但真实抓取的 hermes trace 里完全没有 usage/turn-count 字段，这条能力声明可能不准确——留给下一阶段用同样的"重新实测再改"纪律处理，不在本次范围内强改。
 - `report.js` 的矩阵表格在 native/inject 双模式数据下的展示已在最终 review 修复轮中一并修好（6 列布局）。
 - 详见 worktree 内 `.superpowers/sdd/2026-08-14-skill-harness-phase1/progress.md` 的完整执行 ledger（含全部 15 个 task 的 review 记录、6 个真实 bug 的复现证据与修复过程）。
+
+### 原 session 独立复核（2026-08-15，author 侧 accept）
+
+上面那节由接手方自填。author session 另做了一遍**独立实跑**，不采信自报。
+
+复核环境：从 staging 复制出的隔离副本。先用 git 对象库比对 tree SHA，确认
+`tools/skill-harness`（`d0a01c9f3`）、`tests/harness`（`9308786f1`）、`package.json`
+（`67b24b491`）与 staging **逐字节相同**，因此在副本上的结论对 staging 成立。
+判据 4 需要改文件，故用隔离副本而非任何人的工作树。
+
+| # | 结果 | 独立实测证据 |
+|---|---|---|
+| 1 | ✅ | `npm test` exit 0，185 tests / 178 pass / **0 fail** / 7 skipped，`not ok` 计数为 0 |
+| 2 | ✅ | 恰好 6 段；`argv:` `env (redacted):` `systemAppend:` `positional:` 各 6 次；`jail writes:` 恰好 3 次（仅三个 native 段）；native 段无正文且无路径补偿行，inject 段两者均有；`***` 仅出现在 claude 段（唯一注入凭证的平台） |
+| 3 | ✅ | exit 0，**0 个 `✓`**，41 行 `never` |
+| 4 | ✅ | reason 清空 → exit 1 且**恰好 1 条**失败（`仓库自带的 matrix.json 合法`）；还原 → exit 0 / 0 fail |
+| 5 | ✅ | **author 侧自行发起的真实模型调用**，`SKILL_HARNESS_E2E=1` exit 0，7 pass / 0 fail / 0 skipped，耗时约 3 分钟 |
+| 6 | ✅ | 扫全部 **37** 个产物目录（含本次复核新增的 7 个），`sk-ant` / `oat01` / `MINIMAX_CN_API_KEY=` / `eyJ` 零命中 |
+| 7 | ✅ | 从 git 对象库直接解析：**恰好 15 个** `feat|test(harness):` 提交，与计划 15 个 task 一一对应且顺序一致；25 个提交中 0 个不合 Conventional Commits、0 个首行超 80 字符 |
+
+**复核结论：7 条硬判据独立实跑全部通过，验收成立。**
+
+复核中确认与新发现：
+
+- **`builtinSkillFloor` 16 → 15 属实**。author 侧 E2E 独立测得 15，且
+  `measurements/2026-08-14-native-vs-inject.md` 已按计划立的"重新实测再改"纪律
+  追加了变更记录。这条改动经得起复核。
+- **spec 未同步，现与代码矛盾**。`2026-08-14-skill-harness-adapter-design.md` 仍有三处写 16
+  （`claude 16`、`实测结论 3 ... = 16`、`17 项 = 探针 1 + 内置 16`），而 `profiles.js` 是 15、
+  measurements 已记录变更。不属 7 条判据，不影响验收，但设计文档现在是错的，应修。
+- **`--skill` 不影响 dry-run 加载哪份正文**。`cli.js` 里 `skillPath` 硬编码为探针 skill，
+  `--skill` 只决定选哪些格子。判据 2 未要求此项，故不算失败；但意味着 dry-run 目前只能
+  预览探针，第二期接真实 skill 时必须补。
+- coverage 输出 41 行而非锚点写的 39 —— `skills-index.json` 在此期间新增了 skill，属正常漂移。
 
 ---
 

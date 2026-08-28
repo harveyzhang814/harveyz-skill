@@ -1,7 +1,7 @@
 {
   "toolBundleMeta": {
     "tools": "开发者 OS 工具（hub — 项目管理 + git 状态 + 任务跟踪；sync — Syncthing 守护进程管理）",
-    "research-tools": "研究抓取后端（browser-fetch-mcp — clip-url/extract-url 共用的认证浏览器抓取 MCP server）"
+    "research-tools": "研究抓取后端（browser-fetch — clip-url/sync-* 共用的认证浏览器抓取 CLI；roster — sync-* 共用的人与渠道名册）"
   },
   "tools": [
     {
@@ -17,13 +17,19 @@
       "installScope": "global"
     },
     {
-      "name": "browser-fetch-mcp",
-      "path": "tools/browser-fetch-mcp",
+      "name": "browser-fetch",
+      "path": "tools/browser-fetch",
+      "bundle": "research-tools"
+    },
+    {
+      "name": "roster",
+      "path": "tools/roster",
       "bundle": "research-tools"
     }
   ],
   "bundleMeta": {
-    "research": "研究工具（extract-url + learn-video + extract-vision + survey-skillrepo + learn-paper + extract-cognition + probe-session + clip-url + fetch-paper）",
+    "research": "研究工具（learn-video + extract-vision + survey-skillrepo + learn-paper + extract-cognition + probe-session + clip-url + fetch-paper）",
+    "feed": "追更工具（manage-roster — 人与渠道名册；sync-xtimeline + sync-ytchannel — 按名册跑增量抓取；capture-creator — 给人记一笔判断）",
     "creative": "创意工具（capture-todo + capture-insight）",
     "coding": "程序工具（init-workflow + setup-debug + init-goal + question-me + capture-vocab + rephrase + explain-pm）",
     "writing": "写作工具（forge-doc + draw-diagram + manage-dir + migrate-spec）",
@@ -36,15 +42,8 @@
       "path": "mint/learn-skill",
       "bundle": "mint",
       "installScope": "global",
-      "contentHash": "5255c96c742fbab8",
+      "contentHash": "542f333a8a72024c",
       "contentVersion": "2.0.0"
-    },
-    {
-      "path": "research/extract-url",
-      "bundle": "research",
-      "installScope": "global",
-      "contentHash": "23481acf2a35120c",
-      "contentVersion": "2.8.0"
     },
     {
       "path": "research/extract-vision",
@@ -64,7 +63,7 @@
       "path": "research/survey-skillrepo",
       "bundle": "research",
       "installScope": "global",
-      "contentHash": "e9d46ca1e90ee289",
+      "contentHash": "ea823301b039a8aa",
       "contentVersion": "2.0.1"
     },
     {
@@ -78,8 +77,8 @@
       "path": "research/fetch-paper",
       "bundle": "research",
       "installScope": "project",
-      "contentHash": "3e567a3e81009d78",
-      "contentVersion": "0.1.0"
+      "contentHash": "001350e42f2341c6",
+      "contentVersion": "0.2.0"
     },
     {
       "path": "research/extract-cognition",
@@ -106,15 +105,22 @@
       "path": "research/clip-url",
       "bundle": "research",
       "installScope": "project",
-      "contentHash": "46e5edd59daaa755",
-      "contentVersion": "0.7.5"
+      "contentHash": "4d25c27b6f6d3d4b",
+      "contentVersion": "0.8.0"
     },
     {
-      "path": "research/sync-xtimeline",
-      "bundle": "research",
+      "path": "feed/sync-xtimeline",
+      "bundle": "feed",
       "installScope": "project",
-      "contentHash": "9913531fbbd693d2",
-      "contentVersion": "0.1.0"
+      "contentHash": "951a41ae53856ec8",
+      "contentVersion": "0.4.0"
+    },
+    {
+      "path": "feed/sync-ytchannel",
+      "bundle": "feed",
+      "installScope": "project",
+      "contentHash": "108c0c5e3168b670",
+      "contentVersion": "0.3.0"
     },
     {
       "path": "creative/capture-todo",
@@ -232,7 +238,7 @@
       "path": "mint/init-skill",
       "bundle": "mint",
       "installScope": "project",
-      "contentHash": "ff8aeceb83b17a1e",
+      "contentHash": "4053e6476d1c3f09",
       "contentVersion": "1.2.0"
     },
     {
@@ -315,8 +321,22 @@
     {
       "path": "coding/handoff",
       "bundle": "coding",
-      "contentHash": "e853463d770ce355",
-      "contentVersion": "1.1.0"
+      "contentHash": "18b8649ea0df4fa4",
+      "contentVersion": "1.2.0"
+    },
+    {
+      "path": "feed/manage-roster",
+      "bundle": "feed",
+      "installScope": "project",
+      "contentHash": "a8900f2583244795",
+      "contentVersion": "0.1.1"
+    },
+    {
+      "path": "feed/capture-creator",
+      "bundle": "feed",
+      "installScope": "project",
+      "contentHash": "57c4a5af03982093",
+      "contentVersion": "0.1.0"
     }
   ],
   "hooks": [

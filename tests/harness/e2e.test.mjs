@@ -15,10 +15,11 @@ const BASE_URL = 'https://api.minimaxi.com/anthropic'
 const SKILL_PATH = path.resolve('tools/skill-harness/probe/probe-anchor')
 
 // claude 的内置 skill 不算宿主泄漏——jail 挡不住它们，这是已知不对称。
-// TODO: 2026-08-15 E2E 实测发现 builtinSkillFloor 从 16 降到 15（见
-// docs/superpowers/specs/measurements/2026-08-14-native-vs-inject.md 的 L1 快照漂移记录），
-// 但那条记录只给出了数量变化，没指出具体是哪个 skill 消失了。这里仍列着旧的 16 个，
-// 需要一次新的 E2E 实测（对比 system 行 skills[] 的实际集合）来确定该删掉哪一个。
+// 2026-08-15 复核实测结论：没有任何内置 skill 被上游删除。16 → 15 的差异来自模型门控——
+// `schedule` 在第三方端点（ANTHROPIC_BASE_URL + --model MiniMax-M2.7）下不出现在
+// system 行的 skills[] 里，OAuth + claude-sonnet-5 下则有。即 builtinSkillFloor 是
+// 「平台 × 模型/认证」的函数，不是平台常量。
+// 下面这份白名单按 OAuth 下的全 16 项取，是标准配置 15 项的超集，多留一项无害。
 const CLAUDE_BUILTINS = new Set([
   'deep-research', 'design-sync', 'dataviz', 'update-config', 'verify', 'debug',
   'code-review', 'simplify', 'batch', 'fewer-permission-prompts', 'doctor',
@@ -33,9 +34,11 @@ async function baseCtx() {
     apiKey: readEnvFile(path.join(os.homedir(), '.hermes/.env')).MINIMAX_CN_API_KEY,
     oauthToken: claudeOAuthToken(),
     task: 'run anchor probe',
-    skillPath: SKILL_PATH,
-    skillDir: SKILL_PATH,
-    skillBody: stripFrontmatter(await fs.readFile(path.join(SKILL_PATH, 'SKILL.md'), 'utf8')),
+    skills: new Map([['probe-anchor', {
+      skillPath: SKILL_PATH,
+      skillDir: SKILL_PATH,
+      skillBody: stripFrontmatter(await fs.readFile(path.join(SKILL_PATH, 'SKILL.md'), 'utf8')),
+    }]]),
     source: process.env,
     sessionId: '00000000-0000-0000-0000-000000000000',
     concurrency: 3,
@@ -100,7 +103,14 @@ test('E2E L3: 宿主 skill 不可见', { skip: !ENABLED }, async () => {
 test('E2E: claude 的 builtinSkillFloor 实测值仍是 15', { skip: !ENABLED }, async () => {
   const { records } = await runMatrix(cells('native'), await baseCtx())
   const claude = records.find(r => r.platform === 'claude')
-  assert.equal(claude.builtinSkillFloor, 15, 'upstream changed its builtin skill set — update profiles.js and the L1 snapshot')
+  assert.equal(
+    claude.builtinSkillFloor, 15,
+    `expected 15 under the pinned model (${MODEL}); got ${claude.builtinSkillFloor}. ` +
+    'First check whether the model changed — this number is model-gated (16 under OAuth + claude-sonnet-5, ' +
+    'which additionally exposes `schedule`). Only if the model is unchanged does this mean upstream ' +
+    'altered its builtin skill set, in which case re-measure and update profiles.js, the L1 snapshot, ' +
+    'and docs/superpowers/specs/measurements/.',
+  )
 })
 
 test('E2E: 三平台实测 model 与请求一致', { skip: !ENABLED }, async () => {

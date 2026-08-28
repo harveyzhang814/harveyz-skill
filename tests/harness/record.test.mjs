@@ -100,8 +100,31 @@ test('makeRecord: contentHash 透传，coverage 的 stale 判定靠它', () => {
 
 test('makeRecord: 字段集合固定，新增字段必须来这里登记', () => {
   assert.deepEqual(Object.keys(makeRecord(BASE)).sort(), [
-    'builtinSkillFloor', 'contentHash', 'durationMs', 'exitCode', 'mode', 'model',
-    'modelMismatch', 'platform', 'provider', 'repeat', 'reply', 'sessionId', 'skill',
-    'stderr', 'task', 'toolCalls', 'triggered', 'turns', 'unavailable', 'usage',
+    'builtinSkillFloor', 'contentHash', 'durationMs', 'evalId', 'exitCode', 'harvestErrors', 'mode',
+    'model', 'modelMismatch', 'platform', 'provider', 'repeat', 'reply', 'sessionId', 'skill',
+    'stderr', 'task', 'toolCalls', 'transcriptTruncated', 'triggered', 'turns', 'unavailable',
+    'usage',
   ])
+})
+
+test('采集出错要进 record——采集故障若不记，会伪装成被测方的质量问题', () => {
+  const rec = makeRecord({ ...BASE, harvest: { truncated: true, errors: ['artifact a.md: ENOENT'] } })
+  assert.equal(rec.transcriptTruncated, true)
+  assert.deepEqual(rec.harvestErrors, ['artifact a.md: ENOENT'])
+})
+
+test('makeRecord: evalId 透传——record 必须记得自己是为哪个 eval 场景跑的，grade 阶段靠它找回对应的 evalDef，不是别的都对只有这一格瞎猜', () => {
+  const r = makeRecord({ ...BASE, evalId: 2 })
+  assert.equal(r.evalId, 2)
+})
+
+test('makeRecord: 没有声明的 skill（evalId 未传）落 null，不是 undefined——record.json 序列化后字段要显式存在', () => {
+  const r = makeRecord(BASE)
+  assert.equal(r.evalId, null)
+})
+
+test('没传 harvest 时字段有确定默认值，不是 undefined', () => {
+  const rec = makeRecord(BASE)
+  assert.equal(rec.transcriptTruncated, false)
+  assert.deepEqual(rec.harvestErrors, [])
 })

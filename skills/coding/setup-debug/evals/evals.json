@@ -1,5 +1,5 @@
 {
-  "skill_name": "full-stack-debug-env",
+  "skill_name": "setup-debug",
   "evals": [
     {
       "id": 1,
@@ -8,6 +8,17 @@
       "files": [
         "/tmp/fsd-test-node-spa/package.json",
         "/tmp/fsd-test-node-spa/server.js"
+      ],
+      "frozen": "2026-08-17",
+      "assertions": [
+        { "id": "log-dir-created", "source": "artifact",
+          "text": "创建了 tmp/logs/ 目录" },
+        { "id": "backend-and-browser-sources", "source": "artifact",
+          "text": "日志来源规划中至少含 backend 与 browser 两个独立来源，各自有独立日志文件" },
+        { "id": "verify-script-created", "source": "artifact",
+          "text": "创建了 harness/debug/verify-logs.sh" },
+        { "id": "both-docs-generated", "source": "artifact",
+          "text": "同时生成了 harness/debug/README.md 与 docs/how-to/debug-env.md 两份文档" }
       ]
     },
     {
@@ -16,6 +27,17 @@
       "expected_output": "应规划 api.log/worker.log/db.log 三个独立日志来源；worker 被识别为异步/任务驱动型来源；verify-logs.sh 中 worker.log 应报 SKIP 而非 FAIL；生成完整文档",
       "files": [
         "/tmp/fsd-test-docker/docker-compose.yml"
+      ],
+      "frozen": "2026-08-17",
+      "assertions": [
+        { "id": "three-sources-planned", "source": "artifact",
+          "text": "规划了 api、worker、db 三个独立日志来源，各自有独立日志文件" },
+        { "id": "worker-typed-async", "source": "artifact",
+          "text": "worker 被识别为异步或任务驱动型来源，而不是与 api 同类处理" },
+        { "id": "worker-skip-not-fail", "source": "artifact",
+          "text": "verify-logs.sh 中 worker.log 的检查结果是 SKIP，不是 FAIL——异步来源在无任务时本就无日志" },
+        { "id": "both-docs-generated", "source": "artifact",
+          "text": "同时生成了 harness/debug/README.md 与 docs/how-to/debug-env.md 两份文档" }
       ]
     }
   ]

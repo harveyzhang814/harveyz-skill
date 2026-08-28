@@ -56,3 +56,7 @@ test('每个 profile 的字段集合一致', () => {
   const keys = PROFILES.map(p => Object.keys(p).sort().join(','))
   assert.equal(new Set(keys).size, 1, `profiles have divergent field sets: ${keys.join(' | ')}`)
 })
+
+test('L1: artifactChannel 整表——pi 认证不通不重定向 HOME，误改成 jail 必须变红，因为目前没有别的断言在读这个字段', () => {
+  assert.deepEqual(PROFILES.map(p => p.artifactChannel), ['jail', 'none', 'jail'])
+})

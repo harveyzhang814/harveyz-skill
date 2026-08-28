@@ -3,26 +3,37 @@ import fs from 'fs-extra'
 import os from 'node:os'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { selectCells, validateMatrix, PHASE1_PLATFORMS, MODES } from './select.js'
+import { selectCells, selectProbeCells, validateMatrix, PHASE1_PLATFORMS, MODES, DEFAULT_TASK } from './select.js'
 import { planCell, runMatrix, ADAPTERS } from './runner.js'
 import { loadRuns, buildCoverage, renderCoverage } from './coverage.js'
 import { renderReport } from './report.js'
 import { stripFrontmatter } from './prompt.js'
 import { claudeOAuthToken } from './jail.js'
+import { runGrade, invokeClaudeGrader } from './grade/index.js'
+import { loadDeclaration } from './declarations.js'
+import { aggregateVerdicts } from './variance.js'
+import { renderQualityReport } from './quality-report.js'
 
 const here = path.dirname(fileURLToPath(import.meta.url))
 const REPO_ROOT = path.resolve(here, '../..')
 
-const COMMANDS = new Set(['run', 'dry-run', 'report', 'coverage'])
-const REPEATABLE = { '--skill': 'skills', '--platform': 'platforms', '--bundle': 'bundles' }
+const COMMANDS = new Set(['run', 'dry-run', 'report', 'coverage', 'grade'])
+const REPEATABLE = { '--skill': 'skills', '--platform': 'platforms', '--bundle': 'bundles', '--only': 'only' }
 
 export function parseArgs(argv) {
   const command = argv[0]
   if (!COMMANDS.has(command)) throw new Error(`unknown command: ${command} (expected one of ${[...COMMANDS].join(', ')})`)
 
   const opts = { modes: [...MODES], repeat: 1 }
-  for (let i = 1; i < argv.length; i++) {
+  // grade 的第一个位置参数是 runId，不是旗标
+  let start = 1
+  if (command === 'grade' && argv[1] && !argv[1].startsWith('--')) {
+    opts.runId = argv[1]
+    start = 2
+  }
+  for (let i = start; i < argv.length; i++) {
     const flag = argv[i]
+    if (flag === '--probe') { opts.probe = true; continue }
     const value = argv[++i]
     if (REPEATABLE[flag]) {
       const key = REPEATABLE[flag]
@@ -33,7 +44,12 @@ export function parseArgs(argv) {
     else if (flag === '--provider') opts.provider = value
     else if (flag === '--base-url') opts.baseUrl = value
     else if (flag === '--task') opts.task = value
-    else if (flag === '--repeat') opts.repeat = Number(value)
+    else if (flag === '--repeat') {
+      const n = Number(value)
+      if (!Number.isInteger(n) || n < 1) throw new Error(`--repeat must be a positive integer, got: ${value}`)
+      opts.repeat = n
+    }
+    else if (flag === '--grader-model') opts.graderModel = value
     else throw new Error(`unknown flag: ${flag}`)
   }
 
@@ -46,6 +62,13 @@ export function parseArgs(argv) {
   if ((command === 'run' || command === 'dry-run') && !opts.model) {
     throw new Error('--model is required — falling back to each platform default would confound platform with model')
   }
+  if (opts.probe && (opts.skills?.length ?? 0) > 0) {
+    throw new Error('--probe and --skill are mutually exclusive — say which one you mean, guessing recreates the defect this flag exists to fix')
+  }
+  if (command === 'grade') {
+    if (!opts.runId) throw new Error('grade requires a runId: skill-harness grade <runId> --grader-model <model>')
+    if (!opts.graderModel) throw new Error('--grader-model is required — an unpinned grader confounds the measuring stick with the thing measured')
+  }
   return { command, opts }
 }
 
@@ -55,6 +78,7 @@ export function renderDryRun(cells, ctx) {
     if (cell.state !== 'run') continue
     const adapter = ADAPTERS[cell.platform]
     const plan = planCell(cell, ctx)
+    const entry = ctx.skills.get(cell.skill)
     out.push(`=== ${cell.platform}/${cell.mode} · ${cell.skill} ===`)
     out.push('argv:')
     out.push(plan.argv.map(a => `  ${a}`).join('\n'))
@@ -62,7 +86,7 @@ export function renderDryRun(cells, ctx) {
     out.push(Object.entries(plan.redactedEnv).map(([k, v]) => `  ${k}=${v}`).join('\n'))
     if (cell.mode === 'native') {
       const dest = adapter.profile.skillChannel === 'skill-dir'
-        ? path.join(ctx.jailDir, cell.platform === 'claude' ? '.claude/skills' : '.hermes/skills', path.basename(ctx.skillPath))
+        ? path.join(ctx.jailDir, cell.platform === 'claude' ? '.claude/skills' : '.hermes/skills', path.basename(entry.skillPath))
         : '(none — loaded via explicit flag)'
       out.push(`jail writes: ${dest}`)
       out.push('skill body: not in the prompt — loaded natively by the platform')
@@ -76,6 +100,47 @@ export function renderDryRun(cells, ctx) {
   return out.join('\n')
 }
 
+// 纯函数（readBody 注入，测试不必读真盘）。只为 cells 里实际要跑（state === 'run'）
+// 的 skill 建条目——不把全仓库 41 个 SKILL.md 都读进来。键是 cell.skill，
+// 即 skills-index.json 里的 path（如 'mint/learn-skill'）。
+export async function buildSkillMap(repoRoot, cells, readBody) {
+  const skills = new Map()
+  for (const cell of cells) {
+    if (cell.state !== 'run') continue
+    if (skills.has(cell.skill)) continue
+    const skillPath = path.join(repoRoot, 'skills', cell.skill)
+    const skillBody = stripFrontmatter(await readBody(path.join(skillPath, 'SKILL.md')))
+    skills.set(cell.skill, { skillPath, skillDir: skillPath, skillBody })
+  }
+  return skills
+}
+
+// 纯函数（readBody 注入），与 buildSkillMap 对称。--probe：一期锚点探针冒烟用例，
+// 所有 state === 'run' 的格子显式指向同一个探针目录，而不是按 cell.skill 解析。
+export async function buildProbeMap(repoRoot, cells, readBody) {
+  const probePath = path.join(repoRoot, 'tools/skill-harness/probe/probe-anchor')
+  const skillBody = stripFrontmatter(await readBody(path.join(probePath, 'SKILL.md')))
+  const entry = { skillPath: probePath, skillDir: probePath, skillBody }
+  const skills = new Map()
+  for (const cell of cells) {
+    if (cell.state !== 'run') continue
+    skills.set(cell.skill, entry)
+  }
+  return skills
+}
+
+// run/dry-run 与 grade 都要读 evals.json——run 阶段现在要按声明的 eval 数量
+// 展开 cell（本任务修的缺陷本身），grade 阶段要读回声明去核对 record.evalId。
+// 两处共用一份加载逻辑，避免各写一份、字段选取悄悄分岔。
+async function loadAllDeclarations(repoRoot, indexSkills) {
+  const declarations = new Map()
+  for (const s of indexSkills) {
+    const decl = await loadDeclaration(repoRoot, s.path)
+    if (decl) declarations.set(s.path, decl)
+  }
+  return declarations
+}
+
 async function main() {
   const { command, opts } = parseArgs(process.argv.slice(2))
   const index = await fs.readJson(path.join(REPO_ROOT, 'skills-index.json'))
@@ -87,23 +152,63 @@ async function main() {
     process.exit(1)
   }
 
+  if (command === 'grade') {
+    const runDir = path.join(os.homedir(), '.hskill/skill-harness', opts.runId)
+    const declarations = await loadAllDeclarations(REPO_ROOT, index.skills)
+    const out = await runGrade({
+      runDir, graderModel: opts.graderModel, only: opts.only, declarations,
+      invoke: (prompt, model) => invokeClaudeGrader(prompt, model, {
+        source: process.env,
+        oauthToken: opts.baseUrl ? undefined : claudeOAuthToken(),
+        baseUrl: opts.baseUrl,
+        apiKey: opts.baseUrl ? process.env.MINIMAX_CN_API_KEY : undefined,
+      }),
+    })
+    const verdicts = aggregateVerdicts(out.gradings)
+    console.log(renderQualityReport({
+      records: await fs.readJson(path.join(runDir, 'records.json')),
+      declarations, verdicts,
+      allSkills: index.skills.map(s => s.path),
+      graderModel: out.graderModel, subjectModel: out.subjectModel,
+    }))
+    return
+  }
+
   if (command === 'coverage') {
     const runs = await loadRuns(path.join(os.homedir(), '.hskill/skill-harness'))
     console.log(renderCoverage(buildCoverage({ runs, skills: index.skills })))
     return
   }
 
-  const cells = selectCells({ skills: index.skills, matrix, opts })
-  const skillPath = path.join(REPO_ROOT, 'tools/skill-harness/probe/probe-anchor')
+  // --probe：单一探针身份 × 选中的 platforms/modes（3×2=6 格），不是套着探针外壳的
+  // 41 行真实 skill——cell.skill 本身就是探针身份，record/cells.json 因此天然带着
+  // 正确的身份，不会被下游（coverage 的 staleness 判定等）当成真实 skill 跑过。
+  // 探针没有声明、有自己的身份（brief 第 7 条），不吃 eval 轴，selectProbeCells
+  // 原样不动。
+  // 不带 --probe：按 cell.skill 逐格解析，被测 skill 由 --skill 真正决定——
+  // 这是本任务要修的缺陷：过去这里无论 --skill 传什么都硬编码成探针。
+  // declarations 传给 selectCells 是 eval 轴的另一半（本任务要修的缺陷本身）：
+  // 有声明的 skill 现在按声明的 eval 数量展开 cell，各自带自己的 prompt。
+  const declarations = opts.probe ? new Map() : await loadAllDeclarations(REPO_ROOT, index.skills)
+  const cells = opts.probe
+    ? selectProbeCells(opts)
+    : selectCells({ skills: index.skills, matrix, opts, declarations })
+
+  const readBody = p => fs.readFile(p, 'utf8')
+  const skills = opts.probe
+    ? await buildProbeMap(REPO_ROOT, cells, readBody)
+    : await buildSkillMap(REPO_ROOT, cells, readBody)
+
   const ctx = {
     model: opts.model,
     provider: opts.provider,
     baseUrl: opts.baseUrl,
     apiKey: opts.baseUrl ? process.env.MINIMAX_CN_API_KEY : undefined,
-    task: opts.task ?? 'run anchor probe',
-    skillPath,
-    skillDir: skillPath,
-    skillBody: stripFrontmatter(await fs.readFile(path.join(skillPath, 'SKILL.md'), 'utf8')),
+    // 只在 cell 自己没带 task 时才用得到（探针格子、或没有声明的 skill 走的兜底
+    // 默认值）——有声明的 skill 的 cell 已经带着自己 eval 的 prompt，这里的
+    // ctx.task 对它们不生效，不会静默盖过某个 eval 的 prompt（brief 第 8 条）。
+    task: opts.task ?? (opts.probe ? 'run anchor probe' : DEFAULT_TASK),
+    skills,
     // 每个 skill 有自己的 contentHash——全量跑时 opts.skills 是 undefined，
     // 单个值在这里没有意义，必须查表；查表逻辑在 runner.js 的 resolveContentHash。
     contentHashMap: new Map(index.skills.map(s => [s.path, s.contentHash])),
@@ -147,7 +252,12 @@ async function main() {
   }
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+// process.argv[1] 是被调用的路径本身——通过 npm 全局 bin 的符号链接调用时，
+// 它是符号链接路径，不是 import.meta.url 解析出的真实文件路径，直接比较
+// 永远不相等，main() 会被静默跳过（不报错、不输出，退出码却是 0）。
+// realpath 先把符号链接解出来再比较。
+const invokedPath = process.argv[1] ? fs.realpathSync(process.argv[1]) : null
+if (invokedPath && import.meta.url === `file://${invokedPath}`) {
   main().catch(e => {
     console.error(e.message)
     process.exit(1)
