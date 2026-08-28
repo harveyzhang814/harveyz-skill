@@ -42,7 +42,7 @@
       "path": "mint/learn-skill",
       "bundle": "mint",
       "installScope": "global",
-      "contentHash": "5255c96c742fbab8",
+      "contentHash": "542f333a8a72024c",
       "contentVersion": "2.0.0"
     },
     {
@@ -63,7 +63,7 @@
       "path": "research/survey-skillrepo",
       "bundle": "research",
       "installScope": "global",
-      "contentHash": "e9d46ca1e90ee289",
+      "contentHash": "ea823301b039a8aa",
       "contentVersion": "2.0.1"
     },
     {
@@ -77,8 +77,8 @@
       "path": "research/fetch-paper",
       "bundle": "research",
       "installScope": "project",
-      "contentHash": "3e567a3e81009d78",
-      "contentVersion": "0.1.0"
+      "contentHash": "001350e42f2341c6",
+      "contentVersion": "0.2.0"
     },
     {
       "path": "research/extract-cognition",
@@ -238,7 +238,7 @@
       "path": "mint/init-skill",
       "bundle": "mint",
       "installScope": "project",
-      "contentHash": "ff8aeceb83b17a1e",
+      "contentHash": "4053e6476d1c3f09",
       "contentVersion": "1.2.0"
     },
     {
@@ -321,15 +321,15 @@
     {
       "path": "coding/handoff",
       "bundle": "coding",
-      "contentHash": "e853463d770ce355",
-      "contentVersion": "1.1.0"
+      "contentHash": "18b8649ea0df4fa4",
+      "contentVersion": "1.2.0"
     },
     {
       "path": "feed/manage-roster",
       "bundle": "feed",
       "installScope": "project",
-      "contentHash": "fbb7672833c65712",
-      "contentVersion": "0.1.0"
+      "contentHash": "a8900f2583244795",
+      "contentVersion": "0.1.1"
     },
     {
       "path": "feed/capture-creator",
