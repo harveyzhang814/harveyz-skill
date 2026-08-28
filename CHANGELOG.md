@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.29.1] - 2026-08-28
+
+### Added
+- `hskill version --check`：检查 npm registry 上的最新版本并与本地版本比对，只报告不安装。支持 `--json`；网络/registry 请求失败时非零退出
+
 ## [0.29.0] - 2026-08-28
 
 ### Added
