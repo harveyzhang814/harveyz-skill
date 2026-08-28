@@ -86,6 +86,37 @@ def test_pending_json_written_with_report_content(real_roster_env):
     assert json.loads(pending_path.read_text(encoding="utf-8")) == report
 
 
+def test_leftover_pending_json_is_replayed_without_refetching(real_roster_env):
+    """render_digest.py is the only thing that clears pending.json. If a prior
+    run got through fetch (advancing cursors) but died before render_digest.py,
+    the leftover file must be replayed byte-for-byte, not discarded — cursors
+    have already moved past those tweets, so a fresh fetch would never
+    surface them again."""
+    env, data_dir = real_roster_env
+    data_dir.mkdir(parents=True, exist_ok=True)
+    stale_report = {
+        "run_time": "2020-01-01T00:00:00+00:00",
+        "new": {"alice": [{"tweet_id": "1", "url": "u", "text": "hi",
+                            "timestamp": "t", "author_handle": "@alice",
+                            "type": "post", "reply_to_handle": None,
+                            "quoted_author": None, "quoted_text": None,
+                            "quoted_timestamp": None}]},
+        "baselines": {},
+        "failures": {},
+    }
+    pending_path = data_dir / "pending.json"
+    pending_path.write_text(json.dumps(stale_report), encoding="utf-8")
+
+    result = subprocess.run(
+        [sys.executable, str(SCRIPT)], env=env,
+        capture_output=True, text=True, timeout=60,
+    )
+
+    assert result.returncode == 0, result.stderr
+    assert json.loads(result.stdout) == stale_report
+    assert json.loads(pending_path.read_text(encoding="utf-8")) == stale_report
+
+
 def test_malformed_cursor_on_one_handle_does_not_crash_run(stub_roster, monkeypatch):
     stub_roster.watch("badcursor", "https://x.com/badcursor", cursor="not-a-number")
     stub_roster.watch("goodhandle", "https://x.com/goodhandle", cursor=None)

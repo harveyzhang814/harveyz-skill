@@ -59,10 +59,18 @@ async def run(chrome_profile: Optional[str]) -> dict:
 
 
 def main():
+    pending_path = Path(get_data_dir()) / "pending.json"
+    if pending_path.exists():
+        # A previous run fetched and advanced cursors but never made it through
+        # render_digest.py (which is what clears this file) — replaying the
+        # leftover report instead of re-fetching is the only way to not lose
+        # those tweets, since the cursors have already moved past them.
+        print(pending_path.read_text(encoding="utf-8"))
+        return
+
     chrome_profile = sys.argv[1] if len(sys.argv) > 1 and sys.argv[1] else None
     report = asyncio.run(run(chrome_profile))
 
-    pending_path = Path(get_data_dir()) / "pending.json"
     pending_path.parent.mkdir(parents=True, exist_ok=True)
     pending_path.write_text(json.dumps(report, ensure_ascii=False), encoding="utf-8")
 
