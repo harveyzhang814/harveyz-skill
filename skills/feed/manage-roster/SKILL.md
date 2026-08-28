@@ -1,6 +1,6 @@
 ---
 name: manage-roster
-version: "0.1.0"
+version: "0.1.1"
 description: "Maintain the roster of watched creators and their channels — the shared watchlist behind sync-xtimeline and sync-ytchannel. Add a channel URL, merge two handles that turn out to be the same person, rename a placeholder, view the roster with cursor state. Trigger phrases: '/manage-roster add <url>', '/manage-roster list', '/manage-roster merge <a> <b>', '/manage-roster rename <id> <name>', '/manage-roster remove <id>', 'watch this X account', 'watch this YouTube channel', 'who am I following'. Does not fetch anything — running an incremental fetch is sync-xtimeline / sync-ytchannel; writing a creator's profile is the cognition layer."
 user_invocable: true
 ---
