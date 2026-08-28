@@ -1,6 +1,6 @@
 {
   "name": "sync",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Syncthing daemon lifecycle and initial folder/device setup",
   "extraPaths": ["sync_agent", "pyproject.toml"],
   "uninstallPaths": ["~/.hskill/tools/sync/venv", "~/.hskill/tools/sync"],
