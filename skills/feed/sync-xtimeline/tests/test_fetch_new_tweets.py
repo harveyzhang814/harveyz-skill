@@ -117,6 +117,54 @@ def test_leftover_pending_json_is_replayed_without_refetching(real_roster_env):
     assert json.loads(pending_path.read_text(encoding="utf-8")) == stale_report
 
 
+def test_handle_filter_only_fetches_the_requested_handles(stub_roster, monkeypatch):
+    stub_roster.watch("alice", "https://x.com/alice", cursor=None)
+    stub_roster.watch("bob", "https://x.com/bob", cursor=None)
+
+    fetched = []
+
+    async def fake_fetch_timeline(profile_url, chrome_profile=None):
+        fetched.append(profile_url)
+        return [{"tweet_id": "100", "url": "u", "text": "hi", "timestamp": "t", "author_handle": "@x"}]
+
+    monkeypatch.setattr(fetch_new_tweets, "fetch_timeline", fake_fetch_timeline)
+
+    report = asyncio.run(fetch_new_tweets.run(None, ["alice"]))
+
+    assert fetched == ["https://x.com/alice/all"]
+    assert "alice" in report["baselines"]
+    assert "bob" not in report["baselines"]
+    assert "bob" not in report["failures"]
+
+
+def test_handle_filter_reports_unknown_handle_as_a_failure(stub_roster, monkeypatch):
+    stub_roster.watch("alice", "https://x.com/alice", cursor=None)
+
+    async def fake_fetch_timeline(profile_url, chrome_profile=None):
+        return [{"tweet_id": "100", "url": "u", "text": "hi", "timestamp": "t", "author_handle": "@x"}]
+
+    monkeypatch.setattr(fetch_new_tweets, "fetch_timeline", fake_fetch_timeline)
+
+    report = asyncio.run(fetch_new_tweets.run(None, ["ghost"]))
+
+    assert report["failures"] == {"ghost": "不在 roster 名册里"}
+    assert report["baselines"] == {}
+
+
+def test_no_handle_filter_still_fetches_the_whole_roster(stub_roster, monkeypatch):
+    stub_roster.watch("alice", "https://x.com/alice", cursor=None)
+    stub_roster.watch("bob", "https://x.com/bob", cursor=None)
+
+    async def fake_fetch_timeline(profile_url, chrome_profile=None):
+        return [{"tweet_id": "100", "url": "u", "text": "hi", "timestamp": "t", "author_handle": "@x"}]
+
+    monkeypatch.setattr(fetch_new_tweets, "fetch_timeline", fake_fetch_timeline)
+
+    report = asyncio.run(fetch_new_tweets.run(None))
+
+    assert set(report["baselines"]) == {"alice", "bob"}
+
+
 def test_malformed_cursor_on_one_handle_does_not_crash_run(stub_roster, monkeypatch):
     stub_roster.watch("badcursor", "https://x.com/badcursor", cursor="not-a-number")
     stub_roster.watch("goodhandle", "https://x.com/goodhandle", cursor=None)

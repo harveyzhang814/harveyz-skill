@@ -1,6 +1,6 @@
 ---
 name: sync-ytchannel
-version: "0.3.0"
+version: "0.4.0"
 description: "Run one incremental fetch over every YouTube channel on the roster and write a Markdown update log listing each new video's title, publish date and URL. Trigger phrases: '/sync-ytchannel run', '/sync-ytchannel', 'check my YouTube channels for new videos', or a request to run sync-ytchannel on a schedule via /loop or schedule. Adding or removing a watched channel is manage-roster, not this skill. Listing only — never downloads a video, transcript or description, and never ingests into Obsidian (use clip-url or learn-video for a single video)."
 user_invocable: true
 ---
@@ -35,13 +35,14 @@ python3 scripts/roster_locate.py
 只有一个子命令：
 
 - `/sync-ytchannel run`（或无参数默认）— 跑一次增量抓取，产出更新日志
+- `/sync-ytchannel run <handle>`（可以给多个）— 只抓这一个或几个频道，其余频道的游标不动
 
 `add` / `remove` / `list` 已迁到 [manage-roster](../manage-roster/)。
 
 ### run（支持 /loop、schedule 无人值守调用，过程中不能有需要用户回答的交互）
 
 1. 运行 `python3 scripts/browser_fetch_locate.py`。若输出 `FOUND: <path>`，继续步骤 2；若输出 `NOT_FOUND: <error>`（exit code 1），向用户报告"browser-fetch 未安装或未找到：{error}。在本仓库 checkout 内运行会自动定位；若通过 `hskill install` 安装到别处运行，需要先运行 `hskill install --tool browser-fetch`"，流程终止，不再执行后续步骤。
-2. 运行 `python3 scripts/sync_channels.py`。这一步自己完成抓取、增量对比、渲染更新日志、推进游标，中间不需要任何介入（视频标题不翻译）。
+2. 运行 `python3 scripts/sync_channels.py`（用户指定了具体频道就对每个频道各加一个 `--handle <handle>`，比如 `--handle claude --handle mattpocockuk`；不指定就不加参数，抓 roster 上这个平台的全部渠道）。这一步自己完成抓取、增量对比、渲染更新日志、推进游标，中间不需要任何介入（视频标题不翻译）。`--handle` 指到的频道如果不在 roster 名册里，会作为一条失败记录出现在更新日志的"失败"部分，不会中止整体运行。
 3. 根据输出：
    - `EMPTY`：向用户报告"本次没有新视频，未生成更新日志"。
    - `WRITTEN: <path>`：向用户报告更新日志路径，并简述本次涵盖了哪些频道的新视频（每个频道几个）、哪些频道是首次建立基线、哪些频道抓取失败。
