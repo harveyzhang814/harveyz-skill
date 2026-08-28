@@ -1,6 +1,6 @@
 {
   "name": "roster",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Creator + channel roster — shared watchlist, cursors and profiles for the sync-* skills",
   "extraPaths": ["roster", "pyproject.toml"],
   "uninstallPaths": ["~/.hskill/tools/roster/venv", "~/.hskill/tools/roster"],
