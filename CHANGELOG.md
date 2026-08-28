@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.29.0] - 2026-08-28
+
 ### Added
 - `roster`：新增 tool，人（creator）与渠道（channel）名册。三份数据、三个写入方：`registry.json`（人与渠道定义，归 manage-roster）、`state.json`（游标与失败态，归 sync-*）、`profiles/*.md`（画像，归 capture-creator）。CLI 按同样的三组划分。渠道数据可重建，画像不可重建——删除操作一律归档而非删除
 - `manage-roster`：新增 skill，名册的人机入口（`add` / `list` / `merge` / `rename` / `remove`），含旧 watchlist 的一次性幂等迁移
