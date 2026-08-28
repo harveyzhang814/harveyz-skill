@@ -126,6 +126,40 @@ def test_run_reports_new_videos_and_advances_cursor(fake_roster, fake_fetch, cap
     ]
 
 
+def test_handle_filter_only_fetches_the_requested_handles(fake_roster, fake_fetch):
+    fake_roster.watch("a", "https://www.youtube.com/@a")
+    fake_roster.watch("b", "https://www.youtube.com/@b")
+    fake_fetch["https://www.youtube.com/@a"] = [_video("v1")]
+    fake_fetch["https://www.youtube.com/@b"] = [_video("v2")]
+
+    report, _ = sync_channels.collect(handles=["a"])
+
+    assert report["baselines"] == {"a": 1}
+    assert "b" not in report["baselines"]
+    assert "b" not in report["failures"]
+
+
+def test_handle_filter_reports_unknown_handle_as_a_failure(fake_roster, fake_fetch):
+    fake_roster.watch("a", "https://www.youtube.com/@a")
+    fake_fetch["https://www.youtube.com/@a"] = [_video("v1")]
+
+    report, _ = sync_channels.collect(handles=["ghost"])
+
+    assert report["failures"] == {"ghost": "不在 roster 名册里"}
+    assert report["baselines"] == {}
+
+
+def test_no_handle_filter_still_fetches_the_whole_roster(fake_roster, fake_fetch):
+    fake_roster.watch("a", "https://www.youtube.com/@a")
+    fake_roster.watch("b", "https://www.youtube.com/@b")
+    fake_fetch["https://www.youtube.com/@a"] = [_video("v1")]
+    fake_fetch["https://www.youtube.com/@b"] = [_video("v2")]
+
+    report, _ = sync_channels.collect()
+
+    assert set(report["baselines"]) == {"a", "b"}
+
+
 def test_run_isolates_per_channel_failures(fake_roster, fake_fetch, capsys):
     fake_roster.watch("a", "https://www.youtube.com/@a")
     fake_roster.watch("b", "https://www.youtube.com/@b")

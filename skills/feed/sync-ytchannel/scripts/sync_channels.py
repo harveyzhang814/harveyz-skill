@@ -8,11 +8,11 @@ That ordering is the point of keeping fetch/render/persist in one script: if
 the digest never lands on disk, the videos it would have reported stay
 unreported and the next run picks them up again.
 
-Usage: python3 sync_channels.py [chrome_profile]
+Usage: python3 sync_channels.py [chrome_profile] [--handle H [--handle H2 ...]]
 Prints EMPTY, or WRITTEN: <path>.
 """
+import argparse
 import asyncio
-import sys
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
@@ -24,14 +24,34 @@ from config import get_data_dir
 from mcp_channel_client import fetch_channel_videos
 
 
-async def _collect(chrome_profile: Optional[str]) -> tuple[dict, list[tuple[str, list[str]]]]:
+def _select_channels(handles: Optional[list[str]]) -> tuple[list[dict], list[str]]:
+    """No --handle means the full roster for this platform, unchanged. With
+    --handle, only run those; any that aren't actually on the roster are
+    reported back so the caller can surface them instead of silently no-op'ing."""
+    channels = roster_client.channels()
+    if not handles:
+        return channels, []
+    wanted = set(handles)
+    selected = [c for c in channels if c["handle"] in wanted]
+    found = {c["handle"] for c in selected}
+    missing = [h for h in handles if h not in found]
+    return selected, missing
+
+
+async def _collect(
+    chrome_profile: Optional[str], handles: Optional[list[str]] = None
+) -> tuple[dict, list[tuple[str, list[str]]]]:
     run_time = datetime.now(timezone.utc).isoformat()
     new: dict[str, list[dict]] = {}
     baselines: dict[str, int] = {}
     failures: dict[str, str] = {}
     pending_cursors: list[tuple[str, list[str]]] = []
 
-    for channel in roster_client.channels():
+    channels, missing = _select_channels(handles)
+    for handle in missing:
+        failures[handle] = "不在 roster 名册里"
+
+    for channel in channels:
         handle = channel["handle"]
         try:
             videos = await fetch_channel_videos(channel["url"], chrome_profile)
@@ -57,8 +77,10 @@ async def _collect(chrome_profile: Optional[str]) -> tuple[dict, list[tuple[str,
     return report, pending_cursors
 
 
-def collect(chrome_profile: Optional[str] = None) -> tuple[dict, list[tuple[str, list[str]]]]:
-    return asyncio.run(_collect(chrome_profile))
+def collect(
+    chrome_profile: Optional[str] = None, handles: Optional[list[str]] = None
+) -> tuple[dict, list[tuple[str, list[str]]]]:
+    return asyncio.run(_collect(chrome_profile, handles))
 
 
 def write_digest(report: dict) -> Path:
@@ -70,9 +92,18 @@ def write_digest(report: dict) -> Path:
     return digest_path
 
 
-def main():
-    chrome_profile = sys.argv[1] if len(sys.argv) > 1 and sys.argv[1] else None
-    report, pending_cursors = collect(chrome_profile)
+def _parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("chrome_profile", nargs="?", default=None)
+    parser.add_argument(
+        "--handle", action="append", dest="handles", default=None,
+        help="只抓这个 handle（可重复传多次），不传则抓 roster 上这个平台的全部渠道",
+    )
+    return parser.parse_args()
+
+
+def main(chrome_profile: Optional[str] = None, handles: Optional[list[str]] = None) -> None:
+    report, pending_cursors = collect(chrome_profile, handles)
 
     if not digest.has_content(report):
         print("EMPTY")
@@ -85,4 +116,5 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    args = _parse_args()
+    main(args.chrome_profile, args.handles)
