@@ -53,6 +53,7 @@ function printHelp() {
     hskill update                  update hskill to the latest version
     hskill mcp                     start an MCP server (stdio) exposing hskill's tools to MCP-capable agent hosts
     hskill version                 show version
+    hskill version --check         compare local version against npm registry (no install)
     hskill --help                  show this help
 
   ${chalk.cyan('Examples:')}
@@ -156,6 +157,24 @@ if (args[0] === '--help' || args[0] === '-h') {
 }
 
 if (args[0] === '--version' || args[0] === '-v' || subcommand === 'version') {
+  if (subcommand === 'version' && args.includes('--check')) {
+    try {
+      const { checkNpmVersion } = await import('../lib/version-check.js')
+      const { current, latest, upToDate } = await checkNpmVersion('harveyz-skill', version)
+      if (jsonFlag) {
+        console.log(JSON.stringify({ current, latest, upToDate }, null, 2))
+      } else if (upToDate) {
+        console.log(chalk.green(`  ✔ hskill v${current} is up to date`))
+      } else {
+        console.log(chalk.yellow(`  ⚠ hskill v${current} → v${latest} available`))
+        console.log(chalk.dim('  Run: npm install -g harveyz-skill@latest'))
+      }
+    } catch (err) {
+      console.error(chalk.red(`  ✗ Could not check npm registry: ${err.message}`))
+      process.exit(1)
+    }
+    process.exit(0)
+  }
   console.log(version)
   process.exit(0)
 }
