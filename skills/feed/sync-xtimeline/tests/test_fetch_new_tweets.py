@@ -33,7 +33,7 @@ def real_roster_env(tmp_path):
     config_path.write_text(json.dumps({"DATA_DIR": str(data_dir)}), encoding="utf-8")
     return {**os.environ,
             "HSKILL_ROSTER_CONFIG": str(config_path),
-            "BROWSER_FETCH_MCP_DATA_DIR": str(tmp_path / "bfm-data")}, data_dir
+            "BROWSER_FETCH_DATA_DIR": str(tmp_path / "bfm-data")}, data_dir
 
 
 @pytest.fixture

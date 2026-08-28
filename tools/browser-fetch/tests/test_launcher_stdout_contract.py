@@ -18,10 +18,10 @@ SH_PATH = Path(__file__).resolve().parents[1] / "browser-fetch.sh"
 
 # 六条会往 stdout 写安装信息的 bootstrap 命令，dev 分支三条 + installed 分支三条。
 BOOTSTRAP_LINE_PATTERNS = [
-    r'^\s*python3 -m venv "\$\{DEV_VENV\}".*$',
+    r'^\s*python3 -m venv --clear "\$\{DEV_VENV\}".*$',
     r'^\s*"\$\{DEV_VENV\}/bin/pip" install .*$',
     r'^\s*"\$\{DEV_VENV\}/bin/python3" -m playwright install chromium.*$',
-    r'^\s*python3 -m venv "\$\{VENV_DIR\}".*$',
+    r'^\s*python3 -m venv --clear "\$\{VENV_DIR\}".*$',
     r'^\s*"\$\{VENV_DIR\}/bin/pip" install .*$',
     r'^\s*"\$\{VENV_DIR\}/bin/python3" -m playwright install chromium.*$',
 ]
