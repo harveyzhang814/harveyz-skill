@@ -1,7 +1,7 @@
 ---
 name: handoff
 description: Use when handing a task across sessions — writing a self-contained handoff doc for a fresh session to pick up (author), sanity-checking an inbound handoff before starting (verify), or accepting completed work against the criteria agreed at handoff time (accept). Triggers on phrases like "write a handoff", "hand this off", "pick up this task", "sign off on this work". Generic skill — project-specific conventions are read from .hskill/handoff/config.md.
-version: "1.2.0"
+version: "1.3.0"
 user_invocable: true
 ---
 
@@ -28,7 +28,8 @@ user_invocable: true
 3. **汇集上下文**：以**当前对话**为真相源。涉及代码时读 `git status` / `git diff` 核对现状、排查受影响文件（若这两类内容按第 4 步判定为必要），并作为门禁的现实校验（纯规划交接可跳过）；spec/plan 作为权威指针。**不把 memory 写进文档**——memory 可能陈旧、且接手方访问不到你的 memory 目录；若某条 memory 是承载性背景，把**核实过的事实**内联进去，别留 `[[memory]]` 死链。现状一律以 git/仓库为准，不以 memory 为准。
 4. **起草**：读 `assets/handoff-template.md`，按其中的候选内容清单逐类过必要性测试——"不写这条信息，接手方会不会出问题"，答案是"会"才写出对应章节，答案是"不会"整节跳过，不留空标题。**交接目的**和**最小验收锚点**这两项任何情况下都必须写。指针式引用权威依据，只内联接手方开工必需的硬核，不重抄 spec 全文。写到 `<output_dir>/YYYY-MM-DD-<topic>-handoff.md`，状态置 `待执行`。
 5. **跑完整性门禁**（见下），不过不放行。
-6. **交付**：告知用户文档路径，说明下个 session 直接整份喂入即可。
+6. **落库**：接手方若会在**另一个分支或另一个 worktree** 里开工，把交接文档 commit 进这次工作所在的分支——未提交的文档在那边根本看不到，等于没交出去。**提交完成之后**再释放自己的工作区（如 `git worktree remove`）；顺序反了，文档会落回原处成为一份提交不了的孤儿。接手方就在同一目录同一分支续做、或文档整份贴给对方时，此步可省。
+7. **交付**：告知用户文档路径，说明下个 session 直接整份喂入即可。
 
 ## 完整性门禁（author 收尾硬动作）
 
