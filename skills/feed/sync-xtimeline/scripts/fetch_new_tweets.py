@@ -72,7 +72,8 @@ async def run(chrome_profile: Optional[str], handles: Optional[list[str]] = None
             if kind == "baseline":
                 baselines[handle] = data["count"]
             elif kind == "new":
-                fresh = [t for t in data["tweets"] if t["tweet_id"] not in _archived_tweet_ids(handle)]
+                archived = _archived_tweet_ids(handle)
+                fresh = [t for t in data["tweets"] if t["tweet_id"] not in archived]
                 if fresh:
                     new[handle] = fresh
             roster_client.set_cursor(handle, data["last_seen_tweet_id"], run_time)
