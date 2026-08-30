@@ -39,7 +39,7 @@
 
 ## 2. 流水线对齐
 
-两个 skill 的 `run` 统一为五段，**去重环节从"只在追加归档时做"提前到"决定新增内容之前做"**：
+两个 skill 的 `run` 统一为四段，**去重环节从"只在追加归档时做"提前到"决定新增内容之前做"**：
 
 ```
 1. fetch + dedupe + advance cursor（脚本：fetch_new_tweets.py / fetch_new_videos.py）
