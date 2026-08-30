@@ -42,18 +42,22 @@
 两个 skill 的 `run` 统一为五段，**去重环节从"只在追加归档时做"提前到"决定新增内容之前做"**：
 
 ```
-1. fetch          browser-fetch CLI 拉取本次可见的全部条目（tweet / video）
-2. dedupe          与归档 JSON（tweets/creators/<handle>.json 或 youtube/creators/<handle>.json）
-                   已有 id 集合（tweet_id / video_id）比对，过滤出真正"新增"的条目
-3. translate       LLM 在对话里翻译第 2 步筛出的新增条目（X 译推文正文，YouTube 译标题），写入 translated 字段
-4. write digest    用第 3 步的结果渲染 digest-<TS>.md
-5. archive + advance cursor
-                   digest 写盘成功后，把新增条目追加进归档 JSON，再推进游标
+1. fetch + dedupe + advance cursor（脚本：fetch_new_tweets.py / fetch_new_videos.py）
+                   browser-fetch CLI 拉取本次可见的全部条目，与游标比对出「新增」，
+                   再与归档 JSON（tweets/creators/<handle>.json 或 youtube/creators/<handle>.json）
+                   已有 id 集合（tweet_id / video_id）二次过滤，排除已经报告过的条目；
+                   立刻推进游标，并把这份报告写入 <channel>/pending.json 兜底
+2. translate       LLM 在对话里翻译第 1 步筛出的新增条目（X 译推文正文，YouTube 译标题），写入 translated 字段
+3. write digest    用第 2 步的结果渲染 digest-<TS>.md（脚本：render_digest.py / digest.py），
+                   成功写盘后清掉 pending.json
+4. archive         把第 2 步的新增条目追加进归档 JSON（脚本：archive_tweets.py / archive_videos.py）
 ```
 
-**为什么要把去重提到 dedupe 这一步、且两边都要有**：当前 X 的"新增"完全信任游标（`last_seen_id`），归档脚本 `archive_tweets.py` 只在追加时对归档文件自己再去一次重——这保护了归档文件不重复，但不保护 digest 本身不重复。YouTube 更明显：`seen_urls` 只是最近 15 条的滑动窗口，没有全量历史可比对，此前没写进归档所以问题没暴露。改成"先查归档决定新增，再写 digest 和归档"之后，归档 JSON 是"哪些条目已经报过"的唯一真值来源，游标不再独自承担去重职责——游标继续管"这次该往前抓多远"（X 靠 id 排序、YouTube 靠窗口比对），这是两个不同的问题，都要保留，不是互相替代。
+**为什么去重要在游标之外再查一次归档、且两边都要有**：当前 X 的"新增"完全信任游标（`last_seen_id`），归档脚本 `archive_tweets.py` 只在追加时对归档文件自己再去一次重——这保护了归档文件不重复，但不保护 digest 本身不重复。YouTube 更明显：`seen_urls` 只是最近 15 条的滑动窗口，没有全量历史可比对，此前没写进归档所以问题没暴露。改成"游标算出候选新增后，再查归档排除已报告过的"之后，归档 JSON 成为"哪些条目已经报过"的补充真值来源，游标继续管"这次该往前抓多远"（X 靠 id 排序、YouTube 靠窗口比对）——这是两个不同的问题，都要保留，不是互相替代。
 
-`run` 对外契约不变：无交互、`EMPTY` / `WRITTEN: <path>`、写盘成功才推进游标（[[2026-08-26-creator-channel-registry-design.md]] 5.2 已定，本次不动）。
+**为什么 YouTube 也要有 `pending.json`**：翻译现在是 LLM 在对话里做的，夹在"抓取"和"写 digest"这两次脚本调用之间——这个间隙如果中断（翻译没做完、进程被杀），游标已经推进过了，重新抓取会永久漏掉这批条目。X 现有的 `pending.json` 机制正是为此设计：抓取成功立刻推游标、把 report 落盘，只有 `write digest` 跑完才清掉；下次调用发现 pending 还在就原样回放，不重新抓取。YouTube 补齐翻译步骤后同样存在这个间隙，必须有同款机制，否则翻译中断就会永久丢内容。
+
+`run` 对外契约不变：无交互、`EMPTY` / `WRITTEN: <path>`（[[2026-08-26-creator-channel-registry-design.md]] 5.2 已定，本次不动）。
 
 ---
 
@@ -65,20 +69,23 @@
 <DATA_DIR>/                          # 仍由 roster 持有，config.json 不变
 ├── registry.json                    # 不变，manage-roster 独占写
 ├── state.json                       # 不变，抓取层写游标
-├── pending.json                     # 不变，X 崩溃恢复暂存
 │
 ├── tweets/                          # 渠道：X/Twitter
+│   ├── pending.json                 # 崩溃恢复暂存，从 DATA_DIR 根目录挪到这里（原因见下）
 │   ├── creators/
 │   │   └── <handle>.json            # 归档，tweet_id 去重，逐条追加
 │   └── digest/
 │       └── digest-<TS>.md           # 每次 run 合并一份（不拆分 handle），按 ## @handle 分节
 │
-└── youtube/                         # 渠道：YouTube（新增两个子目录）
+└── youtube/                         # 渠道：YouTube（新增三项）
+    ├── pending.json                 # 新增，同上机制
     ├── creators/
     │   └── <handle>.json            # 归档，video_id 去重，逐条追加
     └── digest/
         └── digest-<TS>.md
 ```
+
+**`pending.json` 从 `DATA_DIR` 根目录挪到各自渠道目录下**：YouTube 补齐翻译步骤后（见下）也需要同款崩溃恢复机制，如果两边共用根目录下同一个 `pending.json`，两个 skill 交替运行时会互相踩文件——X 写的 pending 会被 YouTube 的下一次 run 当成自己的积压去回放，反之亦然。挪到各自渠道目录下之后两边天然隔离。
 
 **删除**：`view.html`（若已生成过）、`render_view.py`、`sync-xtimeline` 的 `view` 子命令。展示不再由 skill 生产，外部应用直接读 `tweets/creators/*.json` / `youtube/creators/*.json`。
 
@@ -173,6 +180,7 @@ X 和 YouTube 各自保留自己的字段形状，不强行统一字段名——
 | `tweets/<handle>.json` | `tweets/creators/<handle>.json` |
 | `digests/x/<TS>--digest.md` | `tweets/digest/digest-<TS>.md` |
 | `digests/youtube/<TS>--digest.md` | `youtube/digest/digest-<TS>.md` |
+| `pending.json`（根目录，X 专用） | `tweets/pending.json` |
 | `view.html`（若存在） | 删除，不迁移 |
 
 一次性 `mv`，不需要写迁移脚本框架——数据量小（单用户、个位数 handle），且此前 `pending.json`/游标机制已保证"丢一批顶多刷一次基线"，迁移失败的代价可接受。
@@ -205,13 +213,13 @@ X 和 YouTube 各自保留自己的字段形状，不强行统一字段名——
 
 | 位置 | 与本设计的关系 |
 |---|---|
-| `skills/feed/sync-xtimeline/scripts/render_digest.py` | digest 模板改动点（链接语法已符合，其余不变） |
-| `skills/feed/sync-xtimeline/scripts/archive_tweets.py` | 去重逻辑要从"只在追加时去重"改成"决定新增前先查归档"；路径改到 `tweets/creators/<handle>.json` |
+| `skills/feed/sync-xtimeline/scripts/render_digest.py` | digest 写盘路径改到 `tweets/digest/digest-<TS>.md`；模板不变（链接语法已符合） |
+| `skills/feed/sync-xtimeline/scripts/archive_tweets.py` | 路径改到 `tweets/creators/<handle>.json`；去重逻辑不变（仍是追加时的安全网） |
+| `skills/feed/sync-xtimeline/scripts/fetch_new_tweets.py` | 新增：算出候选新增后再查归档过滤一次；`pending.json` 路径从 `DATA_DIR/pending.json` 改到 `DATA_DIR/tweets/pending.json` |
 | `skills/feed/sync-xtimeline/scripts/render_view.py` | 删除 |
-| `skills/feed/sync-xtimeline/scripts/config.py` | 路径拼接改成新目录结构 |
 | `skills/feed/sync-xtimeline/SKILL.md` | 删 `view` 子命令说明，更新目录结构描述 |
-| `skills/feed/sync-ytchannel/scripts/digest.py` | 模板改动：链接语法、`format_date()` 回退链改成"有多精确显示多精确" |
-| `skills/feed/sync-ytchannel/scripts/sync_channels.py` | 拆成五段流水线：插入 dedupe（查归档）、translate（新增步骤）、archive（新增步骤） |
-| `skills/feed/sync-ytchannel/scripts/config.py` | 路径拼接改成新目录结构 |
-| `skills/feed/sync-ytchannel/SKILL.md` | 补翻译步骤说明、补归档步骤说明、更新目录结构描述，把"update log"措辞改成与实现一致的"追更摘要" |
-| `skills/feed/*/tests/` | 两边都要补：dedupe-before-write 的测试、YouTube 新增的 translate/archive 步骤测试、路径迁移后的现有测试更新 |
+| `skills/feed/sync-ytchannel/scripts/digest.py` | 模板改动：链接语法、译文、`format_date()` 不再截断；新增 CLI `main()`（读 stdin report，写 digest，处理 `pending.json`），对齐 `render_digest.py` 的角色 |
+| `skills/feed/sync-ytchannel/scripts/sync_channels.py` | 改名为 `fetch_new_videos.py`，退化成纯 stage-1 脚本：抓取→游标 diff→查归档去重→立刻推游标→写 `youtube/pending.json`，不再自己写 digest |
+| `skills/feed/sync-ytchannel/scripts/archive_videos.py` | 新增，镜像 `archive_tweets.py`，路径 `youtube/creators/<handle>.json` |
+| `skills/feed/sync-ytchannel/SKILL.md` | 补翻译步骤说明（对齐 X 第 3 步的写法）、补归档步骤说明、`pending.json` 崩溃恢复说明、更新目录结构描述，把"update log"措辞改成与实现一致的"追更摘要" |
+| `skills/feed/*/tests/` | 两边都要补：dedupe-against-archive 的测试、pending.json 崩溃恢复测试（YouTube 新增）、archive 步骤测试（YouTube 新增）、路径迁移后的现有测试更新 |
