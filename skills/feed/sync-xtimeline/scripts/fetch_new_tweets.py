@@ -87,7 +87,7 @@ def _parse_args() -> argparse.Namespace:
 
 
 def main(chrome_profile: Optional[str] = None, handles: Optional[list[str]] = None) -> None:
-    pending_path = Path(get_data_dir()) / "pending.json"
+    pending_path = Path(get_data_dir()) / "tweets" / "pending.json"
     if pending_path.exists():
         # A previous run fetched and advanced cursors but never made it through
         # render_digest.py (which is what clears this file) — replaying the

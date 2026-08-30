@@ -81,7 +81,7 @@ def test_pending_json_written_with_report_content(real_roster_env):
     )
     assert result.returncode == 0, result.stderr
     report = json.loads(result.stdout)
-    pending_path = data_dir / "pending.json"
+    pending_path = data_dir / "tweets" / "pending.json"
     assert pending_path.exists()
     assert json.loads(pending_path.read_text(encoding="utf-8")) == report
 
@@ -93,7 +93,8 @@ def test_leftover_pending_json_is_replayed_without_refetching(real_roster_env):
     have already moved past those tweets, so a fresh fetch would never
     surface them again."""
     env, data_dir = real_roster_env
-    data_dir.mkdir(parents=True, exist_ok=True)
+    pending_dir = data_dir / "tweets"
+    pending_dir.mkdir(parents=True, exist_ok=True)
     stale_report = {
         "run_time": "2020-01-01T00:00:00+00:00",
         "new": {"alice": [{"tweet_id": "1", "url": "u", "text": "hi",
@@ -104,7 +105,7 @@ def test_leftover_pending_json_is_replayed_without_refetching(real_roster_env):
         "baselines": {},
         "failures": {},
     }
-    pending_path = data_dir / "pending.json"
+    pending_path = pending_dir / "pending.json"
     pending_path.write_text(json.dumps(stale_report), encoding="utf-8")
 
     result = subprocess.run(
