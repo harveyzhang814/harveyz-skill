@@ -1,10 +1,20 @@
 #!/usr/bin/env python3
-"""Markdown rendering for sync-ytchannel's update log. Pure functions only —
-sync_channels.py owns the file writing.
+"""Markdown rendering + CLI for sync-ytchannel's digest — the YouTube
+counterpart of sync-xtimeline's render_digest.py. Reads a translated report
+from stdin (fetch_new_videos.py's JSON, with the orchestrating skill having
+added a "translated" field to each video in report["new"][handle]) and
+writes it to disk, but only when there's something to report (new videos,
+freshly-established baselines, or failures).
 
-Video titles come from a third party and are only ever rendered as text; this
-module never interprets them.
+Usage: python3 digest.py < report.json
+Prints EMPTY, or WRITTEN: <path>.
 """
+import json
+import sys
+from datetime import datetime
+from pathlib import Path
+
+from config import get_data_dir
 
 
 def has_content(report: dict) -> bool:
@@ -46,3 +56,29 @@ def render_digest(report: dict) -> str:
         lines.append("")
 
     return "\n".join(lines).rstrip() + "\n"
+
+
+def _clear_pending() -> None:
+    pending_path = Path(get_data_dir()) / "youtube" / "pending.json"
+    pending_path.unlink(missing_ok=True)
+
+
+def main():
+    report = json.load(sys.stdin)
+    if not has_content(report):
+        print("EMPTY")
+        _clear_pending()
+        return
+
+    digests_dir = Path(get_data_dir()) / "youtube" / "digest"
+    digests_dir.mkdir(parents=True, exist_ok=True)
+    run_time = datetime.fromisoformat(report["run_time"])
+    timestamp = run_time.strftime("%Y%m%dT%H%M%S")
+    digest_path = digests_dir / f"digest-{timestamp}.md"
+    digest_path.write_text(render_digest(report), encoding="utf-8")
+    print(f"WRITTEN: {digest_path}")
+    _clear_pending()
+
+
+if __name__ == "__main__":
+    main()
