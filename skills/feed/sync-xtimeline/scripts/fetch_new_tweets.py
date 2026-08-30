@@ -16,6 +16,7 @@ from typing import Optional
 
 import cursor as cursor_mod
 import roster_client
+from archive_tweets import _archive_path
 from config import get_data_dir
 from mcp_timeline_client import fetch_timeline
 
@@ -41,6 +42,16 @@ def _select_channels(handles: Optional[list[str]]) -> tuple[list[dict], list[str
     return selected, missing
 
 
+def _archived_tweet_ids(handle: str) -> set[str]:
+    """Read the archive file for this handle and return the set of archived tweet IDs.
+    If the archive doesn't exist, return an empty set."""
+    path = _archive_path(handle)
+    if not path.exists():
+        return set()
+    existing = json.loads(path.read_text(encoding="utf-8"))
+    return {t["tweet_id"] for t in existing}
+
+
 async def run(chrome_profile: Optional[str], handles: Optional[list[str]] = None) -> dict:
     run_time = datetime.now(timezone.utc).isoformat()
     new: dict[str, list[dict]] = {}
@@ -61,7 +72,9 @@ async def run(chrome_profile: Optional[str], handles: Optional[list[str]] = None
             if kind == "baseline":
                 baselines[handle] = data["count"]
             elif kind == "new":
-                new[handle] = data["tweets"]
+                fresh = [t for t in data["tweets"] if t["tweet_id"] not in _archived_tweet_ids(handle)]
+                if fresh:
+                    new[handle] = fresh
             roster_client.set_cursor(handle, data["last_seen_tweet_id"], run_time)
         except Exception as e:
             failures[handle] = str(e)

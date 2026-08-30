@@ -232,3 +232,46 @@ def test_baseline_advances_the_cursor_on_the_roster(stub_roster, monkeypatch):
     asyncio.run(fetch_new_tweets.run(None))
 
     assert stub_roster.cursors["alice"] == "100"
+
+
+def test_tweets_already_in_archive_are_not_re_reported(stub_roster, monkeypatch, isolated_data_dir):
+    stub_roster.watch("alice", "https://x.com/alice", cursor="50")
+    archive_path = isolated_data_dir / "tweets" / "creators" / "alice.json"
+    archive_path.parent.mkdir(parents=True)
+    archive_path.write_text(
+        json.dumps([{"tweet_id": "100", "url": "u", "text": "hi", "timestamp": "t"}]),
+        encoding="utf-8",
+    )
+
+    async def fake_fetch_timeline(profile_url, chrome_profile=None):
+        return [{"tweet_id": "100", "url": "u", "text": "hi", "timestamp": "t", "author_handle": "@alice"}]
+
+    monkeypatch.setattr(fetch_new_tweets, "fetch_timeline", fake_fetch_timeline)
+
+    report = asyncio.run(fetch_new_tweets.run(None))
+
+    assert "alice" not in report["new"]
+    assert stub_roster.cursors["alice"] == "100"
+
+
+def test_only_unarchived_tweets_are_reported_when_partially_overlapping(
+        stub_roster, monkeypatch, isolated_data_dir):
+    stub_roster.watch("alice", "https://x.com/alice", cursor="50")
+    archive_path = isolated_data_dir / "tweets" / "creators" / "alice.json"
+    archive_path.parent.mkdir(parents=True)
+    archive_path.write_text(
+        json.dumps([{"tweet_id": "100", "url": "u100", "text": "old", "timestamp": "t"}]),
+        encoding="utf-8",
+    )
+
+    async def fake_fetch_timeline(profile_url, chrome_profile=None):
+        return [
+            {"tweet_id": "101", "url": "u101", "text": "new", "timestamp": "t", "author_handle": "@alice"},
+            {"tweet_id": "100", "url": "u100", "text": "old", "timestamp": "t", "author_handle": "@alice"},
+        ]
+
+    monkeypatch.setattr(fetch_new_tweets, "fetch_timeline", fake_fetch_timeline)
+
+    report = asyncio.run(fetch_new_tweets.run(None))
+
+    assert [t["tweet_id"] for t in report["new"]["alice"]] == ["101"]
