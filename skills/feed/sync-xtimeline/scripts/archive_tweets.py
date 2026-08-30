@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 """Archives sync-xtimeline's translated report into a per-handle JSON store
-under tweets/<handle>.json, so render_view.py can build a cumulative HTML
-view across all runs. Reads the same translated report render_digest.py
+under tweets/creators/<handle>.json. Reads the same translated report render_digest.py
 consumes (fetch_new_tweets.py's JSON, with the orchestrating skill having
 added a "translated" field to each tweet in report["new"][handle]); dedups
 by tweet_id, safe to re-run.
@@ -16,7 +15,7 @@ from config import get_data_dir
 
 
 def _archive_path(handle: str) -> Path:
-    return Path(get_data_dir()) / "tweets" / f"{handle}.json"
+    return Path(get_data_dir()) / "tweets" / "creators" / f"{handle}.json"
 
 
 def archive_tweets(report: dict) -> None:

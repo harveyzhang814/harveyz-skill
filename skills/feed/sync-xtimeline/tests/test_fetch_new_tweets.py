@@ -81,7 +81,7 @@ def test_pending_json_written_with_report_content(real_roster_env):
     )
     assert result.returncode == 0, result.stderr
     report = json.loads(result.stdout)
-    pending_path = data_dir / "pending.json"
+    pending_path = data_dir / "tweets" / "pending.json"
     assert pending_path.exists()
     assert json.loads(pending_path.read_text(encoding="utf-8")) == report
 
@@ -93,7 +93,8 @@ def test_leftover_pending_json_is_replayed_without_refetching(real_roster_env):
     have already moved past those tweets, so a fresh fetch would never
     surface them again."""
     env, data_dir = real_roster_env
-    data_dir.mkdir(parents=True, exist_ok=True)
+    pending_dir = data_dir / "tweets"
+    pending_dir.mkdir(parents=True, exist_ok=True)
     stale_report = {
         "run_time": "2020-01-01T00:00:00+00:00",
         "new": {"alice": [{"tweet_id": "1", "url": "u", "text": "hi",
@@ -104,7 +105,7 @@ def test_leftover_pending_json_is_replayed_without_refetching(real_roster_env):
         "baselines": {},
         "failures": {},
     }
-    pending_path = data_dir / "pending.json"
+    pending_path = pending_dir / "pending.json"
     pending_path.write_text(json.dumps(stale_report), encoding="utf-8")
 
     result = subprocess.run(
@@ -231,3 +232,46 @@ def test_baseline_advances_the_cursor_on_the_roster(stub_roster, monkeypatch):
     asyncio.run(fetch_new_tweets.run(None))
 
     assert stub_roster.cursors["alice"] == "100"
+
+
+def test_tweets_already_in_archive_are_not_re_reported(stub_roster, monkeypatch, isolated_data_dir):
+    stub_roster.watch("alice", "https://x.com/alice", cursor="50")
+    archive_path = isolated_data_dir / "tweets" / "creators" / "alice.json"
+    archive_path.parent.mkdir(parents=True)
+    archive_path.write_text(
+        json.dumps([{"tweet_id": "100", "url": "u", "text": "hi", "timestamp": "t"}]),
+        encoding="utf-8",
+    )
+
+    async def fake_fetch_timeline(profile_url, chrome_profile=None):
+        return [{"tweet_id": "100", "url": "u", "text": "hi", "timestamp": "t", "author_handle": "@alice"}]
+
+    monkeypatch.setattr(fetch_new_tweets, "fetch_timeline", fake_fetch_timeline)
+
+    report = asyncio.run(fetch_new_tweets.run(None))
+
+    assert "alice" not in report["new"]
+    assert stub_roster.cursors["alice"] == "100"
+
+
+def test_only_unarchived_tweets_are_reported_when_partially_overlapping(
+        stub_roster, monkeypatch, isolated_data_dir):
+    stub_roster.watch("alice", "https://x.com/alice", cursor="50")
+    archive_path = isolated_data_dir / "tweets" / "creators" / "alice.json"
+    archive_path.parent.mkdir(parents=True)
+    archive_path.write_text(
+        json.dumps([{"tweet_id": "100", "url": "u100", "text": "old", "timestamp": "t"}]),
+        encoding="utf-8",
+    )
+
+    async def fake_fetch_timeline(profile_url, chrome_profile=None):
+        return [
+            {"tweet_id": "101", "url": "u101", "text": "new", "timestamp": "t", "author_handle": "@alice"},
+            {"tweet_id": "100", "url": "u100", "text": "old", "timestamp": "t", "author_handle": "@alice"},
+        ]
+
+    monkeypatch.setattr(fetch_new_tweets, "fetch_timeline", fake_fetch_timeline)
+
+    report = asyncio.run(fetch_new_tweets.run(None))
+
+    assert [t["tweet_id"] for t in report["new"]["alice"]] == ["101"]

@@ -1,9 +1,13 @@
 #!/usr/bin/env python3
 """Stage 1 for sync-xtimeline: for every watched handle, call fetch_user_timeline
 via mcp_timeline_client, diff against each handle's last_seen_tweet_id
-cursor (cursor.compute_update, read from the roster), persist the updated cursor, and print
-a JSON report to stdout for the orchestrating skill to translate and hand
-to render_digest.py.
+cursor (cursor.compute_update, read from the roster), filter out tweets
+already archived, persist the updated cursor, and print a JSON report to
+stdout for the orchestrating skill to translate and hand to render_digest.py.
+
+This includes the pending.json crash-recovery handoff: cursor moves
+immediately after a successful fetch, and the report is replayed verbatim
+on the next call if render_digest.py never got to clear pending.json.
 
 Usage: python3 fetch_new_tweets.py [chrome_profile] [--handle H [--handle H2 ...]]
 """
@@ -16,6 +20,7 @@ from typing import Optional
 
 import cursor as cursor_mod
 import roster_client
+from archive_tweets import _archive_path
 from config import get_data_dir
 from mcp_timeline_client import fetch_timeline
 
@@ -41,6 +46,16 @@ def _select_channels(handles: Optional[list[str]]) -> tuple[list[dict], list[str
     return selected, missing
 
 
+def _archived_tweet_ids(handle: str) -> set[str]:
+    """Read the archive file for this handle and return the set of archived tweet IDs.
+    If the archive doesn't exist, return an empty set."""
+    path = _archive_path(handle)
+    if not path.exists():
+        return set()
+    existing = json.loads(path.read_text(encoding="utf-8"))
+    return {t["tweet_id"] for t in existing}
+
+
 async def run(chrome_profile: Optional[str], handles: Optional[list[str]] = None) -> dict:
     run_time = datetime.now(timezone.utc).isoformat()
     new: dict[str, list[dict]] = {}
@@ -61,7 +76,10 @@ async def run(chrome_profile: Optional[str], handles: Optional[list[str]] = None
             if kind == "baseline":
                 baselines[handle] = data["count"]
             elif kind == "new":
-                new[handle] = data["tweets"]
+                archived = _archived_tweet_ids(handle)
+                fresh = [t for t in data["tweets"] if t["tweet_id"] not in archived]
+                if fresh:
+                    new[handle] = fresh
             roster_client.set_cursor(handle, data["last_seen_tweet_id"], run_time)
         except Exception as e:
             failures[handle] = str(e)
@@ -87,7 +105,7 @@ def _parse_args() -> argparse.Namespace:
 
 
 def main(chrome_profile: Optional[str] = None, handles: Optional[list[str]] = None) -> None:
-    pending_path = Path(get_data_dir()) / "pending.json"
+    pending_path = Path(get_data_dir()) / "tweets" / "pending.json"
     if pending_path.exists():
         # A previous run fetched and advanced cursors but never made it through
         # render_digest.py (which is what clears this file) — replaying the
