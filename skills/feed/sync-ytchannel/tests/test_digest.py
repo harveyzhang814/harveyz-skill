@@ -38,7 +38,7 @@ def test_has_content_true_for_new_baselines_or_failures():
 
 
 def test_format_date_prefers_exact_timestamp():
-    assert digest.format_date(_video("v", "T", published_at="2026-08-05T15:28:41+00:00")) == "2026-08-05"
+    assert digest.format_date(_video("v", "T", published_at="2026-08-05T15:28:41+00:00")) == "2026-08-05T15:28:41+00:00"
 
 
 def test_format_date_falls_back_to_relative_text():
@@ -49,17 +49,26 @@ def test_format_date_handles_neither():
     assert digest.format_date(_video("v", "T")) == "日期未知"
 
 
-def test_render_digest_lists_title_date_and_url():
+def test_render_digest_lists_translated_title_date_and_source_link():
     report = _report(new={"mattpocockuk": [
-        _video("gaDdrDdczO4", "New Skills! v1.2", published_at="2026-08-05T15:28:41+00:00"),
-        _video("F3lL98Pj90o", "/wayfinder", published_text="3 weeks ago"),
+        {**_video("gaDdrDdczO4", "New Skills! v1.2", published_at="2026-08-05T15:28:41+00:00"),
+         "translated": "新技能！v1.2"},
+        {**_video("F3lL98Pj90o", "/wayfinder", published_text="3 weeks ago"),
+         "translated": "/寻路"},
     ]})
     out = digest.render_digest(report)
 
     assert "# YouTube 追更摘要 — 2026-08-22T07:00:00+00:00" in out
     assert "## @mattpocockuk" in out
-    assert "- [2026-08-05] New Skills! v1.2（https://www.youtube.com/watch?v=gaDdrDdczO4）" in out
-    assert "- [3 weeks ago] /wayfinder（https://www.youtube.com/watch?v=F3lL98Pj90o）" in out
+    assert "- [2026-08-05T15:28:41+00:00] 新技能！v1.2（[原文](https://www.youtube.com/watch?v=gaDdrDdczO4)）" in out
+    assert "- [3 weeks ago] /寻路（[原文](https://www.youtube.com/watch?v=F3lL98Pj90o)）" in out
+    assert "New Skills! v1.2" not in out  # 只显示译文，不显示原标题
+
+
+def test_render_digest_falls_back_to_original_title_when_translated_missing():
+    report = _report(new={"a": [_video("v1", "raw untranslated title")]})
+    out = digest.render_digest(report)
+    assert "raw untranslated title" in out
 
 
 def test_render_digest_reports_baselines_and_failures():

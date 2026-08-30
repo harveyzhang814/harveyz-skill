@@ -12,12 +12,12 @@ def has_content(report: dict) -> bool:
 
 
 def format_date(video: dict) -> str:
-    """The exact publish date when the uploads feed covered this video,
+    """The exact publish timestamp when the uploads feed covered this video,
     otherwise the grid's relative wording ("2 weeks ago") verbatim — never a
     date guessed from it."""
     published_at = video.get("published_at")
     if published_at:
-        return published_at[:10]
+        return published_at
     return video.get("published_text") or "日期未知"
 
 
@@ -27,7 +27,8 @@ def render_digest(report: dict) -> str:
     for handle, videos in report.get("new", {}).items():
         lines.append(f"## @{handle}")
         for v in videos:
-            lines.append(f"- [{format_date(v)}] {v['title']}（{v['url']}）")
+            text = v.get("translated") or v["title"]
+            lines.append(f"- [{format_date(v)}] {text}（[原文]({v['url']})）")
         lines.append("")
 
     failures = report.get("failures", {})
