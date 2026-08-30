@@ -38,3 +38,13 @@ def test_ids_compare_numerically_not_lexically():
     kind, data = cursor.compute_update("9", [_tweet("10")])
     assert kind == "new"
     assert data["last_seen_tweet_id"] == "10"
+
+
+def test_baseline_ignores_pinned_tweet_at_top_of_list():
+    """置顶推文固定排在列表第一条，不管它发布得多早。基线必须取全部推文里
+    id 真正最大的那条，不能直接信「列表第 0 条」——否则基线会被钉在置顶
+    推文的旧 id 上，下次运行会把这中间所有推文都当成"新增"报出来。"""
+    tweets = [_tweet("100"), _tweet("500"), _tweet("499")]
+    kind, data = cursor.compute_update(None, tweets)
+    assert kind == "baseline"
+    assert data == {"count": 3, "last_seen_tweet_id": "500"}
