@@ -74,5 +74,5 @@ def test_cli_archives_report_from_stdin(tmp_path):
     report = {"run_time": "t", "new": {"alice": [{"tweet_id": "1", "url": "u1", "text": "hi", "timestamp": "t1"}]}}
     result = _run(report, data_dir)
     assert result.returncode == 0, result.stderr
-    saved = json.loads((data_dir / "tweets" / "alice.json").read_text(encoding="utf-8"))
+    saved = json.loads((data_dir / "tweets" / "creators" / "alice.json").read_text(encoding="utf-8"))
     assert saved == report["new"]["alice"]

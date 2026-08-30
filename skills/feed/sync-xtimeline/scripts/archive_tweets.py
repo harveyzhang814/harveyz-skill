@@ -16,7 +16,7 @@ from config import get_data_dir
 
 
 def _archive_path(handle: str) -> Path:
-    return Path(get_data_dir()) / "tweets" / f"{handle}.json"
+    return Path(get_data_dir()) / "tweets" / "creators" / f"{handle}.json"
 
 
 def archive_tweets(report: dict) -> None:
