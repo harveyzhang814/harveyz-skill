@@ -138,6 +138,22 @@ def test_videos_already_in_archive_are_not_re_reported(fake_roster, fake_fetch, 
     ]
 
 
+def test_only_unarchived_videos_are_reported_when_partially_overlapping(fake_roster, fake_fetch, tmp_path):
+    fake_roster.watch("a", "https://www.youtube.com/@a")
+    fake_roster.cursors["a"] = ["https://www.youtube.com/watch?v=v50"]
+    archive_path = tmp_path / "youtube" / "creators" / "a.json"
+    archive_path.parent.mkdir(parents=True)
+    archive_path.write_text(json.dumps([_video("v100", "old")]), encoding="utf-8")
+    fake_fetch["https://www.youtube.com/@a"] = [
+        _video("v101", "new"),
+        _video("v100", "old"),
+    ]
+
+    report = asyncio.run(fetch_new_videos.run(None))
+
+    assert [v["video_id"] for v in report["new"]["a"]] == ["v101"]
+
+
 def test_handle_filter_only_fetches_the_requested_handles(fake_roster, fake_fetch):
     fake_roster.watch("a", "https://www.youtube.com/@a")
     fake_roster.watch("b", "https://www.youtube.com/@b")

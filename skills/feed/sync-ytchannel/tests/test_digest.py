@@ -7,7 +7,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
 
 import digest
-from conftest import write_config
+from conftest import ROSTER_CONFIG_ENV, write_config
 
 SCRIPT = Path(__file__).resolve().parent.parent / "scripts" / "digest.py"
 
@@ -98,7 +98,7 @@ def _run(report: dict, data_dir: Path) -> subprocess.CompletedProcess:
     return subprocess.run(
         [sys.executable, str(SCRIPT)],
         input=json.dumps(report),
-        env={**os.environ, "HSKILL_ROSTER_CONFIG": str(config_path)},
+        env={**os.environ, ROSTER_CONFIG_ENV: str(config_path)},
         capture_output=True, text=True, timeout=10,
     )
 

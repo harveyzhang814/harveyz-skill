@@ -48,14 +48,16 @@
                    已有 id 集合（tweet_id / video_id）二次过滤，排除已经报告过的条目；
                    立刻推进游标，并把这份报告写入 <channel>/pending.json 兜底
 2. translate       LLM 在对话里翻译第 1 步筛出的新增条目（X 译推文正文，YouTube 译标题），写入 translated 字段
-3. write digest    用第 2 步的结果渲染 digest-<TS>.md（脚本：render_digest.py / digest.py），
+3. archive         把第 2 步的新增条目追加进归档 JSON（脚本：archive_tweets.py / archive_videos.py）
+4. write digest    用第 2 步的结果渲染 digest-<TS>.md（脚本：render_digest.py / digest.py），
                    成功写盘后清掉 pending.json
-4. archive         把第 2 步的新增条目追加进归档 JSON（脚本：archive_tweets.py / archive_videos.py）
 ```
 
 **为什么去重要在游标之外再查一次归档、且两边都要有**：当前 X 的"新增"完全信任游标（`last_seen_id`），归档脚本 `archive_tweets.py` 只在追加时对归档文件自己再去一次重——这保护了归档文件不重复，但不保护 digest 本身不重复。YouTube 更明显：`seen_urls` 只是最近 15 条的滑动窗口，没有全量历史可比对，此前没写进归档所以问题没暴露。改成"游标算出候选新增后，再查归档排除已报告过的"之后，归档 JSON 成为"哪些条目已经报过"的补充真值来源，游标继续管"这次该往前抓多远"（X 靠 id 排序、YouTube 靠窗口比对）——这是两个不同的问题，都要保留，不是互相替代。
 
 **为什么 YouTube 也要有 `pending.json`**：翻译现在是 LLM 在对话里做的，夹在"抓取"和"写 digest"这两次脚本调用之间——这个间隙如果中断（翻译没做完、进程被杀），游标已经推进过了，重新抓取会永久漏掉这批条目。X 现有的 `pending.json` 机制正是为此设计：抓取成功立刻推游标、把 report 落盘，只有 `write digest` 跑完才清掉；下次调用发现 pending 还在就原样回放，不重新抓取。YouTube 补齐翻译步骤后同样存在这个间隙，必须有同款机制，否则翻译中断就会永久丢内容。
+
+**为什么 archive 排在 write digest 前面**：`write digest` 是清掉 `pending.json` 这道安全网的那一步，`archive` 是幂等的（按 id 去重，重复追加是无害的空操作）。如果顺序反过来，一旦进程恰好在"digest 写盘、pending.json 已清掉"和"archive 追加完成"之间崩溃，这批条目就会两头落空：`pending.json` 没了没法重放，游标又已经在第 1 步推过、不会被重新抓到，归档 JSON 里永久少这一批。按"先 archive、后 write digest"的顺序，崩溃窗口只可能落在两步之间——此时 `pending.json` 还在，下次调用原样回放同一份 report，重跑 archive 是空操作，digest 照常补写，不存在数据永久丢失的窗口。
 
 `run` 对外契约不变：无交互、`EMPTY` / `WRITTEN: <path>`（[[2026-08-26-creator-channel-registry-design.md]] 5.2 已定，本次不动）。
 

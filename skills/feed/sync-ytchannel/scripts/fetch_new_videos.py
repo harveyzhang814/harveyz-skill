@@ -42,6 +42,8 @@ def _select_channels(handles: Optional[list[str]]) -> tuple[list[dict], list[str
 
 
 def _archived_video_ids(handle: str) -> set[str]:
+    """Read the archive file for this handle and return the set of archived video IDs.
+    If the archive doesn't exist, return an empty set."""
     path = _archive_path(handle)
     if not path.exists():
         return set()
@@ -69,7 +71,8 @@ async def run(chrome_profile: Optional[str], handles: Optional[list[str]] = None
             if kind == "baseline":
                 baselines[handle] = data["count"]
             elif kind == "new":
-                fresh = [v for v in data["videos"] if v["video_id"] not in _archived_video_ids(handle)]
+                archived = _archived_video_ids(handle)
+                fresh = [v for v in data["videos"] if v["video_id"] not in archived]
                 if fresh:
                     new[handle] = fresh
             roster_client.set_cursor(handle, data["seen_urls"], run_time)
@@ -99,6 +102,12 @@ def _parse_args() -> argparse.Namespace:
 def main(chrome_profile: Optional[str] = None, handles: Optional[list[str]] = None) -> None:
     pending_path = Path(get_data_dir()) / "youtube" / "pending.json"
     if pending_path.exists():
+        # A previous run fetched and advanced cursors but never made it through
+        # digest.py (which is what clears this file) — replaying the
+        # leftover report instead of re-fetching is the only way to not lose
+        # those videos, since the cursors have already moved past them. This
+        # takes priority over --handle: the backlog isn't scoped to whatever
+        # you're asking for right now.
         print(pending_path.read_text(encoding="utf-8"))
         return
 

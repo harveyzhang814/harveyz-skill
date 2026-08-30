@@ -1,9 +1,13 @@
 #!/usr/bin/env python3
 """Stage 1 for sync-xtimeline: for every watched handle, call fetch_user_timeline
 via mcp_timeline_client, diff against each handle's last_seen_tweet_id
-cursor (cursor.compute_update, read from the roster), persist the updated cursor, and print
-a JSON report to stdout for the orchestrating skill to translate and hand
-to render_digest.py.
+cursor (cursor.compute_update, read from the roster), filter out tweets
+already archived, persist the updated cursor, and print a JSON report to
+stdout for the orchestrating skill to translate and hand to render_digest.py.
+
+This includes the pending.json crash-recovery handoff: cursor moves
+immediately after a successful fetch, and the report is replayed verbatim
+on the next call if render_digest.py never got to clear pending.json.
 
 Usage: python3 fetch_new_tweets.py [chrome_profile] [--handle H [--handle H2 ...]]
 """
