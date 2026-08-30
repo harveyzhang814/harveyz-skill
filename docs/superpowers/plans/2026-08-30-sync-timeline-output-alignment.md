@@ -1342,10 +1342,10 @@ if __name__ == "__main__":
 Run: `cd skills/feed/sync-ytchannel && python3 -m pytest tests/test_fetch_new_videos.py -v`
 Expected: PASS
 
-- [ ] **Step 6: 确认没有遗留对旧模块名的引用**
+- [ ] **Step 6: 确认脚本和测试目录里没有遗留对旧模块名的引用**
 
-Run: `grep -rn "sync_channels" skills/feed/sync-ytchannel/`
-Expected: 空输出（下一个任务会更新 SKILL.md 里的文件表，这里先确认脚本和测试目录已经干净）
+Run: `grep -rn "sync_channels" skills/feed/sync-ytchannel/scripts/ skills/feed/sync-ytchannel/tests/`
+Expected: 空输出。注意：`SKILL.md` 此时仍然引用着 `scripts/sync_channels.py`（Task 10 才会更新它），所以这里只扫 `scripts/` 和 `tests/`，不扫整个 skill 目录——不要把 grep 范围扩大到 `SKILL.md`，那会在这一步产生误报。
 
 - [ ] **Step 7: Commit**
 
