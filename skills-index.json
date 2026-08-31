@@ -29,7 +29,7 @@
   ],
   "bundleMeta": {
     "research": "研究工具（learn-video + extract-vision + survey-skillrepo + learn-paper + extract-cognition + probe-session + clip-url + fetch-paper）",
-    "feed": "追更工具（manage-creators — 人与渠道名册；sync-xtimeline + sync-ytchannel — 按名册跑增量抓取；capture-creator — 给人记一笔判断）",
+    "feed": "追更工具（manage-creators — 人与渠道名册；sync-xtimeline + sync-ytchannel — 按名册跑增量抓取；capture-opinion — 给人记一笔判断）",
     "creative": "创意工具（capture-todo + capture-insight）",
     "coding": "程序工具（init-workflow + setup-debug + init-goal + question-me + capture-vocab + rephrase + explain-pm）",
     "writing": "写作工具（forge-doc + draw-diagram + manage-dir + migrate-spec）",
@@ -332,11 +332,11 @@
       "contentVersion": "0.2.0"
     },
     {
-      "path": "feed/capture-creator",
+      "path": "feed/capture-opinion",
       "bundle": "feed",
       "installScope": "project",
-      "contentHash": "ea20f84f655b4c1c",
-      "contentVersion": "0.1.1"
+      "contentHash": "27a9cb1a55b0036a",
+      "contentVersion": "0.2.0"
     }
   ],
   "hooks": [
@@ -355,6 +355,10 @@
     {
       "from": "manage-roster",
       "to": "manage-creators"
+    },
+    {
+      "from": "capture-creator",
+      "to": "capture-opinion"
     },
     {
       "from": "url-extract",

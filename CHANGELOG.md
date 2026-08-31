@@ -8,8 +8,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed
-- `manage-roster` 更名为 `manage-creators`：`manage` 动词准确，但 `roster` 作为名词跟"关注了哪些创作者"这个心智模型不够贴，且容易被理解成排班表。新名词与 `capture-creator` 共享同一实体词，形成"身份管理（manage-creators）+ 主观判断（capture-creator）"的一对
+- `manage-roster` 更名为 `manage-creators`：`manage` 动词准确，但 `roster` 作为名词跟"关注了哪些创作者"这个心智模型不够贴，且容易被理解成排班表
   - **升级路径**：旧的 `/manage-roster` 触发短语失效，改用 `/manage-creators`；`hskill update` 会通过 `renames[]` 自动迁移已安装的旧目录名，数据文件（`registry.json` 等）不受影响
+- `capture-creator` 更名为 `capture-opinion`：名词位放的一直是"记的是谁"（creator）而不是"记的是什么"（判断/看法），跟 `capture-insight`/`capture-todo` 系列"名词=被记录对象"的模式不一致，也容易在改名后跟 `manage-creators` 的"新增人"操作混淆，误读成"创建一个 creator"。新名词对齐 skill 自身的触发短语（"I have a take on..."）
+  - **升级路径**：旧的 `/capture-creator` 触发短语失效，改用 `/capture-opinion`；`hskill update` 会通过 `renames[]` 自动迁移已安装的旧目录名，画像文件（`profiles/*.md`）不受影响
 
 ## [0.30.0] - 2026-08-31
 

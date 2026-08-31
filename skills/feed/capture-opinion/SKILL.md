@@ -1,11 +1,11 @@
 ---
-name: capture-creator
-version: "0.1.1"
-description: "Record your own judgment about a specific creator already on the roster. You say what you think of them, this skill tidies it into points, stamps it with the current time, shows it back for confirmation, then appends it to that creator's profile. Trigger phrases: '/capture-creator <name>', '/capture-creator', 'I have a take on this blogger', 'let me note down what I think of <name>', 'what do I think of <name>', 'show me my profile of <name>'. Scoped to people on the roster — a standalone insight not tied to a watched creator is capture-insight, and adding or removing a watched channel is manage-creators. Running an incremental fetch is sync-xtimeline / sync-ytchannel. Never saves to Obsidian and never tags — saving an article or tweet is clip-url."
+name: capture-opinion
+version: "0.2.0"
+description: "Record your own judgment about a specific creator already on the roster. You say what you think of them, this skill tidies it into points, stamps it with the current time, shows it back for confirmation, then appends it to that creator's profile. Trigger phrases: '/capture-opinion <name>', '/capture-opinion', 'I have a take on this blogger', 'let me note down what I think of <name>', 'what do I think of <name>', 'show me my profile of <name>'. Scoped to people on the roster — a standalone insight not tied to a watched creator is capture-insight, and adding or removing a watched channel is manage-creators. Running an incremental fetch is sync-xtimeline / sync-ytchannel. Never saves to Obsidian and never tags — saving an article or tweet is clip-url."
 user_invocable: true
 ---
 
-# capture-creator
+# capture-opinion
 
 给名册上的人记一笔判断。**判断由你出，这个 skill 只做整理、盖时间戳、落盘。**
 
