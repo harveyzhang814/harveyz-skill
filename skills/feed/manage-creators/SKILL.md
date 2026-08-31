@@ -1,11 +1,11 @@
 ---
-name: manage-roster
-version: "0.1.1"
-description: "Maintain the roster of watched creators and their channels — the shared watchlist behind sync-xtimeline and sync-ytchannel. Add a channel URL, merge two handles that turn out to be the same person, rename a placeholder, view the roster with cursor state. Trigger phrases: '/manage-roster add <url>', '/manage-roster list', '/manage-roster merge <a> <b>', '/manage-roster rename <id> <name>', '/manage-roster remove <id>', 'watch this X account', 'watch this YouTube channel', 'who am I following'. Does not fetch anything — running an incremental fetch is sync-xtimeline / sync-ytchannel; writing a creator's profile is the cognition layer."
+name: manage-creators
+version: "0.2.0"
+description: "Maintain the roster of watched creators and their channels — the shared watchlist behind sync-xtimeline and sync-ytchannel. Add a channel URL, merge two handles that turn out to be the same person, rename a placeholder, view the roster with cursor state. Trigger phrases: '/manage-creators add <url>', '/manage-creators list', '/manage-creators merge <a> <b>', '/manage-creators rename <id> <name>', '/manage-creators remove <id>', 'watch this X account', 'watch this YouTube channel', 'who am I following'. Does not fetch anything — running an incremental fetch is sync-xtimeline / sync-ytchannel; writing a creator's profile is the cognition layer."
 user_invocable: true
 ---
 
-# manage-roster
+# manage-creators
 
 维护"关注了哪些人、每个人有哪些渠道"这份名册。抓取本身不归它管——`sync-xtimeline` 和 `sync-ytchannel` 从这份名册读渠道列表去抓。
 

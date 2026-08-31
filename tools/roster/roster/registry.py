@@ -1,6 +1,6 @@
 """registry.json —— 人（creator）与渠道（channel）的定义。
 
-唯一写入方是 manage-roster skill（经 `roster registry` 命令组）。抓取层
+唯一写入方是 manage-creators skill（经 `roster registry` 命令组）。抓取层
 只读这里、只写 state.json。
 
 归属关系嵌套表达：渠道存在哪个 creator 的 channels 里，就属于谁。不另存

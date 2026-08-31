@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- `manage-roster` 更名为 `manage-creators`：`manage` 动词准确，但 `roster` 作为名词跟"关注了哪些创作者"这个心智模型不够贴，且容易被理解成排班表。新名词与 `capture-creator` 共享同一实体词，形成"身份管理（manage-creators）+ 主观判断（capture-creator）"的一对
+  - **升级路径**：旧的 `/manage-roster` 触发短语失效，改用 `/manage-creators`；`hskill update` 会通过 `renames[]` 自动迁移已安装的旧目录名，数据文件（`registry.json` 等）不受影响
+
 ## [0.30.0] - 2026-08-31
 
 ### Changed
