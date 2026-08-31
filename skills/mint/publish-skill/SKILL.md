@@ -2,7 +2,7 @@
 name: publish-skill
 description: "Validate and publish a skill to the harveyz-skill repository. Checks SKILL.md format compliance (frontmatter fields, semver version, name-directory match, verb-noun or single-verb naming convention) and registration in skills-index.json. Rules defined in docs/reference/skill-spec.md. Triggers: publish skill, register skill, validate skill format, check skill, add skill to index, is skill ready to publish."
 user_invocable: true
-version: "1.4.0"
+version: "1.5.0"
 ---
 
 # skill-publish
@@ -59,7 +59,7 @@ cat /tmp/sv-unregistered.txt
 | F4 | `version` 字段 | 非空，格式为 `X.Y.Z`（semver） |
 | F5 | `user_invocable` 字段 | 显式声明 `true` 或 `false` |
 | F6 | 正文语言 | frontmatter 结束后的正文内容应为中文（含中文字符即视为合规） |
-| F7 | 目录命名规范 | skill 目录名须为 `<动词>-<名词>`（2 段）或单独 `<动词>`（1 段）格式，连字符分隔，全小写；第一段必须语义上是动词，名词（若存在）不得为工具/平台专有名；`archived/` 下的 skill 跳过此检查 |
+| F7 | 目录命名规范（建议，不阻断） | skill 目录名建议为 `<动词>-<名词>`（2 段）或单独 `<动词>`（1 段）格式，连字符分隔，全小写；第一段建议语义上是动词，名词（若存在）不建议为工具/平台专有名；不符合时仅作警告，不阻止发布；`archived/` 下的 skill 跳过此检查 |
 | F8 | 内容 hash | 若 `skills-index.json` 中有 `contentHash` 记录：hash 不同且 version 未变 → 报错；hash 不同且 version 已递增 → 通过，Step 7 更新；无记录 → 首次初始化，Step 7 写入 |
 | F9 | 动词覆盖建议（警告，不阻断） | 目录名中的动词语义上合理但未命中规范词表时触发，建议评估是否补充进词表 |
 
@@ -84,11 +84,11 @@ cat /tmp/sv-unregistered.txt
    ```
 
    命中 → 直接合规。
-   b. 未命中 → 按语义判断该词是否为合理动词（而非名词/专有名词/工具名）。若是合理动词 → 合规，但记为 **F9 警告**（建议评估是否补充进词表）；若明显不是动词 → **F7 违规**。
+   b. 未命中 → 按语义判断该词是否为合理动词（而非名词/专有名词/工具名）。若是合理动词 → 合规，但记为 **F9 警告**（建议评估是否补充进词表）；若明显不是动词 → 记为 **F7 警告**（建议重命名，不阻止发布）。
 
 特殊模式：若目录名以 `runby-` 开头，直接视为合规（无需检查名词部分，也不参与动词判定）。
 
-违规示例：`skill-analyzer`（`skill` 是名词非动词）、`diagram`（单段但是名词非动词）、`youtube-learner`（`youtube` 是平台专有名非动词）
+触发 F7 警告的示例（不阻断）：`skill-analyzer`（`skill` 是名词非动词）、`diagram`（单段但是名词非动词）、`youtube-learner`（`youtube` 是平台专有名非动词）
 
 合规但触发 F9 警告的示例：`probe-session`（`probe` 语义上是合理动词，未命中词表）、`handoff`（单段动词，语义完整，未命中词表）
 
@@ -158,6 +158,8 @@ skill-publish 检查结果
 
 格式警告（不阻止通过，建议修复）
 --------
+  skills/meta/skill-analyzer
+    F7  目录名 'skill-analyzer' 不符合命名规范建议（'skill' 是名词而非动词），建议改名为 'analyze-skill'
   skills/mint/probe-session
     F9  动词 'probe' 未命中规范词表，语义合理，建议评估是否补充进词表
 
@@ -175,7 +177,7 @@ skill-publish 检查结果
   ...
 
 ========================
-共发现 3 个问题（2 个格式，1 个注册），3 个警告
+共发现 3 个问题（2 个格式，1 个注册），4 个警告
 ```
 
 若全部通过（含警告）：
@@ -183,7 +185,7 @@ skill-publish 检查结果
 ```
 skill-publish 检查结果
 ========================
-所有 N 个 skill 格式与注册均符合规范。✓（1 个 F9 警告，1 个 R4 警告，建议评估补充词表 / 填写 installScope）
+所有 N 个 skill 格式与注册均符合规范。✓（1 个 F7 警告，1 个 F9 警告，1 个 R4 警告，建议评估重命名 / 补充词表 / 填写 installScope）
 ```
 
 若完全无问题无警告：
@@ -206,15 +208,13 @@ skill-publish 检查结果
 应用此修复？(y/n)
 ```
 
-**格式问题（F7）** — 命名不符合规范时，先建议新名：
+**格式警告（F7）** — 命名不符合规范建议时，提示新名，跳过不影响发布：
 ```
-修复 F7（目录命名规范）：
-  当前名称：skill-analyzer
-  建议改为：analyze-skill（动词 analyze 在词表中，名词 skill）
-  需要重命名目录并更新 skills-index.json 的 path 字段。
-  是否继续？(y/n)
+F7 警告：目录名 'skill-analyzer' 不符合命名规范建议（'skill' 是名词而非动词）。
+建议改为：analyze-skill（动词 analyze 在词表中，名词 skill）
+是否重命名？(y/n/跳过)
 ```
-确认后执行 `git mv` 重命名目录，并更新 `skills-index.json` 中对应的 `path` 值，最后运行 `node scripts/generate-npmignore.js`。
+选 `y` 则执行 `git mv` 重命名目录，并更新 `skills-index.json` 中对应的 `path` 值，最后运行 `node scripts/generate-npmignore.js`；选 `n`/跳过则保留警告，不做修改，不影响发布。
 
 **格式警告（F9）** — 动词未命中词表但语义合理，不阻止发布，仅询问是否顺带补充词表：
 ```
