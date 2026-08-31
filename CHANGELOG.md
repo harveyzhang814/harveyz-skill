@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed
+- `publish-skill` v1.5.0：F7 目录命名规范从阻断发布的硬性检查改为警告（建议，不阻断）——与 F9 一致，命名不合规不再需要人工每次手动确认保留旧名才能通过发布
 - **破坏性变更** `sync-xtimeline` / `sync-ytchannel`：输出目录结构从 `digests/{x,youtube}/` + `tweets/<handle>.json` + 根目录 `pending.json` 改为按渠道分的 `tweets/{creators,digest,pending.json}` / `youtube/{creators,digest,pending.json}`；`sync-xtimeline` 移除 `view` 子命令和 HTML 视图生成（`render_view.py`），展示改由外部工具直接读归档 JSON；`sync-ytchannel` 新增标题翻译与 JSON 归档（`archive_videos.py`），并补上崩溃恢复用的 `pending.json` 机制
   - **升级路径**：现有 `DATA_DIR`（`~/.hskill/roster/` 默认）需要手动迁移旧数据到新目录结构，否则遗留的根目录 `pending.json`（若存在待处理批次）会被静默忽略、旧的 `tweets/<handle>.json` 归档会与新的 `tweets/creators/<handle>.json` 脱节。迁移步骤见 `docs/superpowers/plans/2026-08-30-sync-timeline-output-alignment.md` 的 Task 11（一次性 `mv` 操作，无需专门脚本）
 

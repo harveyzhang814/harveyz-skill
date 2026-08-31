@@ -245,8 +245,8 @@
       "path": "mint/publish-skill",
       "bundle": "mint",
       "installScope": "project",
-      "contentHash": "d75112c559187087",
-      "contentVersion": "1.4.0"
+      "contentHash": "21b491de6e7f3157",
+      "contentVersion": "1.5.0"
     },
     {
       "path": "mint/archive-skill",
