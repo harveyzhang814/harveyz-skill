@@ -209,30 +209,3 @@ def test_cli_digest_lands_under_the_platform_subdirectory(tmp_path):
     written_path = Path(result.stdout.strip().split("WRITTEN: ", 1)[1])
     assert written_path.parent == data_dir / "tweets" / "digest"
 
-
-def test_cli_empty_report_removes_pending_json(tmp_path):
-    data_dir = tmp_path / "data"
-    pending_path = data_dir / "tweets" / "pending.json"
-    pending_path.parent.mkdir(parents=True, exist_ok=True)
-    pending_path.write_text("{}", encoding="utf-8")
-
-    report = {"run_time": "2026-08-15T09:00:00+00:00", "new": {}, "baselines": {}, "failures": {}}
-    result = _run(report, data_dir)
-    assert result.returncode == 0, result.stderr
-    assert not pending_path.exists()
-
-
-def test_cli_written_report_removes_pending_json(tmp_path):
-    data_dir = tmp_path / "data"
-    pending_path = data_dir / "tweets" / "pending.json"
-    pending_path.parent.mkdir(parents=True, exist_ok=True)
-    pending_path.write_text("{}", encoding="utf-8")
-
-    report = {
-        "run_time": "2026-08-15T09:00:00+00:00",
-        "new": {}, "baselines": {"carol": 3}, "failures": {},
-    }
-    result = _run(report, data_dir)
-    assert result.returncode == 0, result.stderr
-    assert "WRITTEN:" in result.stdout
-    assert not pending_path.exists()

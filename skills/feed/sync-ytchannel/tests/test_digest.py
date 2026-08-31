@@ -123,29 +123,3 @@ def test_cli_nonempty_report_writes_timestamped_file(tmp_path):
     assert written_path.name == "digest-20260815T090000.md"
     assert written_path.parent == data_dir / "youtube" / "digest"
 
-
-def test_cli_empty_report_removes_pending_json(tmp_path):
-    data_dir = tmp_path / "data"
-    pending_dir = data_dir / "youtube"
-    pending_dir.mkdir(parents=True)
-    pending_path = pending_dir / "pending.json"
-    pending_path.write_text("{}", encoding="utf-8")
-
-    report = {"run_time": "2026-08-15T09:00:00+00:00", "new": {}, "baselines": {}, "failures": {}}
-    result = _run(report, data_dir)
-    assert result.returncode == 0, result.stderr
-    assert not pending_path.exists()
-
-
-def test_cli_written_report_removes_pending_json(tmp_path):
-    data_dir = tmp_path / "data"
-    pending_dir = data_dir / "youtube"
-    pending_dir.mkdir(parents=True)
-    pending_path = pending_dir / "pending.json"
-    pending_path.write_text("{}", encoding="utf-8")
-
-    report = {"run_time": "2026-08-15T09:00:00+00:00", "new": {}, "baselines": {"a": 3}, "failures": {}}
-    result = _run(report, data_dir)
-    assert result.returncode == 0, result.stderr
-    assert "WRITTEN:" in result.stdout
-    assert not pending_path.exists()

@@ -84,7 +84,7 @@ def test_run_first_time_establishes_baseline_without_listing_videos(fake_roster,
 
     assert report["baselines"] == {"a": 2}
     assert "a" not in report["new"]
-    assert fake_roster.cursors["a"] == [
+    assert report["cursors"]["a"] == [
         "https://www.youtube.com/watch?v=v1",
         "https://www.youtube.com/watch?v=v2",
     ]
@@ -101,7 +101,8 @@ def test_run_with_nothing_new_reports_none(fake_roster, fake_fetch):
     assert report["baselines"] == {}
 
 
-def test_run_reports_new_videos_and_advances_cursor_immediately(fake_roster, fake_fetch):
+def test_run_reports_the_cursor_without_writing_it(fake_roster, fake_fetch):
+    """该推到的游标值只是报出来，写盘归 archive_videos.py。"""
     fake_roster.watch("a", "https://www.youtube.com/@a")
     fake_roster.cursors["a"] = ["https://www.youtube.com/watch?v=v1"]
     fake_fetch["https://www.youtube.com/@a"] = [
@@ -112,13 +113,27 @@ def test_run_reports_new_videos_and_advances_cursor_immediately(fake_roster, fak
     report = asyncio.run(fetch_new_videos.run(None))
 
     assert [v["video_id"] for v in report["new"]["a"]] == ["v2"]
-    assert fake_roster.cursors["a"] == [
+    assert report["cursors"]["a"] == [
         "https://www.youtube.com/watch?v=v2",
         "https://www.youtube.com/watch?v=v1",
     ]
+    assert fake_roster.cursors["a"] == ["https://www.youtube.com/watch?v=v1"]
 
 
-def test_videos_already_in_archive_are_not_re_reported(fake_roster, fake_fetch, tmp_path):
+def test_nothing_new_leaves_the_channel_out_of_cursors(fake_roster, fake_fetch):
+    fake_roster.watch("a", "https://www.youtube.com/@a")
+    fake_roster.cursors["a"] = ["https://www.youtube.com/watch?v=v1"]
+    fake_fetch["https://www.youtube.com/@a"] = [_video("v1", "Older")]
+
+    report = asyncio.run(fetch_new_videos.run(None))
+
+    assert "a" not in report["cursors"]
+
+
+def test_videos_already_in_archive_are_still_reported(fake_roster, fake_fetch, tmp_path):
+    """上一轮崩在归档之后、推进游标之前，游标没动，这一轮会重抓到同一批。
+    照常报出来，代价只是多一份摘要；被归档过滤掉的话它们就永远不会出现在
+    任何一份摘要里。"""
     fake_roster.watch("a", "https://www.youtube.com/@a")
     fake_roster.cursors["a"] = ["https://www.youtube.com/watch?v=v1"]
     archive_path = tmp_path / "youtube" / "creators" / "a.json"
@@ -131,27 +146,7 @@ def test_videos_already_in_archive_are_not_re_reported(fake_roster, fake_fetch, 
 
     report = asyncio.run(fetch_new_videos.run(None))
 
-    assert "a" not in report["new"]
-    assert fake_roster.cursors["a"] == [
-        "https://www.youtube.com/watch?v=v2",
-        "https://www.youtube.com/watch?v=v1",
-    ]
-
-
-def test_only_unarchived_videos_are_reported_when_partially_overlapping(fake_roster, fake_fetch, tmp_path):
-    fake_roster.watch("a", "https://www.youtube.com/@a")
-    fake_roster.cursors["a"] = ["https://www.youtube.com/watch?v=v50"]
-    archive_path = tmp_path / "youtube" / "creators" / "a.json"
-    archive_path.parent.mkdir(parents=True)
-    archive_path.write_text(json.dumps([_video("v100", "old")]), encoding="utf-8")
-    fake_fetch["https://www.youtube.com/@a"] = [
-        _video("v101", "new"),
-        _video("v100", "old"),
-    ]
-
-    report = asyncio.run(fetch_new_videos.run(None))
-
-    assert [v["video_id"] for v in report["new"]["a"]] == ["v101"]
+    assert [v["video_id"] for v in report["new"]["a"]] == ["v2"]
 
 
 def test_handle_filter_only_fetches_the_requested_handles(fake_roster, fake_fetch):
@@ -198,8 +193,8 @@ def test_run_isolates_per_channel_failures(fake_roster, fake_fetch):
 
     assert report["failures"] == {"a": "consent wall"}
     assert report["baselines"] == {"b": 1}
-    assert fake_roster.cursors["a"] is None
-    assert fake_roster.cursors["b"] == ["https://www.youtube.com/watch?v=v9"]
+    assert "a" not in report["cursors"]
+    assert report["cursors"]["b"] == ["https://www.youtube.com/watch?v=v9"]
 
 
 def test_failed_channel_is_recorded_on_the_roster(fake_roster, fake_fetch):
@@ -220,31 +215,27 @@ def test_report_json_shape(fake_roster, fake_fetch):
 
     report = asyncio.run(fetch_new_videos.run(None))
 
-    assert set(report) == {"run_time", "new", "baselines", "failures"}
+    assert set(report) == {"run_time", "new", "baselines", "failures", "cursors"}
     assert report["baselines"] == {"a": 1}
     assert [v["video_id"] for v in report["new"]["b"]] == ["v2"]
     assert report["failures"] == {}
     json.dumps(report)
 
 
-def test_main_prints_report_and_writes_pending_json(fake_roster, fake_fetch, capsys):
+def test_main_prints_report_and_writes_no_pending_file(fake_roster, fake_fetch, capsys):
     fake_roster.watch("a", "https://www.youtube.com/@a")
     fake_fetch["https://www.youtube.com/@a"] = [_video("v1")]
 
     fetch_new_videos.main()
 
-    out = capsys.readouterr().out
-    report = json.loads(out)
+    report = json.loads(capsys.readouterr().out)
     assert report["baselines"] == {"a": 1}
-    pending_path = _pending_path()
-    assert pending_path.exists()
-    assert json.loads(pending_path.read_text(encoding="utf-8")) == report
+    assert not _pending_path().exists()
 
 
-def test_leftover_pending_json_is_replayed_without_refetching(fake_roster, fake_fetch, capsys):
-    """digest.py 是唯一清 pending.json 的地方。如果上一次 run 抓完、推了游标，
-    但在翻译这一步中断，残留的 pending.json 必须原样回放——游标已经越过那批
-    视频，重新抓取永远不会再看到它们。"""
+def test_leftover_pending_json_from_an_older_version_is_ignored(fake_roster, fake_fetch, capsys):
+    """升级前留下的 pending.json 绝不能再被当成断点回放——那正是「一次中断
+    之后每次运行都静默空转」的成因。这次运行必须照常真的发起抓取。"""
     stale_report = {
         "run_time": "2020-01-01T00:00:00+00:00",
         "new": {"a": [{"video_id": "v1", "url": "u1", "title": "T",
@@ -255,15 +246,18 @@ def test_leftover_pending_json_is_replayed_without_refetching(fake_roster, fake_
     pending_path.parent.mkdir(parents=True, exist_ok=True)
     pending_path.write_text(json.dumps(stale_report), encoding="utf-8")
 
+    fake_roster.watch("a", "https://www.youtube.com/@a")
+    fake_fetch["https://www.youtube.com/@a"] = [_video("v9")]
+
     fetch_new_videos.main()
 
-    out = capsys.readouterr().out
-    assert json.loads(out) == stale_report
-    assert json.loads(pending_path.read_text(encoding="utf-8")) == stale_report
-    assert fake_fetch == {}  # fetch_channel_videos 从没被真正调用
+    report = json.loads(capsys.readouterr().out)
+    assert report != stale_report
+    assert report["baselines"] == {"a": 1}
 
 
 def test_run_with_empty_watchlist_is_empty(fake_roster, capsys):
     fetch_new_videos.main()
     report = json.loads(capsys.readouterr().out)
-    assert report == {"run_time": report["run_time"], "new": {}, "baselines": {}, "failures": {}}
+    assert report == {"run_time": report["run_time"], "new": {}, "baselines": {},
+                      "failures": {}, "cursors": {}}

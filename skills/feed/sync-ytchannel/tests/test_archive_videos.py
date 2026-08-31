@@ -6,7 +6,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
 
-from archive_videos import archive_videos, _archive_path
+import roster_client
+from archive_videos import archive_videos, advance_cursors, _archive_path
 from conftest import write_config
 
 SCRIPT = Path(__file__).resolve().parent.parent / "scripts" / "archive_videos.py"
@@ -92,3 +93,25 @@ def test_cli_archives_report_from_stdin(tmp_path):
     assert result.returncode == 0, result.stderr
     saved = json.loads((data_dir / "youtube" / "creators" / "a.json").read_text(encoding="utf-8"))
     assert saved == report["new"]["a"]
+
+
+def test_advance_cursors_writes_every_handle_in_the_report(monkeypatch):
+    """归档落盘之后才推进游标——这是整轮的提交点。"""
+    written = {}
+    monkeypatch.setattr(roster_client, "set_cursor",
+                        lambda h, value, run_time: written.__setitem__(h, (value, run_time)))
+
+    advance_cursors({"run_time": "2026-08-15T09:00:00+00:00",
+                     "cursors": {"alice": "101", "bob": "202"}})
+
+    assert written == {"alice": ("101", "2026-08-15T09:00:00+00:00"),
+                       "bob": ("202", "2026-08-15T09:00:00+00:00")}
+
+
+def test_advance_cursors_without_a_cursors_field_writes_nothing(monkeypatch):
+    calls = []
+    monkeypatch.setattr(roster_client, "set_cursor", lambda *a: calls.append(a))
+
+    advance_cursors({"run_time": "2026-08-15T09:00:00+00:00", "new": {}})
+
+    assert calls == []

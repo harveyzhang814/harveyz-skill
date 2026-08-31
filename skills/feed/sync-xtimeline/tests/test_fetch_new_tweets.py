@@ -47,6 +47,8 @@ def stub_roster(monkeypatch):
     monkeypatch.setattr(roster_client, "get_cursor", lambda h: cursors.get(h))
     monkeypatch.setattr(roster_client, "set_cursor",
                         lambda h, tweet_id, run_time: cursors.__setitem__(h, tweet_id))
+    # 抓取阶段不该再碰 set_cursor —— 推进游标归 archive_tweets.py。留着这个
+    # stub 是为了万一它被调用，测试能看见（cursors 会被改写）而不是静默通过。
     monkeypatch.setattr(roster_client, "set_error",
                         lambda h, error, run_time: errors.__setitem__(h, error))
 
@@ -73,25 +75,22 @@ def test_empty_roster_produces_empty_report(real_roster_env):
     assert "run_time" in report
 
 
-def test_pending_json_written_with_report_content(real_roster_env):
+def test_no_pending_file_is_written(real_roster_env):
+    """断点文件整个机制已经删掉：抓取阶段不落盘任何续跑状态，游标也没推进，
+    所以没有需要保护的批次。"""
     env, data_dir = real_roster_env
     result = subprocess.run(
         [sys.executable, str(SCRIPT)], env=env,
         capture_output=True, text=True, timeout=60,
     )
     assert result.returncode == 0, result.stderr
-    report = json.loads(result.stdout)
-    pending_path = data_dir / "tweets" / "pending.json"
-    assert pending_path.exists()
-    assert json.loads(pending_path.read_text(encoding="utf-8")) == report
+    assert "cursors" in json.loads(result.stdout)
+    assert not (data_dir / "tweets" / "pending.json").exists()
 
 
-def test_leftover_pending_json_is_replayed_without_refetching(real_roster_env):
-    """render_digest.py is the only thing that clears pending.json. If a prior
-    run got through fetch (advancing cursors) but died before render_digest.py,
-    the leftover file must be replayed byte-for-byte, not discarded — cursors
-    have already moved past those tweets, so a fresh fetch would never
-    surface them again."""
+def test_leftover_pending_json_from_an_older_version_is_ignored(real_roster_env):
+    """升级前留下的 pending.json 绝不能再被当成断点回放——那正是「一次中断
+    之后每次运行都静默空转」的成因。这次运行必须照常真的发起抓取。"""
     env, data_dir = real_roster_env
     pending_dir = data_dir / "tweets"
     pending_dir.mkdir(parents=True, exist_ok=True)
@@ -105,8 +104,7 @@ def test_leftover_pending_json_is_replayed_without_refetching(real_roster_env):
         "baselines": {},
         "failures": {},
     }
-    pending_path = pending_dir / "pending.json"
-    pending_path.write_text(json.dumps(stale_report), encoding="utf-8")
+    (pending_dir / "pending.json").write_text(json.dumps(stale_report), encoding="utf-8")
 
     result = subprocess.run(
         [sys.executable, str(SCRIPT)], env=env,
@@ -114,8 +112,9 @@ def test_leftover_pending_json_is_replayed_without_refetching(real_roster_env):
     )
 
     assert result.returncode == 0, result.stderr
-    assert json.loads(result.stdout) == stale_report
-    assert json.loads(pending_path.read_text(encoding="utf-8")) == stale_report
+    report = json.loads(result.stdout)
+    assert report != stale_report
+    assert report["run_time"] != stale_report["run_time"]
 
 
 def test_handle_filter_only_fetches_the_requested_handles(stub_roster, monkeypatch):
@@ -221,7 +220,8 @@ def test_run_fetches_the_all_tab_not_the_bare_profile_url(stub_roster, monkeypat
     assert seen_urls == ["https://x.com/alice/all"]
 
 
-def test_baseline_advances_the_cursor_on_the_roster(stub_roster, monkeypatch):
+def test_baseline_reports_the_cursor_without_writing_it(stub_roster, monkeypatch):
+    """基线该推到的游标值只是报出来，写盘归 archive_tweets.py。"""
     stub_roster.watch("alice", "https://x.com/alice", cursor=None)
 
     async def fake_fetch_timeline(profile_url, chrome_profile=None):
@@ -229,12 +229,44 @@ def test_baseline_advances_the_cursor_on_the_roster(stub_roster, monkeypatch):
 
     monkeypatch.setattr(fetch_new_tweets, "fetch_timeline", fake_fetch_timeline)
 
-    asyncio.run(fetch_new_tweets.run(None))
+    report = asyncio.run(fetch_new_tweets.run(None))
 
-    assert stub_roster.cursors["alice"] == "100"
+    assert report["cursors"]["alice"] == "100"
+    assert stub_roster.cursors["alice"] is None
 
 
-def test_tweets_already_in_archive_are_not_re_reported(stub_roster, monkeypatch, isolated_data_dir):
+def test_new_tweets_report_the_cursor_without_writing_it(stub_roster, monkeypatch):
+    stub_roster.watch("alice", "https://x.com/alice", cursor="50")
+
+    async def fake_fetch_timeline(profile_url, chrome_profile=None):
+        return [{"tweet_id": "100", "url": "u", "text": "hi", "timestamp": "t", "author_handle": "@alice"}]
+
+    monkeypatch.setattr(fetch_new_tweets, "fetch_timeline", fake_fetch_timeline)
+
+    report = asyncio.run(fetch_new_tweets.run(None))
+
+    assert report["cursors"]["alice"] == "100"
+    assert stub_roster.cursors["alice"] == "50"
+
+
+def test_nothing_new_leaves_the_handle_out_of_cursors(stub_roster, monkeypatch):
+    """没有新推文时游标本来就不需要动，别在报告里塞一个空推进。"""
+    stub_roster.watch("alice", "https://x.com/alice", cursor="100")
+
+    async def fake_fetch_timeline(profile_url, chrome_profile=None):
+        return [{"tweet_id": "100", "url": "u", "text": "hi", "timestamp": "t", "author_handle": "@alice"}]
+
+    monkeypatch.setattr(fetch_new_tweets, "fetch_timeline", fake_fetch_timeline)
+
+    report = asyncio.run(fetch_new_tweets.run(None))
+
+    assert "alice" not in report["cursors"]
+
+
+def test_tweets_already_in_archive_are_still_reported(stub_roster, monkeypatch, isolated_data_dir):
+    """上一轮崩在归档之后、推进游标之前，游标没动，这一轮会重抓到同一批。
+    此时必须照常报出来——被归档过滤掉的话摘要会是空的，那批推文就永远不会
+    出现在任何一份摘要里（静默漏报）。重复的代价只是多一份摘要。"""
     stub_roster.watch("alice", "https://x.com/alice", cursor="50")
     archive_path = isolated_data_dir / "tweets" / "creators" / "alice.json"
     archive_path.parent.mkdir(parents=True)
@@ -250,28 +282,4 @@ def test_tweets_already_in_archive_are_not_re_reported(stub_roster, monkeypatch,
 
     report = asyncio.run(fetch_new_tweets.run(None))
 
-    assert "alice" not in report["new"]
-    assert stub_roster.cursors["alice"] == "100"
-
-
-def test_only_unarchived_tweets_are_reported_when_partially_overlapping(
-        stub_roster, monkeypatch, isolated_data_dir):
-    stub_roster.watch("alice", "https://x.com/alice", cursor="50")
-    archive_path = isolated_data_dir / "tweets" / "creators" / "alice.json"
-    archive_path.parent.mkdir(parents=True)
-    archive_path.write_text(
-        json.dumps([{"tweet_id": "100", "url": "u100", "text": "old", "timestamp": "t"}]),
-        encoding="utf-8",
-    )
-
-    async def fake_fetch_timeline(profile_url, chrome_profile=None):
-        return [
-            {"tweet_id": "101", "url": "u101", "text": "new", "timestamp": "t", "author_handle": "@alice"},
-            {"tweet_id": "100", "url": "u100", "text": "old", "timestamp": "t", "author_handle": "@alice"},
-        ]
-
-    monkeypatch.setattr(fetch_new_tweets, "fetch_timeline", fake_fetch_timeline)
-
-    report = asyncio.run(fetch_new_tweets.run(None))
-
-    assert [t["tweet_id"] for t in report["new"]["alice"]] == ["101"]
+    assert [t["tweet_id"] for t in report["new"]["alice"]] == ["100"]
