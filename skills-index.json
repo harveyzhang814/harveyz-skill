@@ -112,15 +112,15 @@
       "path": "feed/sync-xtimeline",
       "bundle": "feed",
       "installScope": "project",
-      "contentHash": "951a41ae53856ec8",
-      "contentVersion": "0.4.0"
+      "contentHash": "056f8d5f1470519a",
+      "contentVersion": "0.6.0"
     },
     {
       "path": "feed/sync-ytchannel",
       "bundle": "feed",
       "installScope": "project",
-      "contentHash": "108c0c5e3168b670",
-      "contentVersion": "0.3.0"
+      "contentHash": "773202d59ca433ff",
+      "contentVersion": "0.5.0"
     },
     {
       "path": "creative/capture-todo",
