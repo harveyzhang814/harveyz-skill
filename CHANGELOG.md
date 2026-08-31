@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.30.0] - 2026-08-31
+
 ### Changed
 - `publish-skill` v1.5.0：F7 目录命名规范从阻断发布的硬性检查改为警告（建议，不阻断）——与 F9 一致，命名不合规不再需要人工每次手动确认保留旧名才能通过发布
 - **破坏性变更** `sync-xtimeline` / `sync-ytchannel`：输出目录结构从 `digests/{x,youtube}/` + `tweets/<handle>.json` + 根目录 `pending.json` 改为按渠道分的 `tweets/{creators,digest,pending.json}` / `youtube/{creators,digest,pending.json}`；`sync-xtimeline` 移除 `view` 子命令和 HTML 视图生成（`render_view.py`），展示改由外部工具直接读归档 JSON；`sync-ytchannel` 新增标题翻译与 JSON 归档（`archive_videos.py`），并补上崩溃恢复用的 `pending.json` 机制
