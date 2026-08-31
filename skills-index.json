@@ -29,7 +29,7 @@
   ],
   "bundleMeta": {
     "research": "研究工具（learn-video + extract-vision + survey-skillrepo + learn-paper + extract-cognition + probe-session + clip-url + fetch-paper）",
-    "feed": "追更工具（manage-roster — 人与渠道名册；sync-xtimeline + sync-ytchannel — 按名册跑增量抓取；capture-creator — 给人记一笔判断）",
+    "feed": "追更工具（manage-creators — 人与渠道名册；sync-xtimeline + sync-ytchannel — 按名册跑增量抓取；capture-opinion — 给人记一笔判断）",
     "creative": "创意工具（capture-todo + capture-insight）",
     "coding": "程序工具（init-workflow + setup-debug + init-goal + question-me + capture-vocab + rephrase + explain-pm）",
     "writing": "写作工具（forge-doc + draw-diagram + manage-dir + migrate-spec）",
@@ -112,15 +112,15 @@
       "path": "feed/sync-xtimeline",
       "bundle": "feed",
       "installScope": "project",
-      "contentHash": "9aa6482cc9296133",
-      "contentVersion": "0.7.0"
+      "contentHash": "23fc4c422fbb66ba",
+      "contentVersion": "0.7.1"
     },
     {
       "path": "feed/sync-ytchannel",
       "bundle": "feed",
       "installScope": "project",
-      "contentHash": "5cdb49af4a92a616",
-      "contentVersion": "0.6.0"
+      "contentHash": "1fc93a9bf01e4167",
+      "contentVersion": "0.6.1"
     },
     {
       "path": "creative/capture-todo",
@@ -325,18 +325,18 @@
       "contentVersion": "1.3.0"
     },
     {
-      "path": "feed/manage-roster",
+      "path": "feed/manage-creators",
       "bundle": "feed",
       "installScope": "project",
-      "contentHash": "a8900f2583244795",
-      "contentVersion": "0.1.1"
+      "contentHash": "93cbe3e047eac8ed",
+      "contentVersion": "0.2.0"
     },
     {
-      "path": "feed/capture-creator",
+      "path": "feed/capture-opinion",
       "bundle": "feed",
       "installScope": "project",
-      "contentHash": "57c4a5af03982093",
-      "contentVersion": "0.1.0"
+      "contentHash": "27a9cb1a55b0036a",
+      "contentVersion": "0.2.0"
     }
   ],
   "hooks": [
@@ -352,6 +352,14 @@
     }
   ],
   "renames": [
+    {
+      "from": "manage-roster",
+      "to": "manage-creators"
+    },
+    {
+      "from": "capture-creator",
+      "to": "capture-opinion"
+    },
     {
       "from": "url-extract",
       "to": "extract-url"

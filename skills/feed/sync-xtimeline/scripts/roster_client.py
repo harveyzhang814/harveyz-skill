@@ -3,7 +3,7 @@
 
 只调两个命令组：`registry channels`（读渠道列表）和 `state`（读写游标）。
 **绝不调 `registry add/remove/merge/rename`**——registry.json 的写入权
-归 manage-roster，这里只读。画像同理，归认知层。
+归 manage-creators，这里只读。画像同理，归认知层。
 """
 import json
 import subprocess

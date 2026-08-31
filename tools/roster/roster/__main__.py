@@ -1,8 +1,8 @@
 """roster CLI —— 三个命令组，一组对应一份文件、对应一个消费者：
 
-  roster registry ...   registry.json    manage-roster skill
+  roster registry ...   registry.json    manage-creators skill
   roster state ...      state.json       sync-* skill
-  roster profile ...    profiles/*.md    capture-creator skill
+  roster profile ...    profiles/*.md    capture-opinion skill
 
 读跨组允许（registry list 要读 state 展示游标），写不允许。
 """
@@ -185,7 +185,7 @@ def _resolve_creator(data_dir, creator_id: str) -> str:
     所以 merge 之后用旧 id（alias）记录也会落到同一个人身上。"""
     creator = registry.find_creator(registry.load(data_dir), creator_id)
     if creator is None:
-        raise ValueError(f"名册里没有这个人：{creator_id}（先用 manage-roster 把渠道加进来）")
+        raise ValueError(f"名册里没有这个人：{creator_id}（先用 manage-creators 把渠道加进来）")
     return creator["id"]
 
 

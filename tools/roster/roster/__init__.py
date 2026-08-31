@@ -1,7 +1,7 @@
 """roster —— 人（creator）与渠道（channel）名册。
 
 三份数据、三个消费者、三个 CLI 命令组：
-  registry.json    人与渠道的定义   manage-roster skill
+  registry.json    人与渠道的定义   manage-creators skill
   state.json       游标与失败态     sync-* skill
   profiles/*.md    画像             认知层 skill
 

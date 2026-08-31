@@ -1,7 +1,7 @@
 ---
 name: sync-xtimeline
-version: "0.7.0"
-description: "Run one incremental fetch over every X (Twitter) account on the roster and produce a translated Markdown digest of what is new since last run, plus a per-handle JSON archive. Trigger phrases: '/sync-xtimeline run', '/sync-xtimeline', 'check my X accounts for new tweets', or a request to run sync-xtimeline on a schedule via /loop or schedule. Adding or removing a watched account is manage-roster, not this skill. Not for saving a single article or tweet to Obsidian (use clip-url for that) — this skill never ingests into Obsidian, never tags, never downloads images, and only reports incremental new tweets, not full thread content. Display of archived tweets is left to external tooling reading the JSON archive directly, not this skill."
+version: "0.7.1"
+description: "Run one incremental fetch over every X (Twitter) account on the roster and produce a translated Markdown digest of what is new since last run, plus a per-handle JSON archive. Trigger phrases: '/sync-xtimeline run', '/sync-xtimeline', 'check my X accounts for new tweets', or a request to run sync-xtimeline on a schedule via /loop or schedule. Adding or removing a watched account is manage-creators, not this skill. Not for saving a single article or tweet to Obsidian (use clip-url for that) — this skill never ingests into Obsidian, never tags, never downloads images, and only reports incremental new tweets, not full thread content. Display of archived tweets is left to external tooling reading the JSON archive directly, not this skill."
 user_invocable: true
 ---
 
@@ -9,7 +9,7 @@ user_invocable: true
 
 批量追更一批固定的 X 博主，每次运行只报告上次运行之后的新推文（翻译成中文），产出一份 Markdown 摘要文件，并把新推文追加进按博主分文件的 JSON 归档。下文脚本路径均相对本 SKILL.md 所在目录。
 
-**关注哪些账号由 [manage-roster](../manage-roster/) 维护，不在这里改。** 本 skill 只负责跑一次增量抓取。
+**关注哪些账号由 [manage-creators](../manage-creators/) 维护，不在这里改。** 本 skill 只负责跑一次增量抓取。
 
 ## 初始化（run first）
 
@@ -28,7 +28,7 @@ Pi → `platforms/SKILL.pi.md`。若补丁顶部带「⚠️ 未在本平台实�
 python3 scripts/roster_locate.py
 ```
 
-若输出 `NOT_FOUND: <error>`（exit 1），向用户报告"roster tool 未安装：{error}"，流程终止。若从未初始化过名册（`~/.hskill/roster/config.json` 不存在），让用户先跑一次 [manage-roster](../manage-roster/)。
+若输出 `NOT_FOUND: <error>`（exit 1），向用户报告"roster tool 未安装：{error}"，流程终止。若从未初始化过名册（`~/.hskill/roster/config.json` 不存在），让用户先跑一次 [manage-creators](../manage-creators/)。
 
 所有产物（`tweets/digest/`、`tweets/creators/<handle>.json`）落在名册的数据目录下的 `tweets/` 子目录里，跟 sync-ytchannel 共用同一个 `DATA_DIR`（各自渠道各占一个顶层子目录）。
 
@@ -39,7 +39,7 @@ python3 scripts/roster_locate.py
 - `/sync-xtimeline run`（或无参数默认）— 跑一次增量抓取，产出摘要
 - `/sync-xtimeline run <handle>`（可以给多个）— 只抓这一个或几个账号，其余账号的游标不动
 
-`add` / `remove` / `list` 已迁到 [manage-roster](../manage-roster/)。查看归档过的历史推文，直接读 `DATA_DIR/tweets/creators/<handle>.json`（外部应用读，不是本 skill 的职责）。
+`add` / `remove` / `list` 已迁到 [manage-creators](../manage-creators/)。查看归档过的历史推文，直接读 `DATA_DIR/tweets/creators/<handle>.json`（外部应用读，不是本 skill 的职责）。
 
 ### run（支持 /loop、schedule 无人值守调用，过程中不能有需要用户回答的交互）
 

@@ -1,7 +1,7 @@
 ---
 name: sync-ytchannel
-version: "0.6.0"
-description: "Run one incremental fetch over every YouTube channel on the roster, produce a translated Markdown digest of what is new since last run, and archive each new video's title, translated title, publish date and URL to a per-channel JSON store. Trigger phrases: '/sync-ytchannel run', '/sync-ytchannel', 'check my YouTube channels for new videos', or a request to run sync-ytchannel on a schedule via /loop or schedule. Adding or removing a watched channel is manage-roster, not this skill. Listing only — never downloads a video, transcript or description, and never ingests into Obsidian (use clip-url or learn-video for a single video). Display of archived videos is left to external tooling reading the JSON archive directly, not this skill."
+version: "0.6.1"
+description: "Run one incremental fetch over every YouTube channel on the roster, produce a translated Markdown digest of what is new since last run, and archive each new video's title, translated title, publish date and URL to a per-channel JSON store. Trigger phrases: '/sync-ytchannel run', '/sync-ytchannel', 'check my YouTube channels for new videos', or a request to run sync-ytchannel on a schedule via /loop or schedule. Adding or removing a watched channel is manage-creators, not this skill. Listing only — never downloads a video, transcript or description, and never ingests into Obsidian (use clip-url or learn-video for a single video). Display of archived videos is left to external tooling reading the JSON archive directly, not this skill."
 user_invocable: true
 ---
 
@@ -9,7 +9,7 @@ user_invocable: true
 
 批量追更一批 YouTube 频道，每次运行只报告上次运行之后新上传的视频（标题翻译成中文），产出一份 Markdown 摘要文件，并把新视频追加进按频道分文件的 JSON 归档。下文脚本路径均相对本 SKILL.md 所在目录。
 
-**关注哪些频道由 [manage-roster](../manage-roster/) 维护，不在这里改。** 本 skill 只负责跑一次增量抓取：从名册读渠道列表，回写游标。
+**关注哪些频道由 [manage-creators](../manage-creators/) 维护，不在这里改。** 本 skill 只负责跑一次增量抓取：从名册读渠道列表，回写游标。
 
 ## 初始化（run first）
 
@@ -28,7 +28,7 @@ Pi → `platforms/SKILL.pi.md`。若补丁顶部带「⚠️ 未在本平台实�
 python3 scripts/roster_locate.py
 ```
 
-若输出 `NOT_FOUND: <error>`（exit 1），向用户报告"roster tool 未安装：{error}"，流程终止。若从未初始化过名册（`~/.hskill/roster/config.json` 不存在），让用户先跑一次 [manage-roster](../manage-roster/)。
+若输出 `NOT_FOUND: <error>`（exit 1），向用户报告"roster tool 未安装：{error}"，流程终止。若从未初始化过名册（`~/.hskill/roster/config.json` 不存在），让用户先跑一次 [manage-creators](../manage-creators/)。
 
 所有产物（`youtube/digest/`、`youtube/creators/<handle>.json`）落在名册的数据目录下的 `youtube/` 子目录里，跟 sync-xtimeline 共用同一个 `DATA_DIR`（各自渠道各占一个顶层子目录）。
 
@@ -39,7 +39,7 @@ python3 scripts/roster_locate.py
 - `/sync-ytchannel run`（或无参数默认）— 跑一次增量抓取，产出摘要
 - `/sync-ytchannel run <handle>`（可以给多个）— 只抓这一个或几个频道，其余频道的游标不动
 
-`add` / `remove` / `list` 已迁到 [manage-roster](../manage-roster/)。查看归档过的历史视频，直接读 `DATA_DIR/youtube/creators/<handle>.json`（外部应用读，不是本 skill 的职责）。
+`add` / `remove` / `list` 已迁到 [manage-creators](../manage-creators/)。查看归档过的历史视频，直接读 `DATA_DIR/youtube/creators/<handle>.json`（外部应用读，不是本 skill 的职责）。
 
 ### run（支持 /loop、schedule 无人值守调用，过程中不能有需要用户回答的交互）
 
