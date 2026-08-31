@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """browser-fetch CLI wrapper for the `channel` subcommand. 模块名的 mcp_
-前缀是历史遗留，保留是为了不波及 SKILL.md 和上游 sync_channels.py。
+前缀是历史遗留，保留是为了不波及 SKILL.md 和上游 fetch_new_videos.py。
 
-保持 async def：sync_channels.py 在 asyncio.run() 里 await 它。
+保持 async def：fetch_new_videos.py 在 asyncio.run() 里 await 它。
 """
 from typing import Optional
 

@@ -179,7 +179,7 @@ def test_cli_empty_report_prints_empty_and_writes_no_file(tmp_path):
     result = _run(report, data_dir)
     assert result.returncode == 0, result.stderr
     assert result.stdout.strip() == "EMPTY"
-    assert not (data_dir / "digests").exists()
+    assert not (data_dir / "tweets" / "digest").exists()
 
 
 def test_cli_nonempty_report_writes_timestamped_file(tmp_path):
@@ -193,13 +193,12 @@ def test_cli_nonempty_report_writes_timestamped_file(tmp_path):
     assert "WRITTEN:" in result.stdout
     written_path = Path(result.stdout.strip().split("WRITTEN: ", 1)[1])
     assert written_path.exists()
-    assert written_path.name == "20260815T090000--digest.md"
+    assert written_path.name == "digest-20260815T090000.md"
     assert "@carol" in written_path.read_text(encoding="utf-8")
 
 
 def test_cli_digest_lands_under_the_platform_subdirectory(tmp_path):
-    """两个 sync skill 共用同一个 DATA_DIR，同一天两份 digest 会撞名，
-    所以各落各的平台子目录。"""
+    """两个 sync skill 共用同一个 DATA_DIR，渠道各有自己的子目录。"""
     data_dir = tmp_path / "data"
     report = {
         "run_time": "2026-08-15T09:00:00+00:00",
@@ -208,13 +207,13 @@ def test_cli_digest_lands_under_the_platform_subdirectory(tmp_path):
     result = _run(report, data_dir)
     assert result.returncode == 0, result.stderr
     written_path = Path(result.stdout.strip().split("WRITTEN: ", 1)[1])
-    assert written_path.parent == data_dir / "digests" / "x"
+    assert written_path.parent == data_dir / "tweets" / "digest"
 
 
 def test_cli_empty_report_removes_pending_json(tmp_path):
     data_dir = tmp_path / "data"
-    data_dir.mkdir(parents=True)
-    pending_path = data_dir / "pending.json"
+    pending_path = data_dir / "tweets" / "pending.json"
+    pending_path.parent.mkdir(parents=True, exist_ok=True)
     pending_path.write_text("{}", encoding="utf-8")
 
     report = {"run_time": "2026-08-15T09:00:00+00:00", "new": {}, "baselines": {}, "failures": {}}
@@ -225,8 +224,8 @@ def test_cli_empty_report_removes_pending_json(tmp_path):
 
 def test_cli_written_report_removes_pending_json(tmp_path):
     data_dir = tmp_path / "data"
-    data_dir.mkdir(parents=True)
-    pending_path = data_dir / "pending.json"
+    pending_path = data_dir / "tweets" / "pending.json"
+    pending_path.parent.mkdir(parents=True, exist_ok=True)
     pending_path.write_text("{}", encoding="utf-8")
 
     report = {

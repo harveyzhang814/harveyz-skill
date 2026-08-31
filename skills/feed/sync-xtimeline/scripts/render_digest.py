@@ -77,7 +77,7 @@ def render_digest(report: dict) -> str:
 
 
 def _clear_pending() -> None:
-    pending_path = Path(get_data_dir()) / "pending.json"
+    pending_path = Path(get_data_dir()) / "tweets" / "pending.json"
     pending_path.unlink(missing_ok=True)
 
 
@@ -88,11 +88,11 @@ def main():
         _clear_pending()
         return
 
-    digests_dir = Path(get_data_dir()) / "digests" / "x"
+    digests_dir = Path(get_data_dir()) / "tweets" / "digest"
     digests_dir.mkdir(parents=True, exist_ok=True)
     run_time = datetime.fromisoformat(report["run_time"])
     timestamp = run_time.strftime("%Y%m%dT%H%M%S")
-    digest_path = digests_dir / f"{timestamp}--digest.md"
+    digest_path = digests_dir / f"digest-{timestamp}.md"
     digest_path.write_text(render_digest(report), encoding="utf-8")
     print(f"WRITTEN: {digest_path}")
     _clear_pending()
