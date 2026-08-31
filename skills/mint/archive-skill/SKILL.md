@@ -2,7 +2,7 @@
 name: archive-skill
 description: "Archive, retire, deprecate, or sunset a skill from the active registry. Use this skill whenever someone wants to remove a skill from active use — even if they don't use the word 'archive'. Moves it to skills/archived/, removes it from skills-index.json, regenerates packaging config, and commits on a chore branch merged back to the original branch. Triggers: 'archive X skill', 'retire X', 'deprecate X', 'remove X from bundle', 'sunset X skill'."
 user_invocable: true
-version: "1.1.1"
+version: "1.2.0"
 ---
 
 # archive-skill
@@ -103,6 +103,10 @@ git mv "skills/<category>/<name>" "skills/archived/<name>"
 - 若为最后一项：删除 ` + <name>`
 - 若括号内只剩该项：将整个 `（<name>）` 删除，或保留空括号（均可）
 - 若描述中无该 skill 名：跳过，不报错
+
+**记录到 archived 列表：** 在顶层 `archived.skills` 数组中追加 `<name>`（数组不存在则创建 `"archived": { "skills": [], "tools": [] }`）。若 `<name>` 已在列表中，跳过不重复添加。
+
+`skills/archived/` 目录本身不会随 npm 包发布（见 `.npmignore`），`archived.skills` 是 hskill CLI 用来检测"已归档但安装目录里还留着"的唯一依据（`hskill update` / `hskill install` 会读取它），所以这一步不能省略。
 
 ---
 
