@@ -456,5 +456,19 @@
       "from": "domain-vocab",
       "to": "capture-vocab"
     }
-  ]
+  ],
+  "archived": {
+    "skills": [
+      "article-fetcher",
+      "close-task",
+      "dispatch-task",
+      "extract-url",
+      "manage-docs",
+      "npm-release"
+    ],
+    "tools": [
+      "p-launch",
+      "todo-tool"
+    ]
+  }
 }

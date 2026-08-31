@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { select, input } from '@inquirer/prompts'
+import { select, input, confirm } from '@inquirer/prompts'
 import chalk from 'chalk'
 import { execSync, spawnSync } from 'child_process'
 import { existsSync, writeFileSync, unlinkSync } from 'fs'
@@ -14,7 +14,7 @@ import {
   TOOL_BUNDLE_CHOICES,
 } from '../lib/bundles.js'
 import { buildTargetChoices, resolveTargets, TARGETS, USER_ONLY_TARGETS, SKILL_TARGETS, userSkillDir } from '../lib/targets.js'
-import { installSkills, installTools, installHooks, installHooksForTarget, uninstallHook, uninstallTool, uninstallSkill, migrateRenamedSkills } from '../lib/installer.js'
+import { installSkills, installTools, installHooks, installHooksForTarget, uninstallHook, uninstallTool, uninstallSkill, migrateRenamedSkills, findArchivedInstalled, findArchivedToolsInstalled } from '../lib/installer.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const require = createRequire(import.meta.url)
@@ -179,6 +179,49 @@ if (args[0] === '--version' || args[0] === '-v' || subcommand === 'version') {
   process.exit(0)
 }
 
+// ── Archived skills/tools still installed ───────────────────────────────────
+// skills-index.json's `archived` field records every skill/tool name that was
+// dropped from the active registry (skills/archived/, tools/archived/ — neither
+// of which ships in the npm package, so detection must read this shipped data
+// rather than scan disk). Detect leftovers still on disk and offer cleanup.
+async function checkArchivedInstalls() {
+  const { archived } = require('../skills-index.json')
+  const archivedSkills = archived?.skills ?? []
+  const archivedTools  = archived?.tools  ?? []
+  if (!archivedSkills.length && !archivedTools.length) return
+
+  const targets = SKILL_TARGETS.map(name => ({ name, dir: userSkillDir(name) }))
+  const foundSkills = archivedSkills.length ? await findArchivedInstalled(archivedSkills, targets) : []
+  const foundTools  = archivedTools.length  ? await findArchivedToolsInstalled(archivedTools) : []
+  if (!foundSkills.length && !foundTools.length) return
+
+  console.error('')
+  if (foundSkills.length) {
+    console.error(chalk.yellow(`  ⚠ Found ${foundSkills.length} archived skill(s) still installed:`))
+    for (const f of foundSkills) console.error(chalk.dim(`    · ${f.skillName} (${f.target})`))
+  }
+  if (foundTools.length) {
+    console.error(chalk.yellow(`  ⚠ Found ${foundTools.length} archived tool(s) still installed:`))
+    for (const t of foundTools) console.error(chalk.dim(`    · ${t.toolName}`))
+  }
+
+  let remove
+  if (process.stdout.isTTY) {
+    remove = await confirm({ message: '  Remove archived skill(s)/tool(s) from install directories?', default: true })
+  } else {
+    remove = true
+    console.error(chalk.dim('  · Non-interactive session, removing automatically'))
+  }
+
+  if (!remove) {
+    console.error(chalk.dim('  · Kept archived skill(s)/tool(s) in place'))
+    return
+  }
+  for (const f of foundSkills) await uninstallSkill(f.skillName, f.dir)
+  for (const t of foundTools)  await uninstallTool(t.toolName, { yes: true })
+  console.error('')
+}
+
 // ── Update ───────────────────────────────────────────────────────────────────
 if (subcommand === 'update') {
   console.log(chalk.dim('  · Updating hskill…'))
@@ -201,6 +244,7 @@ if (subcommand === 'update') {
     if (totalMigrated > 0) console.log(chalk.green(`  ✔ Migrated ${totalMigrated} skill(s)`))
     if (totalFailed   > 0) console.log(chalk.yellow(`  ⚠ ${totalFailed} migration(s) failed — check output above`))
   }
+  await checkArchivedInstalls()
   const legacyDir = path.join(os.homedir(), '.local', 'share', 'hskill')
   if (existsSync(legacyDir)) {
     console.log('')
@@ -1116,6 +1160,8 @@ function printSummary(skillSummary, toolSummary, hookSummary = null) {
 }
 
 try {
+  await checkArchivedInstalls()
+
   if (toolArg && skillArg) {
     const msg = '--tool and --skill cannot be combined; use --bundle to install both'
     if (jsonFlag) process.stderr.write(JSON.stringify({ error: true, message: msg }) + '\n')
