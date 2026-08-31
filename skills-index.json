@@ -105,8 +105,8 @@
       "path": "research/clip-url",
       "bundle": "research",
       "installScope": "project",
-      "contentHash": "4d25c27b6f6d3d4b",
-      "contentVersion": "0.8.0"
+      "contentHash": "588dc9194f846fa8",
+      "contentVersion": "0.8.1"
     },
     {
       "path": "feed/sync-xtimeline",
@@ -252,8 +252,8 @@
       "path": "mint/archive-skill",
       "bundle": "mint",
       "installScope": "project",
-      "contentHash": "080305f6ad678326",
-      "contentVersion": "1.1.1"
+      "contentHash": "2f028d12b2285128",
+      "contentVersion": "1.2.0"
     },
     {
       "path": "mint/dedup-skill",
@@ -321,8 +321,8 @@
     {
       "path": "coding/handoff",
       "bundle": "coding",
-      "contentHash": "18b8649ea0df4fa4",
-      "contentVersion": "1.2.0"
+      "contentHash": "3a93302e821d08e8",
+      "contentVersion": "1.3.0"
     },
     {
       "path": "feed/manage-roster",
