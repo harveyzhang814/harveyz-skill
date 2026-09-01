@@ -1,6 +1,6 @@
 ---
 name: learn-video
-version: "1.6.1"
+version: "1.7.0"
 description: "Process a YouTube or Bilibili video using the vdl CLI: transcribe, generate article and summary. Triggers when the user provides a YouTube or Bilibili URL and wants to learn from, summarize, transcribe, or extract key points from the video — e.g. 'help me understand this talk', 'summarize this YouTube video', 'summarize this Bilibili video', 'get the transcript', 'process this video', 'summarize it'."
 user_invocable: true
 ---
@@ -23,6 +23,12 @@ which vdl
 cd "$HOME/Projects/Video-Learner"
 npm link
 ```
+
+---
+
+## 前置：检查统一存储根
+
+运行 `python3 scripts/store_config.py check`。若输出 `MISSING:`，询问用户"抓取产物统一存到哪个目录？（直接回车使用默认：`~/Documents/knowledge`）"，将回答展开为绝对路径，写入 `~/.hskill/config.json` 的 `knowledgeRoot` 字段（文件不存在则新建；若已存在 `skillDir` 等其他字段，只增改 `knowledgeRoot`，不覆盖）。
 
 ---
 
@@ -224,6 +230,25 @@ work/<task_id>/
 
 ---
 
+## 归档到统一存储根
+
+拿到「进度汇报与完成判定」返回的 `transcript`/`article`/`summary` 三个路径后，在向用户报告之前先归档：
+
+```bash
+cd "$HOME/Projects/harveyz-skill/skills/research/learn-video"  # 或本 skill 安装后的实际目录
+TASK_ID="<task_id>" SOURCE_URL="<URL>" TITLE="<视频标题>" \
+TRANSCRIPT_PATH="<transcript 路径>" ARTICLE_PATH="<article 路径>" SUMMARY_PATH="<summary 路径>" \
+python3 scripts/archive.py
+```
+
+输出两行 `VIDEO_DIR: <path>` 和 `META_PATH: <path>`。同一个 `task_id` 重复归档时覆盖，幂等——`rerun`/更换 focus 之后重新归档不会产生重复目录。
+
+**复制而非移动**：`vdl` 侧的 `work/<task_id>/` 保持不变，`vdl rerun` 需要它还在。归档只是把三个文件的副本放进 `<knowledgeRoot>/videos/<task_id>/`。
+
+归档完成后，「向用户报告」小节里的"产物路径"改为报告 `VIDEO_DIR` 打印出的路径，不再是 `work/<task_id>/...`。
+
+---
+
 ## 向用户报告
 
 当「进度汇报与完成判定」判定任务成功后，立即执行，不要等用户追问：
@@ -231,3 +256,12 @@ work/<task_id>/
 1. 展示 **summary.md** 全文
 2. 告知产物路径（成功 JSON 里的 `transcript`/`article`/`summary` 三个字段，或「获取结果」里的固定路径）
 3. 询问是否需要：查看完整文章、转录稿，或用不同 focus 重新生成摘要
+
+---
+
+## 参考文件
+
+| 文件 | 用途 |
+|------|------|
+| `scripts/store_config.py` | 读共享 `knowledgeRoot`（`~/.hskill/config.json`），四个入范围 skill 各存一份内容相同的副本 |
+| `scripts/archive.py` | 把 vdl 产物复制进 `<knowledgeRoot>/videos/<task_id>/` 并写 `meta.json`，同 `task_id` 重跑幂等 |
