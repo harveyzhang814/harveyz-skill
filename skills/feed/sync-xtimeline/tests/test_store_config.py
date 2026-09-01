@@ -48,6 +48,11 @@ def test_get_root_reads_configured_value(isolated_config):
     assert store_config.get_root() == Path("/fake/knowledge")
 
 
+def test_get_root_expands_tilde(isolated_config):
+    _write(isolated_config, knowledgeRoot="~/Documents/knowledge")
+    assert store_config.get_root() == Path.home() / "Documents" / "knowledge"
+
+
 def test_articles_dir(isolated_config):
     _write(isolated_config, knowledgeRoot="/fake/knowledge")
     assert store_config.articles_dir() == Path("/fake/knowledge/articles")

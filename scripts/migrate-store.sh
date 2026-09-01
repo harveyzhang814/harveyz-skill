@@ -50,6 +50,9 @@ VAULT_CONFIG="${HSKILL_EXTRACT_URL_CONFIG:-$HOME/.hskill/url-extract/config.json
 ROSTER_CONFIG="${HSKILL_ROSTER_CONFIG:-$HOME/.hskill/roster/config.json}"
 
 ROOT="$(_json_get "$STORE_CONFIG" knowledgeRoot || true)"
+if [[ -n "$ROOT" ]]; then
+  ROOT="$(python3 -c "import os, sys; print(os.path.expanduser(sys.argv[1]))" "$ROOT")"
+fi
 if [[ -z "$ROOT" ]]; then
   warn "统一存储根未配置（$STORE_CONFIG 缺少 knowledgeRoot），无法迁移。请先跑任一入范围 skill 完成初始化。"
   exit 1

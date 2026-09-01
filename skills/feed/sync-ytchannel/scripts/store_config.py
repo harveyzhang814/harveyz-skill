@@ -30,7 +30,7 @@ def get_root() -> Path:
     cfg = json.loads(config_path.read_text(encoding="utf-8"))
     if "knowledgeRoot" not in cfg:
         raise KeyError(f"{config_path} 缺少 knowledgeRoot 字段，请先完成初始化：{_INIT_HINT}")
-    return Path(cfg["knowledgeRoot"])
+    return Path(cfg["knowledgeRoot"]).expanduser()
 
 
 def articles_dir() -> Path:
