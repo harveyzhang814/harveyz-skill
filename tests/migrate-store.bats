@@ -35,7 +35,7 @@ _write_roster_config() {
 CFG
 }
 
-@test "dry-run: hash8 dir with meta.json listed under 将搬, non-hash dir under 跳过" {
+@test "dry-run: hash8 dir with meta.json listed under moved, non-hash dir under skipped" {
   _write_vault_config
   mkdir -p "${VAULT}/deadbeef"
   echo '{}' > "${VAULT}/deadbeef/meta.json"
