@@ -254,7 +254,7 @@ python3 scripts/archive.py
 当「进度汇报与完成判定」判定任务成功后，立即执行，不要等用户追问：
 
 1. 展示 **summary.md** 全文
-2. 告知产物路径（成功 JSON 里的 `transcript`/`article`/`summary` 三个字段，或「获取结果」里的固定路径）
+2. 告知产物路径（「归档到统一存储根」步骤打印的 `VIDEO_DIR` 路径，即 `<knowledgeRoot>/videos/<task_id>/`）
 3. 询问是否需要：查看完整文章、转录稿，或用不同 focus 重新生成摘要
 
 ---

@@ -18,7 +18,6 @@ Parameters via environment variables:
 import json
 import os
 import shutil
-import sys
 from datetime import datetime, timedelta, timezone
 
 import store_config
