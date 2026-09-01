@@ -58,7 +58,7 @@ python3 scripts/roster_locate.py
 
 ## 边界
 
-跟 [clip-url](../../research/clip-url/) 的单篇入库流程完全独立：不进 Obsidian、不打标、不下载图片、不展开长线程。跟 [sync-ytchannel](../sync-ytchannel/) 共用同一份 roster 名册（游标/渠道列表）和同一份 `knowledgeRoot` 配置，各渠道在 `feeds/` 下各占一个子目录（本 skill 落 `feeds/tweets/`）。历史归档（原 roster `DATA_DIR/tweets/`）需要先跑 `bash scripts/migrate-store.sh --apply`（仓库根）搬过来。不生成 HTML 视图——展示交给外部应用直接读 `tweets/creators/<handle>.json`。设计文档：`docs/superpowers/specs/2026-08-15-watch-x-design.md`（历史文档，写作时 skill 还叫 watch-x）、`docs/superpowers/specs/2026-08-30-sync-timeline-output-alignment-design.md`（本次输出格式对齐设计）。
+跟 [clip-url](../../research/clip-url/) 的单篇入库流程完全独立：不进 Obsidian、不打标、不下载图片、不展开长线程。跟 [sync-ytchannel](../sync-ytchannel/) 共用同一份 roster 名册（游标/渠道列表）和同一份 `knowledgeRoot` 配置，各渠道在 `feeds/` 下各占一个子目录（本 skill 落 `feeds/tweets/`）。历史归档（原 roster `DATA_DIR/tweets/`）需要先跑 `bash scripts/migrate-store.sh --apply`（仓库根）搬过来。不生成 HTML 视图——展示交给外部应用直接读 `<knowledgeRoot>/feeds/tweets/creators/<handle>.json`。设计文档：`docs/superpowers/specs/2026-08-15-watch-x-design.md`（历史文档，写作时 skill 还叫 watch-x）、`docs/superpowers/specs/2026-08-30-sync-timeline-output-alignment-design.md`（本次输出格式对齐设计）。
 
 ## 参考文件
 
