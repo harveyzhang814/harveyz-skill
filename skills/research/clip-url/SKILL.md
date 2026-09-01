@@ -42,7 +42,7 @@ user_invocable: true
 
 1. 净化 URL
 2. 确认默认 chrome_profile（只在第一次使用本 skill 时问一次）
-2.5. 确认共享配置存在（VAULT_PATH / 固定词表）
+2.5. 确认共享配置存在（knowledgeRoot / 固定词表）
 3. 派发 Subagent 1：CLI 抓取
 4. 判断抓取结果，决定是否需要自优化
 4.5. 派发 Subagent 3：自优化（仅在步骤 4 判定需要时）
