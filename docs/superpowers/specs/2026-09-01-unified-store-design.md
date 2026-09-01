@@ -3,7 +3,7 @@
 ## 元信息
 
 - **设计日期**：2026-09-01
-- **状态**：待实现
+- **状态**：待实现（设计已于 2026-09-01 获用户确认，可直接进实施计划）
 - **涉及组件**：改造 `clip-url`、`learn-video`、`sync-xtimeline`、`sync-ytchannel`；新增迁移脚本。`roster` 保留名册与游标职责，交出产物目录职责。`vdl`（Video-Learner 仓库）零改动。
 - **代码基线**：`staging`
 - **本文范围**：只定"长期产物落在哪、目录怎么排、根怎么解析、历史怎么迁"。不改任何 skill 的抓取契约、翻译流程、去重算法、游标语义，不改 skill 数量与边界。`learn-paper`、`fetch-paper`、`pdf-math-translate`、`learn-skill`、`survey-skillrepo` 本次不动。
