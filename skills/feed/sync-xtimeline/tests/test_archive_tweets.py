@@ -13,13 +13,13 @@ from conftest import write_config
 SCRIPT = Path(__file__).resolve().parent.parent / "scripts" / "archive_tweets.py"
 
 
-def _run(report: dict, data_dir: Path) -> subprocess.CompletedProcess:
-    config_path = data_dir.parent / "config.json"
-    write_config(config_path, data_dir)
+def _run(report: dict, root: Path) -> subprocess.CompletedProcess:
+    config_path = root.parent / "config.json"
+    write_config(config_path, root)
     return subprocess.run(
         [sys.executable, str(SCRIPT)],
         input=json.dumps(report),
-        env={**os.environ, "HSKILL_ROSTER_CONFIG": str(config_path)},
+        env={**os.environ, "HSKILL_CONFIG": str(config_path)},
         capture_output=True, text=True, timeout=10,
     )
 
@@ -71,11 +71,11 @@ def test_archive_tweets_noop_when_report_has_no_new():
 
 
 def test_cli_archives_report_from_stdin(tmp_path):
-    data_dir = tmp_path / "data"
+    root = tmp_path / "knowledge"
     report = {"run_time": "t", "new": {"alice": [{"tweet_id": "1", "url": "u1", "text": "hi", "timestamp": "t1"}]}}
-    result = _run(report, data_dir)
+    result = _run(report, root)
     assert result.returncode == 0, result.stderr
-    saved = json.loads((data_dir / "tweets" / "creators" / "alice.json").read_text(encoding="utf-8"))
+    saved = json.loads((root / "feeds" / "tweets" / "creators" / "alice.json").read_text(encoding="utf-8"))
     assert saved == report["new"]["alice"]
 
 

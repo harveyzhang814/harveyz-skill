@@ -82,7 +82,7 @@ def main():
         print("EMPTY")
         return
 
-    digests_dir = Path(get_data_dir()) / "tweets" / "digest"
+    digests_dir = Path(get_data_dir()) / "digest"
     digests_dir.mkdir(parents=True, exist_ok=True)
     run_time = datetime.fromisoformat(report["run_time"])
     timestamp = run_time.strftime("%Y%m%dT%H%M%S")

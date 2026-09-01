@@ -19,7 +19,11 @@ SCRIPT = Path(__file__).resolve().parent.parent / "scripts" / "store_config.py"
 
 @pytest.fixture(autouse=True)
 def isolated_config(tmp_path, monkeypatch):
-    config_path = tmp_path / "config.json"
+    # Distinct filename from tests/conftest.py's own HSKILL_CONFIG fixture
+    # (also autouse, also under this same tmp_path) — sharing "config.json"
+    # would make conftest's real file satisfy this file's "config missing"
+    # checks.
+    config_path = tmp_path / "store-config-under-test.json"
     monkeypatch.setenv("HSKILL_CONFIG", str(config_path))
     return config_path
 

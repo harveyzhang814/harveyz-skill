@@ -7,7 +7,6 @@
 """
 import json
 import subprocess
-from pathlib import Path
 
 from roster_locate import find_roster
 
@@ -23,10 +22,6 @@ def _run(*args: str) -> str:
     if result.returncode != 0:
         raise RuntimeError(f"roster {' '.join(args)} 失败：{result.stderr.strip()}")
     return result.stdout.strip()
-
-
-def data_dir() -> Path:
-    return Path(_run("data-dir"))
 
 
 def channels() -> list[dict]:
