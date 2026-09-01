@@ -17,22 +17,22 @@ from vault_config import get_url_hash  # noqa: E402
 
 
 @pytest.fixture(autouse=True)
-def isolated_data_dir(isolated_vault_config, tmp_path, monkeypatch):
+def isolated_data_dir(isolated_store_config, tmp_path, monkeypatch):
     """fetch_and_save spawns browser-fetch with env=dict(os.environ), so the
     CLI subprocess inherits this. Point it at a per-test data dir so tests
     never read or write the real ~/.hskill/browser-fetch/ state (fetch_article
-    consults the persisted default chrome_profile). Also write a valid VAULT_PATH
-    into the conftest-provided shared config.json so tests never touch the real
-    ~/.hskill/url-extract/ directory or a real Obsidian Vault."""
+    consults the persisted default chrome_profile). Also write a valid
+    knowledgeRoot into the conftest-provided shared config.json so tests
+    never touch the real ~/.hskill/config.json or a real Obsidian Vault."""
     monkeypatch.setenv("BROWSER_FETCH_DATA_DIR", str(tmp_path / "data"))
-    vault_path = isolated_vault_config.parent / "vault"
-    isolated_vault_config.write_text(json.dumps({"VAULT_PATH": str(vault_path)}), encoding="utf-8")
+    root = tmp_path / "knowledge"
+    isolated_store_config.write_text(json.dumps({"knowledgeRoot": str(root)}), encoding="utf-8")
 
 
 def test_fetch_and_save_writes_real_content(tmp_path):
     origin_path = fetch_and_save("https://example.com")
 
-    assert origin_path == tmp_path / "vault" / get_url_hash("https://example.com") / "Origin" / "Example Domain.md"
+    assert origin_path == tmp_path / "knowledge" / "articles" / get_url_hash("https://example.com") / "Origin" / "Example Domain.md"
     assert origin_path.exists()
     assert origin_path.name == "Example Domain.md"
     assert origin_path.parent.name == "Origin"
