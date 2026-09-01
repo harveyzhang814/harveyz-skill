@@ -101,3 +101,42 @@ CFG
   [ "$status" -eq 0 ]
   [ -d "${ROOT}/articles/deadbeef" ]
 }
+
+@test "dry-run: tilde-prefixed knowledgeRoot is expanded, not printed literally" {
+  cat > "$HSKILL_CONFIG" <<CFG
+{"knowledgeRoot": "~/some-subdir-under-home-that-doesnt-exist-yet"}
+CFG
+
+  HOME="${TEST_DIR}" run bash "$SCRIPT"
+  [ "$status" -eq 0 ]
+  [[ "$output" != *'~'* ]]
+}
+
+@test "dry-run: hash8 dir missing meta.json is skipped, hash8 dir with meta.json is moved" {
+  _write_vault_config
+  mkdir -p "${VAULT}/deadbeef"
+  echo '{}' > "${VAULT}/deadbeef/meta.json"
+  mkdir -p "${VAULT}/abcdef12"
+  echo "hi" > "${VAULT}/abcdef12/other.txt"
+
+  run bash "$SCRIPT"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"将搬：deadbeef"* ]]
+  [[ "$output" == *"跳过：abcdef12"* ]]
+}
+
+@test "--apply: pre-existing destination is left untouched, source dir not moved" {
+  _write_vault_config
+  mkdir -p "${ROOT}/articles/deadbeef"
+  echo '{"sentinel": "dest-original"}' > "${ROOT}/articles/deadbeef/meta.json"
+  mkdir -p "${VAULT}/deadbeef"
+  echo '{"sentinel": "source-new"}' > "${VAULT}/deadbeef/meta.json"
+
+  run bash "$SCRIPT" --apply
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"跳过：deadbeef（目标已存在：${ROOT}/articles/deadbeef）"* ]]
+  [ -d "${VAULT}/deadbeef" ]
+  [ -f "${VAULT}/deadbeef/meta.json" ]
+  grep -q "source-new" "${VAULT}/deadbeef/meta.json"
+  grep -q "dest-original" "${ROOT}/articles/deadbeef/meta.json"
+}
