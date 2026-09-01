@@ -2,7 +2,7 @@
 
 **日期**：2026-09-01
 **author 模型**：Opus 5
-**状态**：执行中 <!-- 待执行 → 执行中 → 待验收 → 已验收 / 打回 -->
+**状态**：待验收 <!-- 待执行 → 执行中 → 待验收 → 已验收 / 打回 -->
 **交接目的**：设计已跟用户逐项敲定、写成 spec 提交、并获用户确认通过。接手方从这里往下走完剩余流程——用 writing-plans 拆实施计划，然后落地实现。
 
 > **接手方须知**：你正在接手一个任务。本文档是完整交接与唯一权威入口：从头读到尾，按「工作流约定」章节开工。**完成后把上面的状态置为「待验收」并停在这里**——`已验收` / `打回` 由原 session 按「最小验收锚点」判定后写，不要代填。你的自测结果写成独立小节，别写进原 session 的验收记录里。
@@ -22,6 +22,18 @@
 7. `skills-index.json` 中被改动的四个 skill，其 `contentHash` 与 `contentVersion` 已更新。
 
 第 6 条是本次风险最高的一条，单独实跑，不要只靠单测覆盖。
+
+### 接手方自测（2026-09-01，Task 12 全量验证）
+
+七条锚点逐条实跑，结果如下——全部 PASS：
+
+1. **锚点 1（`npm test` 全绿）**：PASS。`npm test` exit 0；`bats tests/` 138/138 ok；`scripts/run-skill-tests.sh` 下所有 pytest 套件（clip-url 49、learn-video 13、sync-xtimeline 66、sync-ytchannel 65 等）全过，另有「custom skill tests: 11 passed, 0 failed」；`node --test` 328 tests：321 pass / 0 fail / 7 skipped。
+2. **锚点 2（四份 `store_config.py` 的 `check` 行为）**：PASS。四个 skill 目录下 `scripts/store_config.py` 均存在；`HSKILL_CONFIG` 指向不存在的文件时，四者均打印 `MISSING: ... 请先完成初始化...` 并 `exit=1`；指向含 `knowledgeRoot` 字段的真实临时配置时，四者均打印 `OK: <绝对路径>` 并 `exit=0`。
+3. **锚点 3（`VAULT_PATH` 不再被代码读取）**：PASS。`grep -rn "VAULT_PATH" skills/research/clip-url/` 命中 9 处，全部落在 `SKILL.md`/`platforms/*.md` 文档或 `dedup_check.py`/`write_meta_and_separate.py`/`vault_config.py` 的模块 docstring 里，逐一核对无一行是可执行的路径拼接代码。
+4. **锚点 4（四个调用点全部改完）**：PASS。`grep -n 'get_data_dir() / "tweets"\|get_data_dir() / "youtube"' skills/feed/ -r` 无结果。
+5. **锚点 5（`roster_client.py` 只删了 `data_dir()`）**：PASS。两份 `roster_client.py` 里 `grep -n "def data_dir"` 均无结果；`channels`/`get_cursor`/`set_cursor`/`set_error` 四个函数在两份文件里各命中 4 处定义。
+6. **锚点 6（`migrate-store.sh` dry-run 无副作用 + fixture 分类正确）**：PASS。`bats tests/migrate-store.bats` 5/5 ok（dry-run 无副作用、`--apply` 分类正确、`DATA_DIR/tweets`+`DATA_DIR/youtube` 迁移、幂等重跑，均覆盖）。
+7. **锚点 7（`skills-index.json` 四条记录已更新）**：PASS。brief 给定的 Python 断言脚本对四个 skill 逐一输出 `OK <contentHash> <contentVersion>`（`research/clip-url` 0.9.0、`research/learn-video` 1.7.0、`feed/sync-xtimeline` 0.8.0、`feed/sync-ytchannel` 0.7.0），无 AssertionError。
 
 ---
 
