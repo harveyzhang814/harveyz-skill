@@ -56,7 +56,7 @@
       "path": "research/learn-video",
       "bundle": "research",
       "installScope": "global",
-      "contentHash": "820a164c3ab18757",
+      "contentHash": "8d0f1ffeab52e513",
       "contentVersion": "1.7.0"
     },
     {
@@ -112,14 +112,14 @@
       "path": "feed/sync-xtimeline",
       "bundle": "feed",
       "installScope": "project",
-      "contentHash": "eb10d6431c127bc2",
+      "contentHash": "5c8557cc442f9277",
       "contentVersion": "0.8.0"
     },
     {
       "path": "feed/sync-ytchannel",
       "bundle": "feed",
       "installScope": "project",
-      "contentHash": "0f1d3aea545cbc56",
+      "contentHash": "a6b9df4e049d169f",
       "contentVersion": "0.7.0"
     },
     {

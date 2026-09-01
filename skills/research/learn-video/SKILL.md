@@ -28,7 +28,7 @@ npm link
 
 ## 前置：检查统一存储根
 
-运行 `python3 scripts/store_config.py check`。若输出 `MISSING:`，询问用户"抓取产物统一存到哪个目录？（直接回车使用默认：`~/Documents/knowledge`）"，将回答展开为绝对路径，写入 `~/.hskill/config.json` 的 `knowledgeRoot` 字段（文件不存在则新建；若已存在 `skillDir` 等其他字段，只增改 `knowledgeRoot`，不覆盖）。
+运行 `cd "$HOME/Projects/harveyz-skill/skills/research/learn-video" && python3 scripts/store_config.py check`（或本 skill 安装后的实际目录）。若输出 `MISSING:`，询问用户"抓取产物统一存到哪个目录？（直接回车使用默认：`~/Documents/knowledge`）"，将回答展开为绝对路径，写入 `~/.hskill/config.json` 的 `knowledgeRoot` 字段（文件不存在则新建；若已存在 `skillDir` 等其他字段，只增改 `knowledgeRoot`，不覆盖）。
 
 ---
 
