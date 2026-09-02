@@ -11,6 +11,9 @@ setup() {
   export HSKILL_CONFIG="${TEST_DIR}/hskill-config.json"
   export HSKILL_EXTRACT_URL_CONFIG="${TEST_DIR}/vault-config.json"
   export HSKILL_ROSTER_CONFIG="${TEST_DIR}/roster-config.json"
+  # Without this the script falls back to the real ~/.hskill/sync-xtimeline
+  # and the test reads the developer's own data.
+  export HSKILL_LEGACY_XTIMELINE="${TEST_DIR}/legacy-xtimeline"
   ROOT="${TEST_DIR}/knowledge"
   VAULT="${TEST_DIR}/vault"
   DATA_DIR="${TEST_DIR}/roster-data"
@@ -35,7 +38,13 @@ _write_roster_config() {
 CFG
 }
 
-@test "dry-run: hash8 dir with meta.json listed under moved, non-hash dir under skipped" {
+_write_legacy_xtimeline() {
+  mkdir -p "${HSKILL_LEGACY_XTIMELINE}/digests" "${HSKILL_LEGACY_XTIMELINE}/tweets"
+  echo "old digest" > "${HSKILL_LEGACY_XTIMELINE}/digests/20260817T192449--digest.md"
+  echo '[]' > "${HSKILL_LEGACY_XTIMELINE}/tweets/trq212.json"
+}
+
+@test "dry-run: hash8 dir with meta.json listed under copied, non-hash dir under skipped" {
   _write_vault_config
   mkdir -p "${VAULT}/deadbeef"
   echo '{}' > "${VAULT}/deadbeef/meta.json"
@@ -44,7 +53,7 @@ CFG
 
   run bash "$SCRIPT"
   [ "$status" -eq 0 ]
-  [[ "$output" == *"将搬：deadbeef"* ]]
+  [[ "$output" == *"将复制：deadbeef"* ]]
   [[ "$output" == *"跳过：我的笔记"* ]]
 }
 
@@ -63,7 +72,7 @@ CFG
   [ -d "${DATA_DIR}/youtube" ]
 }
 
-@test "--apply: moves matching hash8 dirs into ROOT/articles, leaves non-matching alone" {
+@test "--apply: copies matching hash8 dirs into ROOT/articles, leaves the source in place" {
   _write_vault_config
   mkdir -p "${VAULT}/deadbeef"
   echo '{}' > "${VAULT}/deadbeef/meta.json"
@@ -75,10 +84,13 @@ CFG
   [ -d "${ROOT}/articles/deadbeef" ]
   [ -f "${ROOT}/articles/deadbeef/meta.json" ]
   [ -d "${VAULT}/我的笔记" ]
-  [ ! -e "${VAULT}/deadbeef" ]
+  # Copy, never move: the migration must be reversible by changing config
+  # alone, which only holds if the original is still sitting there.
+  [ -d "${VAULT}/deadbeef" ]
+  [ -f "${VAULT}/deadbeef/meta.json" ]
 }
 
-@test "--apply: moves DATA_DIR/tweets and DATA_DIR/youtube into ROOT/feeds" {
+@test "--apply: copies DATA_DIR/tweets and DATA_DIR/youtube into ROOT/feeds" {
   _write_roster_config
   mkdir -p "${DATA_DIR}/tweets/creators" "${DATA_DIR}/youtube/creators"
   echo '[]' > "${DATA_DIR}/tweets/creators/alice.json"
@@ -87,8 +99,8 @@ CFG
   [ "$status" -eq 0 ]
   [ -f "${ROOT}/feeds/tweets/creators/alice.json" ]
   [ -d "${ROOT}/feeds/youtube" ]
-  [ ! -e "${DATA_DIR}/tweets" ]
-  [ ! -e "${DATA_DIR}/youtube" ]
+  [ -f "${DATA_DIR}/tweets/creators/alice.json" ]
+  [ -d "${DATA_DIR}/youtube" ]
 }
 
 @test "--apply: rerunning is idempotent" {
@@ -112,7 +124,7 @@ CFG
   [[ "$output" != *'~'* ]]
 }
 
-@test "dry-run: hash8 dir missing meta.json is skipped, hash8 dir with meta.json is moved" {
+@test "dry-run: hash8 dir missing meta.json is skipped, hash8 dir with meta.json is copied" {
   _write_vault_config
   mkdir -p "${VAULT}/deadbeef"
   echo '{}' > "${VAULT}/deadbeef/meta.json"
@@ -121,11 +133,11 @@ CFG
 
   run bash "$SCRIPT"
   [ "$status" -eq 0 ]
-  [[ "$output" == *"将搬：deadbeef"* ]]
+  [[ "$output" == *"将复制：deadbeef"* ]]
   [[ "$output" == *"跳过：abcdef12"* ]]
 }
 
-@test "--apply: pre-existing destination is left untouched, source dir not moved" {
+@test "--apply: pre-existing destination is left untouched, source left in place" {
   _write_vault_config
   mkdir -p "${ROOT}/articles/deadbeef"
   echo '{"sentinel": "dest-original"}' > "${ROOT}/articles/deadbeef/meta.json"
@@ -139,4 +151,74 @@ CFG
   [ -f "${VAULT}/deadbeef/meta.json" ]
   grep -q "source-new" "${VAULT}/deadbeef/meta.json"
   grep -q "dest-original" "${ROOT}/articles/deadbeef/meta.json"
+}
+
+@test "--apply: Origin/ and Image/ go to articles/_orphans without a meta.json" {
+  _write_vault_config
+  mkdir -p "${VAULT}/Origin" "${VAULT}/Image"
+  echo "orphan article" > "${VAULT}/Origin/old.md"
+  echo "orphan image" > "${VAULT}/Image/31e1d2a2_img_1.jpg"
+
+  run bash "$SCRIPT" --apply
+  [ "$status" -eq 0 ]
+  [ -f "${ROOT}/articles/_orphans/Origin/old.md" ]
+  [ -f "${ROOT}/articles/_orphans/Image/31e1d2a2_img_1.jpg" ]
+  # No source_url is recoverable for these, so fabricating one would put a
+  # lie into the `find -name meta.json` index.
+  [ ! -e "${ROOT}/articles/_orphans/Origin/meta.json" ]
+  [ ! -e "${ROOT}/articles/_orphans/meta.json" ]
+  [ -d "${VAULT}/Origin" ]
+  [ -d "${VAULT}/Image" ]
+}
+
+@test "--verify: exits non-zero before migration, zero after" {
+  _write_vault_config
+  mkdir -p "${VAULT}/deadbeef"
+  echo '{}' > "${VAULT}/deadbeef/meta.json"
+
+  run bash "$SCRIPT" --verify
+  [ "$status" -ne 0 ]
+
+  bash "$SCRIPT" --apply
+  run bash "$SCRIPT" --verify
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"全部通过"* ]]
+}
+
+@test "--verify: writes nothing" {
+  _write_vault_config
+  mkdir -p "${VAULT}/deadbeef"
+  echo '{}' > "${VAULT}/deadbeef/meta.json"
+
+  run bash "$SCRIPT" --verify
+  [ ! -e "${ROOT}" ]
+}
+
+@test "--verify: reports a truncated copy as a size mismatch" {
+  _write_roster_config
+  mkdir -p "${DATA_DIR}/tweets/creators"
+  echo '[{"id": "1"}]' > "${DATA_DIR}/tweets/creators/alice.json"
+  bash "$SCRIPT" --apply
+
+  printf '' > "${ROOT}/feeds/tweets/creators/alice.json"
+
+  run bash "$SCRIPT" --verify
+  [ "$status" -ne 0 ]
+  [[ "$output" == *"大小不符"* ]]
+}
+
+@test "unknown flag exits 2" {
+  run bash "$SCRIPT" --nope
+  [ "$status" -eq 2 ]
+}
+
+@test "--apply: legacy sync-xtimeline layout merges into feeds/tweets" {
+  _write_legacy_xtimeline
+
+  run bash "$SCRIPT" --apply
+  [ "$status" -eq 0 ]
+  # digests/ (plural) -> digest/, flat tweets/*.json -> creators/
+  [ -f "${ROOT}/feeds/tweets/digest/20260817T192449--digest.md" ]
+  [ -f "${ROOT}/feeds/tweets/creators/trq212.json" ]
+  [ -f "${HSKILL_LEGACY_XTIMELINE}/digests/20260817T192449--digest.md" ]
 }

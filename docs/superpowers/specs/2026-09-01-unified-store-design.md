@@ -3,7 +3,7 @@
 ## 元信息
 
 - **设计日期**：2026-09-01
-- **状态**：实施中（2026-09-02 按用户决定修订：vdl 重指到统一根、无 title 的视频任务不索引、孤儿目录进 `_orphans/`）
+- **状态**：实施中（2026-09-02 按用户决定修订：vdl 重指到统一根、无 title 的视频任务不索引、孤儿目录进 `_orphans/`、迁移全程只复制不删除、新增六阶段迁移策略见 §6.0）
 - **涉及组件**：改造 `clip-url`、`learn-video`、`sync-xtimeline`、`sync-ytchannel`；新增迁移脚本。`roster` 保留名册与游标职责，交出产物目录职责。`vdl`（Video-Learner 仓库）**源码零改动，但其 `WORK_ROOT` 配置要重指到 `<ROOT>/videos`**（用它自带的 `vdl config set work-root`）。
 - **代码基线**：`staging`
 - **本文范围**：只定"长期产物落在哪、目录怎么排、根怎么解析、历史怎么迁"。不改任何 skill 的抓取契约、翻译流程、去重算法、游标语义，不改 skill 数量与边界。`learn-paper`、`fetch-paper`、`pdf-math-translate`、`learn-skill`、`survey-skillrepo` 本次不动。
@@ -205,44 +205,81 @@ SKILL.md 的「初始化」小节把 vault 路径引导改成 `knowledgeRoot` �
 
 ## 6. 迁移
 
-分两半：视频由 vdl 自己搬，其余由 `scripts/migrate-store.sh` 搬。脚本默认 dry-run 打印计划，`--apply` 才执行，幂等可重跑。
+### 6.0 总策略（六个阶段，按序执行）
 
-### 6.1 视频：交给 vdl
+**贯穿始终的铁律：只复制，不删除。** 迁移期间原始数据一个字节都不动，新旧两套并存。是否清除原件是**最后一步单独的人工判断**，不由任何脚本代做。这条铁律的作用是让整个迁移可回退——任一阶段发现不对，把配置改回去就行，不需要恢复备份。
+
+| 阶段 | 做什么 | 完成判据 |
+|---|---|---|
+| 1. 装 | 安装最新 skill（`hskill`）与全部下游配套程序（含 vdl `npm link`） | `which vdl`；`hskill status` 无 outdated |
+| 2. 搬 | 完整复制数据到新根。vdl 侧 `vdl config set work-root`，其余 `migrate-store.sh --apply` | 两条命令退出码 0 |
+| 3. 配 | 改 skill 配置：`~/.hskill/config.json` 的 `knowledgeRoot`、vdl 的 `WORK_ROOT`，让系统指向新根 | `store_config.py check` 输出 `OK:`；`vdl config get` 的 work root 等于 `<ROOT>/videos` |
+| 4. 校 | 校验迁移数据完整性 | `migrate-store.sh --verify` 退出码 0 |
+| 5. 跑 | 用最新 skill 和脚本把**每条路径各跑一遍真实任务**，确认新产物落在新根 | 见 6.3 |
+| 6. 清 | 询问用户是否完成、是否清除原始数据 | 人工决定；脚本不代做 |
+
+阶段 2 早于阶段 3，是有意的：先把数据复制到新根时，老配置还指着老路径，老系统照常能用；等数据齐了再翻配置。反过来先翻配置，会有一段"skill 指向空目录"的窗口。
+
+阶段 5 不能省。阶段 4 只证明**旧数据搬对了**，不证明**新数据会写对**——后者只有真跑一遍才知道。
+
+### 6.1 阶段 2：视频交给 vdl
 
 ```bash
 vdl config set work-root ~/Documents/knowledge/videos
 ```
 
-交互式确认后复制整个 work 目录（**复制不删旧**，跑完两份并存，旧的需手动清理），双边都有数据时按 task id + url 合并 SQLite。脚本不碰这块。
+交互式确认后**复制**整个 work 目录（vdl 自己也是复制不删旧，与本策略一致），双边都有数据时按 task id + url 合并 SQLite。`migrate-store.sh` 不碰这块，只在之后补 `meta.json`。
 
-搬完由 `migrate-store.sh` 补 `meta.json`：遍历 `<ROOT>/videos/work/<task_id>/`，`source_url` 和 `title` 从同目录的 `database.sqlite` 的 `tasks` 表取，`title` 为空时回退到 `writing/article.md` 的首个 H1，`fetched_at` 取 `tasks.ts`。
+`meta.json` 的 `source_url` / `title` 从同目录 `database.sqlite` 的 `tasks` 表取，`title` 为空时回退到 `writing/article.md` 的首个 H1，`fetched_at` 取 `tasks.ts`。
 
-**拿不到 title 的任务不写 `meta.json`，因此不进索引。** 用户 2026-09-02 明确决定抛弃这批。它们的目录和转录稿留在磁盘上（删除不可逆，是独立操作，不由迁移脚本代做）。现状：229 个目录里 54 个有 title（53 个来自 sqlite、1 个来自 H1），恰好等于有 `writing/article.md` 的那 54 个；其余 174 个只有转录稿、sqlite 的 `title` 为 null、`media/` 为空、无 `.info.json`，本地无从恢复标题。
+**拿不到 title 的任务不写 `meta.json`，因此不进索引。** 用户 2026-09-02 明确决定抛弃这批。它们的目录和转录稿留在磁盘上——删除不可逆，属于阶段 6，不由迁移脚本代做。现状：229 个目录里 54 个有 title（53 个来自 sqlite、1 个来自 H1），恰好等于有 `writing/article.md` 的那 54 个；其余 174 个只有转录稿、sqlite 的 `title` 为 null、`media/` 为空、无 `.info.json`，本地无从恢复标题。
 
-### 6.2 其余四处：`migrate-store.sh`
+### 6.2 阶段 2：其余五处交给 `migrate-store.sh`
+
+脚本三种模式：默认 dry-run 打印计划、`--apply` 执行复制、`--verify` 核对（阶段 4 用）。幂等——目标已存在就跳过，可重跑。
 
 | 来源 | 目标 | 说明 |
 |---|---|---|
 | `<VAULT_PATH>/<hash8>/` | `<ROOT>/articles/<hash8>/` | 仅限含 `meta.json` 的目录 |
-| `<DATA_DIR>/tweets/` | `<ROOT>/feeds/tweets/` | 整段搬 |
-| `<DATA_DIR>/youtube/` | `<ROOT>/feeds/youtube/` | 整段搬 |
+| `<DATA_DIR>/tweets/` | `<ROOT>/feeds/tweets/` | 整段复制 |
+| `<DATA_DIR>/youtube/` | `<ROOT>/feeds/youtube/` | 整段复制 |
 | `~/.hskill/sync-xtimeline/{digests,tweets}/` | `<ROOT>/feeds/tweets/{digest,creators}/` | roster 化之前的旧布局，逐文件并入 |
 | `<VAULT_PATH>/{Origin,Image}/` | `<ROOT>/articles/_orphans/` | 见下 |
 
 `roster` 的 `registry.json`、`state.json` 留原地。`<VAULT_PATH>/url-index.db` 留原地——0 行，全仓库只有 `skills/archived/extract-url/` 的测试引用它，是死文件。
 
-**孤儿的处理。** `<VAULT_PATH>` 顶层的 `Origin/`（9 篇 md）和 `Image/`（58 张图，7 个 hash 前缀无一对应现存文章目录）是更早版本 clip-url 的扁平布局遗留，两堆互不引用，都没有 `meta.json`。原样移进 `<ROOT>/articles/_orphans/`，**不代造 `meta.json`**：`source_url` 无从得知，造一个假的会污染 §3.2 的索引。下划线前缀使其与 `<hash8>` 实体目录在命名上不会混淆。
+**孤儿的处理。** `<VAULT_PATH>` 顶层的 `Origin/`（9 篇 md）和 `Image/`（58 张图，7 个 hash 前缀无一对应现存文章目录）是更早版本 clip-url 的扁平布局遗留，两堆互不引用，都没有 `meta.json`。原样复制进 `<ROOT>/articles/_orphans/`，**不代造 `meta.json`**：`source_url` 无从得知，造一个假的会污染 §3.2 的索引。下划线前缀使其与 `<hash8>` 实体目录在命名上不会混淆。
 
-**关键风险与约束：** `VAULT_PATH` 指向的是用户的 Obsidian vault 根，里面混着用户手写的笔记。脚本**禁止整目录 mv**，只搬同时满足两个条件的子目录：目录名匹配 `^[0-9a-f]{8}$`，且目录内含 `meta.json`。其余一律不碰（`Origin/`、`Image/` 是上面显式点名的例外），并在 dry-run 输出里列出"跳过的目录"让用户核对。
+**关键风险与约束：** `VAULT_PATH` 指向的是用户的 Obsidian vault 根，里面混着用户手写的笔记。脚本**禁止整目录操作**，只复制同时满足两个条件的子目录：目录名匹配 `^[0-9a-f]{8}$`，且目录内含 `meta.json`。其余一律不碰（`Origin/`、`Image/` 是上面显式点名的例外），并在 dry-run 输出里列出"跳过的目录"让用户核对。
 
-**验证四条：**
+**实现注记：** 脚本必须兼容 macOS 自带的 bash 3.2，它在解析 `$var（中文）` 时会把全角字符吞进变量名，触发 `unbound variable`。凡是变量后面紧跟非 ASCII 字符的地方一律写成 `${var}`。
 
-1. 迁移前后 `meta.json` 计数一致（`find <VAULT> -maxdepth 2 -name meta.json | wc -l` 对比 `find <ROOT>/articles -maxdepth 2 -name meta.json | wc -l`）。
-2. 拿一个已抓过的 URL 跑一次 `dedup_check.py`，应输出 `ALREADY_FETCHED`。
-3. `find <ROOT>/videos -maxdepth 3 -name meta.json | wc -l` 等于有 title 的任务数。
-4. 用户手写的笔记（`Index.md`、`Cadences.md`、`导航视图.base` 等）仍在 `<VAULT_PATH>` 原处。
+### 6.3 阶段 5：逐路径实跑
 
-`sync-*` 的游标存在 `roster` 的 `state.json` 里、不随迁移变动，所以搬完归档后下一轮增量抓取的行为不受影响——这是"游标不搬"能成立的前提。
+四条路径各跑一次真实任务，断言新产物落在新根：
+
+| 路径 | 跑什么 | 断言 |
+|---|---|---|
+| clip-url | 抓一篇没抓过的文章 | 新目录出现在 `<ROOT>/articles/<hash8>/`，含 `meta.json` |
+| learn-video | 处理一个短视频 | 产物在 `<ROOT>/videos/work/<task_id>/`，`archive.py` 写出 `meta.json` |
+| sync-xtimeline | 跑一次增量同步 | digest 落在 `<ROOT>/feeds/tweets/digest/`，游标推进 |
+| sync-ytchannel | 跑一次增量同步 | digest 落在 `<ROOT>/feeds/youtube/digest/` |
+
+另外拿一个**迁移过来的**已抓 URL 跑 `dedup_check.py`，应输出 `ALREADY_FETCHED`——这条证明新根上的历史数据是活的，不只是躺在那里的文件。
+
+### 6.4 阶段 6：清理
+
+`--verify` 全绿且阶段 5 四条路径都跑通之后，才谈清理。候选清理对象及其体积：
+
+| 对象 | 体积 | 备注 |
+|---|---|---|
+| `<VAULT_PATH>/<hash8>/` × 375 | 193 MB | 已有副本 |
+| `Vault/VL/`（vdl 旧 work 根） | 9.1 GB | vdl 自己复制留下的 |
+| `~/Projects/Video-Learner/work/` | 5.3 GB | 更早的遗留，28/32 与主根重复且内容一致，独有的 4 个无 writing |
+| `~/.hskill/roster/{tweets,youtube}/` | 56 KB | 已有副本 |
+| `~/.hskill/sync-xtimeline/{digests,tweets}/` | 56 KB | 已有副本 |
+
+**由用户逐项决定，脚本不提供 `--clean`。** 删除是唯一不可回退的操作，不值得为省几次手打命令而把它自动化。
 
 ---
 
@@ -252,7 +289,7 @@ vdl config set work-root ~/Documents/knowledge/videos
 |---|---|
 | `store_config` | config 缺失 → 抛异常且信息含引导语；缺 `knowledgeRoot` 字段 → 同上；`~` 展开正确；四个路径拼接正确；`HSKILL_CONFIG` 覆盖生效 |
 | `clip-url` | 临时根下 `dedup_check` 对已存在的 `articles/<hash8>/meta.json` 命中；`get_article_paths` 返回 `articles/` 下的路径 |
-| `migrate-store.sh` | 只搬 hash8 目录；旁边的手写笔记目录原封不动且出现在跳过列表；`Origin/`、`Image/` 进 `_orphans/` 且不生成 `meta.json`；旧 `sync-xtimeline` 布局并入 `feeds/tweets/`；视频回填只覆盖有 title 的任务、无 title 的不写 `meta.json`；`--apply` 重跑幂等；dry-run 不产生副作用 |
+| `migrate-store.sh` | 只复制 hash8 目录且**源目录仍在原处**；旁边的手写笔记原封不动且出现在跳过列表；`Origin/`、`Image/` 进 `_orphans/` 且不生成 `meta.json`；旧 `sync-xtimeline` 布局并入 `feeds/tweets/`；视频回填只覆盖有 title 的任务；`--apply` 重跑幂等；dry-run 不产生副作用；`--verify` 在迁移前退出非 0、迁移后退出 0 |
 | `sync-*` | 现有测试的 `DATA_DIR` fixture 换成 store fixture；断言 digest 和 creators 落在 `feeds/<channel>/` 下 |
 | `learn-video` | 归档步骤往已存在的 `videos/work/<task_id>/` 写出合法 `meta.json` 且不动 vdl 产物；同 task_id 重跑幂等；任务目录缺失时报错退出、不建目录、错误信息含 `vdl config set work-root` |
 
