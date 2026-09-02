@@ -31,7 +31,7 @@ def find_browser_fetch() -> str:
         return str(installed_path)
 
     raise FileNotFoundError(
-        "browser-fetch launcher not found. Run sync-ytchannel from a harveyz-skill "
+        "browser-fetch launcher not found. Run sync-website from a harveyz-skill "
         "git checkout, or run `hskill install` and select the browser-fetch tool."
     )
 
