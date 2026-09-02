@@ -212,17 +212,19 @@ SKILL.md 的「初始化」小节把 vault 路径引导改成 `knowledgeRoot` �
 | 阶段 | 做什么 | 完成判据 |
 |---|---|---|
 | 1. 装 | 安装最新 skill（`hskill`）与全部下游配套程序（含 vdl `npm link`） | `which vdl`；`hskill status` 无 outdated |
-| 2. 搬 | 完整复制数据到新根。vdl 侧 `vdl config set work-root`，其余 `migrate-store.sh --apply` | 两条命令退出码 0 |
-| 3. 配 | 改 skill 配置：`~/.hskill/config.json` 的 `knowledgeRoot`、vdl 的 `WORK_ROOT`，让系统指向新根 | `store_config.py check` 输出 `OK:`；`vdl config get` 的 work root 等于 `<ROOT>/videos` |
+| 2. 配 | 写 `~/.hskill/config.json` 的 `knowledgeRoot`；`vdl config set work-root <ROOT>/videos`（该命令同时完成视频数据的复制） | `store_config.py check` 输出 `OK:`；`vdl config get` 的 work root 等于 `<ROOT>/videos` |
+| 3. 搬 | `migrate-store.sh --apply` 复制其余五处 | 退出码 0 |
 | 4. 校 | 校验迁移数据完整性 | `migrate-store.sh --verify` 退出码 0 |
 | 5. 跑 | 用最新 skill 和脚本把**每条路径各跑一遍真实任务**，确认新产物落在新根 | 见 6.3 |
 | 6. 清 | 询问用户是否完成、是否清除原始数据 | 人工决定；脚本不代做 |
 
-阶段 2 早于阶段 3，是有意的：先把数据复制到新根时，老配置还指着老路径，老系统照常能用；等数据齐了再翻配置。反过来先翻配置，会有一段"skill 指向空目录"的窗口。
+**配必须早于搬，这是工具的硬约束，不是偏好。** `knowledgeRoot` 既是"目标在哪"又是"开关"——没有第二个开关可拨，`migrate-store.sh` 也要读它才知道往哪复制。`vdl config set work-root` 同理：一条命令既改配置又搬数据。
+
+代价是阶段 2 到阶段 4 之间存在一个窗口：配置已指向新根，但数据还没复制完。**期间不要运行任何入范围的 skill**——此时 `dedup_check.py` 在新根上查不到历史文章，会把已抓过的 URL 判成新的。因为全程只复制、原件都在，这个窗口最坏的后果是重复抓一篇，不会丢东西。整个窗口是一次性的、分钟级的。
 
 阶段 5 不能省。阶段 4 只证明**旧数据搬对了**，不证明**新数据会写对**——后者只有真跑一遍才知道。
 
-### 6.1 阶段 2：视频交给 vdl
+### 6.1 阶段 2：视频交给 vdl（配 + 搬一步完成）
 
 ```bash
 vdl config set work-root ~/Documents/knowledge/videos
@@ -234,7 +236,7 @@ vdl config set work-root ~/Documents/knowledge/videos
 
 **拿不到 title 的任务不写 `meta.json`，因此不进索引。** 用户 2026-09-02 明确决定抛弃这批。它们的目录和转录稿留在磁盘上——删除不可逆，属于阶段 6，不由迁移脚本代做。现状：229 个目录里 54 个有 title（53 个来自 sqlite、1 个来自 H1），恰好等于有 `writing/article.md` 的那 54 个；其余 174 个只有转录稿、sqlite 的 `title` 为 null、`media/` 为空、无 `.info.json`，本地无从恢复标题。
 
-### 6.2 阶段 2：其余五处交给 `migrate-store.sh`
+### 6.2 阶段 3：其余五处交给 `migrate-store.sh`
 
 脚本三种模式：默认 dry-run 打印计划、`--apply` 执行复制、`--verify` 核对（阶段 4 用）。幂等——目标已存在就跳过，可重跑。
 
