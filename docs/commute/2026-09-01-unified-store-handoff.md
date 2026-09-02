@@ -2,7 +2,7 @@
 
 **日期**：2026-09-01
 **author 模型**：Opus 5
-**状态**：待验收 <!-- 待执行 → 执行中 → 待验收 → 已验收 / 打回 -->
+**状态**：已验收 <!-- 待执行 → 执行中 → 待验收 → 已验收 / 打回 -->
 **交接目的**：设计已跟用户逐项敲定、写成 spec 提交、并获用户确认通过。接手方从这里往下走完剩余流程——用 writing-plans 拆实施计划，然后落地实现。
 
 > **接手方须知**：你正在接手一个任务。本文档是完整交接与唯一权威入口：从头读到尾，按「工作流约定」章节开工。**完成后把上面的状态置为「待验收」并停在这里**——`已验收` / `打回` 由原 session 按「最小验收锚点」判定后写，不要代填。你的自测结果写成独立小节，别写进原 session 的验收记录里。
@@ -34,6 +34,41 @@
 5. **锚点 5（`roster_client.py` 只删了 `data_dir()`）**：PASS。两份 `roster_client.py` 里 `grep -n "def data_dir"` 均无结果；`channels`/`get_cursor`/`set_cursor`/`set_error` 四个函数在两份文件里各命中 4 处定义。
 6. **锚点 6（`migrate-store.sh` dry-run 无副作用 + fixture 分类正确）**：PASS。`bats tests/migrate-store.bats` 5/5 ok（dry-run 无副作用、`--apply` 分类正确、`DATA_DIR/tweets`+`DATA_DIR/youtube` 迁移、幂等重跑，均覆盖）。
 7. **锚点 7（`skills-index.json` 四条记录已更新）**：PASS。brief 给定的 Python 断言脚本对四个 skill 逐一输出 `OK <contentHash> <contentVersion>`（`research/clip-url` 0.9.0、`research/learn-video` 1.7.0、`feed/sync-xtimeline` 0.8.0、`feed/sync-ytchannel` 0.7.0），无 AssertionError。
+
+### 原 session 验收（2026-09-02，accept phase）
+
+接手方自填结论不采信，七条逐条独立实跑。**结论：七条全部 PASS，判定达成。**
+
+| 锚点 | 结果 | 我实际跑的东西 |
+|---|---|---|
+| 1 | PASS | `npm test` exit 0；`fail 0`；node `tests 328 / pass 321 / fail 0`（7 skipped）；全部 pytest 套件通过；`custom skill tests: 11 passed, 0 failed` |
+| 2 | PASS | 四个 skill 各自 `store_config.py check`：`HSKILL_CONFIG` 指向不存在文件时均 `MISSING: …` + exit 1；指向含 `knowledgeRoot` 的配置时均 `OK: <绝对路径>` + exit 0，且 `~` 正确展开。另核：四份副本 md5 完全相同（唯一 md5 数 = 1） |
+| 3 | PASS | `grep -rn "VAULT_PATH" skills/research/clip-url/` 命中 9 处，逐处打开核对：6 处在 `SKILL.md`/`platforms/*.md`，3 处在 `.py` 的模块 docstring；`vault_config.py:14` 已是 `return str(store_config.articles_dir())`，无任何可执行代码读该字段 |
+| 4 | PASS | `grep -rn 'get_data_dir() / "tweets"\|get_data_dir() / "youtube"' skills/feed/` 无结果 |
+| 5 | PASS | 两份 `roster_client.py` 均无 `def data_dir`；`channels`/`get_cursor`/`set_cursor`/`set_error` 各命中 4 |
+| 6 | PASS | **未采信接手方的 bats 交差，自建 fixture 实跑**（锚点原文要求"单独实跑，不要只靠单测覆盖"）。详见下方小节 |
+| 7 | PASS | **未采信"字段已更新"，按 `publish-skill` F8 算法独立重算**：`sed 's/^version:.*$/version: __HASH_PLACEHOLDER__/' SKILL.md \| shasum -a 256 \| cut -c1-16`。四个 hash 与 index 记录逐一相符，且 frontmatter 的 `version` 与 `contentVersion` 一致 |
+
+**锚点 6 的自建 fixture 实跑细节**（本次风险最高项）：
+
+构造 vault fixture 含五个子目录——`deadbeef/`（有 `meta.json`）、`我的笔记/`（手写笔记，无 `meta.json`）、`cafebabe/`（合规名但无 `meta.json`）、`NotAHash/`（有 `meta.json` 但名字不合规）、`DEADBEEF/`（大写十六进制）。结果：
+
+- dry-run 前后 `find` 快照逐字节相同 → **零副作用**，退出码 0。
+- `deadbeef` 归"将搬"；`我的笔记`、`cafebabe`、`NotAHash` 全部归"跳过"。分类正确。
+- 超出锚点要求额外跑了 `--apply`：`deadbeef` 正确搬入 `root/articles/`，`tweets`/`youtube` 正确搬入 `root/feeds/`，**`我的笔记/note.md` 内容原封未动**。
+- 再跑一次 `--apply` 幂等：输出"没有可搬的文章目录"+"源目录不存在，跳过"，无重复搬移、无报错。
+- `DEADBEEF/` 这个样本**实际未被检验**：macOS APFS 大小写不敏感，它塌缩进了 `deadbeef/`。这是我 fixture 自身的构造限制，不是脚本缺陷——真实 hash8 是 md5 小写十六进制，该边界在本机文件系统上构造不出来。据实记录，不算作已覆盖。
+
+**对接手方自测陈述的更正**（不静默改动上方小节，在此并列写出）：
+
+1. 接手方记录的 pytest 计数与我实跑不符，四项各少 1：clip-url 报 49 实为 **50**，learn-video 报 13 实为 **14**，sync-xtimeline 报 66 实为 **67**，sync-ytchannel 报 65 实为 **66**。原因是其自测发生在 Task 12，之后又落了 `e777fd1`（补 tilde 展开与安全闸门分支测试）和 `ebb1478` 两个提交。其数字在当时应属准确，现已过期。
+2. 接手方记录"`bats tests/` 138/138 ok"，我实跑的 bats plan 是 `1..141` + `1..13` = **154**。同样是上述两个后续提交所致。
+3. 以上两条都不影响判定——两次运行的 `fail` 均为 0。
+
+**两条不影响判定、但需记录的发现：**
+
+- `dedup_check.py:4` 与 `write_meta_and_separate.py:13` 的模块 docstring 仍写着"reads `~/.hskill/url-extract/config.json` / `VAULT_PATH`"，与改造后的事实不符（`vault_config.py` 自己的 docstring 已正确更新）。锚点 3 的判据是"不再有读取该字段的**代码**"，故不构成失败，但这两处注释会误导下一个读代码的人。建议后续顺手修。
+- 接手方把 `feature/unified-store` 合并进了 `staging`（`9265dcf`）。合并本身是双父提交，`--no-ff` 用对了；但本文档「工作流约定」写明"只在用户明确说'合并/完成'时才 merge 到 staging"，而用户此前只说了"spec 通过，准备 handoff"，未授权合并。这是流程越界，非技术缺陷，交由用户判断是否需要处理。
 
 ---
 
