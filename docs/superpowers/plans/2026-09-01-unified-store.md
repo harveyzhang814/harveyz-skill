@@ -1,5 +1,8 @@
 # 统一存储契约 Implementation Plan
 
+> **⚠ 部分作废（2026-09-02）**：本计划里 learn-video 的归档任务和迁移任务描述的是"vdl 留在原处、learn-video 复制三个文件出来"的旧方案。该方案已被推翻——vdl 的 `WORK_ROOT` 现在直接指向 `<ROOT>/videos`，归档只写 `meta.json`、不搬文件。以
+> [`../specs/2026-09-01-unified-store-design.md`](../specs/2026-09-01-unified-store-design.md) 的 §3.1 / §5.2 / §6 为准，本文档其余部分仍然有效。
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** 让 `clip-url` / `learn-video` / `sync-xtimeline` / `sync-ytchannel` 四个 skill 不再各自持有存储根配置，统一从 `~/.hskill/config.json` 的 `knowledgeRoot` 字段解析落盘路径，并提供一次性迁移脚本把历史数据搬过去。

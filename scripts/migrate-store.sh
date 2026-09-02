@@ -115,6 +115,8 @@ else
       else
         info "  将搬：$name"
       fi
+    elif [[ "$name" == "Origin" || "$name" == "Image" ]]; then
+      info "  跳过：${name}（扁平布局遗留，由下方「vault 孤儿」一节处理）"
     else
       info "  跳过：${name}（非 8 位十六进制目录名，或无 meta.json）"
     fi
@@ -138,6 +140,106 @@ if [[ -z "$DATA_DIR" ]]; then
   info "未配置 roster DATA_DIR（${ROSTER_CONFIG}），跳过这一项"
 else
   _move_dir "$DATA_DIR/youtube" "$ROOT/feeds/youtube" "sync-ytchannel"
+fi
+echo ""
+
+# ── sync-xtimeline 旧布局（roster 化之前）逐文件并入 ───────────────────
+LEGACY_X="${HSKILL_LEGACY_XTIMELINE:-$HOME/.hskill/sync-xtimeline}"
+echo "sync-xtimeline 旧布局（$LEGACY_X → $ROOT/feeds/tweets）"
+if [[ ! -d "$LEGACY_X" ]]; then
+  info "旧目录不存在，跳过这一项"
+else
+  # digests/ (复数) → digest/；tweets/*.json (扁平) → creators/
+  _merge_files() {
+    local src="$1" dst="$2"
+    [[ -d "$src" ]] || return 0
+    for f in "$src"/*; do
+      [[ -f "$f" ]] || continue
+      local base; base="$(basename "$f")"
+      if [[ -e "$dst/$base" ]]; then
+        warn "  跳过：$base（目标已存在：$dst/$base）"
+        continue
+      fi
+      if [[ "$APPLY" -eq 1 ]]; then
+        mkdir -p "$dst"
+        mv "$f" "$dst/$base"
+        ok "  $base → $dst/"
+      else
+        info "  将并入：$base → $dst/"
+      fi
+    done
+  }
+  _merge_files "$LEGACY_X/digests" "$ROOT/feeds/tweets/digest"
+  _merge_files "$LEGACY_X/tweets"  "$ROOT/feeds/tweets/creators"
+  info "  config.json / watchlist.json / view.html 留原地（配置，非产物）"
+fi
+echo ""
+
+# ── vault 顶层孤儿：扁平布局遗留，无 meta.json，不代造 ──────────────────
+echo "vault 孤儿（$VAULT_PATH/{Origin,Image} → $ROOT/articles/_orphans/）"
+if [[ -z "$VAULT_PATH" || ! -d "$VAULT_PATH" ]]; then
+  info "VAULT_PATH 不可用，跳过这一项"
+else
+  for name in Origin Image; do
+    _move_dir "$VAULT_PATH/$name" "$ROOT/articles/_orphans/$name" "孤儿 $name"
+  done
+  info "  不生成 meta.json——source_url 无从得知，造假会污染索引"
+fi
+echo ""
+
+# ── 视频：vdl 已搬完，这里只补 meta.json ───────────────────────────────
+echo "视频 meta.json 回填（$ROOT/videos/work/）"
+VIDEO_WORK="$ROOT/videos/work"
+if [[ ! -d "$VIDEO_WORK" ]]; then
+  info "$VIDEO_WORK 不存在——先跑 vdl config set work-root $ROOT/videos，再回来跑本脚本"
+elif [[ ! -f "$VIDEO_WORK/database.sqlite" ]]; then
+  warn "缺 $VIDEO_WORK/database.sqlite，无法取 title/url，跳过这一项"
+else
+  APPLY="$APPLY" python3 - "$VIDEO_WORK" <<'PY'
+import json, os, sqlite3, sys
+
+work = sys.argv[1]
+apply_ = os.environ.get("APPLY") == "1"
+db = sqlite3.connect(os.path.join(work, "database.sqlite"))
+rows = {r[0]: r for r in db.execute("select id, url, title, ts from tasks")}
+
+
+def h1_title(task_id):
+    """Fall back to the article's own H1 — sqlite's title column is null for
+    most tasks, but any task that produced an article carries it there."""
+    path = os.path.join(work, task_id, "writing", "article.md")
+    if not os.path.exists(path):
+        return None
+    with open(path, encoding="utf-8", errors="ignore") as fh:
+        for line in fh:
+            line = line.strip()
+            if line.startswith("# "):
+                return line[2:].strip()
+            if line and not line.startswith("#"):
+                return None
+    return None
+
+
+written = skipped = 0
+for task_id in sorted(os.listdir(work)):
+    task_dir = os.path.join(work, task_id)
+    if not os.path.isdir(task_dir):
+        continue
+    row = rows.get(task_id)
+    title = (row[2] if row else None) or h1_title(task_id)
+    if not row or not row[1] or not title:
+        skipped += 1
+        continue
+    meta = {"source_url": row[1], "title": title, "fetched_at": (row[3] or "")[:10]}
+    if apply_:
+        with open(os.path.join(task_dir, "meta.json"), "w", encoding="utf-8") as fh:
+            json.dump(meta, fh, ensure_ascii=False, indent=2)
+    written += 1
+
+verb = "已写入" if apply_ else "将写入"
+print(f"  {verb} meta.json：{written} 个")
+print(f"  跳过（无 title 或无 url，按用户决定不索引）：{skipped} 个——目录和转录稿留在磁盘上")
+PY
 fi
 echo ""
 
