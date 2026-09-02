@@ -207,7 +207,7 @@ CFG
   [ ! -e "${ROOT}" ]
 }
 
-@test "--verify: reports a truncated copy as a size mismatch" {
+@test "--verify: a truncated copy fails" {
   _write_roster_config
   mkdir -p "${DATA_DIR}/tweets/creators"
   echo '[{"id": "1"}]' > "${DATA_DIR}/tweets/creators/alice.json"
@@ -217,7 +217,22 @@ CFG
 
   run bash "$SCRIPT" --verify
   [ "$status" -ne 0 ]
-  [[ "$output" == *"大小不符"* ]]
+  [[ "$output" == *"比源还小"* ]]
+}
+
+@test "--verify: a target that grew past its source passes" {
+  # What live use looks like: the skills start appending to the migrated
+  # feed archive. Only shrinkage means a broken copy.
+  _write_roster_config
+  mkdir -p "${DATA_DIR}/tweets/creators"
+  echo '[{"id": "1"}]' > "${DATA_DIR}/tweets/creators/alice.json"
+  bash "$SCRIPT" --apply
+
+  echo '[{"id": "1"}, {"id": "2"}]' > "${ROOT}/feeds/tweets/creators/alice.json"
+
+  run bash "$SCRIPT" --verify
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"已比源更大"* ]]
 }
 
 @test "unknown flag exits 2" {
