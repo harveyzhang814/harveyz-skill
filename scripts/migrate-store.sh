@@ -117,17 +117,25 @@ def copied_intact(src: Path, dst: Path):
     """Every regular file under src must exist under dst with the same size.
     Sizes, not hashes: this runs over ~9 GB and a mismatched size is what a
     truncated copy actually looks like."""
-    missing, mismatched, total = [], [], 0
+    missing, mismatched, grown, total = [], [], [], 0
     for path in src.rglob("*"):
         if not path.is_file() or path.name == ".DS_Store":
             continue
         total += 1
         target = dst / path.relative_to(src)
+        rel = str(path.relative_to(src))
         if not target.is_file():
-            missing.append(str(path.relative_to(src)))
-        elif target.stat().st_size != path.stat().st_size:
-            mismatched.append(str(path.relative_to(src)))
-    return total, missing, mismatched
+            missing.append(rel)
+            continue
+        delta = target.stat().st_size - path.stat().st_size
+        if delta > 0:
+            # Bigger than the source is what live use looks like: once the
+            # skills run against the new root, feed archives get appended to.
+            # A broken copy is *smaller*, so only that direction is a failure.
+            grown.append(rel)
+        elif delta < 0:
+            mismatched.append(rel)
+    return total, missing, mismatched, grown
 
 
 def report_copy(label, src: Path, dst: Path):
@@ -137,7 +145,7 @@ def report_copy(label, src: Path, dst: Path):
     if not dst.is_dir():
         check(label, False, f"目标不存在：{dst}")
         return
-    total, missing, mismatched = copied_intact(src, dst)
+    total, missing, mismatched, grown = copied_intact(src, dst)
     bad = missing + mismatched
     if not bad and total == 0:
         # "0 files, all matched" is how a wrongly-resolved source path looks.
@@ -145,7 +153,9 @@ def report_copy(label, src: Path, dst: Path):
         print(f"{YELLOW}⚠{OFF} {label} — 源目录里一个文件都没有（{src}），本条未构成有效校验")
         return
     check(label, not bad, f"{total} 个文件全部对上" if not bad
-          else f"{len(missing)} 个缺失 / {len(mismatched)} 个大小不符，例如 {bad[0]}")
+          else f"{len(missing)} 个缺失 / {len(mismatched)} 个比源还小，例如 {bad[0]}")
+    if grown:
+        print(f"{DIM}  ↳ {len(grown)} 个已比源更大（新根投入使用后被追加）：{', '.join(grown)}{OFF}")
 
 
 print("── 1. 文章 ──")
@@ -157,7 +167,7 @@ if vault and Path(vault).is_dir():
     check("每个源文章目录都有对应副本", src_ids <= dst_ids,
           f"源 {len(src_ids)} 个，目标缺 {len(src_ids - dst_ids)} 个")
     for name in sorted(src_ids):
-        t, miss, mism = copied_intact(Path(vault) / name, root / "articles" / name)
+        t, miss, mism, _ = copied_intact(Path(vault) / name, root / "articles" / name)
         if miss or mism:
             check(f"文章 {name} 内容完整", False, f"{len(miss)} 缺 / {len(mism)} 大小不符")
             break
