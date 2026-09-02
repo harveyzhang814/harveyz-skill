@@ -1,6 +1,6 @@
 ---
 name: learn-video
-version: "1.6.1"
+version: "1.8.0"
 description: "Process a YouTube or Bilibili video using the vdl CLI: transcribe, generate article and summary. Triggers when the user provides a YouTube or Bilibili URL and wants to learn from, summarize, transcribe, or extract key points from the video — e.g. 'help me understand this talk', 'summarize this YouTube video', 'summarize this Bilibili video', 'get the transcript', 'process this video', 'summarize it'."
 user_invocable: true
 ---
@@ -23,6 +23,22 @@ which vdl
 cd "$HOME/Projects/Video-Learner"
 npm link
 ```
+
+---
+
+## 前置：检查统一存储根
+
+运行 `cd "$HOME/Projects/harveyz-skill/skills/research/learn-video" && python3 scripts/store_config.py check`（或本 skill 安装后的实际目录）。若输出 `MISSING:`，询问用户"抓取产物统一存到哪个目录？（直接回车使用默认：`~/Documents/knowledge`）"，将回答展开为绝对路径，写入 `~/.hskill/config.json` 的 `knowledgeRoot` 字段（文件不存在则新建；若已存在 `skillDir` 等其他字段，只增改 `knowledgeRoot`，不覆盖）。
+
+**再核对 vdl 的落点。** vdl 直接往统一存储根里写，所以它的 `WORK_ROOT` 必须等于 `<knowledgeRoot>/videos`：
+
+```bash
+vdl config get | grep -i work
+```
+
+不一致就提示用户运行 `vdl config set work-root <knowledgeRoot>/videos`（该命令会问是否迁移旧任务，交互式，让用户自己确认）。**不要代替用户改 `~/.config/vdl/settings.conf`**——那是另一个程序的配置文件。
+
+这两个值存在两个不同的文件里，没有任何机制保证同步；漂了的话归档步骤会当场报错，不会静默写出孤儿 `meta.json`。
 
 ---
 
@@ -109,7 +125,7 @@ echo "$TASKLINE"
 
 - **成功**：日志中出现一行以 `{"task_id"` 开头的 JSON（因为启动命令带了 `--json`），例如：
   ```
-  {"task_id":"...","elapsed":812,"transcript":"work/.../original.md","article":"work/.../article.md","summary":"work/.../summary.md"}
+  {"task_id":"...","elapsed":812,"transcript":"work/.../original_zh.md","article":"work/.../article.md","summary":"work/.../summary.md"}
   ```
   直接从这行 JSON 取 `transcript`/`article`/`summary` 三个路径，跳到「向用户报告」——不需要再手工拼 `work/<task_id>/...` 路径。
 - **失败**：日志中出现一行 `Error: Step <step_display_name> failed: <原因>`（stderr 已通过 `2>&1` 合并进日志）。提取步骤名和原因，跳到「处理步骤失败」。
@@ -215,12 +231,33 @@ vdl result <task_id> --type article
 **产物路径**：
 
 ```
-work/<task_id>/
-├── transcript/original.md   # 带时间戳逐字稿
+<knowledgeRoot>/videos/work/<task_id>/
+├── meta.json                 # 归档步骤写入
+├── media/                    # vdl 下载的音视频，体积大
+├── transcript/
+│   ├── original_zh.md        # 带时间戳逐字稿（语言后缀随视频而定）
+│   └── original_en.md
 └── writing/
     ├── article.md            # 结构化文章
     └── summary.md            # TL;DR + Outline + Key Points
 ```
+
+`work/` 这一层是 vdl 自己的布局（`core/paths.js` 把它写死在 `WORK_ROOT` 之下，`database.sqlite` 和 `index.jsonl` 也建在上面），不是本 skill 能去掉的。
+
+---
+
+## 归档到统一存储根
+
+vdl 的产物已经落在统一存储根里了（`WORK_ROOT` 指向 `<knowledgeRoot>/videos`），所以归档**不搬任何文件**，只补一份 `meta.json` 把这个目录标成实体：
+
+```bash
+cd "$HOME/Projects/harveyz-skill/skills/research/learn-video"  # 或本 skill 安装后的实际目录
+TASK_ID="<task_id>" SOURCE_URL="<URL>" TITLE="<视频标题>" python3 scripts/archive.py
+```
+
+输出两行 `VIDEO_DIR: <path>` 和 `META_PATH: <path>`。同一个 `task_id` 重复归档时覆盖，幂等——`rerun`/更换 focus 之后重新归档不会产生重复目录。
+
+`meta.json` 是索引的唯一凭据（`find <knowledgeRoot> -name meta.json` 就是全量实体清单），所以任务目录不存在时脚本直接报错退出，不会凭空建目录写一份指向空气的 `meta.json`。真报了这个错，先回「前置」小节核对 `WORK_ROOT`。
 
 ---
 
@@ -229,5 +266,14 @@ work/<task_id>/
 当「进度汇报与完成判定」判定任务成功后，立即执行，不要等用户追问：
 
 1. 展示 **summary.md** 全文
-2. 告知产物路径（成功 JSON 里的 `transcript`/`article`/`summary` 三个字段，或「获取结果」里的固定路径）
+2. 告知产物路径（「归档到统一存储根」步骤打印的 `VIDEO_DIR` 路径，即 `<knowledgeRoot>/videos/work/<task_id>/`）
 3. 询问是否需要：查看完整文章、转录稿，或用不同 focus 重新生成摘要
+
+---
+
+## 参考文件
+
+| 文件 | 用途 |
+|------|------|
+| `scripts/store_config.py` | 读共享 `knowledgeRoot`（`~/.hskill/config.json`），四个入范围 skill 各存一份内容相同的副本 |
+| `scripts/archive.py` | 往 vdl 已经写好的 `<knowledgeRoot>/videos/work/<task_id>/` 里补 `meta.json`；不搬文件，目录不存在则报错退出，同 `task_id` 重跑幂等 |

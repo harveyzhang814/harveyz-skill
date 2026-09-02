@@ -1,15 +1,16 @@
 #!/usr/bin/env python3
 """Stage 1 for sync-ytchannel: for every watched channel, call
 fetch_channel_videos via mcp_channel_client, diff against that channel's
-seen-URL cursor (cursor.compute_update, read from the roster), filter out
-videos already archived, persist the advanced cursor, and print a JSON
-report to stdout for the orchestrating skill to translate and hand to
-digest.py.
+seen-URL cursor (cursor.compute_update, read from the roster), and print a
+JSON report to stdout for the orchestrating skill to translate and hand to
+digest.py and then archive_videos.py.
 
 This is the YouTube counterpart of sync-xtimeline's fetch_new_tweets.py —
-same shape, including the pending.json crash-recovery handoff: cursor moves
-immediately after a successful fetch, and the report is replayed verbatim
-on the next call if digest.py never got to clear pending.json.
+same shape, including deferring the cursor: this step does NOT move it. The
+value it should move to rides out in the report's "cursors" field, and
+archive_videos.py — the last stage — writes it only after the digest and
+the archive are both on disk. So a crash anywhere in the run means "this
+round never happened": the next run re-fetches the same batch.
 
 Usage: python3 fetch_new_videos.py [chrome_profile] [--handle H [--handle H2 ...]]
 """
@@ -17,13 +18,10 @@ import argparse
 import asyncio
 import json
 from datetime import datetime, timezone
-from pathlib import Path
 from typing import Optional
 
 import cursor as cursor_mod
 import roster_client
-from archive_videos import _archive_path
-from config import get_data_dir
 from mcp_channel_client import fetch_channel_videos
 
 
@@ -41,21 +39,12 @@ def _select_channels(handles: Optional[list[str]]) -> tuple[list[dict], list[str
     return selected, missing
 
 
-def _archived_video_ids(handle: str) -> set[str]:
-    """Read the archive file for this handle and return the set of archived video IDs.
-    If the archive doesn't exist, return an empty set."""
-    path = _archive_path(handle)
-    if not path.exists():
-        return set()
-    existing = json.loads(path.read_text(encoding="utf-8"))
-    return {v["video_id"] for v in existing}
-
-
 async def run(chrome_profile: Optional[str], handles: Optional[list[str]] = None) -> dict:
     run_time = datetime.now(timezone.utc).isoformat()
     new: dict[str, list[dict]] = {}
     baselines: dict[str, int] = {}
     failures: dict[str, str] = {}
+    cursors: dict[str, list[str]] = {}
 
     channels, missing = _select_channels(handles)
     for handle in missing:
@@ -71,11 +60,8 @@ async def run(chrome_profile: Optional[str], handles: Optional[list[str]] = None
             if kind == "baseline":
                 baselines[handle] = data["count"]
             elif kind == "new":
-                archived = _archived_video_ids(handle)
-                fresh = [v for v in data["videos"] if v["video_id"] not in archived]
-                if fresh:
-                    new[handle] = fresh
-            roster_client.set_cursor(handle, data["seen_urls"], run_time)
+                new[handle] = data["videos"]
+            cursors[handle] = data["seen_urls"]
         except Exception as e:
             failures[handle] = str(e)
             roster_client.set_error(handle, str(e), run_time)
@@ -86,6 +72,7 @@ async def run(chrome_profile: Optional[str], handles: Optional[list[str]] = None
         "new": new,
         "baselines": baselines,
         "failures": failures,
+        "cursors": cursors,
     }
 
 
@@ -100,22 +87,7 @@ def _parse_args() -> argparse.Namespace:
 
 
 def main(chrome_profile: Optional[str] = None, handles: Optional[list[str]] = None) -> None:
-    pending_path = Path(get_data_dir()) / "youtube" / "pending.json"
-    if pending_path.exists():
-        # A previous run fetched and advanced cursors but never made it through
-        # digest.py (which is what clears this file) — replaying the
-        # leftover report instead of re-fetching is the only way to not lose
-        # those videos, since the cursors have already moved past them. This
-        # takes priority over --handle: the backlog isn't scoped to whatever
-        # you're asking for right now.
-        print(pending_path.read_text(encoding="utf-8"))
-        return
-
     report = asyncio.run(run(chrome_profile, handles))
-
-    pending_path.parent.mkdir(parents=True, exist_ok=True)
-    pending_path.write_text(json.dumps(report, ensure_ascii=False), encoding="utf-8")
-
     print(json.dumps(report, ensure_ascii=False))
 
 

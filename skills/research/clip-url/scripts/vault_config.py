@@ -1,36 +1,18 @@
 #!/usr/bin/env python3
-"""Shared-vault path resolution for clip-url: reads
-~/.hskill/url-extract/config.json, 由 clip-url 初始化写入（目录名 url-extract 为历史遗留），
-so both skills' dedup index (meta.json) and article layout live in one place.
-
-Written from scratch — does not import extract-url's config.py.
+"""Article path resolution for clip-url. Delegates the storage root to
+store_config.articles_dir() — VAULT_PATH (the old
+~/.hskill/url-extract/config.json field) has retired; that config file
+now only carries fixed_tags.txt's directory. See
+docs/superpowers/specs/2026-09-01-unified-store-design.md §5.1.
 """
 import hashlib
-import json
-import os
-import sys
 from pathlib import Path
 
-
-def _config_path() -> Path:
-    env_cfg = os.environ.get("HSKILL_EXTRACT_URL_CONFIG")
-    return Path(env_cfg) if env_cfg else Path.home() / ".hskill" / "url-extract" / "config.json"
+import store_config
 
 
 def get_vault_path() -> str:
-    config_path = _config_path()
-    if not config_path.exists():
-        raise FileNotFoundError(
-            f"共享配置文件不存在：{config_path}\n"
-            "请先完成 clip-url 初始化（配置 VAULT_PATH 和固定词表）——"
-            "见 SKILL.md「初始化」小节。"
-        )
-    cfg = json.loads(config_path.read_text(encoding="utf-8"))
-    if "VAULT_PATH" not in cfg:
-        raise KeyError(
-            f"{config_path} 缺少 VAULT_PATH，请重新完成 clip-url 初始化。"
-        )
-    return cfg["VAULT_PATH"]
+    return str(store_config.articles_dir())
 
 
 def get_url_hash(url: str) -> str:
@@ -51,19 +33,3 @@ def get_article_paths(url: str) -> dict:
         "article_dir": article_dir,
         "meta_path": article_dir / "meta.json",
     }
-
-
-def main():
-    if len(sys.argv) > 1 and sys.argv[1] == "check":
-        try:
-            print(f"OK: {get_vault_path()}")
-        except (FileNotFoundError, KeyError) as e:
-            print(f"MISSING: {e}", file=sys.stderr)
-            sys.exit(1)
-        return
-    print("Usage: vault_config.py check", file=sys.stderr)
-    sys.exit(1)
-
-
-if __name__ == "__main__":
-    main()

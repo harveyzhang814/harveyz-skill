@@ -1,13 +1,17 @@
 #!/usr/bin/env python3
 """Stage 1 for sync-xtimeline: for every watched handle, call fetch_user_timeline
 via mcp_timeline_client, diff against each handle's last_seen_tweet_id
-cursor (cursor.compute_update, read from the roster), filter out tweets
-already archived, persist the updated cursor, and print a JSON report to
-stdout for the orchestrating skill to translate and hand to render_digest.py.
+cursor (cursor.compute_update, read from the roster), and print a JSON
+report to stdout for the orchestrating skill to translate and hand to
+render_digest.py and then archive_tweets.py.
 
-This includes the pending.json crash-recovery handoff: cursor moves
-immediately after a successful fetch, and the report is replayed verbatim
-on the next call if render_digest.py never got to clear pending.json.
+This step does NOT move the cursor. The value it should move to rides out
+in the report's "cursors" field, and archive_tweets.py — the last stage —
+writes it only after the digest and the archive are both on disk. So a
+crash anywhere in the run means "this round never happened": the next run
+re-fetches the same batch. The cost is redoing one round's fetch and
+translation; what it buys is that no interruption can leave the cursor
+parked past a batch nobody ever reported.
 
 Usage: python3 fetch_new_tweets.py [chrome_profile] [--handle H [--handle H2 ...]]
 """
@@ -15,13 +19,10 @@ import argparse
 import asyncio
 import json
 from datetime import datetime, timezone
-from pathlib import Path
 from typing import Optional
 
 import cursor as cursor_mod
 import roster_client
-from archive_tweets import _archive_path
-from config import get_data_dir
 from mcp_timeline_client import fetch_timeline
 
 
@@ -46,21 +47,12 @@ def _select_channels(handles: Optional[list[str]]) -> tuple[list[dict], list[str
     return selected, missing
 
 
-def _archived_tweet_ids(handle: str) -> set[str]:
-    """Read the archive file for this handle and return the set of archived tweet IDs.
-    If the archive doesn't exist, return an empty set."""
-    path = _archive_path(handle)
-    if not path.exists():
-        return set()
-    existing = json.loads(path.read_text(encoding="utf-8"))
-    return {t["tweet_id"] for t in existing}
-
-
 async def run(chrome_profile: Optional[str], handles: Optional[list[str]] = None) -> dict:
     run_time = datetime.now(timezone.utc).isoformat()
     new: dict[str, list[dict]] = {}
     baselines: dict[str, int] = {}
     failures: dict[str, str] = {}
+    cursors: dict[str, str] = {}
 
     channels, missing = _select_channels(handles)
     for handle in missing:
@@ -76,11 +68,8 @@ async def run(chrome_profile: Optional[str], handles: Optional[list[str]] = None
             if kind == "baseline":
                 baselines[handle] = data["count"]
             elif kind == "new":
-                archived = _archived_tweet_ids(handle)
-                fresh = [t for t in data["tweets"] if t["tweet_id"] not in archived]
-                if fresh:
-                    new[handle] = fresh
-            roster_client.set_cursor(handle, data["last_seen_tweet_id"], run_time)
+                new[handle] = data["tweets"]
+            cursors[handle] = data["last_seen_tweet_id"]
         except Exception as e:
             failures[handle] = str(e)
             roster_client.set_error(handle, str(e), run_time)
@@ -91,6 +80,7 @@ async def run(chrome_profile: Optional[str], handles: Optional[list[str]] = None
         "new": new,
         "baselines": baselines,
         "failures": failures,
+        "cursors": cursors,
     }
 
 
@@ -105,22 +95,7 @@ def _parse_args() -> argparse.Namespace:
 
 
 def main(chrome_profile: Optional[str] = None, handles: Optional[list[str]] = None) -> None:
-    pending_path = Path(get_data_dir()) / "tweets" / "pending.json"
-    if pending_path.exists():
-        # A previous run fetched and advanced cursors but never made it through
-        # render_digest.py (which is what clears this file) — replaying the
-        # leftover report instead of re-fetching is the only way to not lose
-        # those tweets, since the cursors have already moved past them. This
-        # takes priority over --handle: the backlog isn't scoped to whatever
-        # you're asking for right now.
-        print(pending_path.read_text(encoding="utf-8"))
-        return
-
     report = asyncio.run(run(chrome_profile, handles))
-
-    pending_path.parent.mkdir(parents=True, exist_ok=True)
-    pending_path.write_text(json.dumps(report, ensure_ascii=False), encoding="utf-8")
-
     print(json.dumps(report, ensure_ascii=False))
 
 

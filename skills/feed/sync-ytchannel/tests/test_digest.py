@@ -7,7 +7,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
 
 import digest
-from conftest import ROSTER_CONFIG_ENV, write_config
+from conftest import HSKILL_CONFIG_ENV, write_config
 
 SCRIPT = Path(__file__).resolve().parent.parent / "scripts" / "digest.py"
 
@@ -92,60 +92,34 @@ def test_render_digest_omits_empty_sections():
     assert "## 已建立追踪基线" not in out
 
 
-def _run(report: dict, data_dir: Path) -> subprocess.CompletedProcess:
-    config_path = data_dir.parent / "config.json"
-    write_config(config_path, data_dir)
+def _run(report: dict, root: Path) -> subprocess.CompletedProcess:
+    config_path = root.parent / "config.json"
+    write_config(config_path, root)
     return subprocess.run(
         [sys.executable, str(SCRIPT)],
         input=json.dumps(report),
-        env={**os.environ, ROSTER_CONFIG_ENV: str(config_path)},
+        env={**os.environ, HSKILL_CONFIG_ENV: str(config_path)},
         capture_output=True, text=True, timeout=10,
     )
 
 
 def test_cli_empty_report_prints_empty_and_writes_no_file(tmp_path):
-    data_dir = tmp_path / "data"
+    root = tmp_path / "knowledge"
     report = {"run_time": "2026-08-15T09:00:00+00:00", "new": {}, "baselines": {}, "failures": {}}
-    result = _run(report, data_dir)
+    result = _run(report, root)
     assert result.returncode == 0, result.stderr
     assert result.stdout.strip() == "EMPTY"
-    assert not (data_dir / "youtube" / "digest").exists()
+    assert not (root / "feeds" / "youtube" / "digest").exists()
 
 
 def test_cli_nonempty_report_writes_timestamped_file(tmp_path):
-    data_dir = tmp_path / "data"
+    root = tmp_path / "knowledge"
     report = {"run_time": "2026-08-15T09:00:00+00:00", "new": {}, "baselines": {"a": 3}, "failures": {}}
-    result = _run(report, data_dir)
+    result = _run(report, root)
     assert result.returncode == 0, result.stderr
     assert "WRITTEN:" in result.stdout
     written_path = Path(result.stdout.strip().split("WRITTEN: ", 1)[1])
     assert written_path.exists()
     assert written_path.name == "digest-20260815T090000.md"
-    assert written_path.parent == data_dir / "youtube" / "digest"
+    assert written_path.parent == root / "feeds" / "youtube" / "digest"
 
-
-def test_cli_empty_report_removes_pending_json(tmp_path):
-    data_dir = tmp_path / "data"
-    pending_dir = data_dir / "youtube"
-    pending_dir.mkdir(parents=True)
-    pending_path = pending_dir / "pending.json"
-    pending_path.write_text("{}", encoding="utf-8")
-
-    report = {"run_time": "2026-08-15T09:00:00+00:00", "new": {}, "baselines": {}, "failures": {}}
-    result = _run(report, data_dir)
-    assert result.returncode == 0, result.stderr
-    assert not pending_path.exists()
-
-
-def test_cli_written_report_removes_pending_json(tmp_path):
-    data_dir = tmp_path / "data"
-    pending_dir = data_dir / "youtube"
-    pending_dir.mkdir(parents=True)
-    pending_path = pending_dir / "pending.json"
-    pending_path.write_text("{}", encoding="utf-8")
-
-    report = {"run_time": "2026-08-15T09:00:00+00:00", "new": {}, "baselines": {"a": 3}, "failures": {}}
-    result = _run(report, data_dir)
-    assert result.returncode == 0, result.stderr
-    assert "WRITTEN:" in result.stdout
-    assert not pending_path.exists()

@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.31.0] - 2026-09-02
+
+### Added
+- 统一存储根（`knowledgeRoot`）：`clip-url` / `learn-video` / `sync-xtimeline` / `sync-ytchannel` 四个 skill 的长期产物收进一个可配置根目录（默认 `~/Documents/knowledge`），按「类型 × 形态」分层，清单统一收进 `feeds/`。根由 `~/.hskill/config.json` 的 `knowledgeRoot` 持有，各 skill 各带一份 `store_config.py` 副本读取，不新增必装 tool
+- `scripts/migrate-store.sh`：一次性迁移脚本，把旧数据搬进统一存储根。全程只复制不删除，`--verify` 逐文件核对存在性与大小并显式断言原始数据未被删除；是否清除原件留给用户最后手工判断，脚本不提供 `--clean`
+
+### Changed
+- **破坏性变更** `learn-video`：vdl 的 `WORK_ROOT` 直接指向 `<知识根>/videos`，不再把产物复制进知识根（避免同一份数据两处物理副本、下游仍写老路径）
+  - **升级路径**：执行 `scripts/migrate-store.sh` 完成一次性迁移后，用 vdl 自带的 `vdl config set work-root` 把 WORK_ROOT 指到知识根下的 `videos/` 目录；SKILL.md 初始化步骤已加 WORK_ROOT 与 `knowledgeRoot` 的一致性核对（两值分居两个配置文件，无机制保证同步）
+- `sync-xtimeline` / `sync-ytchannel`：运行流程新增 `knowledgeRoot` 前置检查（新增 step 2），未配置时在归档阶段前直接失败退出，而不是跑到归档阶段才崩溃——两者本就是为 `/loop`/`schedule` 无人值守场景设计的
+- `manage-roster` 更名为 `manage-creators`：`manage` 动词准确，但 `roster` 作为名词跟"关注了哪些创作者"这个心智模型不够贴，且容易被理解成排班表
+  - **升级路径**：旧的 `/manage-roster` 触发短语失效，改用 `/manage-creators`；`hskill update` 会通过 `renames[]` 自动迁移已安装的旧目录名，数据文件（`registry.json` 等）不受影响
+- `capture-creator` 更名为 `capture-opinion`：名词位放的一直是"记的是谁"（creator）而不是"记的是什么"（判断/看法），跟 `capture-insight`/`capture-todo` 系列"名词=被记录对象"的模式不一致，也容易在改名后跟 `manage-creators` 的"新增人"操作混淆，误读成"创建一个 creator"。新名词对齐 skill 自身的触发短语（"I have a take on..."）
+  - **升级路径**：旧的 `/capture-creator` 触发短语失效，改用 `/capture-opinion`；`hskill update` 会通过 `renames[]` 自动迁移已安装的旧目录名，画像文件（`profiles/*.md`）不受影响
+
+### Fixed
+- `sync-xtimeline` / `sync-ytchannel` 共用的抓取流程：游标推进改为归档完成后才推进，删掉 `pending.json` 断点回放机制。此前抓取成功即推进游标，若中断于渲染/归档之前会导致该批内容永久丢失，`pending.json` 只是原样回放上次结果掩盖「本次其实没抓」，调用方分辨不出两者，定时任务因此可以每天照常"成功"而上游内容一直没同步
+- `store_config.py` / `migrate-store.sh`：`knowledgeRoot` 里的 `~` 未展开，SKILL.md 建议的默认值 `~/Documents/knowledge` 会被静默解析成进程 CWD 下字面量 `~` 目录
+
 ## [0.30.0] - 2026-08-31
 
 ### Changed

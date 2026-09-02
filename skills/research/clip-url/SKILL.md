@@ -1,6 +1,6 @@
 ---
 name: clip-url
-version: "0.8.1"
+version: "0.9.0"
 description: "Use this the instant a URL is shared with any intent to save, archive, clip, or translate-and-keep it in Obsidian — a bare link with no comment, \"save this\", \"archive this\", \"clip this\", \"add to obsidian\", \"save it\", \"save to vault/obsidian\", \"keep a record of this\", \"translate and save\", \"help me save/grab this link\", or a request to fetch a page via browser-fetch — including these requests phrased in Chinese. Covers arXiv papers, WeChat official account posts, X/Twitter threads, Hacker News links, blog posts, news articles, and general webpages — including sites needing special handling (login walls, images, JS-rendered content). Do not use for translate-or-summarize-only requests with no save intent, in-page actions like clicking buttons or filling forms, retagging or fixing metadata on an article already saved, links shared purely for reaction or jokes, or topic searches with no specific URL given."
 user_invocable: true
 ---
@@ -28,11 +28,13 @@ user_invocable: true
 
 **② 检查共享配置**
 
-运行 `python3 scripts/vault_config.py check`。若报缺失，引导用户提供 Obsidian Vault
-绝对路径。写入前先确保目录存在（`mkdir -p ~/.hskill/url-extract/`），再写入
-`~/.hskill/url-extract/config.json` 的 `VAULT_PATH` 字段，并在同目录创建空的
-`fixed_tags.txt`。配置目录名 `url-extract` 是历史遗留，clip-url 沿用同一份
-配置，以便与历史抓取记录互相去重。
+运行 `python3 scripts/store_config.py check`。若输出 `MISSING:`，询问用户"抓取产物
+统一存到哪个目录？（直接回车使用默认：`~/Documents/knowledge`）"，将回答展开为绝对
+路径，写入 `~/.hskill/config.json` 的 `knowledgeRoot` 字段（文件不存在则新建；若已
+存在 `skillDir` 等其他字段，只增改 `knowledgeRoot`，不覆盖）。再确保
+`~/.hskill/url-extract/` 目录存在（`mkdir -p ~/.hskill/url-extract/`）并在其中创建
+空的 `fixed_tags.txt`（若不存在）——这份历史目录现在只承载固定词表，文章存储路径
+已改由 `knowledgeRoot` 统一解析，不再读取其中的 `VAULT_PATH` 字段。
 
 ## 执行流程
 
@@ -40,7 +42,7 @@ user_invocable: true
 
 1. 净化 URL
 2. 确认默认 chrome_profile（只在第一次使用本 skill 时问一次）
-2.5. 确认共享配置存在（VAULT_PATH / 固定词表）
+2.5. 确认共享配置存在（knowledgeRoot / 固定词表）
 3. 派发 Subagent 1：CLI 抓取
 4. 判断抓取结果，决定是否需要自优化
 4.5. 派发 Subagent 3：自优化（仅在步骤 4 判定需要时）
@@ -77,19 +79,14 @@ url_safe = re.sub(r'[\x00-\x1f\x7f]', '', url).strip()[:2048]
 
 **不允许**：跳过展示直接把探测到的 profile 设为默认值——必须等用户明确回答，且只有用户确认后才能调用 `chrome_profile_config.py set`。
 
-### 步骤 2.5：确认共享配置存在（VAULT_PATH / 固定词表）
+### 步骤 2.5：确认共享配置存在（knowledgeRoot / 固定词表）
 
-```python
-import subprocess
-result = subprocess.run(
-    ['python3', '-c',
-     'import sys; sys.path.insert(0, "scripts"); import vault_config; print(vault_config.get_vault_path())'],
-    capture_output=True, text=True
-)
+```bash
+python3 scripts/store_config.py check
 ```
 
-- 若 `result.returncode != 0`（`config.json` 不存在，或存在但缺 `VAULT_PATH` 字段）：向用户报告"共享配置缺失，请先完成本文档「初始化」小节的 ② 检查共享配置，再回来使用本 skill"，流程终止。
-- 若 `result.returncode == 0`：再检查 `~/.hskill/url-extract/fixed_tags.txt` 是否存在：
+- 若输出 `MISSING:`（`~/.hskill/config.json` 不存在，或存在但缺 `knowledgeRoot` 字段）：向用户报告"共享配置缺失，请先完成本文档「初始化」小节的 ② 检查共享配置，再回来使用本 skill"，流程终止。
+- 若输出 `OK: <root>`：再检查 `~/.hskill/url-extract/fixed_tags.txt` 是否存在：
   ```bash
   ls ~/.hskill/url-extract/fixed_tags.txt 2>/dev/null && echo "EXISTS" || echo "NOT_FOUND"
   ```
@@ -97,7 +94,7 @@ result = subprocess.run(
 
 ### 步骤 3：派发 Subagent 1（CLI 抓取）
 
-读取 `references/subagent1-fetch-prompt.md`，将其中 `<URL>` 替换为 url_safe，`<CHROME_PROFILE>` 替换为空（不留任何字符）——browser-fetch 的 `article` 子命令会自己解析已持久化的默认 chrome_profile，不需要这里显式传值，按**补丁①**派发。文章存储目录由 Subagent 1 内部通过共享的 VAULT_PATH 自动计算，不再需要这里传参。
+读取 `references/subagent1-fetch-prompt.md`，将其中 `<URL>` 替换为 url_safe，`<CHROME_PROFILE>` 替换为空（不留任何字符）——browser-fetch 的 `article` 子命令会自己解析已持久化的默认 chrome_profile，不需要这里显式传值，按**补丁①**派发。文章存储目录由 Subagent 1 内部通过共享的 knowledgeRoot 自动计算，不再需要这里传参。
 
 ### 步骤 4：等待 Subagent 1 完成，判断是否需要自优化
 
@@ -167,7 +164,7 @@ result = subprocess.run(
 
 ## 边界
 
-沿用与已归档的 extract-url 相同的存储布局与去重索引，因此历史抓取记录仍然有效：URL 去重和固定标签词表读同一份 `~/.hskill/url-extract/config.json`（`VAULT_PATH`）和 `fixed_tags.txt`；抓取产出的原文文件名沿用同一命名规则，按标题命名（`Origin/<标题>.md`，Translation 沿用同一文件名），两者共存于同一个 `<hash8>/` 目录下，去重判定只看 `meta.json` 的 `source_url`，不受文件名影响——历史抓取记录与新抓取的文章互相认得出"已抓取"。
+文章统一落在 `<knowledgeRoot>/articles/<hash8>/` 下（`knowledgeRoot` 见 `~/.hskill/config.json`，由 `store_config.py` 解析）；固定标签词表仍读 `~/.hskill/url-extract/fixed_tags.txt`（这是这份历史配置目录唯一保留的用途，`VAULT_PATH` 字段已退休，不再读取）。抓取产出的原文文件名按标题命名（`Origin/<标题>.md`，Translation 沿用同一文件名），两者共存于同一个 `<hash8>/` 目录下，去重判定只看 `meta.json` 的 `source_url`，不受文件名影响。历史抓取记录（原 Obsidian vault 下的数据）需要先跑 `bash scripts/migrate-store.sh --apply`（仓库根）搬过来，才能被新根下的去重判定认出。
 
 ## 参考文件
 
@@ -179,7 +176,8 @@ result = subprocess.run(
 | `references/subagent-self-optimize-prompt.md` | Subagent 3（自优化，抓取失败/过薄时触发）派发 prompt 模板 |
 | `scripts/browser_fetch_locate.py` | 步骤 1.5 前置检测：定位 browser-fetch launcher（dev-mode 优先，已安装模式兜底），也被 `browser_fetch_cli.py` 共用 |
 | `scripts/browser_fetch_cli.py` | browser-fetch CLI 调用层，四个 client 共用 |
-| `scripts/vault_config.py` | 读共享 `VAULT_PATH`（`~/.hskill/url-extract/config.json`），计算文章路径 |
+| `scripts/store_config.py` | 读共享 `knowledgeRoot`（`~/.hskill/config.json`），四个入范围 skill 各存一份内容相同的副本 |
+| `scripts/vault_config.py` | 委托 `store_config.articles_dir()` 计算文章路径；`fixed_tags.txt` 仍读 `~/.hskill/url-extract/` |
 | `scripts/dedup_check.py` | URL 去重检查（读 `<hash8>/meta.json`） |
 | `scripts/article_meta.py` | 去重索引写入 + 固定词表兜底移位（纯函数库） |
 | `scripts/write_meta_and_separate.py` | Subagent 2 用的 CLI 包装，调用 `article_meta` 写 meta.json + 移位 |
