@@ -264,3 +264,37 @@ CFG
   [ -f "${ROOT}/feeds/tweets/creators/trq212.json" ]
   [ -f "${LEGACY_DATA}/digests/20260822T064553--digest.md" ]
 }
+
+@test "--apply: video backfill merges into vdl's own meta.json, never clobbers it" {
+  # vdl writes meta.json itself on completion, carrying file_size / bit_rate /
+  # *_done that we never produce. An overwriting backfill silently drops them.
+  VIDEO_WORK="${ROOT}/videos/work"
+  mkdir -p "${VIDEO_WORK}/t1/writing"
+  echo "body" > "${VIDEO_WORK}/t1/writing/article.md"
+  cat > "${VIDEO_WORK}/t1/meta.json" <<'META'
+{"id": "t1", "file_size": 3552927, "bit_rate": 129410, "transcript_done": true, "focus": ""}
+META
+  python3 -c "
+import sqlite3
+c = sqlite3.connect('${VIDEO_WORK}/database.sqlite')
+c.execute('create table tasks (id TEXT PRIMARY KEY, url TEXT, ts TEXT, title TEXT, uploader TEXT, upload_date TEXT, duration TEXT, mode TEXT, output_lang TEXT)')
+c.execute(\"insert into tasks values ('t1','https://y/1','2026-07-01T00:00:00Z','T','Chan','20260701','120','media','zh-CN')\")
+c.commit()
+"
+
+  run bash "$SCRIPT" --apply
+  [ "$status" -eq 0 ]
+
+  run python3 -c "
+import json; m = json.load(open('${VIDEO_WORK}/t1/meta.json'))
+assert m['source_url'] == 'https://y/1', m
+assert m['title'] == 'T', m
+assert m['file_size'] == 3552927, m
+assert m['bit_rate'] == 129410, m
+assert m['transcript_done'] is True, m
+assert 'focus' not in m, m
+print('MERGED')
+"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"MERGED"* ]]
+}

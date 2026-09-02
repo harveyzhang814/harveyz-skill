@@ -456,8 +456,19 @@ for task_id in sorted(os.listdir(work)):
     extra = dict(zip(SCHOLIA_COLUMNS, disp.get(task_id, ())))
     meta.update({k: v for k, v in extra.items() if v not in (None, "")})
     meta.setdefault("url", row[1])
+    # vdl 自己也写 meta.json（完成时），带着 file_size / bit_rate / *_done 等
+    # 我们不产生的字段。回填必须是并入而不是覆盖，否则重跑一次就把那些抹掉了。
+    meta_path = os.path.join(task_dir, "meta.json")
+    try:
+        with open(meta_path, encoding="utf-8") as fh:
+            existing = json.load(fh)
+    except (FileNotFoundError, json.JSONDecodeError):
+        existing = {}
+    for k, v in existing.items():
+        if k not in meta and v not in (None, ""):
+            meta[k] = v
     if apply_:
-        with open(os.path.join(task_dir, "meta.json"), "w", encoding="utf-8") as fh:
+        with open(meta_path, "w", encoding="utf-8") as fh:
             json.dump(meta, fh, ensure_ascii=False, indent=2)
     written += 1
 
