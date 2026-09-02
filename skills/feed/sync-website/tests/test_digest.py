@@ -93,6 +93,34 @@ def test_render_digest_omits_empty_sections():
     assert "## 已建立追踪基线" not in out
 
 
+def test_has_content_true_for_recalibrated_only():
+    assert digest.has_content(_report(recalibrated=["a"])) is True
+
+
+def test_has_content_false_for_empty_recalibrated():
+    assert digest.has_content(_report()) is False
+    assert digest.has_content(_report(recalibrated=[])) is False
+
+
+def test_render_digest_surfaces_recalibrated_with_no_other_content():
+    report = _report(recalibrated=["a"])
+    out = digest.render_digest(report)
+    assert "## 本轮重新标定过抽取规则，暂无新文章" in out
+    assert "- a" in out
+
+
+def test_render_digest_does_not_duplicate_recalibrated_already_in_new():
+    report = _report(new={"a": [_article("u", "T")]}, recalibrated=["a"])
+    out = digest.render_digest(report)
+    assert "## 本轮重新标定过抽取规则，暂无新文章" not in out
+
+
+def test_render_digest_does_not_duplicate_recalibrated_already_in_baselines():
+    report = _report(baselines={"a": 4}, recalibrated=["a"])
+    out = digest.render_digest(report)
+    assert "## 本轮重新标定过抽取规则，暂无新文章" not in out
+
+
 def _run(report: dict, root: Path) -> subprocess.CompletedProcess:
     config_path = root.parent / "config.json"
     write_config(config_path, root)
@@ -120,3 +148,11 @@ def test_cli_nonempty_report_writes_timestamped_file(tmp_path):
     assert written_path.exists()
     assert written_path.name == "digest-20260902T070000.md"
     assert written_path.parent == root / "feeds" / "website" / "digest"
+
+
+def test_cli_recalibrated_only_report_writes_file_not_empty(tmp_path):
+    root = tmp_path / "knowledge"
+    result = _run(_report(recalibrated=["a"]), root)
+    assert result.returncode == 0, result.stderr
+    assert "WRITTEN:" in result.stdout
+    assert result.stdout.strip() != "EMPTY"

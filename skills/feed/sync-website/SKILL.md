@@ -107,6 +107,8 @@ sync-xtimeline / sync-ytchannel 共用同一份 `knowledgeRoot` 配置（各自�
      字段下本来就没有值），并把 handle 加进 `report["recalibrated"]`
      （不存在就新建这个列表）。
    - 标定失败 → 把 handle 和失败原因写进 `report["failures"]`。
+   - 标定成功但重跑 `fetch_new_articles.py --handle <handle>` 本身失败（比如
+     网络超时）→ 同样把 handle 和失败原因写进 `report["failures"]`。
    - 处理完 `needs_calibration` 里的每个 handle 后，把这个字段从 `report`
      里删掉（它是内部信号，不进摘要）。
 5. 对 `report["new"]` 里的每一条文章，把 `title` 翻译成中文，写入该文章

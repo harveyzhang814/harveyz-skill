@@ -19,7 +19,10 @@ from config import get_data_dir
 
 
 def has_content(report: dict) -> bool:
-    return bool(report.get("new") or report.get("failures") or report.get("baselines"))
+    return bool(
+        report.get("new") or report.get("failures") or report.get("baselines")
+        or report.get("recalibrated")
+    )
 
 
 def format_date(article: dict) -> str:
@@ -56,6 +59,13 @@ def render_digest(report: dict) -> str:
         for handle, count in baselines.items():
             tag = "  [本轮重新标定过抽取规则]" if handle in recalibrated else ""
             lines.append(f"- {handle}{tag}：起始 {count} 篇文章，从下次运行开始报告新增")
+        lines.append("")
+
+    recalibrated_only = recalibrated - set(report.get("new", {})) - set(baselines)
+    if recalibrated_only:
+        lines.append("## 本轮重新标定过抽取规则，暂无新文章")
+        for handle in sorted(recalibrated_only):
+            lines.append(f"- {handle}")
         lines.append("")
 
     return "\n".join(lines).rstrip() + "\n"
