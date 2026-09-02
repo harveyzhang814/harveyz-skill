@@ -250,7 +250,11 @@ vdl config set work-root ~/Documents/knowledge/videos
 
 `roster` 的 `registry.json`、`state.json` 留原地。`<VAULT_PATH>/url-index.db` 留原地——0 行，全仓库只有 `skills/archived/extract-url/` 的测试引用它，是死文件。
 
-**孤儿的处理。** `<VAULT_PATH>` 顶层的 `Origin/`（9 篇 md）和 `Image/`（58 张图，7 个 hash 前缀无一对应现存文章目录）是更早版本 clip-url 的扁平布局遗留，两堆互不引用，都没有 `meta.json`。原样复制进 `<ROOT>/articles/_orphans/`，**不代造 `meta.json`**：`source_url` 无从得知，造一个假的会污染 §3.2 的索引。下划线前缀使其与 `<hash8>` 实体目录在命名上不会混淆。
+**孤儿的处理。** `<VAULT_PATH>` 顶层的 `Origin/`（9 篇原文）、根目录下的 5 篇译文、以及 `Image/`（58 张图）是更早版本 clip-url 的扁平布局遗留：译文放 vault 根、原文放 `Origin/`、图片放 `Image/<前缀>_img_N.ext`，引用写成 vault 根相对的 `Image/...`。`migrate-store.sh` 原样复制进 `<ROOT>/articles/_orphans/{Origin,Translation,Image}/`，**不代造 `meta.json`**。译文的识别靠 frontmatter 里有没有 `source_url`——用户手写的笔记没有这一行，天然被排除，不需要维护文件名白名单。
+
+**孤儿重建（`scripts/rebuild-orphan-articles.py`，单独一步）。** 这批文件的 frontmatter 其实带着 `source_url` / `origin_title` / `fetch_date`，所以 `meta.json` 可以**推导**而非编造——这是本脚本获准往索引里写东西的全部理由。只在无歧义时重建：`hash8 = md5(source_url)[:8]` 尚无对应实体，**且**恰好只有一个 `Origin/*.md` 映射到它。多个文件共用同一个 `source_url` 意味着同一篇被抓了多次，选哪个是人工判断，一律跳过并报告。重建时把 `Image/<前缀>_img_N` 复制成 `<hash8>/Image/img_N` 并把引用改写为 `../Image/img_N`，以匹配嵌套布局。
+
+本机实跑结果：9 篇里 2 篇已是正式实体、3 篇共用一个 `source_url`（Anthropic Economic Index，`e19bdeb4`，待人工三选一）、4 篇重建成功。
 
 **关键风险与约束：** `VAULT_PATH` 指向的是用户的 Obsidian vault 根，里面混着用户手写的笔记。脚本**禁止整目录操作**，只复制同时满足两个条件的子目录：目录名匹配 `^[0-9a-f]{8}$`，且目录内含 `meta.json`。其余一律不碰（`Origin/`、`Image/` 是上面显式点名的例外），并在 dry-run 输出里列出"跳过的目录"让用户核对。
 
