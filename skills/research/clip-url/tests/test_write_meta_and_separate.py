@@ -14,9 +14,9 @@ import vault_config  # noqa: E402
 
 
 @pytest.fixture(autouse=True)
-def valid_vault_config(isolated_vault_config, tmp_path, monkeypatch):
-    vault_path = isolated_vault_config.parent / "vault"
-    isolated_vault_config.write_text(json.dumps({"VAULT_PATH": str(vault_path)}), encoding="utf-8")
+def valid_store_config(isolated_store_config, tmp_path, monkeypatch):
+    root = tmp_path / "knowledge"
+    isolated_store_config.write_text(json.dumps({"knowledgeRoot": str(root)}), encoding="utf-8")
     fixed_tags_path = tmp_path / "fixed_tags.txt"
     fixed_tags_path.write_text("ai\n", encoding="utf-8")
     monkeypatch.setenv("FIXED_TAGS_PATH", str(fixed_tags_path))

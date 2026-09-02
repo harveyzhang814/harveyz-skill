@@ -13,9 +13,9 @@ from vault_config import get_article_paths  # noqa: E402
 
 
 @pytest.fixture(autouse=True)
-def valid_vault_config(isolated_vault_config):
-    vault_path = isolated_vault_config.parent / "vault"
-    isolated_vault_config.write_text(json.dumps({"VAULT_PATH": str(vault_path)}), encoding="utf-8")
+def valid_store_config(isolated_store_config, tmp_path):
+    root = tmp_path / "knowledge"
+    isolated_store_config.write_text(json.dumps({"knowledgeRoot": str(root)}), encoding="utf-8")
 
 
 def test_returns_false_when_no_meta_json():

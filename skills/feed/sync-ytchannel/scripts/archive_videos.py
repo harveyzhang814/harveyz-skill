@@ -22,7 +22,7 @@ from config import get_data_dir
 
 
 def _archive_path(handle: str) -> Path:
-    return Path(get_data_dir()) / "youtube" / "creators" / f"{handle}.json"
+    return Path(get_data_dir()) / "creators" / f"{handle}.json"
 
 
 def archive_videos(report: dict) -> None:

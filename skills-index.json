@@ -56,8 +56,8 @@
       "path": "research/learn-video",
       "bundle": "research",
       "installScope": "global",
-      "contentHash": "bbd4d47bb386e182",
-      "contentVersion": "1.6.1"
+      "contentHash": "8d0f1ffeab52e513",
+      "contentVersion": "1.7.0"
     },
     {
       "path": "research/survey-skillrepo",
@@ -105,22 +105,22 @@
       "path": "research/clip-url",
       "bundle": "research",
       "installScope": "project",
-      "contentHash": "588dc9194f846fa8",
-      "contentVersion": "0.8.1"
+      "contentHash": "9162d358b877b375",
+      "contentVersion": "0.9.0"
     },
     {
       "path": "feed/sync-xtimeline",
       "bundle": "feed",
       "installScope": "project",
-      "contentHash": "23fc4c422fbb66ba",
-      "contentVersion": "0.7.1"
+      "contentHash": "5c8557cc442f9277",
+      "contentVersion": "0.8.0"
     },
     {
       "path": "feed/sync-ytchannel",
       "bundle": "feed",
       "installScope": "project",
-      "contentHash": "1fc93a9bf01e4167",
-      "contentVersion": "0.6.1"
+      "contentHash": "a6b9df4e049d169f",
+      "contentVersion": "0.7.0"
     },
     {
       "path": "creative/capture-todo",

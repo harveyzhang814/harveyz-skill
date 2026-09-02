@@ -54,7 +54,6 @@ def fake_roster(monkeypatch, tmp_path):
     monkeypatch.setattr(
         roster_client, "set_error",
         lambda h, error, run_time: fake.errors.__setitem__(h, error))
-    monkeypatch.setattr(roster_client, "data_dir", lambda: tmp_path)
     return fake
 
 
@@ -73,7 +72,7 @@ def fake_fetch(monkeypatch):
 
 
 def _pending_path() -> Path:
-    return get_data_dir() / "youtube" / "pending.json"
+    return get_data_dir() / "pending.json"
 
 
 def test_run_first_time_establishes_baseline_without_listing_videos(fake_roster, fake_fetch):
@@ -130,13 +129,13 @@ def test_nothing_new_leaves_the_channel_out_of_cursors(fake_roster, fake_fetch):
     assert "a" not in report["cursors"]
 
 
-def test_videos_already_in_archive_are_still_reported(fake_roster, fake_fetch, tmp_path):
+def test_videos_already_in_archive_are_still_reported(fake_roster, fake_fetch):
     """上一轮崩在归档之后、推进游标之前，游标没动，这一轮会重抓到同一批。
     照常报出来，代价只是多一份摘要；被归档过滤掉的话它们就永远不会出现在
     任何一份摘要里。"""
     fake_roster.watch("a", "https://www.youtube.com/@a")
     fake_roster.cursors["a"] = ["https://www.youtube.com/watch?v=v1"]
-    archive_path = tmp_path / "youtube" / "creators" / "a.json"
+    archive_path = get_data_dir() / "creators" / "a.json"
     archive_path.parent.mkdir(parents=True)
     archive_path.write_text(json.dumps([_video("v2", "Already archived")]), encoding="utf-8")
     fake_fetch["https://www.youtube.com/@a"] = [

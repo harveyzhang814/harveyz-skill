@@ -13,20 +13,18 @@ from conftest import write_config
 SCRIPT = Path(__file__).resolve().parent.parent / "scripts" / "archive_videos.py"
 
 
-def _run(report: dict, data_dir: Path) -> subprocess.CompletedProcess:
-    config_path = data_dir.parent / "config.json"
-    write_config(config_path, data_dir)
+def _run(report: dict, root: Path) -> subprocess.CompletedProcess:
+    config_path = root.parent / "config.json"
+    write_config(config_path, root)
     return subprocess.run(
         [sys.executable, str(SCRIPT)],
         input=json.dumps(report),
-        env={**os.environ, "HSKILL_ROSTER_CONFIG": str(config_path)},
+        env={**os.environ, "HSKILL_CONFIG": str(config_path)},
         capture_output=True, text=True, timeout=10,
     )
 
 
-def test_archive_videos_writes_new_handle_file(tmp_path, monkeypatch):
-    import roster_client
-    monkeypatch.setattr(roster_client, "data_dir", lambda: tmp_path)
+def test_archive_videos_writes_new_handle_file():
     report = {
         "run_time": "2026-08-15T09:00:00+00:00",
         "new": {"a": [{"video_id": "v1", "url": "u1", "title": "T", "translated": "译"}]},
@@ -36,9 +34,7 @@ def test_archive_videos_writes_new_handle_file(tmp_path, monkeypatch):
     assert saved == report["new"]["a"]
 
 
-def test_archive_videos_appends_across_calls(tmp_path, monkeypatch):
-    import roster_client
-    monkeypatch.setattr(roster_client, "data_dir", lambda: tmp_path)
+def test_archive_videos_appends_across_calls():
     first = {"run_time": "t", "new": {"a": [{"video_id": "v1", "url": "u1", "title": "T1"}]}}
     second = {"run_time": "t", "new": {"a": [{"video_id": "v2", "url": "u2", "title": "T2"}]}}
     archive_videos(first)
@@ -47,9 +43,7 @@ def test_archive_videos_appends_across_calls(tmp_path, monkeypatch):
     assert [v["video_id"] for v in saved] == ["v1", "v2"]
 
 
-def test_archive_videos_dedups_by_video_id(tmp_path, monkeypatch):
-    import roster_client
-    monkeypatch.setattr(roster_client, "data_dir", lambda: tmp_path)
+def test_archive_videos_dedups_by_video_id():
     report = {"run_time": "t", "new": {"a": [{"video_id": "v1", "url": "u1", "title": "T"}]}}
     archive_videos(report)
     archive_videos(report)
@@ -57,9 +51,7 @@ def test_archive_videos_dedups_by_video_id(tmp_path, monkeypatch):
     assert len(saved) == 1
 
 
-def test_archive_videos_keeps_handles_isolated(tmp_path, monkeypatch):
-    import roster_client
-    monkeypatch.setattr(roster_client, "data_dir", lambda: tmp_path)
+def test_archive_videos_keeps_handles_isolated():
     report = {
         "run_time": "t",
         "new": {
@@ -72,26 +64,22 @@ def test_archive_videos_keeps_handles_isolated(tmp_path, monkeypatch):
     assert [v["video_id"] for v in json.loads(_archive_path("b").read_text(encoding="utf-8"))] == ["v9"]
 
 
-def test_archive_videos_noop_when_report_has_no_new(tmp_path, monkeypatch):
-    import roster_client
-    monkeypatch.setattr(roster_client, "data_dir", lambda: tmp_path)
+def test_archive_videos_noop_when_report_has_no_new():
     report = {"run_time": "t", "new": {}, "baselines": {"c": 3}, "failures": {}}
     archive_videos(report)
     assert not _archive_path("c").exists()
 
 
-def test_archive_path_is_under_youtube_creators(tmp_path, monkeypatch):
-    import roster_client
-    monkeypatch.setattr(roster_client, "data_dir", lambda: tmp_path)
-    assert _archive_path("a") == tmp_path / "youtube" / "creators" / "a.json"
+def test_archive_path_is_under_creators(isolated_data_dir):
+    assert _archive_path("a") == isolated_data_dir / "creators" / "a.json"
 
 
 def test_cli_archives_report_from_stdin(tmp_path):
-    data_dir = tmp_path / "data"
+    root = tmp_path / "knowledge"
     report = {"run_time": "t", "new": {"a": [{"video_id": "v1", "url": "u1", "title": "T"}]}}
-    result = _run(report, data_dir)
+    result = _run(report, root)
     assert result.returncode == 0, result.stderr
-    saved = json.loads((data_dir / "youtube" / "creators" / "a.json").read_text(encoding="utf-8"))
+    saved = json.loads((root / "feeds" / "youtube" / "creators" / "a.json").read_text(encoding="utf-8"))
     assert saved == report["new"]["a"]
 
 
