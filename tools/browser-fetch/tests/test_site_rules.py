@@ -1,9 +1,12 @@
 """Unit tests for site_rules.py's per-domain selector-rule store — pure
 filesystem I/O, no playwright, no network. Mirrors test_config.py's style
 for the sibling config.py module."""
+import pytest
+
 from browser_fetch import site_rules
 
 SELECTORS = {"item": "div.entry", "title": "h3 a", "link": "h3 a", "date": "p.date"}
+BAD_DOMAINS = ["../../../tmp/evil", "a/b", "a\\b"]
 
 
 def test_get_rule_returns_none_when_unset(tmp_path):
@@ -61,3 +64,21 @@ def test_remove_rule_returns_false_when_nothing_to_remove(tmp_path):
 def test_rules_for_different_domains_are_isolated(tmp_path):
     site_rules.set_rule(tmp_path, "a.example", "https://a.example/", SELECTORS, [], "t")
     assert site_rules.get_rule(tmp_path, "b.example") is None
+
+
+@pytest.mark.parametrize("domain", BAD_DOMAINS)
+def test_get_rule_rejects_path_traversal_domain(tmp_path, domain):
+    with pytest.raises(ValueError):
+        site_rules.get_rule(tmp_path, domain)
+
+
+@pytest.mark.parametrize("domain", BAD_DOMAINS)
+def test_set_rule_rejects_path_traversal_domain(tmp_path, domain):
+    with pytest.raises(ValueError):
+        site_rules.set_rule(tmp_path, domain, "https://example.com/", SELECTORS, [], "t")
+
+
+@pytest.mark.parametrize("domain", BAD_DOMAINS)
+def test_remove_rule_rejects_path_traversal_domain(tmp_path, domain):
+    with pytest.raises(ValueError):
+        site_rules.remove_rule(tmp_path, domain)

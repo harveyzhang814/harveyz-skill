@@ -16,6 +16,8 @@ def _rules_dir(data_dir: Path) -> Path:
 
 
 def _rule_path(data_dir: Path, domain: str) -> Path:
+    if "/" in domain or "\\" in domain or ".." in domain:
+        raise ValueError(f"invalid domain: {domain!r}")
     return _rules_dir(data_dir) / f"{domain}.json"
 
 
