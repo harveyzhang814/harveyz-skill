@@ -87,7 +87,12 @@ echo ""
 if [[ "$VERIFY" -eq 1 ]]; then
   VAULT_PATH="$(_json_get "$VAULT_CONFIG" VAULT_PATH || true)"
   DATA_DIR="$(_json_get "$ROSTER_CONFIG" DATA_DIR || true)"
-  LEGACY_X="${HSKILL_LEGACY_XTIMELINE:-$HOME/.hskill/sync-xtimeline}"
+  # Same resolution as the copy pass below: the old layout's products live at
+  # its config.json's DATA_DIR, not in the skill dir. Reading the skill dir
+  # here would count 0 files and pass vacuously.
+  LEGACY_X_CONFIG="${HSKILL_LEGACY_XTIMELINE:-$HOME/.hskill/sync-xtimeline}"
+  LEGACY_X="$(_json_get "$LEGACY_X_CONFIG/config.json" DATA_DIR || true)"
+  [[ -z "$LEGACY_X" ]] && LEGACY_X="$LEGACY_X_CONFIG"
   ROOT="$ROOT" VAULT_PATH="$VAULT_PATH" DATA_DIR="$DATA_DIR" LEGACY_X="$LEGACY_X" python3 - <<'PY'
 import os, sqlite3, sys
 from pathlib import Path
@@ -134,6 +139,11 @@ def report_copy(label, src: Path, dst: Path):
         return
     total, missing, mismatched = copied_intact(src, dst)
     bad = missing + mismatched
+    if not bad and total == 0:
+        # "0 files, all matched" is how a wrongly-resolved source path looks.
+        # Say so instead of printing a green tick nobody can falsify.
+        print(f"{YELLOW}⚠{OFF} {label} — 源目录里一个文件都没有（{src}），本条未构成有效校验")
+        return
     check(label, not bad, f"{total} 个文件全部对上" if not bad
           else f"{len(missing)} 个缺失 / {len(mismatched)} 个大小不符，例如 {bad[0]}")
 
@@ -164,13 +174,35 @@ if vault and Path(vault).is_dir():
     orig = [d.name for d in Path(vault).iterdir() if d.is_dir() and (d / "meta.json").is_file()]
     check("源文章目录未被删除（本脚本只复制）", len(orig) > 0 or not orig, f"{len(orig)} 个仍在原处")
 
+def report_merge(label, src: Path, dst: Path):
+    """The legacy layout is merged file-by-file with same-name-skipped, so its
+    contract is 'the name is present at the target', not 'the bytes match'.
+    A collision means roster's newer file won — that is intended, but it is
+    also a real difference the user has to decide about, so name it."""
+    if not src.is_dir():
+        print(f"{DIM}· {label} — 源不存在，跳过{OFF}")
+        return
+    names = [f for f in src.iterdir() if f.is_file() and f.name != ".DS_Store"]
+    if not names:
+        print(f"{YELLOW}⚠{OFF} {label} — 源目录里一个文件都没有（{src}），本条未构成有效校验")
+        return
+    absent = [f.name for f in names if not (dst / f.name).is_file()]
+    collided = [f.name for f in names
+                if (dst / f.name).is_file() and (dst / f.name).stat().st_size != f.stat().st_size]
+    check(label, not absent,
+          f"{len(names)} 个名字都已在目标就位" if not absent else f"缺 {len(absent)} 个：{absent[0]}")
+    if collided:
+        print(f"{DIM}  ↳ {len(collided)} 个同名但内容不同，目标保留的是较新来源的版本："
+              f"{', '.join(collided)}。旧版仍在 {src}，留待阶段 6 处置{OFF}")
+
+
 print("\n── 3. Feed ──")
 if data_dir:
     report_copy("tweets", Path(data_dir) / "tweets", root / "feeds" / "tweets")
     report_copy("youtube", Path(data_dir) / "youtube", root / "feeds" / "youtube")
 if legacy_x and Path(legacy_x).is_dir():
-    report_copy("旧布局 digests", Path(legacy_x) / "digests", root / "feeds" / "tweets" / "digest")
-    report_copy("旧布局 tweets", Path(legacy_x) / "tweets", root / "feeds" / "tweets" / "creators")
+    report_merge("旧布局 digests", Path(legacy_x) / "digests", root / "feeds" / "tweets" / "digest")
+    report_merge("旧布局 tweets", Path(legacy_x) / "tweets", root / "feeds" / "tweets" / "creators")
 
 print("\n── 4. 视频 ──")
 work = root / "videos" / "work"
