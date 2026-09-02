@@ -16,8 +16,21 @@ _YOUTUBE_RE = re.compile(
 _X_RE = re.compile(
     r"^https?://(?:www\.)?(?:x|twitter)\.com/@?([A-Za-z0-9_]+)/?(?:[?#].*)?$"
 )
-_YOUTUBE_HOSTS = {"youtube.com", "www.youtube.com", "m.youtube.com"}
-_X_HOSTS = {"x.com", "www.x.com", "twitter.com", "www.twitter.com"}
+_YOUTUBE_HOSTS = {
+    "youtube.com",
+    "www.youtube.com",
+    "m.youtube.com",
+    "youtu.be",
+    "music.youtube.com",
+}
+_X_HOSTS = {
+    "x.com",
+    "www.x.com",
+    "twitter.com",
+    "www.twitter.com",
+    "m.twitter.com",
+    "mobile.twitter.com",
+}
 
 
 def parse_channel_url(url: str) -> tuple[str, str]:

@@ -28,6 +28,10 @@ def test_parse_channel_url(url, expected):
     "https://www.youtube.com/watch?v=abc",
     "https://x.com/a/b/c",
     "ftp://simonwillison.net/",
+    "https://youtu.be/dQw4w9WgXcQ",
+    "https://music.youtube.com/watch?v=abc",
+    "https://m.twitter.com/karpathy",
+    "https://mobile.twitter.com/karpathy",
 ])
 def test_parse_channel_url_rejects(url):
     with pytest.raises(ValueError):
