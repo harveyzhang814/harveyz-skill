@@ -58,7 +58,9 @@ handle 生成规则：域名 slug，去掉 `www.`，点换连字符。`https://s
 
 这是本设计跟直觉方案分歧最大的一处。直觉方案是让 skill 持有 selector、每次调用传进去；本设计把规则**沉淀进 browser-fetch 自己的 data dir**，`articles` 子命令在生产路径上不接受任何 selector 参数。
 
-理由：browser-fetch 已经有 `dispatch_site()`（`tools/browser-fetch/browser_fetch/extractors.py:20`）做「域名 → 抽取器」的路由，只是这张表现在写死在代码里。规则库是把这张表从编译期扩到运行时，而不是新加一套并行机制。skill 侧因此可以保持纯 stdlib + subprocess——`skills/feed/sync-ytchannel/scripts/` 全部 import 只有标准库和同目录模块，这个性质值得保住。
+理由：抽取规则是「每个站一份、会持续增加、会被改写」的**数据**，它的自然归属是有持久化能力的那一层。browser-fetch 已经有 data dir 和读写它的惯例（`config.py`），skill 侧没有。放这里，sync-website 就能保持纯 stdlib + subprocess——`skills/feed/sync-ytchannel/scripts/` 全部 import 只有标准库和同目录模块，这个性质值得保住。
+
+**规则库与 `dispatch_site()` 没有任何关系，不得合并。** `dispatch_site()`（`extractors.py:20`）现在被 `fetch_article`（`core.py:383`）和 `fetch_user_timeline`（`core.py:549`）调用，前者是 clip-url 的主路径，后者是 sync-xtimeline 的 X 守卫。规则库是 `fetch_articles` 自己的一次独立查表，走单独的函数，不进 `dispatch_site()` 的分支，也不改它的返回值域。
 
 **规则库位置：** `_data_dir()/site_rules/<domain>.json`，`_data_dir()` 沿用 `core.py:44` 的解析（`BROWSER_FETCH_DATA_DIR` 可覆盖，测试用）。
 
@@ -117,6 +119,32 @@ skill 侧的脚本跟 sync-ytchannel 一一对应，不多也不少：
 | `fetch_new_videos.py` | `fetch_new_articles.py` | 多一条自愈分支，见 4.2 |
 | `digest.py` | 同 | 多一行「本轮重新标定过」标注 |
 | `archive_videos.py` | `archive_articles.py` | 按 `url` 去重（youtube 版按 `video_id`） |
+
+
+### 3.4 隔离约束：新增不得影响 browser-fetch 现有功能
+
+现有消费方：`clip-url`（`article` / `page` / `eval` / `profile`）、`sync-xtimeline`（`timeline`）、`sync-ytchannel`（`channel`）。以下是核过代码后确认的隔离依据，实现时逐条守住。
+
+**1. CLI 是平铺的 dispatch 表，新增只做追加。** `build_parser()`（`cli.py:29`）里每个子命令各自 `set_defaults(handler=...)`，`main()` 只调 `args.handler`，子命令之间无共享分支。新增 `articles` / `articles-probe` / `articles-rule` = 在 `build_parser()` 末尾追加三段，**不修改任何已有 subparser 的定义**。
+
+**2. core 层的六个入口互不调用。** `fetch_page` / `fetch_article` / `fetch_user_timeline` / `fetch_channel_videos` / `evaluate_js` 是平级的 top-level async 函数，彼此没有调用关系。`fetch_articles` 是第六个同级函数，**不得为它重构任何已有函数**。
+
+**3. 共享设施只读复用，不改签名不改行为。** 允许复用且仅允许复用这三样：
+   - `_get_context(key)` / `_profile_key()`（`core.py:56,69`）——浏览器 context 池
+   - `config.get_default_chrome_profile(_data_dir())`——默认 Chrome profile
+   - `extract_cookies()`——cookie 注入
+
+   `fetch_channel_videos` 和 `evaluate_js` 已经各自在用同一组，新增第三个消费者不改变它们的行为。**任何一处需要改这三样的签名或语义，都说明设计走偏了，停下来重新设计，不要顺手改。**
+
+**4. `dispatch_site()` 一行不动。** 理由见 3.2。
+
+**5. pacing 状态不共享。** `timeline_pace.json` 只被 `fetch_user_timeline` 读写（`core.py:570,612`）。`articles` 第一版不加 pacing，等于不碰这个文件。将来若要给 `articles` 加冷却，**必须用独立的状态文件**，不得复用 `get_last_timeline_fetch_at` / `set_last_timeline_fetch_at`——共用会让抓网站把 X 的冷却计时器顶掉。
+
+**6. 规则库是 data dir 下的新目录。** `_data_dir()/site_rules/` 跟已有的 `config.json`、`timeline_pace.json`、`contexts/` 平级且不重叠。规则库不存在或为空时，除 `articles` 之外的所有子命令行为完全不变。
+
+**7. 没有第二个暴露面需要同步。** `tools/browser-fetch-mcp/` 只剩 `__pycache__`，源码已空——MCP 包装层已退役，现在消费方只有 CLI。所以新增子命令不需要同步任何 MCP tool 定义。（附带说明：这个目录是遗留死代码，本设计不动它，只是记下来。）
+
+**8. 回归基线。** `tools/browser-fetch` 当前 **141 passed**（本设计成稿时实跑确认）。验收线：改完之后仍然是 141 passed，加上新增用例——**已有用例一个都不许改**。任何一个已有用例需要修改才能通过，就是隔离被破坏了，退回重做。
 
 ---
 
@@ -238,7 +266,7 @@ skill 侧的脚本跟 sync-ytchannel 一一对应，不多也不少：
 
 | 决策 | 代价 |
 |---|---|
-| 规则沉淀进 browser-fetch | 工具从「只认它自己懂的平台」变成「知识可在运行时扩充」。data dir 里多一份会长大的状态，且**这份状态的正确性没有单元测试能覆盖**——测试能证明「规则被正确应用了」，证明不了「规则本身对不对」 |
+| 规则沉淀进 browser-fetch | 工具从「只认它自己懂的平台」变成「知识可在运行时扩充」。data dir 里多一份会长大的状态，且**这份状态的正确性没有单元测试能覆盖**——测试能证明「规则被正确应用了」，证明不了「规则本身对不对」。对现有功能的影响由 §3.4 的八条约束兜住，其中 1/2/3/4 是设计约束（违反即返工），8 是可执行的验收线 |
 | 规则存 selector 数据而非 JS | 表达力有上限。shadow DOM、要点「加载更多」才出内容、纯 canvas 渲染的列表，都抽不了，只能报失败 |
 | run 内自愈 | run 不再纯机械。一次改版可能悄悄换掉规则、抽出错的东西，而摘要看起来正常。用 4.3 的显式标注缓解，缓解不等于消除 |
 | 一个域名一个渠道 | 多栏目站（`openai.com/news` + `/research`）只能追一个 |
@@ -251,7 +279,7 @@ skill 侧的脚本跟 sync-ytchannel 一一对应，不多也不少：
 
 ## 8. 判断
 
-**技术判断：** 三处新增里，`roster/urls.py` 的兜底匹配是风险最高的一处——它改的是共享工具上一个已经有明确拒绝语义的函数，而 sync-xtimeline / sync-ytchannel 都依赖它。这一处应该最先写测试、最先合。browser-fetch 的规则库是纯新增，不动现有码路，风险最低。
+**技术判断：** 对现有功能的风险不在 browser-fetch。它的 CLI 是平铺 dispatch、core 是互不调用的平级函数，新增走的是纯追加路径，§3.4 的八条约束是可检查的。真正的风险在 `roster/urls.py` 的兜底匹配——那是三处新增里唯一动到已有语义的地方——它改的是共享工具上一个已经有明确拒绝语义的函数，而 sync-xtimeline / sync-ytchannel 都依赖它。这一处应该最先写测试、最先合。browser-fetch 的规则库是纯新增，不动现有码路，风险最低。
 
 **产品判断（依据只到代码为止，未考虑你的实际信源清单）：** 「一个域名一个渠道」这条约束，取决于你想追的站里有多少是多栏目机构站。如果 OpenAI / Anthropic / 大厂 blog 占比高，这条约束会很快咬人，那时候要么改成「域名+路径」粒度、要么给 roster 加同域多渠道支持——两条都是改共享工具。第一版按域名做，是赌你追的多数是个人博客和单列表页的站。这个赌注值得在实装前对着你的实际清单验一下。
 
@@ -263,7 +291,12 @@ skill 侧的脚本跟 sync-ytchannel 一一对应，不多也不少：
 
 - `tools/roster/roster/urls.py` 现在只认 YouTube / X，`/watch?v=` 被明确拒绝
 - `tools/roster/roster/registry.py` 的 `find_channel` 按 `(platform, handle)` 唯一
-- `tools/browser-fetch/browser_fetch/extractors.py:20` 的 `dispatch_site()` 是硬编码 hostname 路由
+- `tools/browser-fetch/browser_fetch/extractors.py:20` 的 `dispatch_site()` 是硬编码 hostname 路由，被 `fetch_article`（`core.py:383`）和 `fetch_user_timeline`（`core.py:549`）调用
+- `cli.py` 的子命令是平铺 dispatch 表，各自 `set_defaults(handler=...)`，互不共享分支
+- core 的六个入口是平级 top-level async 函数，互不调用；共享的只有 `_get_context` / `_profile_key` / `config.get_default_chrome_profile` / `extract_cookies`
+- `timeline_pace.json` 只在 `fetch_user_timeline` 里读写（`core.py:570,612`）
+- `tools/browser-fetch-mcp/` 源码已空，只剩 `__pycache__`——MCP 包装层已退役
+- `tools/browser-fetch` 当前测试 141 passed（实跑）
 - `tools/browser-fetch/browser_fetch/core.py:44` 的 `_data_dir()` 支持 `BROWSER_FETCH_DATA_DIR` 覆盖
 - browser-fetch 依赖只有 playwright + pycookiecheat；`skills/feed/sync-ytchannel/scripts/` 全部 import 只有标准库和同目录模块
 - browser-fetch 已有 `eval <url> --js-file` 子命令，help 文本标注「调试用」
