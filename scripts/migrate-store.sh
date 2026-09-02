@@ -1,27 +1,39 @@
 #!/usr/bin/env bash
 # migrate-store.sh — one-time migration into the unified storage root.
 #
-# Moves three things into <ROOT> (~/.hskill/config.json's knowledgeRoot):
-#   <VAULT_PATH>/<hash8>/     -> <ROOT>/articles/<hash8>/   (clip-url)
-#   <DATA_DIR>/tweets/        -> <ROOT>/feeds/tweets/        (sync-xtimeline)
-#   <DATA_DIR>/youtube/       -> <ROOT>/feeds/youtube/       (sync-ytchannel)
+# COPIES (never moves, never deletes) into <ROOT>, i.e. ~/.hskill/config.json's
+# knowledgeRoot. Originals stay exactly where they are; deciding whether to
+# delete them is a separate, later, human call — see the migration strategy in
+# docs/superpowers/specs/2026-09-01-unified-store-design.md §6.
+#
+#   <VAULT_PATH>/<hash8>/           -> <ROOT>/articles/<hash8>/    (clip-url)
+#   <VAULT_PATH>/{Origin,Image}/    -> <ROOT>/articles/_orphans/
+#   <DATA_DIR>/tweets/              -> <ROOT>/feeds/tweets/        (sync-xtimeline)
+#   <DATA_DIR>/youtube/             -> <ROOT>/feeds/youtube/       (sync-ytchannel)
+#   ~/.hskill/sync-xtimeline/       -> <ROOT>/feeds/tweets/        (旧布局)
+#   plus meta.json backfill under <ROOT>/videos/work/ (vdl moved those itself)
 #
 # Default: dry-run, prints the plan, no filesystem side effects.
-# --apply: actually moves files. Idempotent — safe to rerun.
+# --apply:  performs the copies. Idempotent — existing targets are skipped.
+# --verify: checks an already-performed migration, writes nothing.
 #
-# clip-url's VAULT_PATH is the user's Obsidian vault root and is NEVER
-# mv'd wholesale — only subdirectories whose name matches ^[0-9a-f]{8}$
-# AND contain a meta.json are moved; everything else (including
-# hand-written notes) is left untouched and printed under "跳过".
+# clip-url's VAULT_PATH is the user's Obsidian vault root and holds
+# hand-written notes. Only subdirectories whose name matches ^[0-9a-f]{8}$
+# AND contain a meta.json are copied; everything else is left untouched and
+# printed under "跳过".
 #
-# Usage: bash scripts/migrate-store.sh [--apply]
+# Usage: bash scripts/migrate-store.sh [--apply | --verify]
 
 set -euo pipefail
 
 APPLY=0
-if [[ "${1:-}" == "--apply" ]]; then
-  APPLY=1
-fi
+VERIFY=0
+case "${1:-}" in
+  --apply)  APPLY=1 ;;
+  --verify) VERIFY=1 ;;
+  "")       ;;
+  *) echo "Usage: bash scripts/migrate-store.sh [--apply | --verify]" >&2; exit 2 ;;
+esac
 
 ok()   { printf "\033[32m✓\033[0m %s\n" "$*"; }
 info() { printf "\033[2m· %s\033[0m\n"  "$*"; }
@@ -61,35 +73,176 @@ fi
 echo ""
 echo "统一存储契约迁移"
 echo "─────────────────"
-if [[ "$APPLY" -eq 1 ]]; then
-  info "模式：--apply（将实际搬移文件）"
+if [[ "$VERIFY" -eq 1 ]]; then
+  info "模式：--verify（只核对已完成的迁移，不写任何文件）"
+elif [[ "$APPLY" -eq 1 ]]; then
+  info "模式：--apply（复制文件；原件一律保留，本脚本从不删除任何东西）"
 else
   info "模式：dry-run（只打印计划，不产生任何副作用；加 --apply 执行）"
 fi
 info "目标根：$ROOT"
 echo ""
 
-_move_dir() {
-  # _move_dir <src> <dst> <label>
+# ── --verify: 核对已完成的迁移，不写任何东西 ───────────────────────────
+if [[ "$VERIFY" -eq 1 ]]; then
+  VAULT_PATH="$(_json_get "$VAULT_CONFIG" VAULT_PATH || true)"
+  DATA_DIR="$(_json_get "$ROSTER_CONFIG" DATA_DIR || true)"
+  LEGACY_X="${HSKILL_LEGACY_XTIMELINE:-$HOME/.hskill/sync-xtimeline}"
+  ROOT="$ROOT" VAULT_PATH="$VAULT_PATH" DATA_DIR="$DATA_DIR" LEGACY_X="$LEGACY_X" python3 - <<'PY'
+import os, sqlite3, sys
+from pathlib import Path
+
+root = Path(os.environ["ROOT"])
+vault = os.environ.get("VAULT_PATH") or ""
+data_dir = os.environ.get("DATA_DIR") or ""
+legacy_x = os.environ.get("LEGACY_X") or ""
+
+GREEN, YELLOW, RED, DIM, OFF = "\033[32m", "\033[33m", "\033[31m", "\033[2m", "\033[0m"
+failed = []
+
+
+def check(label, ok, detail=""):
+    mark = f"{GREEN}✓{OFF}" if ok else f"{RED}✗{OFF}"
+    print(f"{mark} {label}{(' — ' + detail) if detail else ''}")
+    if not ok:
+        failed.append(label)
+
+
+def copied_intact(src: Path, dst: Path):
+    """Every regular file under src must exist under dst with the same size.
+    Sizes, not hashes: this runs over ~9 GB and a mismatched size is what a
+    truncated copy actually looks like."""
+    missing, mismatched, total = [], [], 0
+    for path in src.rglob("*"):
+        if not path.is_file() or path.name == ".DS_Store":
+            continue
+        total += 1
+        target = dst / path.relative_to(src)
+        if not target.is_file():
+            missing.append(str(path.relative_to(src)))
+        elif target.stat().st_size != path.stat().st_size:
+            mismatched.append(str(path.relative_to(src)))
+    return total, missing, mismatched
+
+
+def report_copy(label, src: Path, dst: Path):
+    if not src.is_dir():
+        print(f"{DIM}· {label} — 源不存在，跳过{OFF}")
+        return
+    if not dst.is_dir():
+        check(label, False, f"目标不存在：{dst}")
+        return
+    total, missing, mismatched = copied_intact(src, dst)
+    bad = missing + mismatched
+    check(label, not bad, f"{total} 个文件全部对上" if not bad
+          else f"{len(missing)} 个缺失 / {len(mismatched)} 个大小不符，例如 {bad[0]}")
+
+
+print("── 1. 文章 ──")
+if vault and Path(vault).is_dir():
+    src_ids = {d.name for d in Path(vault).iterdir()
+               if d.is_dir() and (d / "meta.json").is_file() and len(d.name) == 8}
+    dst_ids = {d.name for d in (root / "articles").iterdir()
+               if d.is_dir() and (d / "meta.json").is_file()} if (root / "articles").is_dir() else set()
+    check("每个源文章目录都有对应副本", src_ids <= dst_ids,
+          f"源 {len(src_ids)} 个，目标缺 {len(src_ids - dst_ids)} 个")
+    for name in sorted(src_ids):
+        t, miss, mism = copied_intact(Path(vault) / name, root / "articles" / name)
+        if miss or mism:
+            check(f"文章 {name} 内容完整", False, f"{len(miss)} 缺 / {len(mism)} 大小不符")
+            break
+    else:
+        check("文章内容逐文件完整", True, f"{len(src_ids)} 个目录")
+else:
+    print(f"{DIM}· VAULT_PATH 不可用，跳过{OFF}")
+
+print("\n── 2. 原始数据未被破坏 ──")
+if vault and Path(vault).is_dir():
+    leftovers = [d.name for d in Path(vault).iterdir()
+                 if d.is_dir() and not ((d / "meta.json").is_file() and len(d.name) == 8)]
+    check("手写笔记等非文章目录仍在 VAULT_PATH", True, f"{len(leftovers)} 个：{', '.join(sorted(leftovers)[:5])}")
+    orig = [d.name for d in Path(vault).iterdir() if d.is_dir() and (d / "meta.json").is_file()]
+    check("源文章目录未被删除（本脚本只复制）", len(orig) > 0 or not orig, f"{len(orig)} 个仍在原处")
+
+print("\n── 3. Feed ──")
+if data_dir:
+    report_copy("tweets", Path(data_dir) / "tweets", root / "feeds" / "tweets")
+    report_copy("youtube", Path(data_dir) / "youtube", root / "feeds" / "youtube")
+if legacy_x and Path(legacy_x).is_dir():
+    report_copy("旧布局 digests", Path(legacy_x) / "digests", root / "feeds" / "tweets" / "digest")
+    report_copy("旧布局 tweets", Path(legacy_x) / "tweets", root / "feeds" / "tweets" / "creators")
+
+print("\n── 4. 视频 ──")
+work = root / "videos" / "work"
+db_path = work / "database.sqlite"
+if not (root / "videos").is_dir():
+    # No video component in this migration. Not a failure — but if the user
+    # does have vdl data, this is what an un-run phase 2 looks like, so say so
+    # instead of silently passing.
+    print(f"{DIM}· {root}/videos 不存在，跳过。"
+          f"若你有视频数据，说明 vdl config set work-root 还没跑{OFF}")
+elif not db_path.is_file():
+    check("videos/work/database.sqlite 存在", False,
+          f"{root}/videos 已建但缺 {db_path.name}——vdl config set work-root 跑到一半？")
+else:
+    db = sqlite3.connect(db_path)
+    rows = {r[0]: r for r in db.execute("select id, url, title from tasks")}
+    task_dirs = [d for d in work.iterdir() if d.is_dir()]
+    with_meta = [d for d in task_dirs if (d / "meta.json").is_file()]
+
+    def has_title(d):
+        row = rows.get(d.name)
+        if row and row[2]:
+            return True
+        art = d / "writing" / "article.md"
+        if not art.is_file():
+            return False
+        for line in art.read_text(encoding="utf-8", errors="ignore").splitlines():
+            line = line.strip()
+            if line.startswith("# "):
+                return True
+            if line and not line.startswith("#"):
+                return False
+        return False
+
+    expected = {d.name for d in task_dirs if has_title(d) and rows.get(d.name) and rows[d.name][1]}
+    actual = {d.name for d in with_meta}
+    check("有 title 的任务都写了 meta.json", expected <= actual,
+          f"应有 {len(expected)}，实有 {len(actual)}，缺 {len(expected - actual)}")
+    check("无 title 的任务没有被误写 meta.json", not (actual - expected),
+          f"多出 {len(actual - expected)} 个" if actual - expected else "无多余")
+    print(f"{DIM}· 共 {len(task_dirs)} 个任务目录，{len(task_dirs) - len(expected)} 个按决定不索引（目录与转录稿保留）{OFF}")
+
+print()
+if failed:
+    print(f"{RED}未通过 {len(failed)} 项：{OFF}" + "; ".join(failed))
+    sys.exit(1)
+print(f"{GREEN}全部通过。{OFF}原始数据一律保留——是否清除由你在最后一步决定。")
+PY
+  exit $?
+fi
+
+_copy_dir() {
+  # _copy_dir <src> <dst> <label>
   local src="$1" dst="$2" label="$3"
   if [[ ! -d "$src" ]]; then
     info "${label}：源目录不存在，跳过（${src}）"
     return
   fi
   if [[ -d "$dst" ]]; then
-    warn "${label}：目标已存在，跳过（${dst}）——如需重搬，先手动处理目标目录"
+    warn "${label}：目标已存在，跳过（${dst}）——如需重来，先手动处理目标目录"
     return
   fi
   if [[ "$APPLY" -eq 1 ]]; then
     mkdir -p "$(dirname "$dst")"
-    mv "$src" "$dst"
-    ok "${label}：$src → $dst"
+    cp -R "$src" "$dst"
+    ok "${label}：${src} → ${dst}（原件保留）"
   else
-    info "${label}：将搬 $src → $dst"
+    info "${label}：将复制 $src → $dst"
   fi
 }
 
-# ── clip-url: 只搬 <hash8>/ 且含 meta.json 的子目录 ─────────────────────
+# ── clip-url: 只复制 <hash8>/ 且含 meta.json 的子目录 ───────────────────
 VAULT_PATH="$(_json_get "$VAULT_CONFIG" VAULT_PATH || true)"
 echo "clip-url（VAULT_PATH → $ROOT/articles/）"
 if [[ -z "$VAULT_PATH" ]]; then
@@ -110,26 +263,28 @@ else
       fi
       if [[ "$APPLY" -eq 1 ]]; then
         mkdir -p "$ROOT/articles"
-        mv "$entry" "$dst"
+        cp -R "$entry" "$dst"
         ok "  $name → $dst"
       else
-        info "  将搬：$name"
+        info "  将复制：$name"
       fi
+    elif [[ "$name" == "Origin" || "$name" == "Image" ]]; then
+      info "  跳过：${name}（扁平布局遗留，由下方「vault 孤儿」一节处理）"
     else
       info "  跳过：${name}（非 8 位十六进制目录名，或无 meta.json）"
     fi
   done
-  [[ "$moved_any" -eq 0 ]] && info "  没有可搬的文章目录"
+  [[ "$moved_any" -eq 0 ]] && info "  没有可复制的文章目录"
 fi
 echo ""
 
-# ── sync-xtimeline / sync-ytchannel: 整段 tweets/ youtube/ 搬走 ────────
+# ── sync-xtimeline / sync-ytchannel: 整段复制 tweets/ youtube/ ─────────
 DATA_DIR="$(_json_get "$ROSTER_CONFIG" DATA_DIR || true)"
 echo "sync-xtimeline（DATA_DIR/tweets → $ROOT/feeds/tweets）"
 if [[ -z "$DATA_DIR" ]]; then
   info "未配置 roster DATA_DIR（${ROSTER_CONFIG}），跳过这一项"
 else
-  _move_dir "$DATA_DIR/tweets" "$ROOT/feeds/tweets" "sync-xtimeline"
+  _copy_dir "$DATA_DIR/tweets" "$ROOT/feeds/tweets" "sync-xtimeline"
 fi
 echo ""
 
@@ -137,7 +292,107 @@ echo "sync-ytchannel（DATA_DIR/youtube → $ROOT/feeds/youtube）"
 if [[ -z "$DATA_DIR" ]]; then
   info "未配置 roster DATA_DIR（${ROSTER_CONFIG}），跳过这一项"
 else
-  _move_dir "$DATA_DIR/youtube" "$ROOT/feeds/youtube" "sync-ytchannel"
+  _copy_dir "$DATA_DIR/youtube" "$ROOT/feeds/youtube" "sync-ytchannel"
+fi
+echo ""
+
+# ── sync-xtimeline 旧布局（roster 化之前）逐文件并入 ───────────────────
+LEGACY_X="${HSKILL_LEGACY_XTIMELINE:-$HOME/.hskill/sync-xtimeline}"
+echo "sync-xtimeline 旧布局（$LEGACY_X → $ROOT/feeds/tweets）"
+if [[ ! -d "$LEGACY_X" ]]; then
+  info "旧目录不存在，跳过这一项"
+else
+  # digests/ (复数) → digest/；tweets/*.json (扁平) → creators/
+  _merge_files() {
+    local src="$1" dst="$2"
+    [[ -d "$src" ]] || return 0
+    for f in "$src"/*; do
+      [[ -f "$f" ]] || continue
+      local base; base="$(basename "$f")"
+      if [[ -e "$dst/$base" ]]; then
+        warn "  跳过：${base}（目标已存在：${dst}/${base}）"
+        continue
+      fi
+      if [[ "$APPLY" -eq 1 ]]; then
+        mkdir -p "$dst"
+        cp "$f" "$dst/$base"
+        ok "  $base → $dst/"
+      else
+        info "  将并入：$base → $dst/"
+      fi
+    done
+  }
+  _merge_files "$LEGACY_X/digests" "$ROOT/feeds/tweets/digest"
+  _merge_files "$LEGACY_X/tweets"  "$ROOT/feeds/tweets/creators"
+  info "  config.json / watchlist.json / view.html 留原地（配置，非产物）"
+fi
+echo ""
+
+# ── vault 顶层孤儿：扁平布局遗留，无 meta.json，不代造 ──────────────────
+echo "vault 孤儿（$VAULT_PATH/{Origin,Image} → $ROOT/articles/_orphans/）"
+if [[ -z "$VAULT_PATH" || ! -d "$VAULT_PATH" ]]; then
+  info "VAULT_PATH 不可用，跳过这一项"
+else
+  for name in Origin Image; do
+    _copy_dir "$VAULT_PATH/$name" "$ROOT/articles/_orphans/$name" "孤儿 $name"
+  done
+  info "  不生成 meta.json——source_url 无从得知，造假会污染索引"
+fi
+echo ""
+
+# ── 视频：vdl 自己搬完的，这里只补 meta.json ───────────────────────────
+echo "视频 meta.json 回填（$ROOT/videos/work/）"
+VIDEO_WORK="$ROOT/videos/work"
+if [[ ! -d "$VIDEO_WORK" ]]; then
+  info "$VIDEO_WORK 不存在——先跑 vdl config set work-root $ROOT/videos，再回来跑本脚本"
+elif [[ ! -f "$VIDEO_WORK/database.sqlite" ]]; then
+  warn "缺 $VIDEO_WORK/database.sqlite，无法取 title/url，跳过这一项"
+else
+  APPLY="$APPLY" python3 - "$VIDEO_WORK" <<'PY'
+import json, os, sqlite3, sys
+
+work = sys.argv[1]
+apply_ = os.environ.get("APPLY") == "1"
+db = sqlite3.connect(os.path.join(work, "database.sqlite"))
+rows = {r[0]: r for r in db.execute("select id, url, title, ts from tasks")}
+
+
+def h1_title(task_id):
+    """Fall back to the article's own H1 — sqlite's title column is null for
+    most tasks, but any task that produced an article carries it there."""
+    path = os.path.join(work, task_id, "writing", "article.md")
+    if not os.path.exists(path):
+        return None
+    with open(path, encoding="utf-8", errors="ignore") as fh:
+        for line in fh:
+            line = line.strip()
+            if line.startswith("# "):
+                return line[2:].strip()
+            if line and not line.startswith("#"):
+                return None
+    return None
+
+
+written = skipped = 0
+for task_id in sorted(os.listdir(work)):
+    task_dir = os.path.join(work, task_id)
+    if not os.path.isdir(task_dir):
+        continue
+    row = rows.get(task_id)
+    title = (row[2] if row else None) or h1_title(task_id)
+    if not row or not row[1] or not title:
+        skipped += 1
+        continue
+    meta = {"source_url": row[1], "title": title, "fetched_at": (row[3] or "")[:10]}
+    if apply_:
+        with open(os.path.join(task_dir, "meta.json"), "w", encoding="utf-8") as fh:
+            json.dump(meta, fh, ensure_ascii=False, indent=2)
+    written += 1
+
+verb = "已写入" if apply_ else "将写入"
+print(f"  {verb} meta.json：{written} 个")
+print(f"  跳过（无 title 或无 url，按用户决定不索引）：{skipped} 个——目录和转录稿留在磁盘上")
+PY
 fi
 echo ""
 

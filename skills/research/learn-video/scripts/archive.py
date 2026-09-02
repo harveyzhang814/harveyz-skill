@@ -1,41 +1,36 @@
 #!/usr/bin/env python3
-"""Archives learn-video's vdl output into the unified storage root: copies
-the three vdl-produced files into <ROOT>/videos/<task_id>/ and writes
-meta.json. Copies, never moves — vdl's own work/<task_id>/ must stay in
-place for `vdl rerun` to keep working. Same task_id rerun overwrites in
-place (shutil.copyfile always overwrites the destination), so this is
-idempotent.
+"""Writes meta.json into vdl's task directory, marking it as an entity in
+the unified storage root. vdl's WORK_ROOT points at <ROOT>/videos, so its
+work/<task_id>/ already IS the final location — nothing is copied.
+
+The extra "work" segment is vdl's own layout (core/paths.js hardcodes it
+under WORK_ROOT and builds database.sqlite / index.jsonl on top of it, so
+it isn't ours to drop). See
+docs/superpowers/specs/2026-09-01-unified-store-design.md §5.2.
 
 Parameters via environment variables:
-  TASK_ID          - vdl's task_id (this skill's entity primary key)
-  SOURCE_URL        - the video URL the user gave
-  TITLE             - video title
-  TRANSCRIPT_PATH   - vdl's transcript/original.md path
-  ARTICLE_PATH      - vdl's writing/article.md path
-  SUMMARY_PATH      - vdl's writing/summary.md path
-  FETCHED_AT        - (optional) override date, defaults to today (UTC+8)
+  TASK_ID     - vdl's task_id (this skill's entity primary key)
+  SOURCE_URL  - the video URL the user gave
+  TITLE       - video title
+  FETCHED_AT  - (optional) override date, defaults to today (UTC+8)
 """
 import json
 import os
-import shutil
 from datetime import datetime, timedelta, timezone
 
 import store_config
 
 
 def archive(task_id: str, source_url: str, title: str,
-            transcript_path: str, article_path: str, summary_path: str,
             fetched_at: str | None = None) -> dict:
-    video_dir = store_config.videos_dir() / task_id
-    (video_dir / "transcript").mkdir(parents=True, exist_ok=True)
-    (video_dir / "writing").mkdir(parents=True, exist_ok=True)
-
-    dest_transcript = video_dir / "transcript" / "original.md"
-    dest_article = video_dir / "writing" / "article.md"
-    dest_summary = video_dir / "writing" / "summary.md"
-    shutil.copyfile(transcript_path, dest_transcript)
-    shutil.copyfile(article_path, dest_article)
-    shutil.copyfile(summary_path, dest_summary)
+    videos_dir = store_config.videos_dir()
+    video_dir = videos_dir / "work" / task_id
+    if not video_dir.is_dir():
+        raise FileNotFoundError(
+            f"任务目录不存在：{video_dir}\n"
+            f"vdl 的 WORK_ROOT 没有指向 {videos_dir}。\n"
+            f"修复：vdl config set work-root {videos_dir}"
+        )
 
     meta_path = video_dir / "meta.json"
     meta = {
@@ -45,25 +40,19 @@ def archive(task_id: str, source_url: str, title: str,
     }
     meta_path.write_text(json.dumps(meta, ensure_ascii=False, indent=2), encoding="utf-8")
 
-    return {
-        "video_dir": video_dir,
-        "meta_path": meta_path,
-        "transcript_path": dest_transcript,
-        "article_path": dest_article,
-        "summary_path": dest_summary,
-    }
+    return {"video_dir": video_dir, "meta_path": meta_path}
 
 
 def main():
-    result = archive(
-        task_id=os.environ["TASK_ID"],
-        source_url=os.environ["SOURCE_URL"],
-        title=os.environ["TITLE"],
-        transcript_path=os.environ["TRANSCRIPT_PATH"],
-        article_path=os.environ["ARTICLE_PATH"],
-        summary_path=os.environ["SUMMARY_PATH"],
-        fetched_at=os.environ.get("FETCHED_AT"),
-    )
+    try:
+        result = archive(
+            task_id=os.environ["TASK_ID"],
+            source_url=os.environ["SOURCE_URL"],
+            title=os.environ["TITLE"],
+            fetched_at=os.environ.get("FETCHED_AT"),
+        )
+    except FileNotFoundError as e:
+        raise SystemExit(str(e))
     print(f"VIDEO_DIR: {result['video_dir']}")
     print(f"META_PATH: {result['meta_path']}")
 

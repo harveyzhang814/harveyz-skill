@@ -56,8 +56,8 @@
       "path": "research/learn-video",
       "bundle": "research",
       "installScope": "global",
-      "contentHash": "8d0f1ffeab52e513",
-      "contentVersion": "1.7.0"
+      "contentHash": "3409d9ccb39ed0c9",
+      "contentVersion": "1.8.0"
     },
     {
       "path": "research/survey-skillrepo",
