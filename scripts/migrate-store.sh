@@ -7,7 +7,7 @@
 # docs/superpowers/specs/2026-09-01-unified-store-design.md §6.
 #
 #   <VAULT_PATH>/<hash8>/           -> <ROOT>/articles/<hash8>/    (clip-url)
-#   <VAULT_PATH>/{Origin,Image}/    -> <ROOT>/articles/_orphans/
+#   <VAULT_PATH>/{Origin,Image}/    -> <ROOT>/_orphans/
 #   <DATA_DIR>/tweets/              -> <ROOT>/feeds/tweets/        (sync-xtimeline)
 #   <DATA_DIR>/youtube/             -> <ROOT>/feeds/youtube/       (sync-ytchannel)
 #   ~/.hskill/sync-xtimeline/       -> <ROOT>/feeds/tweets/        (旧布局)
@@ -375,12 +375,12 @@ fi
 echo ""
 
 # ── vault 顶层孤儿：扁平布局遗留，无 meta.json，不代造 ──────────────────
-echo "vault 孤儿（$VAULT_PATH/{Origin,Image} → $ROOT/articles/_orphans/）"
+echo "vault 孤儿（$VAULT_PATH/{Origin,Image} → $ROOT/_orphans/）"
 if [[ -z "$VAULT_PATH" || ! -d "$VAULT_PATH" ]]; then
   info "VAULT_PATH 不可用，跳过这一项"
 else
   for name in Origin Image; do
-    _copy_dir "$VAULT_PATH/$name" "$ROOT/articles/_orphans/$name" "孤儿 $name"
+    _copy_dir "$VAULT_PATH/$name" "$ROOT/_orphans/$name" "孤儿 $name"
   done
   # 扁平布局把译文放在 vault 根、原文放在 Origin/。识别靠 frontmatter 里的
   # source_url——用户手写的笔记没有这一行，天然被排除，不必维护文件名白名单。
@@ -388,18 +388,18 @@ else
     [[ -f "$f" ]] || continue
     head -12 "$f" | grep -q '^source_url:' || continue
     base="$(basename "$f")"
-    dst="$ROOT/articles/_orphans/Translation/$base"
+    dst="$ROOT/_orphans/Translation/$base"
     if [[ -e "$dst" ]]; then
       warn "  跳过：${base}（目标已存在）"
     elif [[ "$APPLY" -eq 1 ]]; then
-      mkdir -p "$ROOT/articles/_orphans/Translation"
+      mkdir -p "$ROOT/_orphans/Translation"
       cp "$f" "$dst"
       ok "  孤儿译文：${base}"
     else
       info "  将复制孤儿译文：${base}"
     fi
   done
-  info "  不生成 meta.json——见 spec §6.2，孤儿重建是单独一件事"
+  info "  放在 articles/ 之外——它们没有 meta.json，混在实体目录里会被 scholia 当成文章列出来"
 fi
 echo ""
 
@@ -418,6 +418,10 @@ work = sys.argv[1]
 apply_ = os.environ.get("APPLY") == "1"
 db = sqlite3.connect(os.path.join(work, "database.sqlite"))
 rows = {r[0]: r for r in db.execute("select id, url, title, ts from tasks")}
+SCHOLIA_COLUMNS = ("url", "uploader", "upload_date", "duration", "mode",
+                   "output_lang", "ts")
+disp = {r[0]: r[1:] for r in db.execute(
+    "select id, " + ", ".join(SCHOLIA_COLUMNS) + " from tasks")}
 
 
 def h1_title(task_id):
@@ -447,6 +451,11 @@ for task_id in sorted(os.listdir(work)):
         skipped += 1
         continue
     meta = {"source_url": row[1], "title": title, "fetched_at": (row[3] or "")[:10]}
+    # 与 learn-video 的 archive.py 保持同一份字段集：scholia 从 meta.json 直接
+    # 读这些来渲染视频卡片，空值不写（缺字段是诚实的，空字符串会渲染成空白栏）。
+    extra = dict(zip(SCHOLIA_COLUMNS, disp.get(task_id, ())))
+    meta.update({k: v for k, v in extra.items() if v not in (None, "")})
+    meta.setdefault("url", row[1])
     if apply_:
         with open(os.path.join(task_dir, "meta.json"), "w", encoding="utf-8") as fh:
             json.dump(meta, fh, ensure_ascii=False, indent=2)

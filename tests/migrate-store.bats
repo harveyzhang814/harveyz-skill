@@ -166,7 +166,7 @@ CFG
   grep -q "dest-original" "${ROOT}/articles/deadbeef/meta.json"
 }
 
-@test "--apply: Origin/ and Image/ go to articles/_orphans without a meta.json" {
+@test "--apply: Origin/ and Image/ go to _orphans, outside articles/" {
   _write_vault_config
   mkdir -p "${VAULT}/Origin" "${VAULT}/Image"
   echo "orphan article" > "${VAULT}/Origin/old.md"
@@ -174,12 +174,15 @@ CFG
 
   run bash "$SCRIPT" --apply
   [ "$status" -eq 0 ]
-  [ -f "${ROOT}/articles/_orphans/Origin/old.md" ]
-  [ -f "${ROOT}/articles/_orphans/Image/31e1d2a2_img_1.jpg" ]
+  [ -f "${ROOT}/_orphans/Origin/old.md" ]
+  [ -f "${ROOT}/_orphans/Image/31e1d2a2_img_1.jpg" ]
   # No source_url is recoverable for these, so fabricating one would put a
   # lie into the `find -name meta.json` index.
-  [ ! -e "${ROOT}/articles/_orphans/Origin/meta.json" ]
-  [ ! -e "${ROOT}/articles/_orphans/meta.json" ]
+  [ ! -e "${ROOT}/_orphans/Origin/meta.json" ]
+  [ ! -e "${ROOT}/_orphans/meta.json" ]
+  # Outside articles/ on purpose: scholia's CONTENT_DIR points at articles/ and
+  # lists every .md under it, so orphans parked there showed up as articles.
+  [ ! -e "${ROOT}/articles/_orphans" ]
   [ -d "${VAULT}/Origin" ]
   [ -d "${VAULT}/Image" ]
 }
