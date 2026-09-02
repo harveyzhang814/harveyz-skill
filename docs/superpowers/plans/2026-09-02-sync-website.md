@@ -2706,6 +2706,137 @@ to report back. Do not just assert "it worked" — the handoff's accept phase
 explicitly re-runs and does not trust a self-filled PASS table without the
 actual command output attached.
 
+## 自测记录（执行 session 实跑，2026-09-02）
+
+**加入渠道：**
+
+```
+$ tools/roster/roster.sh registry add https://simonwillison.net/
+OK simonwillison-net website:simonwillison-net
+```
+
+**calibrate（模型直接读 HTML 后手动执行流程，非脚本化）：**
+
+抓原始 HTML（`browser-fetch page`），读到条目结构是
+`<div class="entry segment" data-type="entry" ...><h3><a href="...">标题</a></h3>...`，
+与非文章的 `<div class="quote segment" data-type="quotation" ...>` 混排。候选
+selector：`{"item": "div.entry", "title": "h3 a", "link": "h3 a"}`（未给
+`date`——entryFooter 里只有形如"2:16 pm"的钟点，没有可靠日期，符合 §5"抽不到
+就不给"的原则）。
+
+```
+$ browser-fetch articles-probe https://simonwillison.net/ --selectors '{"item":"div.entry","title":"h3 a","link":"h3 a"}'
+{"articles":[
+  {"title":"Claude’s new system prompt really doesn’t want to reproduce song lyrics","url":"https://simonwillison.net/2026/Sep/2/claudes-new-system-prompt/","date_text":""},
+  {"title":"Claude Fable 5.1 made me a really nice animated pelican","url":"https://simonwillison.net/2026/Sep/1/claude-fable-5-1/","date_text":""},
+  {"title":"Understanding ChatGPT Work","url":"https://simonwillison.net/2026/Aug/30/understanding-chatgpt-work/","date_text":""}
+]}
+
+$ python3 scripts/calibration_gate.py < probe_articles.json
+{"passed": true, "reason": ""}
+```
+
+模型过目：三条标题带日期化 URL 路径（`/2026/Sep/2/...`、`/2026/Sep/1/...`、
+`/2026/Aug/30/...`），像文章列表，不像导航/侧栏。两关都过。
+
+```
+$ browser-fetch articles-rule set simonwillison.net --selectors '{"item":"div.entry","title":"h3 a","link":"h3 a"}' --list-url 'https://simonwillison.net/' --sample '<上面三条>'
+{"ok":true,"domain":"simonwillison.net","calibrated_at":"2026-09-02T21:26:34.917968+00:00"}
+```
+
+**run 第一次：**
+
+```
+$ python3 scripts/fetch_new_articles.py
+{"run_time":"2026-09-02T21:26:39...","new":{},"baselines":{"simonwillison-net":3},
+ "failures":{},"needs_calibration":{},
+ "cursors":{"simonwillison-net":["https://simonwillison.net/2026/Sep/2/claudes-new-system-prompt/", "…Sep/1/…", "…Aug/30/…"]}}
+
+$ python3 scripts/digest.py < report1.json
+WRITTEN: .../feeds/website/digest/digest-20260902T212639.md
+# 内容：
+# 网站追更摘要 — 2026-09-02T21:26:39...
+## 已建立追踪基线
+- simonwillison-net：起始 3 篇文章，从下次运行开始报告新增
+
+$ python3 scripts/archive_articles.py < report1.json   # exit 0
+```
+
+**run 第二次（未等新文章发布）：**
+
+```
+$ python3 scripts/fetch_new_articles.py
+{"run_time":"2026-09-02T21:26:54...","new":{},"baselines":{},"failures":{},
+ "needs_calibration":{},"cursors":{}}
+
+$ python3 scripts/digest.py < report2.json
+EMPTY
+
+$ python3 scripts/archive_articles.py < report2.json   # exit 0
+```
+
+**⚠️ 与验收锚点第 7 条字面表述的偏差（如实记录，未回避）：**
+
+两次 run 之后，`feeds/website/creators/simonwillison-net.json` **不存在**——
+这不是 bug，是 `cursor.compute_update` 的既有设计（照抄 sync-ytchannel）：
+首次抓取只建立基线（`seen_urls is None` → `"baseline"`），从不进
+`report["new"]`；`archive_articles.py` 只归档 `report["new"]` 里的条目
+（`archive_articles.py:28`）。真实网站在两次连续 run 之间没有发新文章，
+所以两次 run 后 `report["new"]` 天然是空的——锚点第 7 条"两次 run 后归档
+文件有内容"这句话，字面上要求一篇在标定和两次 run 之间真实发布的新文章，
+这在一次手测 session 里等不到。
+
+为了不把这条锚点晾在"没法验"，追加了第三次验证，用**真实数据**（不是
+构造数据）模拟"时间流逝、有新文章"：把游标手动回退到只含较早两条 URL
+（等价于"标定发生在最新那篇发出来之前"），再跑一次：
+
+```
+$ roster state set website:simonwillison-net --type seen_urls \
+    --value-json '["https://simonwillison.net/2026/Sep/1/claude-fable-5-1/", "…Aug/30/…"]' \
+    --run-time "2026-09-02T00:00:00+00:00"
+
+$ python3 scripts/fetch_new_articles.py   # run 第三次
+{"run_time":"2026-09-02T21:27:42...",
+ "new":{"simonwillison-net":[{"title":"Claude’s new system prompt really doesn’t want to reproduce song lyrics","url":"https://simonwillison.net/2026/Sep/2/claudes-new-system-prompt/","date_text":""}]},
+ "baselines":{},"failures":{},"needs_calibration":{},
+ "cursors":{"simonwillison-net":["…Sep/2/…","…Sep/1/…","…Aug/30/…"]}}
+
+$ python3 scripts/digest.py < report3.json
+WRITTEN: .../feeds/website/digest/digest-20260902T212742.md
+# 内容：
+# 网站追更摘要 — 2026-09-02T21:27:42...
+## simonwillison-net
+- [日期未知] Claude’s new system prompt really doesn’t want to reproduce song lyrics（[原文](https://simonwillison.net/2026/Sep/2/claudes-new-system-prompt/)）
+
+$ python3 scripts/archive_articles.py < report3.json   # exit 0
+```
+
+**归档文件确认（第三次 run 之后）：**
+
+```
+$ cat feeds/website/creators/simonwillison-net.json
+[
+  {
+    "title": "Claude’s new system prompt really doesn’t want to reproduce song lyrics",
+    "url": "https://simonwillison.net/2026/Sep/2/claudes-new-system-prompt/",
+    "date_text": ""
+  }
+]
+```
+
+**结论：** calibrate→run 的全链路（标定固化规则 → 抓取 → diff → 摘要 →
+归档 → 游标推进）用真实站点数据验证成立，字段形状、EMPTY/WRITTEN 判定、
+日期兜底（"日期未知"）均符合 §5。锚点第 7 条按字面（仅两次 run）在真实站点
+上不可达，是锚点措辞的前提假设（"两次 run 之间会有新文章"）与"手测 session
+时间跨度内网站不会自然更新"这一现实之间的落差，不是实现缺陷——补的第三次
+run 用真实 URL 验证了同一条链路在"确有新文章"分支下同样成立。此偏差原样
+写在这里，由原 session 在 accept 阶段判断是否算达成。
+
+未做：`translated` 字段的模型翻译步骤（SKILL.md `run` 第 5 步）未在本次
+手测中执行——`digest.py` 在 `translated` 缺失时按 Task 9 的实现回退到原始
+`title`（已在上面第三次 run 的摘要输出中体现：显示的是英文原题），这条路径
+已被 Task 9 的单元测试覆盖，手测未重复验证。
+
 ---
 
 ## Self-review notes (from drafting this plan)
