@@ -10,7 +10,6 @@ other three sites share — lives in server.py, since it needs a different
 lifecycle than everything else this module's dispatch_site() routes to.
 See docs/superpowers/specs/2026-08-08-browser-fetch-mcp-xcom-extraction-design.md.
 """
-import json
 import xml.etree.ElementTree as ET
 from datetime import datetime, timedelta, timezone
 from urllib.parse import urlparse
@@ -967,6 +966,7 @@ def build_articles_js(selectors: dict) -> str:
     JS string literals, not interpolated code — a selector containing a
     quote can't break out of its literal.
     """
+    import json
     return _EXTRACT_JS_ARTICLES_TEMPLATE % {
         "item": json.dumps(selectors["item"]),
         "title": json.dumps(selectors["title"]),
