@@ -33,7 +33,7 @@ from browser_fetch.extractors import (
 )
 from browser_fetch.images import download_images
 from browser_fetch.profiles import list_chrome_profiles as _list_chrome_profiles
-from browser_fetch import config, markdown, pacing, pacing_log
+from browser_fetch import config, markdown, pacing, pacing_log, site_rules
 
 ANON_KEY = "__anon__"
 
@@ -762,3 +762,101 @@ async def evaluate_js(
         await page.close()
 
     return {"result": result}
+
+
+async def fetch_articles(url: str, chrome_profile: Optional[str] = None) -> dict:
+    """List article entries from url using the calibrated selector rule
+    for its domain. Production path: takes no selector argument — the
+    rule's ownership lives entirely in browser-fetch's site_rules store,
+    per docs/superpowers/specs/2026-09-02-sync-website-design.md §3.2.
+
+    Raises ValueError ("NO_RULE: <domain>") if no rule has been calibrated
+    for url's domain yet — the orchestrating skill's signal to trigger
+    calibration, not an error condition to alarm on.
+    """
+    parsed_url = urlparse(url)
+    if parsed_url.scheme not in ("http", "https") or not parsed_url.netloc:
+        raise ValueError(f"Rejected URL with scheme '{parsed_url.scheme}' — only http/https allowed")
+
+    domain = parsed_url.hostname or ""
+    rule = site_rules.get_rule(_data_dir(), domain)
+    if rule is None:
+        raise ValueError(f"NO_RULE: {domain}")
+
+    articles = await _scrape_articles(url, rule["selectors"], chrome_profile)
+    return {"domain": domain, "articles": articles}
+
+
+async def fetch_articles_probe(
+    url: str, selectors: dict, chrome_profile: Optional[str] = None
+) -> dict:
+    """Calibration path: try candidate selectors against url and return
+    what they extract. Never reads or writes the rule store — only
+    `articles-rule set` persists a rule, so a failed calibration trial
+    leaves no trace (spec §3.2: "probe 与 set 分离是关键")."""
+    parsed_url = urlparse(url)
+    if parsed_url.scheme not in ("http", "https") or not parsed_url.netloc:
+        raise ValueError(f"Rejected URL with scheme '{parsed_url.scheme}' — only http/https allowed")
+
+    articles = await _scrape_articles(url, selectors, chrome_profile)
+    return {"articles": articles}
+
+
+async def _scrape_articles(
+    list_url: str, selectors: dict, chrome_profile: Optional[str]
+) -> list[dict]:
+    """Shared evaluation step behind fetch_articles/fetch_articles_probe:
+    navigate to list_url, run build_articles_js(selectors), drop entries
+    with no url (an item match with no resolvable link is never a usable
+    article). Cookie handling mirrors fetch_channel_videos: optional,
+    degrades to anonymous rather than erroring — listing pages are
+    normally public."""
+    from browser_fetch.extractors import build_articles_js
+
+    js = build_articles_js(selectors)
+
+    effective_chrome_profile = chrome_profile or config.get_default_chrome_profile(_data_dir())
+    if effective_chrome_profile:
+        ctx = await _get_context(_profile_key(effective_chrome_profile))
+        cookies_dict = await asyncio.to_thread(extract_cookies, list_url, effective_chrome_profile)
+        if cookies_dict:
+            domain = urlparse(list_url).hostname
+            await ctx.add_cookies([
+                {"name": k, "value": v, "domain": domain, "path": "/", "secure": list_url.startswith("https")}
+                for k, v in cookies_dict.items()
+            ])
+    else:
+        ctx = await _get_context(ANON_KEY)
+
+    page = await ctx.new_page()
+    try:
+        await page.goto(list_url, wait_until="domcontentloaded", timeout=30000)
+        raw_items = await page.evaluate(js)
+    finally:
+        await page.close()
+
+    return [item for item in raw_items if item["url"]]
+
+
+async def get_site_rule(domain: str) -> dict:
+    rule = site_rules.get_rule(_data_dir(), domain)
+    if rule is None:
+        raise ValueError(f"NO_RULE: {domain}")
+    return rule
+
+
+async def list_site_rules() -> dict:
+    return {"rules": site_rules.list_rules(_data_dir())}
+
+
+async def set_site_rule(domain: str, list_url: str, selectors: dict, sample: list) -> dict:
+    from datetime import datetime, timezone
+
+    calibrated_at = datetime.now(timezone.utc).isoformat()
+    site_rules.set_rule(_data_dir(), domain, list_url, selectors, sample, calibrated_at)
+    return {"ok": True, "domain": domain, "calibrated_at": calibrated_at}
+
+
+async def remove_site_rule(domain: str) -> dict:
+    removed = site_rules.remove_rule(_data_dir(), domain)
+    return {"ok": True, "removed": removed}
