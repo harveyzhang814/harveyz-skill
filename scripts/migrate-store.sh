@@ -297,7 +297,11 @@ fi
 echo ""
 
 # ── sync-xtimeline 旧布局（roster 化之前）逐文件并入 ───────────────────
-LEGACY_X="${HSKILL_LEGACY_XTIMELINE:-$HOME/.hskill/sync-xtimeline}"
+# 旧版把产物写到自己 config.json 的 DATA_DIR（默认是 ~/Vault/Twitter），
+# 不是 skill 目录本身。先读那个 DATA_DIR，读不到才退回 skill 目录。
+LEGACY_X_CONFIG="${HSKILL_LEGACY_XTIMELINE:-$HOME/.hskill/sync-xtimeline}"
+LEGACY_X="$(_json_get "$LEGACY_X_CONFIG/config.json" DATA_DIR || true)"
+[[ -z "$LEGACY_X" ]] && LEGACY_X="$LEGACY_X_CONFIG"
 echo "sync-xtimeline 旧布局（$LEGACY_X → $ROOT/feeds/tweets）"
 if [[ ! -d "$LEGACY_X" ]]; then
   info "旧目录不存在，跳过这一项"

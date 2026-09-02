@@ -39,9 +39,22 @@ CFG
 }
 
 _write_legacy_xtimeline() {
+  # Old layout with no config.json: products sit in the skill dir itself.
   mkdir -p "${HSKILL_LEGACY_XTIMELINE}/digests" "${HSKILL_LEGACY_XTIMELINE}/tweets"
   echo "old digest" > "${HSKILL_LEGACY_XTIMELINE}/digests/20260817T192449--digest.md"
   echo '[]' > "${HSKILL_LEGACY_XTIMELINE}/tweets/trq212.json"
+}
+
+_write_legacy_xtimeline_with_data_dir() {
+  # The real old layout: config.json's DATA_DIR points somewhere else
+  # entirely (a vault subdir), and that is where the products live.
+  LEGACY_DATA="${TEST_DIR}/legacy-vault-twitter"
+  mkdir -p "${HSKILL_LEGACY_XTIMELINE}" "${LEGACY_DATA}/digests" "${LEGACY_DATA}/tweets"
+  cat > "${HSKILL_LEGACY_XTIMELINE}/config.json" <<CFG
+{"DATA_DIR": "${LEGACY_DATA}"}
+CFG
+  echo "vault digest" > "${LEGACY_DATA}/digests/20260822T064553--digest.md"
+  echo '[]' > "${LEGACY_DATA}/tweets/trq212.json"
 }
 
 @test "dry-run: hash8 dir with meta.json listed under copied, non-hash dir under skipped" {
@@ -221,4 +234,15 @@ CFG
   [ -f "${ROOT}/feeds/tweets/digest/20260817T192449--digest.md" ]
   [ -f "${ROOT}/feeds/tweets/creators/trq212.json" ]
   [ -f "${HSKILL_LEGACY_XTIMELINE}/digests/20260817T192449--digest.md" ]
+}
+
+@test "--apply: legacy source comes from its config.json DATA_DIR, not the skill dir" {
+  _write_legacy_xtimeline_with_data_dir
+
+  run bash "$SCRIPT" --apply
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"${LEGACY_DATA}"* ]]
+  [ -f "${ROOT}/feeds/tweets/digest/20260822T064553--digest.md" ]
+  [ -f "${ROOT}/feeds/tweets/creators/trq212.json" ]
+  [ -f "${LEGACY_DATA}/digests/20260822T064553--digest.md" ]
 }
