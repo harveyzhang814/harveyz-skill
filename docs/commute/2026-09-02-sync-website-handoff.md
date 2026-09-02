@@ -2,7 +2,7 @@
 
 **日期**：2026-09-02
 **author 模型**：Claude Opus 5
-**状态**：执行中 <!-- 待执行 → 执行中 → 待验收 → 已验收 / 打回 -->
+**状态**：待验收 <!-- 待执行 → 执行中 → 待验收 → 已验收 / 打回 -->
 **交接目的**：设计稿已经过用户逐项决策并评审通过，接手方从 spec 出发拆实施计划并完成实现——本次交接不重开设计讨论。
 
 > **接手方须知**：你正在接手一个任务。本文档是完整交接与唯一权威入口：从头读到尾，若文档里有「工作流约定」章节按其开工，没有就直接开工。**完成后把上面的状态置为「待验收」并停在这里**——`已验收` / `打回` 由原 session 按「最小验收锚点」判定后写，不要代填。你的自测结果写成独立小节，别写进原 session 的验收记录里。
@@ -162,3 +162,13 @@ npm test                                            # 仓库根；原 session �
 `npm test` 覆盖 hskill CLI 行为和所有 skill 的 SKILL.md 格式校验。新增 skill 后它会校验 `sync-website/SKILL.md` 的 frontmatter（`name` 与目录名一致、semver `version`、`description`、`user_invocable`）。
 
 端到端手测（验收锚点第 7 条）需要 browser-fetch 和 roster 都已安装、`knowledgeRoot` 已配置。若本机没配过，先按 `sync-ytchannel/SKILL.md` 的「初始化」小节走一遍。
+
+## 接手方自测小节（2026-09-02，独立于本节，不代填上面的验收记录）
+
+按 `docs/superpowers/plans/2026-09-02-sync-website.md`（superpowers:subagent-driven-development 全程执行，13 个任务逐条走完 + 一次全分支终审）实现，所有细节、每步命令与实跑输出见该计划文件。要点：
+
+- 三个测试套 + `npm test` 全绿，`dispatch_site()` 及其两个调用点逐字未动（每个改动过 `core.py`/`extractors.py` 的任务都单独复核过）。
+- 端到端手测（验收锚点第 7 条）针对 `simonwillison.net` 实跑，完整命令与输出记在计划文件 Task 13 下的「## 自测记录」小节，包含一处如实记录、未回避的偏差：锚点第 7 条字面表述（两次 run 后归档文件应有内容）在真实站点、无新文章发布的窗口期内结构性不可达（`cursor.compute_update` 的基线语义决定的，抄自 sync-ytchannel，非本次引入的缺陷）；补了第三次 run（游标手动回退到真实较早状态，用真实 URL）验证了归档链路在"确有新文章"分支下成立。
+- 全分支终审（opus 执行）发现 4 条 Important 级发现，均已在一轮修复中处理并复核通过：① roster 已知平台守卫遗漏 `youtu.be`/`music.youtube.com`/`m.twitter.com`/`mobile.twitter.com` 四种常见形态；② 自愈（recalibrate）在本轮无其他内容时会完全消失在摘要里，违反 spec §4.3 的"自愈必须可见"硬要求；③ spec 里定义但 pipeline 从未产出的 `published_at` 字段——判定为文档措辞问题而非实现缺陷，已改 SKILL.md 措辞，未新增日期解析器（避免超出原计划范围）；④ `articles-rule` 的 `domain` 参数未做路径穿越校验，且 calibrate 流程读取不可信 HTML 时缺少与 `run` 步骤 5 同款的"不可信数据"提示语。逐条改动、新增测试、复核结论见 `.superpowers/sdd/2026-09-02-sync-website/progress.md` 与 `final-fix-wave-report.md`。
+
+以上是接手方自己跑出来的结论，供参考——按本 skill（handoff）的约定，`已验收`/`打回` 只能由你（原 session）在自己逐条实跑「最小验收锚点」之后判定并写入上面的记录，这里不代填。

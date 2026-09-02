@@ -108,7 +108,7 @@ This is the highest-risk file in the whole plan — spec §8 flags it as "the
 one place that touches existing shared-tool semantics" — so it goes first
 and gets its own test pass before anything downstream depends on it.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Open `tools/roster/tests/test_urls.py`. Two changes:
 
@@ -153,7 +153,7 @@ def test_parse_channel_url_rejects(url):
         urls.parse_channel_url(url)
 ```
 
-- [ ] **Step 2: Run to verify the new/changed cases fail**
+- [x] **Step 2: Run to verify the new/changed cases fail**
 
 ```bash
 cd tools/roster && .venv/bin/pytest tests/test_urls.py -q
@@ -167,7 +167,7 @@ implemented yet, but the plain regex miss + no fallback already raises) —
 confirm this so you know the guard's job is specifically to keep them
 raising *after* the fallback is added, not to newly reject them now.
 
-- [ ] **Step 3: Implement the fallback + guard**
+- [x] **Step 3: Implement the fallback + guard**
 
 ```python
 """URL → (platform, handle)，以及 creator id 用的 slug。
@@ -228,7 +228,7 @@ def channel_key(platform: str, handle: str) -> str:
     return f"{platform}:{handle}"
 ```
 
-- [ ] **Step 4: Run to verify all pass**
+- [x] **Step 4: Run to verify all pass**
 
 ```bash
 cd tools/roster && .venv/bin/pytest -q
@@ -246,7 +246,7 @@ Expected diff: `"https://example.com/karpathy"` moved out of the rejects
 parametrize list into the accepts list (paired with its expected tuple),
 plus new lines added — no other existing line's expected value changed.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add tools/roster/roster/urls.py tools/roster/tests/test_urls.py
@@ -270,7 +270,7 @@ git commit -m "feat(roster): add website URL fallback to parse_channel_url"
   so Task 4's core.py callers pass `_data_dir()` in like they already do for
   `config.get_default_chrome_profile(_data_dir())`.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```python
 # tools/browser-fetch/tests/test_site_rules.py
@@ -339,7 +339,7 @@ def test_rules_for_different_domains_are_isolated(tmp_path):
     assert site_rules.get_rule(tmp_path, "b.example") is None
 ```
 
-- [ ] **Step 2: Run to verify it fails**
+- [x] **Step 2: Run to verify it fails**
 
 ```bash
 cd tools/browser-fetch && .venv/bin/pytest tests/test_site_rules.py -q
@@ -347,7 +347,7 @@ cd tools/browser-fetch && .venv/bin/pytest tests/test_site_rules.py -q
 
 Expected: FAIL — `ModuleNotFoundError: No module named 'browser_fetch.site_rules'`.
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 ```python
 # tools/browser-fetch/browser_fetch/site_rules.py
@@ -416,7 +416,7 @@ def remove_rule(data_dir: Path, domain: str) -> bool:
     return True
 ```
 
-- [ ] **Step 4: Run to verify it passes**
+- [x] **Step 4: Run to verify it passes**
 
 ```bash
 cd tools/browser-fetch && .venv/bin/pytest tests/test_site_rules.py -q
@@ -424,7 +424,7 @@ cd tools/browser-fetch && .venv/bin/pytest tests/test_site_rules.py -q
 
 Expected: 9 passed.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add tools/browser-fetch/browser_fetch/site_rules.py tools/browser-fetch/tests/test_site_rules.py
@@ -450,7 +450,7 @@ git commit -m "feat(browser-fetch): add site_rules.py per-domain rule store"
   missing or falsy). Returns a JS `page.evaluate` source string that,
   wherever it runs, extracts `[{title, url, date_text}, ...]`.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```python
 # tools/browser-fetch/tests/test_extractors_articles.py
@@ -485,7 +485,7 @@ def test_selector_containing_a_quote_stays_a_safe_json_literal():
     assert js.count('const itemSel = ') == 1
 ```
 
-- [ ] **Step 2: Run to verify it fails**
+- [x] **Step 2: Run to verify it fails**
 
 ```bash
 cd tools/browser-fetch && .venv/bin/pytest tests/test_extractors_articles.py -q
@@ -493,7 +493,7 @@ cd tools/browser-fetch && .venv/bin/pytest tests/test_extractors_articles.py -q
 
 Expected: FAIL — `ImportError: cannot import name 'build_articles_js'`.
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 Add `import json` to the top of `extractors.py` (it currently imports only
 `xml.etree.ElementTree`, `datetime`, `urllib.parse` — this is the file's
@@ -539,7 +539,7 @@ def build_articles_js(selectors: dict) -> str:
     }
 ```
 
-- [ ] **Step 4: Run to verify it passes**
+- [x] **Step 4: Run to verify it passes**
 
 ```bash
 cd tools/browser-fetch && .venv/bin/pytest tests/test_extractors_articles.py -q
@@ -554,7 +554,7 @@ grep -n "dispatch_site" tools/browser-fetch/browser_fetch/extractors.py
 Expected: identical to the pre-task output (`def dispatch_site` at line 20,
 no other change to that function's body or line number).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add tools/browser-fetch/browser_fetch/extractors.py tools/browser-fetch/tests/test_extractors_articles.py
@@ -599,7 +599,7 @@ an async `core.py` function directly in a test. This task follows that
 convention rather than introducing a new one: no direct `await core.xxx()`
 tests, only CLI-level tests.
 
-- [ ] **Step 1: Add a local HTTP fixture server to conftest.py**
+- [x] **Step 1: Add a local HTTP fixture server to conftest.py**
 
 Existing browser-fetch tests hit real external sites (`example.com`,
 Wikipedia, YouTube). For `articles`/`articles-probe`, the extraction logic
@@ -640,7 +640,7 @@ def articles_fixture_server(tmp_path):
         thread.join()
 ```
 
-- [ ] **Step 2: Write the failing tests**
+- [x] **Step 2: Write the failing tests**
 
 ```python
 # tools/browser-fetch/tests/test_cli_articles_rule.py
@@ -779,7 +779,7 @@ def test_articles_probe_rejects_file_scheme(run_cli):
     assert "only http/https allowed" in proc.stderr
 ```
 
-- [ ] **Step 3: Run to verify they fail**
+- [x] **Step 3: Run to verify they fail**
 
 ```bash
 cd tools/browser-fetch && .venv/bin/pytest tests/test_cli_articles.py tests/test_cli_articles_rule.py -q
@@ -788,7 +788,7 @@ cd tools/browser-fetch && .venv/bin/pytest tests/test_cli_articles.py tests/test
 Expected: FAIL — `articles`/`articles-probe`/`articles-rule` are not
 registered subcommands yet (argparse "invalid choice" errors).
 
-- [ ] **Step 4: Implement core.py additions**
+- [x] **Step 4: Implement core.py additions**
 
 In the existing import block, add `site_rules` to the
 `from browser_fetch import config, markdown, pacing, pacing_log` line and
@@ -892,7 +892,7 @@ async def remove_site_rule(domain: str) -> dict:
     return {"ok": True, "removed": removed}
 ```
 
-- [ ] **Step 5: Implement cli.py additions**
+- [x] **Step 5: Implement cli.py additions**
 
 Append, inside `build_parser()`, immediately before its `return parser`
 line (after the existing `p_channel` block — no existing subparser edited):
@@ -935,7 +935,7 @@ line (after the existing `p_channel` block — no existing subparser edited):
 
 (`json` is already imported at the top of `cli.py`.)
 
-- [ ] **Step 6: Run to verify all pass, then run the full suite**
+- [x] **Step 6: Run to verify all pass, then run the full suite**
 
 ```bash
 cd tools/browser-fetch && .venv/bin/pytest tests/test_cli_articles.py tests/test_cli_articles_rule.py -q
@@ -957,7 +957,7 @@ on every *other* existing test file shows nothing except the
 `git diff tools/browser-fetch/tests/conftest.py` — only new lines appended,
 `run_cli` fixture body unchanged).
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add tools/browser-fetch/browser_fetch/core.py tools/browser-fetch/browser_fetch/cli.py tools/browser-fetch/tests/conftest.py tools/browser-fetch/tests/test_cli_articles.py tools/browser-fetch/tests/test_cli_articles_rule.py
@@ -1006,14 +1006,14 @@ themselves and instead: create every file, port its test file with the
 platform/path names adjusted, then run the whole skill's suite once at the
 end to confirm the port is faithful.
 
-- [ ] **Step 1: Create the five byte-identical copies**
+- [x] **Step 1: Create the five byte-identical copies**
 
 Copy these five files' content exactly from `skills/feed/sync-ytchannel/scripts/`
 into `skills/feed/sync-website/scripts/`, unchanged:
 `roster_locate.py`, `browser_fetch_locate.py`, `browser_fetch_cli.py`,
 `store_config.py`, `cursor.py`.
 
-- [ ] **Step 2: Create the two lightly-tweaked copies**
+- [x] **Step 2: Create the two lightly-tweaked copies**
 
 ```python
 # skills/feed/sync-website/scripts/roster_client.py
@@ -1080,7 +1080,7 @@ def get_data_dir() -> Path:
     return store_config.feeds_dir("website")
 ```
 
-- [ ] **Step 3: Port the test files**
+- [x] **Step 3: Port the test files**
 
 ```python
 # skills/feed/sync-website/tests/conftest.py
@@ -1125,7 +1125,7 @@ with `"registry channels --platform youtube"` → `"registry channels --platform
 and `"state set youtube:AK"` → `"state set website:AK"` / `"state fail youtube:AK"` →
 `"state fail website:AK"` (the only three platform-literal strings in that file).
 
-- [ ] **Step 4: Run to verify everything passes**
+- [x] **Step 4: Run to verify everything passes**
 
 ```bash
 cd skills/feed/sync-website && python3 -m pytest tests/ -q
@@ -1136,7 +1136,7 @@ Expected: all pass (5 test files: conftest doesn't run standalone, so
 `test_browser_fetch_locate.py`, `test_roster_client.py` — matching
 sync-ytchannel's per-file pass counts for these same four files).
 
-- [ ] **Step 5: Verify the import constraint and commit**
+- [x] **Step 5: Verify the import constraint and commit**
 
 ```bash
 grep -rn "^import\|^from" skills/feed/sync-website/scripts/*.py
@@ -1166,7 +1166,7 @@ git commit -m "feat(sync-website): scaffold roster/browser-fetch/config plumbing
   catches this specifically to route a channel into `needs_calibration`
   instead of `failures`.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```python
 # skills/feed/sync-website/tests/test_articles_client.py
@@ -1221,7 +1221,7 @@ def test_fetch_articles_propagates_other_failures_unchanged(monkeypatch):
         asyncio.run(articles_client.fetch_articles("https://example.com/"))
 ```
 
-- [ ] **Step 2: Run to verify it fails**
+- [x] **Step 2: Run to verify it fails**
 
 ```bash
 cd skills/feed/sync-website && python3 -m pytest tests/test_articles_client.py -q
@@ -1229,7 +1229,7 @@ cd skills/feed/sync-website && python3 -m pytest tests/test_articles_client.py -
 
 Expected: FAIL — `ModuleNotFoundError: No module named 'articles_client'`.
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 ```python
 #!/usr/bin/env python3
@@ -1263,7 +1263,7 @@ async def fetch_articles(list_url: str, chrome_profile: Optional[str] = None) ->
         raise
 ```
 
-- [ ] **Step 4: Run to verify it passes**
+- [x] **Step 4: Run to verify it passes**
 
 ```bash
 cd skills/feed/sync-website && python3 -m pytest tests/test_articles_client.py -q
@@ -1271,7 +1271,7 @@ cd skills/feed/sync-website && python3 -m pytest tests/test_articles_client.py -
 
 Expected: 4 passed.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add skills/feed/sync-website/scripts/articles_client.py skills/feed/sync-website/tests/test_articles_client.py
@@ -1304,7 +1304,7 @@ calibration attempt (parallel to why `cursor.py` is a separate pure-function
 module instead of inline logic) — flag in review if this reasoning doesn't
 hold.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```python
 # skills/feed/sync-website/tests/test_calibration_gate.py
@@ -1387,7 +1387,7 @@ def test_cli_reads_stdin_and_prints_fail_result():
     assert "条目数" in payload["reason"]
 ```
 
-- [ ] **Step 2: Run to verify it fails**
+- [x] **Step 2: Run to verify it fails**
 
 ```bash
 cd skills/feed/sync-website && python3 -m pytest tests/test_calibration_gate.py -q
@@ -1395,7 +1395,7 @@ cd skills/feed/sync-website && python3 -m pytest tests/test_calibration_gate.py 
 
 Expected: FAIL — `ModuleNotFoundError: No module named 'calibration_gate'`.
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 ```python
 #!/usr/bin/env python3
@@ -1450,7 +1450,7 @@ if __name__ == "__main__":
     main()
 ```
 
-- [ ] **Step 4: Run to verify it passes**
+- [x] **Step 4: Run to verify it passes**
 
 ```bash
 cd skills/feed/sync-website && python3 -m pytest tests/test_calibration_gate.py -q
@@ -1458,7 +1458,7 @@ cd skills/feed/sync-website && python3 -m pytest tests/test_calibration_gate.py 
 
 Expected: 8 passed.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add skills/feed/sync-website/scripts/calibration_gate.py skills/feed/sync-website/tests/test_calibration_gate.py
@@ -1486,7 +1486,7 @@ git commit -m "feat(sync-website): add calibration_gate mechanical threshold che
   `recalibrated` list the orchestrating agent adds after resolving it, not
   `needs_calibration` itself.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```python
 # skills/feed/sync-website/tests/test_fetch_new_articles.py
@@ -1663,7 +1663,7 @@ def test_main_prints_report(fake_roster, fake_fetch, capsys):
     assert report["baselines"] == {"a": 1}
 ```
 
-- [ ] **Step 2: Run to verify it fails**
+- [x] **Step 2: Run to verify it fails**
 
 ```bash
 cd skills/feed/sync-website && python3 -m pytest tests/test_fetch_new_articles.py -q
@@ -1671,7 +1671,7 @@ cd skills/feed/sync-website && python3 -m pytest tests/test_fetch_new_articles.p
 
 Expected: FAIL — `ModuleNotFoundError: No module named 'fetch_new_articles'`.
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 ```python
 #!/usr/bin/env python3
@@ -1794,7 +1794,7 @@ if __name__ == "__main__":
     main(args.chrome_profile, args.handles)
 ```
 
-- [ ] **Step 4: Run to verify it passes**
+- [x] **Step 4: Run to verify it passes**
 
 ```bash
 cd skills/feed/sync-website && python3 -m pytest tests/test_fetch_new_articles.py -q
@@ -1802,7 +1802,7 @@ cd skills/feed/sync-website && python3 -m pytest tests/test_fetch_new_articles.p
 
 Expected: 11 passed.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add skills/feed/sync-website/scripts/fetch_new_articles.py skills/feed/sync-website/tests/test_fetch_new_articles.py
@@ -1825,7 +1825,7 @@ git commit -m "feat(sync-website): add fetch_new_articles run stage 1"
   `render_digest(report) -> str`, CLI reading stdin, writing
   `<knowledgeRoot>/feeds/website/digest/digest-<TS>.md`.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```python
 # skills/feed/sync-website/tests/test_digest.py
@@ -1953,7 +1953,7 @@ def test_cli_nonempty_report_writes_timestamped_file(tmp_path):
     assert written_path.parent == root / "feeds" / "website" / "digest"
 ```
 
-- [ ] **Step 2: Run to verify it fails**
+- [x] **Step 2: Run to verify it fails**
 
 ```bash
 cd skills/feed/sync-website && python3 -m pytest tests/test_digest.py -q
@@ -1961,7 +1961,7 @@ cd skills/feed/sync-website && python3 -m pytest tests/test_digest.py -q
 
 Expected: FAIL — `ModuleNotFoundError: No module named 'digest'`.
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 ```python
 #!/usr/bin/env python3
@@ -2046,7 +2046,7 @@ if __name__ == "__main__":
     main()
 ```
 
-- [ ] **Step 4: Run to verify it passes**
+- [x] **Step 4: Run to verify it passes**
 
 ```bash
 cd skills/feed/sync-website && python3 -m pytest tests/test_digest.py -q
@@ -2054,7 +2054,7 @@ cd skills/feed/sync-website && python3 -m pytest tests/test_digest.py -q
 
 Expected: 15 passed.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add skills/feed/sync-website/scripts/digest.py skills/feed/sync-website/tests/test_digest.py
@@ -2076,7 +2076,7 @@ git commit -m "feat(sync-website): add digest with recalibration tagging"
   `_archive_path(handle) -> Path`. This is the run's commit point (last
   script invoked) — see Task 11's `run` procedure ordering.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```python
 # skills/feed/sync-website/tests/test_archive_articles.py
@@ -2173,7 +2173,7 @@ def test_advance_cursors_without_a_cursors_field_writes_nothing(monkeypatch):
     assert calls == []
 ```
 
-- [ ] **Step 2: Run to verify it fails**
+- [x] **Step 2: Run to verify it fails**
 
 ```bash
 cd skills/feed/sync-website && python3 -m pytest tests/test_archive_articles.py -q
@@ -2181,7 +2181,7 @@ cd skills/feed/sync-website && python3 -m pytest tests/test_archive_articles.py 
 
 Expected: FAIL — `ModuleNotFoundError: No module named 'archive_articles'`.
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 ```python
 #!/usr/bin/env python3
@@ -2239,7 +2239,7 @@ if __name__ == "__main__":
     main()
 ```
 
-- [ ] **Step 4: Run to verify it passes, then the whole skill suite**
+- [x] **Step 4: Run to verify it passes, then the whole skill suite**
 
 ```bash
 cd skills/feed/sync-website && python3 -m pytest tests/test_archive_articles.py -q
@@ -2248,7 +2248,7 @@ cd skills/feed/sync-website && python3 -m pytest tests/ -q
 
 Expected: 9 passed for this file; full skill suite all green.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add skills/feed/sync-website/scripts/archive_articles.py skills/feed/sync-website/tests/test_archive_articles.py
@@ -2272,7 +2272,7 @@ This is the task where the calibrate procedure and the self-heal loop
 agent-executed prose, matching this repo's existing convention (title
 translation in `sync-ytchannel` is documented prose, not code).
 
-- [ ] **Step 1: Write SKILL.md**
+- [x] **Step 1: Write SKILL.md**
 
 ```markdown
 ---
@@ -2455,7 +2455,7 @@ roster 拒绝为重复——多栏目机构站（如 `openai.com/news` 和
 | `scripts/archive_articles.py` | `run` 子命令的第三阶段、本轮的提交点：把新文章按渠道累加进 `<knowledgeRoot>/feeds/website/creators/<handle>.json`（按 url 去重），然后推进游标 |
 ```
 
-- [ ] **Step 2: Write the four platform patches**
+- [x] **Step 2: Write the four platform patches**
 
 ```markdown
 # sync-website — Claude Code 补丁
@@ -2550,7 +2550,7 @@ Chrome profile 由 browser-fetch 侧持久化，与 clip-url 共用同一份配�
 `SKILL_DIR` 为 Pi 平台固定值：`$HOME/.pi/agent/skills/sync-website`
 ```
 
-- [ ] **Step 3: Run the repo-level format validation**
+- [x] **Step 3: Run the repo-level format validation**
 
 ```bash
 cd /Users/harveyzhang96/Projects/harveyz-skill && bats tests/skills.bats
@@ -2562,7 +2562,7 @@ where this check becomes meaningful for the new skill; running it now just
 confirms Task 11 hasn't broken anything for the *existing* registered
 skills).
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add skills/feed/sync-website/SKILL.md skills/feed/sync-website/platforms
@@ -2579,7 +2579,7 @@ git commit -m "docs(sync-website): add SKILL.md with calibrate/run procedures"
 - Modify: `skills/feed/sync-ytchannel/SKILL.md`
 - Modify: `skills/feed/sync-xtimeline/SKILL.md`
 
-- [ ] **Step 1: Register sync-website in skills-index.json**
+- [x] **Step 1: Register sync-website in skills-index.json**
 
 Add an entry to the `skills` array (alongside the existing
 `feed/sync-ytchannel` entry), matching its shape:
@@ -2612,7 +2612,7 @@ Also update `bundleMeta.feed`'s description to mention the third skill:
 "feed": "追更工具（manage-creators — 人与渠道名册；sync-xtimeline + sync-ytchannel + sync-website — 按名册跑增量抓取；capture-opinion — 给人记一笔判断）",
 ```
 
-- [ ] **Step 2: manage-creators one-liner**
+- [x] **Step 2: manage-creators one-liner**
 
 In `skills/feed/manage-creators/SKILL.md`, in the usage table row for
 `add <url>`, append a note that it also accepts website listing-page URLs
@@ -2628,7 +2628,7 @@ to:
 `OK <id> <platform>:<handle>` → 告知已加入，并提示这是占位人、可用 `rename` 填正式名字。`add` 现在也吃网站文章列表页 URL（`platform` 会是 `website`）
 ```
 
-- [ ] **Step 3: Cross-reference sync-website in sync-ytchannel's and sync-xtimeline's 边界 sections**
+- [x] **Step 3: Cross-reference sync-website in sync-ytchannel's and sync-xtimeline's 边界 sections**
 
 In `skills/feed/sync-ytchannel/SKILL.md`'s `## 边界` paragraph, append a
 sentence: `第三个同体系 skill 是 [sync-website](../sync-website/)，追更网站
@@ -2637,7 +2637,7 @@ sentence: `第三个同体系 skill 是 [sync-website](../sync-website/)，追�
 In `skills/feed/sync-xtimeline/SKILL.md`'s `## 边界` paragraph, append the
 same sentence.
 
-- [ ] **Step 4: Run the full test suite**
+- [x] **Step 4: Run the full test suite**
 
 ```bash
 cd /Users/harveyzhang96/Projects/harveyz-skill && npm test
@@ -2648,7 +2648,7 @@ Expected: **fail 0**. `tests/skills.bats` now validates `sync-website`'s
 version is semver, `name` matches directory `sync-website`, `bundle: feed`
 exists in `bundleMeta`) — all should pass given Task 11's frontmatter.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add skills-index.json skills/feed/manage-creators/SKILL.md skills/feed/sync-ytchannel/SKILL.md skills/feed/sync-xtimeline/SKILL.md
@@ -2667,7 +2667,7 @@ something a prior task's `pytest`/`bats` run already covers, since it
 exercises the live calibrate-then-run loop end to end against a real
 website.
 
-- [ ] **Step 1: Add simonwillison.net to the roster (if not already present)**
+- [x] **Step 1: Add simonwillison.net to the roster (if not already present)**
 
 ```bash
 <roster_path> registry add https://simonwillison.net/
@@ -2675,20 +2675,20 @@ website.
 
 Expected: `OK <creator_id> website:simonwillison-net`.
 
-- [ ] **Step 2: Run `/sync-website calibrate simonwillison-net`**
+- [x] **Step 2: Run `/sync-website calibrate simonwillison-net`**
 
 Follow the SKILL.md calibrate procedure directly (Task 11) — this needs a
 live model turn, not a scripted command. Confirm it ends with a successful
 `articles-rule set` call (or, if it fails, capture the failure reason and
 treat that as a real finding, not something to paper over).
 
-- [ ] **Step 3: Run `/sync-website run` twice**
+- [x] **Step 3: Run `/sync-website run` twice**
 
 First run: expect a `baselines` entry for `simonwillison-net` (no articles
 reported yet, cursor established). Second run (with no new posts published
 in between): expect `EMPTY` from `digest.py`.
 
-- [ ] **Step 4: Confirm the archive file**
+- [x] **Step 4: Confirm the archive file**
 
 ```bash
 cat "$(python3 -c "import json,pathlib;print(pathlib.Path(json.loads((pathlib.Path.home()/'.hskill/config.json').read_text())['knowledgeRoot']).expanduser()/'feeds/website/creators/simonwillison-net.json')")"
@@ -2696,7 +2696,7 @@ cat "$(python3 -c "import json,pathlib;print(pathlib.Path(json.loads((pathlib.Pa
 
 Expected: non-empty JSON array of article dicts.
 
-- [ ] **Step 5: Record the transcript**
+- [x] **Step 5: Record the transcript**
 
 Paste the actual commands run and their actual output (calibrate's selector
 JSON, the two `run` outputs, the archive file's content) into this plan's
