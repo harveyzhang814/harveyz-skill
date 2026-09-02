@@ -372,7 +372,24 @@ else
   for name in Origin Image; do
     _copy_dir "$VAULT_PATH/$name" "$ROOT/articles/_orphans/$name" "孤儿 $name"
   done
-  info "  不生成 meta.json——source_url 无从得知，造假会污染索引"
+  # 扁平布局把译文放在 vault 根、原文放在 Origin/。识别靠 frontmatter 里的
+  # source_url——用户手写的笔记没有这一行，天然被排除，不必维护文件名白名单。
+  for f in "$VAULT_PATH"/*.md; do
+    [[ -f "$f" ]] || continue
+    head -12 "$f" | grep -q '^source_url:' || continue
+    base="$(basename "$f")"
+    dst="$ROOT/articles/_orphans/Translation/$base"
+    if [[ -e "$dst" ]]; then
+      warn "  跳过：${base}（目标已存在）"
+    elif [[ "$APPLY" -eq 1 ]]; then
+      mkdir -p "$ROOT/articles/_orphans/Translation"
+      cp "$f" "$dst"
+      ok "  孤儿译文：${base}"
+    else
+      info "  将复制孤儿译文：${base}"
+    fi
+  done
+  info "  不生成 meta.json——见 spec §6.2，孤儿重建是单独一件事"
 fi
 echo ""
 
