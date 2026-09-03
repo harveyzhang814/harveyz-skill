@@ -58,9 +58,14 @@ async def set_rule(
 ) -> dict:
     """固化规则。
 
-    mode 白名单在这里再挡一道 —— 自愈路径上限是二档（spec §4），而 skill
-    这一层是自愈唯一的调用入口。CLI 侧也有 choices 限制，但那道限制随时
-    可能因为加三档支持而放开；这一道是给自愈路径专用的，不随之放开。
+    mode 白名单在这里再挡一道，但目前没有任何生产代码会经过这个函数 ——
+    SKILL.md 的 calibrate 流程（含 run 的自愈复用的那一份）是让模型直接
+    shell 出去调 browser-fetch CLI，不经过这层 Python 封装。今天"自愈上限
+    二档"这条性质，实际是靠 CLI 自己的 `--mode` choices 撑住的（见
+    cli.py）。这道白名单是为将来预留的第二道防线：CLI 的 choices 随时可能
+    因为加三档支持而放开，届时若有调用方真的路由到这个函数，这里仍然会
+    把关。是否要把自愈路径真正接到这个函数上、让这道防线生效，是阶段二
+    （Task 13）待决定的问题。
     """
     import json as _json
     if mode not in ALLOWED_MODES:
