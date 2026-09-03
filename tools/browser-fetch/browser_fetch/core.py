@@ -33,6 +33,7 @@ from browser_fetch.extractors import (
 )
 from browser_fetch.images import download_images
 from browser_fetch.profiles import list_chrome_profiles as _list_chrome_profiles
+from browser_fetch.normalize import normalize_articles
 from browser_fetch import config, markdown, pacing, pacing_log, site_rules
 
 ANON_KEY = "__anon__"
@@ -835,7 +836,8 @@ async def _scrape_articles(
     finally:
         await page.close()
 
-    return [item for item in raw_items if item["url"]]
+    # 归一化跑在 JS 边界之外，所以三档都绕不过去（spec §7.3）。
+    return normalize_articles(raw_items, list_url)
 
 
 async def get_site_rule(domain: str) -> dict:
