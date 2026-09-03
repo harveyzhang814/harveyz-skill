@@ -786,21 +786,27 @@ async def fetch_articles(url: str, chrome_profile: Optional[str] = None) -> dict
         raise ValueError(f"NO_RULE: {domain}")
 
     articles = await _scrape_articles(url, rule["selectors"], chrome_profile)
+    if rule.get("mode") == "selector+transform":
+        articles = await _run_transform(articles, rule["transform_js"], url)
     return {"domain": domain, "articles": articles}
 
 
 async def fetch_articles_probe(
-    url: str, selectors: dict, chrome_profile: Optional[str] = None
+    url: str,
+    selectors: dict,
+    chrome_profile: Optional[str] = None,
+    transform_js: Optional[str] = None,
 ) -> dict:
-    """Calibration path: try candidate selectors against url and return
-    what they extract. Never reads or writes the rule store — only
-    `articles-rule set` persists a rule, so a failed calibration trial
-    leaves no trace (spec §3.2: "probe 与 set 分离是关键")."""
+    """标定路径：用候选规则试跑并返回抽取结果。**从不读写规则库** ——
+    只有 `articles-rule set` 落盘，所以一轮失败的标定不留痕迹
+    （spec §3.2："probe 与 set 分离是关键"）。"""
     parsed_url = urlparse(url)
     if parsed_url.scheme not in ("http", "https") or not parsed_url.netloc:
         raise ValueError(f"Rejected URL with scheme '{parsed_url.scheme}' — only http/https allowed")
 
     articles = await _scrape_articles(url, selectors, chrome_profile)
+    if transform_js:
+        articles = await _run_transform(articles, transform_js, url)
     return {"articles": articles}
 
 
@@ -878,12 +884,22 @@ async def list_site_rules() -> dict:
     return {"rules": site_rules.list_rules(_data_dir())}
 
 
-async def set_site_rule(domain: str, list_url: str, selectors: dict, sample: list) -> dict:
+async def set_site_rule(
+    domain: str,
+    list_url: str,
+    selectors: dict,
+    sample: list,
+    mode: str = "selector",
+    transform_js: Optional[str] = None,
+) -> dict:
     from datetime import datetime, timezone
 
     calibrated_at = datetime.now(timezone.utc).isoformat()
-    site_rules.set_rule(_data_dir(), domain, list_url, selectors, sample, calibrated_at)
-    return {"ok": True, "domain": domain, "calibrated_at": calibrated_at}
+    site_rules.set_rule(
+        _data_dir(), domain, list_url, selectors, sample, calibrated_at,
+        mode=mode, transform_js=transform_js,
+    )
+    return {"ok": True, "domain": domain, "mode": mode, "calibrated_at": calibrated_at}
 
 
 async def remove_site_rule(domain: str) -> dict:

@@ -84,12 +84,15 @@ def build_parser() -> argparse.ArgumentParser:
     p_articles.add_argument("--chrome-profile", default=None)
     p_articles.set_defaults(handler=lambda a: core.fetch_articles(a.url, a.chrome_profile))
 
-    p_articles_probe = sub.add_parser("articles-probe", help="标定路径：用候选 selector 试跑，不落盘")
+    p_articles_probe = sub.add_parser("articles-probe", help="标定路径：用候选规则试跑，不落盘")
     p_articles_probe.add_argument("url")
     p_articles_probe.add_argument("--selectors", required=True, help="JSON: {item,title,link,date}")
+    p_articles_probe.add_argument("--transform-file", default=None, dest="transform_file",
+                                  help="二档：transform JS 源文件，'-' 读 stdin")
     p_articles_probe.add_argument("--chrome-profile", default=None)
     p_articles_probe.set_defaults(handler=lambda a: core.fetch_articles_probe(
-        a.url, json.loads(a.selectors), a.chrome_profile))
+        a.url, json.loads(a.selectors), a.chrome_profile,
+        _read_js(a.transform_file) if a.transform_file else None))
 
     p_articles_rule = sub.add_parser("articles-rule", help="抽取规则库：查看/固化/删除")
     ar_sub = p_articles_rule.add_subparsers(dest="rule_command", required=True)
@@ -99,8 +102,14 @@ def build_parser() -> argparse.ArgumentParser:
     ar_set.add_argument("--selectors", required=True)
     ar_set.add_argument("--list-url", required=True, dest="list_url")
     ar_set.add_argument("--sample", default="[]")
+    ar_set.add_argument("--mode", default="selector",
+                        choices=("selector", "selector+transform"))
+    ar_set.add_argument("--transform-file", default=None, dest="transform_file",
+                        help="mode=selector+transform 必需；'-' 读 stdin")
     ar_set.set_defaults(handler=lambda a: core.set_site_rule(
-        a.domain, a.list_url, json.loads(a.selectors), json.loads(a.sample)))
+        a.domain, a.list_url, json.loads(a.selectors), json.loads(a.sample),
+        mode=a.mode,
+        transform_js=_read_js(a.transform_file) if a.transform_file else None))
 
     ar_get = ar_sub.add_parser("get")
     ar_get.add_argument("domain")

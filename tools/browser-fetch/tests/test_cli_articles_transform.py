@@ -66,3 +66,58 @@ async def test_transform_does_not_run_on_the_target_page():
 async def test_transform_returning_a_non_array_yields_no_articles():
     out = await core._run_transform(ARTICLES, "(items) => 42", LIST_URL)
     assert out == []
+
+
+def test_transform_rule_is_applied_on_the_production_path(run_cli, articles_fixture_server, tmp_path):
+    transform = tmp_path / "t.js"
+    transform.write_text("(items) => items.slice(0, 1)", encoding="utf-8")
+    selectors = {"item": "div.entry", "title": "h3 a", "link": "h3 a", "date": "p.date"}
+
+    proc, _ = run_cli(
+        "articles-rule", "set", "127.0.0.1",
+        "--selectors", json.dumps(selectors),
+        "--list-url", articles_fixture_server,
+        "--mode", "selector+transform",
+        "--transform-file", str(transform),
+    )
+    assert proc.returncode == 0, proc.stderr
+
+    proc, payload = run_cli("articles", articles_fixture_server)
+    assert proc.returncode == 0, proc.stderr
+    assert len(payload["articles"]) == 1  # selector 抽 3 条，transform 砍到 1 条
+
+
+def test_probe_can_try_a_transform_without_persisting_anything(run_cli, articles_fixture_server, tmp_path):
+    transform = tmp_path / "t.js"
+    transform.write_text("(items) => items.slice(0, 2)", encoding="utf-8")
+    selectors = {"item": "div.entry", "title": "h3 a", "link": "h3 a", "date": "p.date"}
+
+    proc, payload = run_cli(
+        "articles-probe", articles_fixture_server,
+        "--selectors", json.dumps(selectors),
+        "--transform-file", str(transform),
+    )
+    assert proc.returncode == 0, proc.stderr
+    assert len(payload["articles"]) == 2
+
+    _, listing = run_cli("articles-rule", "list")
+    assert listing["rules"] == []
+
+
+def test_a_corrupt_rule_fails_the_run_instead_of_downgrading(run_cli, articles_fixture_server, tmp_path):
+    selectors = {"item": "div.entry", "title": "h3 a", "link": "h3 a", "date": "p.date"}
+    transform = tmp_path / "t.js"
+    transform.write_text("(items) => items", encoding="utf-8")
+    run_cli(
+        "articles-rule", "set", "127.0.0.1",
+        "--selectors", json.dumps(selectors),
+        "--list-url", articles_fixture_server,
+        "--mode", "selector+transform",
+        "--transform-file", str(transform),
+    )
+    # 手工删掉 transform.js，模拟规则目录被破坏
+    (tmp_path / "data" / "site_rules" / "127.0.0.1" / "transform.js").unlink()
+
+    proc, _ = run_cli("articles", articles_fixture_server)
+    assert proc.returncode == 1
+    assert "transform.js" in proc.stderr
