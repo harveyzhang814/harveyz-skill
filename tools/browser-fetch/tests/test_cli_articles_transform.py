@@ -4,6 +4,7 @@
 能力相同，"二档可自动、三档要人批"就没有实质差别。这里的三条隔离断言是
 那条设计主张的可证伪形式。
 """
+import asyncio
 import json
 
 import pytest
@@ -16,10 +17,9 @@ from browser_fetch import core
 # function; reusing a cached connection under a second, later-created loop
 # hangs forever (its reader/writer tasks died with the first loop; nothing
 # resolves the second loop's futures). Sharing one event loop across this
-# file's tests keeps that cache usage consistent with the loop it was
-# created under, matching how core.py is actually used in production (one
-# process, one loop, for the whole server lifetime).
-pytestmark = pytest.mark.asyncio(loop_scope="module")
+# file's async tests keeps that cache usage consistent with the loop it was
+# created under, matching how a single CLI invocation uses one event loop
+# for its whole lifetime.
 
 ARTICLES = [
     {"title": "a", "url": "https://example.com/1", "date_text": "d1"},
@@ -28,11 +28,13 @@ ARTICLES = [
 LIST_URL = "https://example.com/blog"
 
 
+@pytest.mark.asyncio(loop_scope="module")
 async def test_transform_receives_the_articles_array():
     out = await core._run_transform(ARTICLES, "(items) => items.slice(1)", LIST_URL)
     assert [a["title"] for a in out] == ["b"]
 
 
+@pytest.mark.asyncio(loop_scope="module")
 async def test_transform_output_goes_through_normalization():
     js = "(items) => items.map(i => ({...i, title: '  x  y  ', url: '/rel'}))"
     out = await core._run_transform(ARTICLES, js, LIST_URL)
@@ -40,6 +42,7 @@ async def test_transform_output_goes_through_normalization():
     assert out[0]["url"] == "https://example.com/rel"
 
 
+@pytest.mark.asyncio(loop_scope="module")
 async def test_transform_cannot_read_target_site_cookies():
     # about:blank navigated to directly (no opener) has an opaque origin in
     # Chromium, so document.cookie doesn't just read empty — it throws
@@ -57,12 +60,14 @@ async def test_transform_cannot_read_target_site_cookies():
     assert out[0]["title"] == "EMPTY"
 
 
+@pytest.mark.asyncio(loop_scope="module")
 async def test_transform_does_not_run_on_the_target_page():
     js = "(items) => [{title: location.href, url: 'https://x/1', date_text: ''}]"
     out = await core._run_transform(ARTICLES, js, LIST_URL)
     assert out[0]["title"] == "about:blank"
 
 
+@pytest.mark.asyncio(loop_scope="module")
 async def test_transform_returning_a_non_array_yields_no_articles():
     out = await core._run_transform(ARTICLES, "(items) => 42", LIST_URL)
     assert out == []
@@ -121,3 +126,11 @@ def test_a_corrupt_rule_fails_the_run_instead_of_downgrading(run_cli, articles_f
     proc, _ = run_cli("articles", articles_fixture_server)
     assert proc.returncode == 1
     assert "transform.js" in proc.stderr
+
+
+@pytest.mark.asyncio(loop_scope="module")
+async def test_transform_that_never_resolves_times_out(monkeypatch):
+    monkeypatch.setattr(core, "TRANSFORM_TIMEOUT_S", 0.1)
+    js = "(items) => new Promise(() => {})"
+    with pytest.raises(asyncio.TimeoutError):
+        await core._run_transform(ARTICLES, js, LIST_URL)

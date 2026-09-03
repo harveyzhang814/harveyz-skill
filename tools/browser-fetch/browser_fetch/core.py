@@ -38,6 +38,7 @@ from browser_fetch import config, markdown, pacing, pacing_log, site_rules
 
 ANON_KEY = "__anon__"
 TRANSFORM_KEY = "__transform__"
+TRANSFORM_TIMEOUT_S = 30
 
 _state = {"playwright": None, "contexts": {}}
 _rng = random.Random()
@@ -864,7 +865,9 @@ async def _run_transform(articles: list[dict], transform_js: str, list_url: str)
     page = await ctx.new_page()
     try:
         await page.goto("about:blank")
-        raw = await page.evaluate(transform_js, articles)
+        raw = await asyncio.wait_for(
+            page.evaluate(transform_js, articles), timeout=TRANSFORM_TIMEOUT_S
+        )
     finally:
         await page.close()
 

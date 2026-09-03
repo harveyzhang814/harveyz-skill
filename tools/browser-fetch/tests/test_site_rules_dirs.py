@@ -221,3 +221,15 @@ def test_remove_rule_also_deletes_a_legacy_flat_file(tmp_path):
 
 def test_remove_rule_returns_false_when_nothing_to_remove(tmp_path):
     assert site_rules.remove_rule(tmp_path, "nope.example") is False
+
+
+def test_flat_file_with_a_bogus_mode_is_forced_back_to_selector(tmp_path):
+    rules_dir = tmp_path / "site_rules"
+    rules_dir.mkdir(parents=True)
+    (rules_dir / "example.com.json").write_text(json.dumps({
+        "domain": "example.com", "list_url": "https://example.com/",
+        "selectors": SELECTORS, "calibrated_at": "t", "sample": [],
+        "mode": "script",
+    }), encoding="utf-8")
+    rule = site_rules.get_rule(tmp_path, "example.com")
+    assert rule["mode"] == "selector"

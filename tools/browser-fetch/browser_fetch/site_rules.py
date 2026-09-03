@@ -47,11 +47,6 @@ def _flat_path(data_dir: Path, domain: str) -> Path:
     return _rules_dir(data_dir) / f"{_check_domain(domain)}.json"
 
 
-def _rule_path(data_dir: Path, domain: str) -> Path:
-    """Helper for set_rule/list_rules/remove_rule — backward compat for flat files."""
-    return _flat_path(data_dir, domain)
-
-
 def _validate(rule: dict, domain_dir: Path) -> None:
     mode = rule.get("mode")
     if mode not in SUPPORTED_MODES:
@@ -81,7 +76,7 @@ def get_rule(data_dir: Path, domain: str) -> Optional[dict]:
     if flat.exists():
         rule = json.loads(flat.read_text(encoding="utf-8"))
         rule.setdefault("schema_version", 1)
-        rule.setdefault("mode", "selector")
+        rule["mode"] = "selector"
         return rule
 
     return None
