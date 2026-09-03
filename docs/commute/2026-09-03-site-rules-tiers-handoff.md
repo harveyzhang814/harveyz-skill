@@ -94,7 +94,7 @@ simonwillison.net
 
 1. ~~`articles_client.py` 的 `probe_articles`/`set_rule`（Task 8 新增）目前没有任何生产调用方~~ **已处理（commit `5fa2137`）**：用户选了方案 B——保持 SKILL.md 现有的"模型直接 shell 调 CLI"标定流程不变，不把自愈接到这层 Python 封装；`set_rule` 的 docstring 已改成如实描述现状（零生产调用方，真正的二档上限是 CLI 自己的 `--mode` choices，这道白名单是留给阶段二可能接线的第二道防线）。是否真的接线仍是 Task 13 待决定的问题。
 2. ~~spec §6 说二档 transform 抛错应该跟"抽取到 0 条"一样触发自愈，但目前抛错只会进 `failures`，永远不会触发重新标定~~ **已处理（commit `d6618ba` + `1dde601`）**：用户选了"走自愈"。核对过这条其实不在任何已排期任务里（Task 13 只覆盖三档不自愈，跟这条是两回事）。实现镜像了已有的 `NO_RULE:` 约定：browser-fetch 侧 transform 抛错/超时打 `TRANSFORM_ERROR:` 标记（exit 1），sync-website 侧识别这个标记路由到 `needs_calibration`。两边测试全绿（browser-fetch 220 passed，sync-website 85 passed），过了一轮 scoped review（无 Critical/Important 发现，隔离机制未受影响）。
-3. **`tool.json`（browser-fetch）和 SKILL.md 的版本号都没有 bump**，装了旧版本的用户不会自动拿到这次的改动（installer 版本号相等就跳过）。规则 schema 从 v1 变成 v2，这次的版本错位比平时更容易踩到 argparse 报错。是不是该现在就 bump，还是留到你走 release 流程时统一处理？
+3. ~~`tool.json`（browser-fetch）和 SKILL.md 的版本号都没有 bump~~ **已处理（commit `abfcec9`）**：用户选了现在就 bump。browser-fetch `0.3.0→0.4.0`（`tool.json` + `pyproject.toml` 同步），sync-website SKILL.md `0.1.0→0.2.0`（installer 版本号跳过逻辑实际读的就是这个字段）。`npm test` 前后都跑过，绿。
 
 ---
 
