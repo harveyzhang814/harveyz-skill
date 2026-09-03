@@ -2,7 +2,7 @@
 
 **日期**：2026-09-03
 **author 模型**：Claude Opus 5
-**状态**：待验收 <!-- 待执行 → 执行中 → 待验收 → 已验收 / 打回 -->
+**状态**：已验收 <!-- 待执行 → 执行中 → 待验收 → 已验收 / 打回 -->
 **交接目的**：设计与实施计划都已写完并经用户确认，接手方按计划逐任务执行到**阶段一结束为止**——本次交接不重开设计讨论，也不自行推进到阶段二。
 
 > **接手方须知**：你正在接手一个任务。本文档是完整交接与唯一权威入口：从头读到尾，若文档里有「工作流约定」章节按其开工，没有就直接开工。**完成后把上面的状态置为「待验收」并停在这里**——`已验收` / `打回` 由原 session 按「最小验收锚点」判定后写，不要代填。你的自测结果写成独立小节，别写进原 session 的验收记录里。
@@ -95,6 +95,83 @@ simonwillison.net
 1. ~~`articles_client.py` 的 `probe_articles`/`set_rule`（Task 8 新增）目前没有任何生产调用方~~ **已处理（commit `5fa2137`）**：用户选了方案 B——保持 SKILL.md 现有的"模型直接 shell 调 CLI"标定流程不变，不把自愈接到这层 Python 封装；`set_rule` 的 docstring 已改成如实描述现状（零生产调用方，真正的二档上限是 CLI 自己的 `--mode` choices，这道白名单是留给阶段二可能接线的第二道防线）。是否真的接线仍是 Task 13 待决定的问题。
 2. ~~spec §6 说二档 transform 抛错应该跟"抽取到 0 条"一样触发自愈，但目前抛错只会进 `failures`，永远不会触发重新标定~~ **已处理（commit `d6618ba` + `1dde601`）**：用户选了"走自愈"。核对过这条其实不在任何已排期任务里（Task 13 只覆盖三档不自愈，跟这条是两回事）。实现镜像了已有的 `NO_RULE:` 约定：browser-fetch 侧 transform 抛错/超时打 `TRANSFORM_ERROR:` 标记（exit 1），sync-website 侧识别这个标记路由到 `needs_calibration`。两边测试全绿（browser-fetch 220 passed，sync-website 85 passed），过了一轮 scoped review（无 Critical/Important 发现，隔离机制未受影响）。
 3. ~~`tool.json`（browser-fetch）和 SKILL.md 的版本号都没有 bump~~ **已处理（commit `abfcec9`）**：用户选了现在就 bump。browser-fetch `0.3.0→0.4.0`（`tool.json` + `pyproject.toml` 同步），sync-website SKILL.md `0.1.0→0.2.0`（installer 版本号跳过逻辑实际读的就是这个字段）。`npm test` 前后都跑过，绿。
+
+---
+
+## 原 session 验收记录（accept，2026-09-03，Claude Opus 5）
+
+**结论：达成。** 十条锚点逐条实跑，全部通过。接手方自填的结论未采信，以下每条都是我自己跑出来的；与接手方记录并列，不覆盖不合并。
+
+| # | 判据 | 我的实跑结果 | 判定 |
+|---|---|---|---|
+| 1 | browser-fetch ≥ 175 | **220 passed in 117.74s** | PASS |
+| 2 | sync-website ≥ 80 | **85 passed** | PASS |
+| 3 | roster = 140 | **140 passed**，与基线一模一样 | PASS |
+| 4 | npm test fail 0 | **328 tests / 321 pass / 0 fail / 7 skipped**，与基线逐项一致 | PASS |
+| 5 | skill 纯标准库 + 同目录 | 全部 import 核对：`argparse/asyncio/json/os/shutil/subprocess/sys/datetime/pathlib/typing/urllib.parse` + 同目录模块。无第三方 | PASS |
+| 6 | 已有测试只改点名那一处 | 见下方「更正一」——实质通过，字面有一处偏离 | PASS（附更正） |
+| 7 | 一档行为逐字不变 | `claude.com/blog` → **15 条**，首条 `{'title': 'A guide to the anatomy of effective commerce agents', 'url': 'https://claude.com/blog/the-anatomy-of-effective-commerce-agents', 'date_text': 'Sep 2, 2026'}`，与锚点示例完全一致 | PASS |
+| 8 | 二档隔离两条测试 | `test_transform_cannot_read_target_site_cookies` / `test_transform_does_not_run_on_the_target_page` → **2 passed** | PASS |
+| 9 | 迁移真的发生 | 我自己做的迁移，见下方实测 | PASS |
+| 10 | 阶段二零改动 | `git diff a5e9cb8..HEAD` 全量文件清单核对；`static_scan.py` 不存在；关键词唯一命中是**本文档锚点 10 自己的文字**，无任何代码命中 | PASS |
+
+**锚点 9 的实测（我自己跑的，不是复述）：** 挑了当时还没迁移的 `claude.com`（接手方迁移的是 `simonwillison.net`）。
+
+```
+迁移前：claude.com.json（扁平，schema_version 1）+ simonwillison.net/（目录）
+执行：articles-rule set claude.com --selectors ... --list-url https://claude.com/blog
+迁移后：claude.com/rule.json 出现，claude.com.json 消失，schema_version 1 → 2
+迁移后重新抽取：仍 15 条，首条标题不变
+残留检查：site_rules/ 下无任何 .tmp / .old
+```
+
+**额外自验（锚点未要求，但阶段一的交付物是"二档可用"，只验隔离不够）：** 用一段真实 transform 端到端跑了一次二档——
+
+```
+transform: (items) => items.filter(i => !i.title.includes('Claude'))
+selector 抽 15 条 → transform 过滤到 4 条 → 结果里含 "Claude" 的条目为 0，date_text 保留
+```
+
+二档在生产路径上确实生效，不只是测试里绿。
+
+### 更正一：锚点 6 有一处字面偏离，实质不构成违反
+
+锚点 6 要求"只有新增文件、新增用例，以及点名的那一处改写"。逐文件核对删除行：
+
+| 文件 | 删除行 | 内容 |
+|---|---|---|
+| `test_site_rules.py` | 2 | 正是点名的 `test_rule_file_written_under_site_rules_subdir` 的函数行与断言行 —— 许可范围内 |
+| `test_articles_client.py` | 0 | 纯追加 |
+| `test_cli_articles.py` | 0 | 纯追加 |
+| `test_fetch_new_articles.py` | **1** | `from articles_client import NoRuleError` → `..., TransformError` |
+
+最后那一行既不是新增用例、也不是点名那处改写，**字面上超出了锚点许可**。但它是 import 行的扩写，**没有任何已有断言或已有用例的行为被改动**，而且是用户批准的决定项 2（transform 报错走自愈）引入 `TransformError` 后的必然结果。判定：不构成实质违反，锚点 6 记 PASS。
+
+写下这条而不是默认放过，是因为下次再用"已有测试零改动"当判据时，需要知道这类 import 扩写算不算——**算偏离，但按实质判定放行，且必须显式记录**。
+
+### 更正二：接手方记录里"未合并到任何分支"与现状不符
+
+接手方自测小节写着分支「**未合并到任何分支**，按工作流约定只在用户明确说'合并'时才动」。但 git 历史显示已经合了：
+
+```
+0bb3a95 merge: feature/site-rules-tiers into staging
+```
+
+双父提交，`--no-ff` 正确。这大概是写完那句之后用户让合的，不是虚假陈述；但记录与现状不一致，按 accept 的规矩显式更正而不静默改掉。
+
+### 更正三：范围超出 plan 的部分（用户已批准，非违规）
+
+决定项 2（transform 报错走自愈，`TRANSFORM_ERROR:` 标记）和决定项 3（版本 bump，browser-fetch `0.3.0→0.4.0`、sync-website SKILL.md `0.1.0→0.2.0`）**都不在 plan 的任何已排期 Task 里**。接手方在记录里如实说明了这一点并等用户拍板，用户逐条选了方案。
+
+这不违反"阶段二不做"——`TRANSFORM_ERROR` 是二档的事，不是三档。但它超出了 plan 的 Task 范围，记在这里以免以后有人拿 plan 对不上代码。
+
+### 一条我这边发现的异常：工作区曾一度丢失本文档的交接记录
+
+accept 开始时 `git status` 显示本文档有一处未提交改动，`git diff` 的内容是：**状态从 `待验收` 退回 `待执行`，且接手方自测小节整段消失。** HEAD 里是完整的，工作区版本是残缺的。
+
+我没有提交这个丢失，而是先把工作区版本备份到 scratchpad、再 `git checkout --` 从 HEAD 恢复，然后才开始验收。
+
+**原因未查明。** 最可能是本 session 的文件写入与另一 session 的提交在同一路径上撞了（本 session 早先用 Write + python 改过这个文件，另一 session 在 worktree 里改了同一文件并合进 staging）。这条记下来是因为它意味着：**这份交接记录曾一度只存在于 git 历史里，工作区打开看是残缺的**——如果当时有人直接读工作区文件做决定，会以为任务还没开始。
 
 ---
 
