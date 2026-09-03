@@ -79,6 +79,40 @@ def build_parser() -> argparse.ArgumentParser:
     p_channel.set_defaults(handler=lambda a: core.fetch_channel_videos(
         a.channel_url, a.chrome_profile, a.max_videos))
 
+    p_articles = sub.add_parser("articles", help="站点感知的文章列表抽取（生产路径，规则来自规则库）")
+    p_articles.add_argument("url")
+    p_articles.add_argument("--chrome-profile", default=None)
+    p_articles.set_defaults(handler=lambda a: core.fetch_articles(a.url, a.chrome_profile))
+
+    p_articles_probe = sub.add_parser("articles-probe", help="标定路径：用候选 selector 试跑，不落盘")
+    p_articles_probe.add_argument("url")
+    p_articles_probe.add_argument("--selectors", required=True, help="JSON: {item,title,link,date}")
+    p_articles_probe.add_argument("--chrome-profile", default=None)
+    p_articles_probe.set_defaults(handler=lambda a: core.fetch_articles_probe(
+        a.url, json.loads(a.selectors), a.chrome_profile))
+
+    p_articles_rule = sub.add_parser("articles-rule", help="抽取规则库：查看/固化/删除")
+    ar_sub = p_articles_rule.add_subparsers(dest="rule_command", required=True)
+
+    ar_set = ar_sub.add_parser("set")
+    ar_set.add_argument("domain")
+    ar_set.add_argument("--selectors", required=True)
+    ar_set.add_argument("--list-url", required=True, dest="list_url")
+    ar_set.add_argument("--sample", default="[]")
+    ar_set.set_defaults(handler=lambda a: core.set_site_rule(
+        a.domain, a.list_url, json.loads(a.selectors), json.loads(a.sample)))
+
+    ar_get = ar_sub.add_parser("get")
+    ar_get.add_argument("domain")
+    ar_get.set_defaults(handler=lambda a: core.get_site_rule(a.domain))
+
+    ar_list = ar_sub.add_parser("list")
+    ar_list.set_defaults(handler=lambda a: core.list_site_rules())
+
+    ar_rm = ar_sub.add_parser("rm")
+    ar_rm.add_argument("domain")
+    ar_rm.set_defaults(handler=lambda a: core.remove_site_rule(a.domain))
+
     return parser
 
 

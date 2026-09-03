@@ -67,7 +67,7 @@ python3 scripts/roster_locate.py
 
 游标存在名册的 `state.json` 里，是"已报告过的 URL 集合"，不是 sync-xtimeline 那种单个 last_seen id——X 的 snowflake tweet id 按时间递增，可以比大小；YouTube 的 video id 是不透明的，只能判断"见过没有"。
 
-设计文档：`docs/superpowers/specs/2026-08-30-sync-timeline-output-alignment-design.md`（历史文档，写作时还有 `pending.json` 断点机制，现已改为游标晚推、不落断点文件）。
+设计文档：`docs/superpowers/specs/2026-08-30-sync-timeline-output-alignment-design.md`（历史文档，写作时还有 `pending.json` 断点机制，现已改为游标晚推、不落断点文件）。第三个同体系 skill 是 [sync-website](../sync-website/)，追更网站的文章列表页。
 
 ## 参考文件
 

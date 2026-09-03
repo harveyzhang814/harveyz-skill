@@ -2,8 +2,13 @@
 
 YouTube 的正则原样取自 sync-ytchannel/scripts/watchlist.py，行为要保持一致：
 /watch?v= 这类单视频链接必须拒绝——名册收的是渠道，不是单条物料。
+
+website 是兜底匹配：已知平台域名先过守卫（域名对得上但没通过对应正则的，
+仍然拒绝，不许掉进 website），其余合法 http/https URL 一律按域名切出一个
+渠道。
 """
 import re
+from urllib.parse import urlparse
 
 _YOUTUBE_RE = re.compile(
     r"^https?://(?:www\.|m\.)?youtube\.com/(?:(@[^/?#]+)|(?:channel|c|user)/([^/?#]+))(?:/[^/?#]*)?/?(?:[?#].*)?$"
@@ -11,6 +16,21 @@ _YOUTUBE_RE = re.compile(
 _X_RE = re.compile(
     r"^https?://(?:www\.)?(?:x|twitter)\.com/@?([A-Za-z0-9_]+)/?(?:[?#].*)?$"
 )
+_YOUTUBE_HOSTS = {
+    "youtube.com",
+    "www.youtube.com",
+    "m.youtube.com",
+    "youtu.be",
+    "music.youtube.com",
+}
+_X_HOSTS = {
+    "x.com",
+    "www.x.com",
+    "twitter.com",
+    "www.twitter.com",
+    "m.twitter.com",
+    "mobile.twitter.com",
+}
 
 
 def parse_channel_url(url: str) -> tuple[str, str]:
@@ -24,6 +44,16 @@ def parse_channel_url(url: str) -> tuple[str, str]:
     match = _X_RE.match(url)
     if match:
         return "x", match.group(1)
+
+    parsed = urlparse(url)
+    hostname = (parsed.hostname or "").lower()
+
+    if hostname in _YOUTUBE_HOSTS or hostname in _X_HOSTS:
+        raise ValueError(f"不是可识别的渠道 URL：{url}")
+
+    if parsed.scheme in ("http", "https") and hostname:
+        bare_host = hostname[4:] if hostname.startswith("www.") else hostname
+        return "website", slugify(bare_host)
 
     raise ValueError(f"不是可识别的渠道 URL：{url}")
 

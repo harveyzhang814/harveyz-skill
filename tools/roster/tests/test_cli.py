@@ -25,7 +25,7 @@ def test_registry_add_persists_to_disk(data_dir, capsys):
 
 
 def test_registry_add_bad_url_exits_1(data_dir, capsys):
-    code, _, err = _run(capsys, "registry", "add", "https://example.com/x")
+    code, _, err = _run(capsys, "registry", "add", "not a url")
     assert code == 1
     assert "不是可识别的渠道 URL" in err
 
