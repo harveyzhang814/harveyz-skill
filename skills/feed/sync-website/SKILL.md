@@ -1,6 +1,6 @@
 ---
 name: sync-website
-version: "0.1.0"
+version: "0.2.0"
 description: "Run one incremental fetch over every website channel on the roster, produce a translated Markdown digest of what is new since last run, and archive each new article's title, translated title, publish date and URL to a per-channel JSON store. Trigger phrases: '/sync-website run', '/sync-website calibrate <handle>', '/sync-website', 'check my watched websites for new articles', or a request to run sync-website on a schedule via /loop or schedule. Adding or removing a watched website is manage-creators, not this skill. Listing only — never downloads article bodies or images, and never ingests into Obsidian (use clip-url for a single article). Display of archived articles is left to external tooling reading the JSON archive directly, not this skill."
 user_invocable: true
 ---
@@ -73,6 +73,11 @@ sync-xtimeline / sync-ytchannel 共用同一份 `knowledgeRoot` 配置（各自�
 3. 你（模型）读这段 HTML，写一组候选 selector：
    `{"item": "...", "title": "...", "link": "...", "date": "..."}`（`date`
    可省略）。
+3b. 若单靠 selector 表达不了（字段要拼接或清洗、条目要过滤），再写一段
+    `transform.js` 存成临时文件。它的形状是 `(items) => items`：**输入是
+    第 4 步 selector 抽出的数组，不是页面**，跑在 `about:blank` 的隔离
+    上下文里，拿不到目标站的 DOM、cookie 和登录态。第 4 步用
+    `--transform-file <路径>` 一起试跑。
 4. `<browser-fetch> articles-probe <url> --selectors '<json>'` 用候选
    selector 试跑，**不落盘**。
 5. 机械门槛：把第 4 步的 `articles` 数组喂给
@@ -83,10 +88,15 @@ sync-xtimeline / sync-ytchannel 共用同一份 `knowledgeRoot` 配置（各自�
 6. 模型过目：机械门槛通过后，把前 5 条 `(title, url)` 摆出来自问"这像文章
    列表，还是像导航菜单 / 侧栏推荐 / 页脚"。不像 → 回第 3 步（占用同一个
    3 轮预算）；3 轮用完仍不像 → 标定失败，同第 5 步的失败处理。
-7. 两关都过 → `<browser-fetch> articles-rule set <domain> --selectors '<json>' --list-url '<url>' --sample '<前3条JSON>'`
-   固化规则。`domain` 是 `<url>` 的 hostname。
+7. 两关都过 → 固化：
+   - 只用 selector：`<browser-fetch> articles-rule set <domain> --selectors '<json>' --list-url '<url>' --sample '<前3条JSON>'`
+   - 用了 transform：同上再加 `--mode selector+transform --transform-file <路径>`
+   `domain` 是 `<url>` 的 hostname。
 
 任何一步中断，规则库都没被改过——写只发生在第 7 步。
+
+**本流程的上限是二档。** 需要在目标页面里跑任意 JS 才能抽的站，走的是另一条
+需要人工发起的路径，不在这里，也不会被 `run` 的自愈自动触发。
 
 ### run（支持 /loop、schedule 无人值守调用，过程中不需要用户回答任何问题——
 但需要模型自己做判断，见下方自愈小节）

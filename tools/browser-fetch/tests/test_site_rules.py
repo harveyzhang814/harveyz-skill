@@ -35,9 +35,11 @@ def test_set_overwrites_previous_rule_for_same_domain(tmp_path):
     assert rule["calibrated_at"] == "t2"
 
 
-def test_rule_file_written_under_site_rules_subdir(tmp_path):
+def test_rule_written_under_a_per_domain_directory(tmp_path):
+    # 存储契约在 2026-09-03-site-rules-tiers 里从扁平 <domain>.json 改成
+    # <domain>/ 目录，好让 JS 存成真正的 .js 文件。
     site_rules.set_rule(tmp_path, "example.com", "https://example.com/", SELECTORS, [], "t")
-    assert (tmp_path / "site_rules" / "example.com.json").exists()
+    assert (tmp_path / "site_rules" / "example.com" / "rule.json").exists()
 
 
 def test_list_rules_empty_when_none_set(tmp_path):
