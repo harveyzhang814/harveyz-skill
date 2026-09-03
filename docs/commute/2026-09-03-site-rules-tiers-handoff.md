@@ -92,7 +92,7 @@ simonwillison.net
 
 全量 opus review 发现 4 个 Important 级问题，其中 1 个（transform 求值无超时——自愈路径上模型写的 JS 可能卡死进程）已经修好了。另外 3 个我没有替你决定，原样列出：
 
-1. **`articles_client.py` 的 `probe_articles`/`set_rule`（Task 8 新增）目前没有任何生产调用方。** `SKILL.md` 的 calibrate 流程（`run` 的自愈也复用这条流程）实际上是让模型直接 shell 出去调 browser-fetch CLI，不经过这层 Python 封装。今天的安全性质（自愈上限二档）其实是靠 CLI 自己的 `--mode` 参数白名单撑住的，不是靠这层守卫——但 `set_rule` 的 docstring 写的是"skill 这一层是自愈唯一的调用入口"，这句话现在不是事实。是阶段二（Task 13）打算把自愈路径接到这层 Python 封装上，还是继续走"模型读 SKILL.md 直接 shell 出去"这个模式、把 docstring 改成实话？
+1. ~~`articles_client.py` 的 `probe_articles`/`set_rule`（Task 8 新增）目前没有任何生产调用方~~ **已处理（commit `5fa2137`）**：用户选了方案 B——保持 SKILL.md 现有的"模型直接 shell 调 CLI"标定流程不变，不把自愈接到这层 Python 封装；`set_rule` 的 docstring 已改成如实描述现状（零生产调用方，真正的二档上限是 CLI 自己的 `--mode` choices，这道白名单是留给阶段二可能接线的第二道防线）。是否真的接线仍是 Task 13 待决定的问题。
 2. **spec §6 说二档 transform 抛错应该跟"抽取到 0 条"一样触发自愈，但目前抛错只会进 `failures`，永远不会触发重新标定。** 这属于 Task 13（阶段二）范围，本次没做，但设计文档的承诺和现在的行为不一致，标记出来供阶段二规划时处理。
 3. **`tool.json`（browser-fetch）和 SKILL.md 的版本号都没有 bump**，装了旧版本的用户不会自动拿到这次的改动（installer 版本号相等就跳过）。规则 schema 从 v1 变成 v2，这次的版本错位比平时更容易踩到 argparse 报错。是不是该现在就 bump，还是留到你走 release 流程时统一处理？
 
