@@ -17,6 +17,12 @@ class NoRuleError(Exception):
     """No calibrated selector rule exists yet for this URL's domain."""
 
 
+class TransformError(Exception):
+    """A tier-2 transform.js raised or timed out while evaluating (spec §6:
+    treated as an extraction failure — the caller should route this the
+    same way as NO_RULE, into self-heal, not a permanent failure)."""
+
+
 async def fetch_articles(list_url: str, chrome_profile: Optional[str] = None) -> list[dict]:
     args = ["articles", list_url]
     if chrome_profile:
@@ -26,6 +32,8 @@ async def fetch_articles(list_url: str, chrome_profile: Optional[str] = None) ->
     except RuntimeError as e:
         if str(e).startswith("NO_RULE:"):
             raise NoRuleError(str(e)) from e
+        if str(e).startswith("TRANSFORM_ERROR:"):
+            raise TransformError(str(e)) from e
         raise
 
 

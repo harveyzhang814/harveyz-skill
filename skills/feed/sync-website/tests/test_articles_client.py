@@ -41,6 +41,14 @@ def test_fetch_articles_raises_no_rule_error_on_no_rule(monkeypatch):
         asyncio.run(articles_client.fetch_articles("https://example.com/"))
 
 
+def test_fetch_articles_raises_transform_error_on_transform_error(monkeypatch):
+    def boom(*args):
+        raise RuntimeError("TRANSFORM_ERROR: Error: boom")
+    monkeypatch.setattr(browser_fetch_cli, "call", boom)
+    with pytest.raises(articles_client.TransformError, match="TRANSFORM_ERROR: Error: boom"):
+        asyncio.run(articles_client.fetch_articles("https://example.com/"))
+
+
 def test_fetch_articles_propagates_other_failures_unchanged(monkeypatch):
     def boom(*args):
         raise RuntimeError("timeout navigating to page")

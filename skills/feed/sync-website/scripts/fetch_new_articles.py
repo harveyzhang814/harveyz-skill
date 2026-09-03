@@ -33,7 +33,7 @@ from typing import Optional
 
 import cursor as cursor_mod
 import roster_client
-from articles_client import fetch_articles, NoRuleError
+from articles_client import fetch_articles, NoRuleError, TransformError
 
 
 def _select_channels(handles: Optional[list[str]]) -> tuple[list[dict], list[str]]:
@@ -65,6 +65,12 @@ async def run(chrome_profile: Optional[str], handles: Optional[list[str]] = None
         try:
             articles = await fetch_articles(list_url, chrome_profile)
         except NoRuleError:
+            needs_calibration[handle] = list_url
+            continue
+        except TransformError:
+            # spec §6: a throwing/timing-out transform is an extraction
+            # failure like NO_RULE — self-heal (calibrate may rewrite the
+            # transform), not a permanent failures entry.
             needs_calibration[handle] = list_url
             continue
         except Exception as e:
