@@ -171,3 +171,53 @@ def test_no_tmp_or_old_directory_survives_a_successful_write(tmp_path):
     site_rules.set_rule(tmp_path, "example.com", "https://example.com/", SELECTORS, [], "t2")
     names = {p.name for p in (tmp_path / "site_rules").iterdir()}
     assert names == {"example.com"}
+
+
+def test_list_rules_covers_both_directory_and_flat_rules(tmp_path):
+    site_rules.set_rule(tmp_path, "a.example", "https://a.example/", SELECTORS, [], "t")
+    rules_dir = tmp_path / "site_rules"
+    (rules_dir / "b.example.json").write_text(json.dumps({
+        "domain": "b.example", "list_url": "https://b.example/",
+        "selectors": SELECTORS, "calibrated_at": "t", "sample": [],
+    }), encoding="utf-8")
+    assert {r["domain"] for r in site_rules.list_rules(tmp_path)} == {"a.example", "b.example"}
+
+
+def test_list_rules_ignores_tmp_and_old_leftovers(tmp_path):
+    site_rules.set_rule(tmp_path, "a.example", "https://a.example/", SELECTORS, [], "t")
+    rules_dir = tmp_path / "site_rules"
+    (rules_dir / "a.example.tmp").mkdir()
+    (rules_dir / "a.example.old").mkdir()
+    assert {r["domain"] for r in site_rules.list_rules(tmp_path)} == {"a.example"}
+
+
+def test_list_rules_skips_a_corrupt_rule_instead_of_failing_the_whole_listing(tmp_path):
+    site_rules.set_rule(tmp_path, "good.example", "https://good.example/", SELECTORS, [], "t")
+    _write_dir_rule(tmp_path, "bad.example", _selector_rule("bad.example", mode="script"))
+    listed = site_rules.list_rules(tmp_path)
+    assert {r["domain"] for r in listed} == {"good.example"}
+
+
+def test_remove_rule_deletes_the_whole_directory(tmp_path):
+    site_rules.set_rule(
+        tmp_path, "example.com", "https://example.com/", SELECTORS, [], "t",
+        mode="selector+transform", transform_js="(a) => a",
+    )
+    assert site_rules.remove_rule(tmp_path, "example.com") is True
+    assert not (tmp_path / "site_rules" / "example.com").exists()
+    assert site_rules.get_rule(tmp_path, "example.com") is None
+
+
+def test_remove_rule_also_deletes_a_legacy_flat_file(tmp_path):
+    rules_dir = tmp_path / "site_rules"
+    rules_dir.mkdir(parents=True)
+    (rules_dir / "example.com.json").write_text(json.dumps({
+        "domain": "example.com", "list_url": "https://example.com/",
+        "selectors": SELECTORS, "calibrated_at": "t", "sample": [],
+    }), encoding="utf-8")
+    assert site_rules.remove_rule(tmp_path, "example.com") is True
+    assert site_rules.get_rule(tmp_path, "example.com") is None
+
+
+def test_remove_rule_returns_false_when_nothing_to_remove(tmp_path):
+    assert site_rules.remove_rule(tmp_path, "nope.example") is False

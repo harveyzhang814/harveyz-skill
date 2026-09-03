@@ -150,18 +150,42 @@ def set_rule(
 
 
 def list_rules(data_dir: Path) -> list[dict]:
+    """目录格式与遗留扁平文件一并列出。单条规则损坏时跳过它而不是让整个
+    列举失败 —— `articles-rule list` 的用途正是排查哪条坏了。"""
     rules_dir = _rules_dir(data_dir)
     if not rules_dir.exists():
         return []
-    return [
-        json.loads(p.read_text(encoding="utf-8"))
-        for p in sorted(rules_dir.glob("*.json"))
-    ]
+
+    out = []
+    for entry in sorted(rules_dir.iterdir()):
+        if entry.is_dir():
+            if entry.suffix in (".tmp", ".old"):
+                continue
+            domain = entry.name
+        elif entry.suffix == ".json":
+            domain = entry.stem
+            if (rules_dir / domain).is_dir():
+                continue  # 目录格式已存在，扁平文件是待清理的残留
+        else:
+            continue
+
+        try:
+            rule = get_rule(data_dir, domain)
+        except (RuleCorruptError, ValueError, json.JSONDecodeError):
+            continue
+        if rule is not None:
+            out.append(rule)
+    return out
 
 
 def remove_rule(data_dir: Path, domain: str) -> bool:
-    path = _rule_path(data_dir, domain)
-    if not path.exists():
-        return False
-    path.unlink()
-    return True
+    domain_dir = _domain_dir(data_dir, domain)
+    flat = _flat_path(data_dir, domain)
+    removed = False
+    if domain_dir.exists():
+        shutil.rmtree(domain_dir)
+        removed = True
+    if flat.exists():
+        flat.unlink()
+        removed = True
+    return removed
