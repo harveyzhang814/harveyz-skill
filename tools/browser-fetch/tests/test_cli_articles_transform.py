@@ -130,7 +130,40 @@ def test_a_corrupt_rule_fails_the_run_instead_of_downgrading(run_cli, articles_f
 
 @pytest.mark.asyncio(loop_scope="module")
 async def test_transform_that_never_resolves_times_out(monkeypatch):
+    # spec §6: a transform that fails (throws, or here times out) is an
+    # extraction failure, not a bare asyncio internal — it must carry the
+    # TRANSFORM_ERROR: prefix so sync-website's fetch_new_articles.py can
+    # route it to self-heal instead of a permanent failure bucket.
     monkeypatch.setattr(core, "TRANSFORM_TIMEOUT_S", 0.1)
     js = "(items) => new Promise(() => {})"
-    with pytest.raises(asyncio.TimeoutError):
+    with pytest.raises(RuntimeError, match="^TRANSFORM_ERROR:"):
         await core._run_transform(ARTICLES, js, LIST_URL)
+
+
+@pytest.mark.asyncio(loop_scope="module")
+async def test_transform_that_throws_is_tagged_with_transform_error_prefix():
+    js = "(items) => { throw new Error('boom'); }"
+    with pytest.raises(RuntimeError, match="^TRANSFORM_ERROR:") as exc_info:
+        await core._run_transform(ARTICLES, js, LIST_URL)
+    assert "boom" in str(exc_info.value)
+
+
+def test_transform_error_surfaces_on_the_production_path(run_cli, articles_fixture_server, tmp_path):
+    """End-to-end: a throwing transform.js exits 1 with a TRANSFORM_ERROR:
+    prefix on stderr, distinguishable from NO_RULE and other failures —
+    sync-website's articles_client.py string-matches this prefix to route
+    the channel to self-heal (spec §6) instead of a permanent failure."""
+    selectors = {"item": "div.entry", "title": "h3 a", "link": "h3 a", "date": "p.date"}
+    transform = tmp_path / "t.js"
+    transform.write_text("(items) => { throw new Error('boom'); }", encoding="utf-8")
+    run_cli(
+        "articles-rule", "set", "127.0.0.1",
+        "--selectors", json.dumps(selectors),
+        "--list-url", articles_fixture_server,
+        "--mode", "selector+transform",
+        "--transform-file", str(transform),
+    )
+
+    proc, _ = run_cli("articles", articles_fixture_server)
+    assert proc.returncode == 1
+    assert "TRANSFORM_ERROR:" in proc.stderr

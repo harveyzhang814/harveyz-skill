@@ -865,9 +865,17 @@ async def _run_transform(articles: list[dict], transform_js: str, list_url: str)
     page = await ctx.new_page()
     try:
         await page.goto("about:blank")
-        raw = await asyncio.wait_for(
-            page.evaluate(transform_js, articles), timeout=TRANSFORM_TIMEOUT_S
-        )
+        try:
+            raw = await asyncio.wait_for(
+                page.evaluate(transform_js, articles), timeout=TRANSFORM_TIMEOUT_S
+            )
+        except Exception as e:
+            # spec §6: a transform that throws or times out is an extraction
+            # failure like any other, not a special case — tagged so
+            # sync-website's fetch_new_articles.py can route it to self-heal
+            # (needs_calibration) instead of a permanent failures entry,
+            # the same way NO_RULE already does.
+            raise RuntimeError(f"TRANSFORM_ERROR: {e}") from e
     finally:
         await page.close()
 
