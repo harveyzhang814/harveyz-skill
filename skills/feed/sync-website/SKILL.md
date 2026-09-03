@@ -1,6 +1,6 @@
 ---
 name: sync-website
-version: "0.1.0"
+version: "0.2.0"
 description: "Run one incremental fetch over every website channel on the roster, produce a translated Markdown digest of what is new since last run, and archive each new article's title, translated title, publish date and URL to a per-channel JSON store. Trigger phrases: '/sync-website run', '/sync-website calibrate <handle>', '/sync-website', 'check my watched websites for new articles', or a request to run sync-website on a schedule via /loop or schedule. Adding or removing a watched website is manage-creators, not this skill. Listing only — never downloads article bodies or images, and never ingests into Obsidian (use clip-url for a single article). Display of archived articles is left to external tooling reading the JSON archive directly, not this skill."
 user_invocable: true
 ---
