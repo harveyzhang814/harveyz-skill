@@ -47,3 +47,39 @@ def test_fetch_articles_propagates_other_failures_unchanged(monkeypatch):
     monkeypatch.setattr(browser_fetch_cli, "call", boom)
     with pytest.raises(RuntimeError, match="timeout navigating"):
         asyncio.run(articles_client.fetch_articles("https://example.com/"))
+
+
+def test_probe_articles_passes_transform_file_when_given(monkeypatch):
+    seen = {}
+
+    def fake_call(*args):
+        seen["args"] = args
+        return {"articles": []}
+
+    monkeypatch.setattr(browser_fetch_cli, "call", fake_call)
+    asyncio.run(articles_client.probe_articles(
+        "https://e.com/", {"item": "div"}, transform_file="/tmp/t.js"))
+    assert "--transform-file" in seen["args"]
+    assert "/tmp/t.js" in seen["args"]
+
+
+def test_probe_articles_omits_transform_file_when_absent(monkeypatch):
+    seen = {}
+
+    def fake_call(*args):
+        seen["args"] = args
+        return {"articles": []}
+
+    monkeypatch.setattr(browser_fetch_cli, "call", fake_call)
+    asyncio.run(articles_client.probe_articles("https://e.com/", {"item": "div"}))
+    assert "--transform-file" not in seen["args"]
+
+
+def test_set_rule_rejects_an_unsupported_mode_before_shelling_out(monkeypatch):
+    def boom(*args):
+        raise AssertionError("不该走到 CLI")
+
+    monkeypatch.setattr(browser_fetch_cli, "call", boom)
+    with pytest.raises(ValueError, match="mode"):
+        asyncio.run(articles_client.set_rule(
+            "e.com", "https://e.com/", {"item": "div"}, [], mode="script"))
