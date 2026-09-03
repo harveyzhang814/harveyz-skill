@@ -2,7 +2,7 @@
 
 **日期**：2026-09-02
 **author 模型**：Claude Opus 5
-**状态**：待验收 <!-- 待执行 → 执行中 → 待验收 → 已验收 / 打回 -->
+**状态**：已验收 <!-- 待执行 → 执行中 → 待验收 → 已验收 / 打回 -->
 **交接目的**：设计稿已经过用户逐项决策并评审通过，接手方从 spec 出发拆实施计划并完成实现——本次交接不重开设计讨论。
 
 > **接手方须知**：你正在接手一个任务。本文档是完整交接与唯一权威入口：从头读到尾，若文档里有「工作流约定」章节按其开工，没有就直接开工。**完成后把上面的状态置为「待验收」并停在这里**——`已验收` / `打回` 由原 session 按「最小验收锚点」判定后写，不要代填。你的自测结果写成独立小节，别写进原 session 的验收记录里。
@@ -20,6 +20,44 @@
 5. `grep -rn "import\|^from" skills/feed/sync-website/scripts/*.py` 的结果里**只有标准库和同目录模块**，没有任何第三方包。
 6. `skills-index.json` 里存在 `sync-website` 条目，`path` 与 `bundle` 填写正确，`npm test` 的索引校验通过。
 7. 端到端手测一个真实站点（建议 `https://simonwillison.net/`）：`calibrate` 能固化出规则，`run` 第一次建立基线、第二次报告 `EMPTY`，`<knowledgeRoot>/feeds/website/creators/simonwillison-net.json` 有内容。**这一条是手测，把实际命令和输出贴进你的自测小节。**
+
+---
+
+### 原 session 验收记录（accept，2026-09-03，Claude Opus 5）
+
+**结论：达成。七条逐条实跑，全绿。** 接手方自填的结论未采信，以下每条都是我自己跑出来的。
+
+| # | 判据 | 我的实跑结果 | 判定 |
+|---|---|---|---|
+| 1 | browser-fetch ≥ 141 passed 且已有用例未改 | `175 passed in 72.13s`。`git diff --stat e8cbc93..HEAD -- tools/browser-fetch/tests/` = **272 insertions(+), 0 deletions**；唯一 MODIFIED 的 `conftest.py` 删除行数 0，其余 4 个是新增文件 | PASS |
+| 2 | roster ≥ 131 passed 且三条 URL 行为正确 | `140 passed`。直接调 `parse_channel_url` 实测：`https://simonwillison.net/` → `('website','simonwillison-net')`；`youtube.com/watch?v=abc` → `ValueError`；`x.com/a/b/c` → `ValueError`。**额外自测**（锚点未要求）：`youtu.be/abc`、`music.youtube.com/watch`、`mobile.twitter.com/x` 均正确拒绝，`ftp://` 拒绝，`www.example.com/blog` → `('website','example-com')` | PASS |
+| 3 | npm test fail 0 且 SKILL.md 过格式校验 | `328 tests / 321 pass / 0 fail / 7 skipped`，与基线一致。**追查过"数量为何没涨"**：`tests/skills.bats` 的 8 条用例是遍历 `skills-index.json` 的循环（`_skill_records()`），加 skill 不增加用例数，sync-website 确在被校验范围内 | PASS |
+| 4 | `dispatch_site` 逐行未动 | 与实现前 `e8cbc93` 对比：`extractors.py:10,20` 与 `core.py:27,383,549` **行号完全一致**；函数体 `diff` 输出为空（IDENTICAL） | PASS |
+| 5 | skill scripts 只依赖标准库 + 同目录 | 全部 import 为 `argparse/asyncio/json/os/shutil/subprocess/sys/datetime/pathlib/typing/urllib.parse` + 同目录模块。无第三方包 | PASS |
+| 6 | skills-index.json 条目正确 | `{"path":"feed/sync-website","bundle":"feed",...}`，`bundle` 与同体系的 `sync-xtimeline`/`sync-ytchannel`/`manage-creators` 一致（均为 `feed`） | PASS |
+| 7 | 端到端手测 | 见下方分解，四支全验 | PASS |
+
+**第 7 条分解（我自己跑的，不是复述接手方记录）：**
+
+- **规则已固化**：`~/.hskill/browser-fetch/contexts/site_rules/simonwillison.net.json` 存在，含 `selectors`/`list_url`/`calibrated_at`/`sample`。
+- **生产路径不带 selector 参数**：`browser-fetch articles https://simonwillison.net/` 直接读规则库返回 3 条结构化条目。
+- **NO_RULE 分支**：`browser-fetch articles https://example.com/` → **exit 2**，stdout 空，`NO_RULE: example.com` 走 stderr，符合 CLI 契约。
+- **EMPTY 分支**：游标在 3 条 URL 状态下跑 `fetch_new_articles.py` → `new:{}`，`digest.py` → `EMPTY`。
+- **归档 + 提交点分支**：我把游标回退到 1 条真实 URL 后重跑 → 抓到 2 条新文章 → 注入 `translated` → `digest.py` 写出 `digest-20260903T024555.md`（含中文标题与原文链接）→ `archive_articles.py` exit 0 → 归档从 1 条增至 2 条 → 游标推进回 3 条。**提交点语义成立**。（副作用说明：游标结束状态与测试前相同，归档比测试前更完整，无数据损坏。）
+- **基线分支**：磁盘上首次 run 的实际产物 `digest-20260902T212639.md` 内容为「已建立追踪基线 — simonwillison-net：起始 3 篇文章」；`tests/test_fetch_new_articles.py` 另有 8 处 baseline 断言。
+- 附带：`skills/feed/sync-website/tests` 自身 **80 passed**。
+
+**更正一：验收锚点第 7 条的字面表述是我写错了，接手方的偏差记录成立。**
+
+原文要求「`run` 第一次建立基线、第二次报告 `EMPTY`，归档文件有内容」——这三件事在**无新文章发布的窗口期内不可能同时成立**：首次只建基线不归档，第二次没有新文章也不归档，归档必须等到真有新文章。这是 `cursor.compute_update` 抄自 sync-ytchannel 的既有语义，不是本次引入的缺陷。接手方如实记录而没有回避或粉饰，判断正确。第 7 条应读作：**基线、EMPTY、归档三支各自成立即可，不要求在同一次连续运行里全部出现**——我按这个口径验的，四支全过。
+
+**更正二：spec §3.4 第 6 条对规则库位置的描述是我写错了。**
+
+原文写「`_data_dir()/site_rules/` 跟已有的 `config.json`、`timeline_pace.json`、`contexts/` 平级且不重叠」。实际 `_data_dir()` 返回的就是 `~/.hskill/browser-fetch/contexts`（`core.py:44-53`），所以 `config.json` 和 `timeline_pace.json` 本来就在 `contexts/` **里面**，`site_rules/` 也落在里面。实现照 `config.py` 的既有惯例做，是对的；错的是我的描述。
+
+实测确认放置安全：Playwright 拿到的持久化目录是 `contexts/<profile_key>`（`core.py:60`）而非 `contexts/` 本身，且全仓无任何代码清理 `contexts/`。**遗留问题（非本次缺陷）**：`contexts/` 这个目录名现在名不副实——它实际上是 browser-fetch 的整个 data dir。这是 `_data_dir()` 早于本次就有的命名，不在本次范围内，记下不处理。
+
+**观察（不影响判定）**：工作已合并进 staging（`ff787ab`，双父提交，`--no-ff` 正确）。交接文档的「工作流约定」写的是「只在用户明确说合并/完成时才 merge」——我这边没有看到该指令，若是用户直接对接手 session 下的，则无问题；记录在此备查。
 
 ---
 
