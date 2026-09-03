@@ -87,6 +87,24 @@ def get_rule(data_dir: Path, domain: str) -> Optional[dict]:
     return None
 
 
+def _swap_dir(tmp: Path, target: Path) -> None:
+    """把 tmp 目录换成 target。os.replace 对目录只在目标不存在或为空时成立，
+    所以先把旧目录改名让出位置，换完再删。
+
+    崩溃点的状态：改名后崩 → 规则暂时读不到但 .old 还在，可人工恢复；
+    替换后崩 → 新规则已生效，只剩一个 .old 待清理。任何一步都不会产生
+    "半条规则"，因为 target 下的文件永远是一次性整批换进去的。
+    """
+    backup = target.with_name(target.name + ".old")
+    if backup.exists():
+        shutil.rmtree(backup)
+    if target.exists():
+        os.replace(target, backup)
+    os.replace(tmp, target)
+    if backup.exists():
+        shutil.rmtree(backup)
+
+
 def set_rule(
     data_dir: Path,
     domain: str,
@@ -94,16 +112,41 @@ def set_rule(
     selectors: dict,
     sample: list,
     calibrated_at: str,
+    mode: str = "selector",
+    transform_js: Optional[str] = None,
 ) -> None:
-    path = _rule_path(data_dir, domain)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps({
+    if mode not in SUPPORTED_MODES:
+        raise ValueError(f"unsupported mode: {mode!r}")
+    if mode == "selector+transform" and not transform_js:
+        raise ValueError("mode 'selector+transform' requires transform_js")
+    if mode == "selector" and transform_js:
+        raise ValueError("mode 'selector' must not carry transform_js")
+
+    target = _domain_dir(data_dir, domain)
+    tmp = target.with_name(target.name + ".tmp")
+    if tmp.exists():
+        shutil.rmtree(tmp)
+    tmp.mkdir(parents=True)
+
+    (tmp / "rule.json").write_text(json.dumps({
+        "schema_version": 2,
         "domain": domain,
         "list_url": list_url,
+        "mode": mode,
         "selectors": selectors,
         "calibrated_at": calibrated_at,
         "sample": sample,
     }, indent=2, ensure_ascii=False), encoding="utf-8")
+
+    if transform_js:
+        (tmp / TRANSFORM_FILE).write_text(transform_js, encoding="utf-8")
+
+    _swap_dir(tmp, target)
+
+    # 迁移：目录格式落盘成功后才删旧扁平文件，中途失败仍能按旧格式读到规则。
+    flat = _flat_path(data_dir, domain)
+    if flat.exists():
+        flat.unlink()
 
 
 def list_rules(data_dir: Path) -> list[dict]:
