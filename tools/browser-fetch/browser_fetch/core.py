@@ -37,6 +37,7 @@ from browser_fetch.normalize import normalize_articles
 from browser_fetch import config, markdown, pacing, pacing_log, site_rules
 
 ANON_KEY = "__anon__"
+TRANSFORM_KEY = "__transform__"
 
 _state = {"playwright": None, "contexts": {}}
 _rng = random.Random()
@@ -838,6 +839,32 @@ async def _scrape_articles(
 
     # 归一化跑在 JS 边界之外，所以三档都绕不过去（spec §7.3）。
     return normalize_articles(raw_items, list_url)
+
+
+async def _run_transform(articles: list[dict], transform_js: str, list_url: str) -> list[dict]:
+    """在隔离上下文里对 selector 抽出的数组做后处理 —— spec §2。
+
+    刻意跑在 about:blank 而不是目标页面上：transform 因此拿不到目标站的
+    DOM、cookie 和登录态，只拿得到传进去的 JSON 数组。这是"二档可由自愈
+    自动写、三档必须人批"这条分级的支点 —— 若 transform 在目标页面里跑，
+    它的能力与三档全 JS 完全相同，分级就只是输入变干净了、能力没变。
+
+    另起一个 context key（不复用 ANON_KEY）是为了不跟任何抓取路径共享
+    浏览器状态。**这不是真沙箱** —— fetch 仍然可用，只是没有目标站凭据。
+
+    输出照样过归一化：transform 可能造出新的或相对的 URL。
+    """
+    ctx = await _get_context(TRANSFORM_KEY)
+    page = await ctx.new_page()
+    try:
+        await page.goto("about:blank")
+        raw = await page.evaluate(transform_js, articles)
+    finally:
+        await page.close()
+
+    if not isinstance(raw, list):
+        return []
+    return normalize_articles(raw, list_url)
 
 
 async def get_site_rule(domain: str) -> dict:

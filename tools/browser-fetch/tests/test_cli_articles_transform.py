@@ -1,0 +1,68 @@
+"""二档 transform 的隔离求值 —— spec §2。
+
+这套分级的支点：transform 必须拿不到目标站的 DOM 与 cookie，否则它跟三档
+能力相同，"二档可自动、三档要人批"就没有实质差别。这里的三条隔离断言是
+那条设计主张的可证伪形式。
+"""
+import json
+
+import pytest
+
+from browser_fetch import core
+
+# core._get_context caches Playwright connections/contexts at module scope
+# (by design — see core.py), keyed only by context key, with no per-test
+# teardown. pytest-asyncio's default is a fresh event loop per test
+# function; reusing a cached connection under a second, later-created loop
+# hangs forever (its reader/writer tasks died with the first loop; nothing
+# resolves the second loop's futures). Sharing one event loop across this
+# file's tests keeps that cache usage consistent with the loop it was
+# created under, matching how core.py is actually used in production (one
+# process, one loop, for the whole server lifetime).
+pytestmark = pytest.mark.asyncio(loop_scope="module")
+
+ARTICLES = [
+    {"title": "a", "url": "https://example.com/1", "date_text": "d1"},
+    {"title": "b", "url": "https://example.com/2", "date_text": "d2"},
+]
+LIST_URL = "https://example.com/blog"
+
+
+async def test_transform_receives_the_articles_array():
+    out = await core._run_transform(ARTICLES, "(items) => items.slice(1)", LIST_URL)
+    assert [a["title"] for a in out] == ["b"]
+
+
+async def test_transform_output_goes_through_normalization():
+    js = "(items) => items.map(i => ({...i, title: '  x  y  ', url: '/rel'}))"
+    out = await core._run_transform(ARTICLES, js, LIST_URL)
+    assert out[0]["title"] == "x y"
+    assert out[0]["url"] == "https://example.com/rel"
+
+
+async def test_transform_cannot_read_target_site_cookies():
+    # about:blank navigated to directly (no opener) has an opaque origin in
+    # Chromium, so document.cookie doesn't just read empty — it throws
+    # SecurityError (spec: cookie access is disallowed for cookie-averse /
+    # opaque-origin documents). That's a stronger form of "no cookie
+    # access" than the brief's `document.cookie || 'EMPTY'` anticipated
+    # (which assumed a falsy empty-string read); the try/catch here adapts
+    # to that real, deterministic browser behavior while keeping the same
+    # assertion — the transform still ends up with no target-site cookie.
+    js = (
+        "(items) => { let c; try { c = document.cookie; } catch (e) { c = ''; } "
+        "return [{title: c || 'EMPTY', url: 'https://x/1', date_text: ''}]; }"
+    )
+    out = await core._run_transform(ARTICLES, js, LIST_URL)
+    assert out[0]["title"] == "EMPTY"
+
+
+async def test_transform_does_not_run_on_the_target_page():
+    js = "(items) => [{title: location.href, url: 'https://x/1', date_text: ''}]"
+    out = await core._run_transform(ARTICLES, js, LIST_URL)
+    assert out[0]["title"] == "about:blank"
+
+
+async def test_transform_returning_a_non_array_yields_no_articles():
+    out = await core._run_transform(ARTICLES, "(items) => 42", LIST_URL)
+    assert out == []
