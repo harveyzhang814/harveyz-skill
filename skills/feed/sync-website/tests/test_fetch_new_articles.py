@@ -15,7 +15,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
 
 import fetch_new_articles
 import roster_client
-from articles_client import NoRuleError
+from articles_client import NoRuleError, TransformError
 from config import get_data_dir
 
 
@@ -109,6 +109,20 @@ def test_empty_articles_result_also_routes_to_needs_calibration(fake_roster, fak
 
     assert report["needs_calibration"] == {"a": "https://a.example/"}
     assert "a" not in report["failures"]
+
+
+def test_transform_error_routes_to_needs_calibration_not_failures(fake_roster, fake_fetch):
+    """spec §6: a throwing/timing-out tier-2 transform is treated like any
+    other extraction failure — self-heal, not a permanent failures entry."""
+    fake_roster.watch("a", "https://a.example/")
+    fake_fetch["https://a.example/"] = TransformError("TRANSFORM_ERROR: Error: boom")
+
+    report = asyncio.run(fetch_new_articles.run(None))
+
+    assert report["needs_calibration"] == {"a": "https://a.example/"}
+    assert report["failures"] == {}
+    assert "a" not in report["cursors"]
+    assert fake_roster.errors == {}
 
 
 def test_other_exceptions_still_route_to_failures(fake_roster, fake_fetch):

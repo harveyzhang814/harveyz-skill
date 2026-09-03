@@ -33,9 +33,12 @@ from browser_fetch.extractors import (
 )
 from browser_fetch.images import download_images
 from browser_fetch.profiles import list_chrome_profiles as _list_chrome_profiles
+from browser_fetch.normalize import normalize_articles
 from browser_fetch import config, markdown, pacing, pacing_log, site_rules
 
 ANON_KEY = "__anon__"
+TRANSFORM_KEY = "__transform__"
+TRANSFORM_TIMEOUT_S = 30
 
 _state = {"playwright": None, "contexts": {}}
 _rng = random.Random()
@@ -784,21 +787,27 @@ async def fetch_articles(url: str, chrome_profile: Optional[str] = None) -> dict
         raise ValueError(f"NO_RULE: {domain}")
 
     articles = await _scrape_articles(url, rule["selectors"], chrome_profile)
+    if rule.get("mode") == "selector+transform":
+        articles = await _run_transform(articles, rule["transform_js"], url)
     return {"domain": domain, "articles": articles}
 
 
 async def fetch_articles_probe(
-    url: str, selectors: dict, chrome_profile: Optional[str] = None
+    url: str,
+    selectors: dict,
+    chrome_profile: Optional[str] = None,
+    transform_js: Optional[str] = None,
 ) -> dict:
-    """Calibration path: try candidate selectors against url and return
-    what they extract. Never reads or writes the rule store — only
-    `articles-rule set` persists a rule, so a failed calibration trial
-    leaves no trace (spec §3.2: "probe 与 set 分离是关键")."""
+    """标定路径：用候选规则试跑并返回抽取结果。**从不读写规则库** ——
+    只有 `articles-rule set` 落盘，所以一轮失败的标定不留痕迹
+    （spec §3.2："probe 与 set 分离是关键"）。"""
     parsed_url = urlparse(url)
     if parsed_url.scheme not in ("http", "https") or not parsed_url.netloc:
         raise ValueError(f"Rejected URL with scheme '{parsed_url.scheme}' — only http/https allowed")
 
     articles = await _scrape_articles(url, selectors, chrome_profile)
+    if transform_js:
+        articles = await _run_transform(articles, transform_js, url)
     return {"articles": articles}
 
 
@@ -835,7 +844,44 @@ async def _scrape_articles(
     finally:
         await page.close()
 
-    return [item for item in raw_items if item["url"]]
+    # 归一化跑在 JS 边界之外，所以三档都绕不过去（spec §7.3）。
+    return normalize_articles(raw_items, list_url)
+
+
+async def _run_transform(articles: list[dict], transform_js: str, list_url: str) -> list[dict]:
+    """在隔离上下文里对 selector 抽出的数组做后处理 —— spec §2。
+
+    刻意跑在 about:blank 而不是目标页面上：transform 因此拿不到目标站的
+    DOM、cookie 和登录态，只拿得到传进去的 JSON 数组。这是"二档可由自愈
+    自动写、三档必须人批"这条分级的支点 —— 若 transform 在目标页面里跑，
+    它的能力与三档全 JS 完全相同，分级就只是输入变干净了、能力没变。
+
+    另起一个 context key（不复用 ANON_KEY）是为了不跟任何抓取路径共享
+    浏览器状态。**这不是真沙箱** —— fetch 仍然可用，只是没有目标站凭据。
+
+    输出照样过归一化：transform 可能造出新的或相对的 URL。
+    """
+    ctx = await _get_context(TRANSFORM_KEY)
+    page = await ctx.new_page()
+    try:
+        await page.goto("about:blank")
+        try:
+            raw = await asyncio.wait_for(
+                page.evaluate(transform_js, articles), timeout=TRANSFORM_TIMEOUT_S
+            )
+        except Exception as e:
+            # spec §6: a transform that throws or times out is an extraction
+            # failure like any other, not a special case — tagged so
+            # sync-website's fetch_new_articles.py can route it to self-heal
+            # (needs_calibration) instead of a permanent failures entry,
+            # the same way NO_RULE already does.
+            raise RuntimeError(f"TRANSFORM_ERROR: {e}") from e
+    finally:
+        await page.close()
+
+    if not isinstance(raw, list):
+        return []
+    return normalize_articles(raw, list_url)
 
 
 async def get_site_rule(domain: str) -> dict:
@@ -849,12 +895,22 @@ async def list_site_rules() -> dict:
     return {"rules": site_rules.list_rules(_data_dir())}
 
 
-async def set_site_rule(domain: str, list_url: str, selectors: dict, sample: list) -> dict:
+async def set_site_rule(
+    domain: str,
+    list_url: str,
+    selectors: dict,
+    sample: list,
+    mode: str = "selector",
+    transform_js: Optional[str] = None,
+) -> dict:
     from datetime import datetime, timezone
 
     calibrated_at = datetime.now(timezone.utc).isoformat()
-    site_rules.set_rule(_data_dir(), domain, list_url, selectors, sample, calibrated_at)
-    return {"ok": True, "domain": domain, "calibrated_at": calibrated_at}
+    site_rules.set_rule(
+        _data_dir(), domain, list_url, selectors, sample, calibrated_at,
+        mode=mode, transform_js=transform_js,
+    )
+    return {"ok": True, "domain": domain, "mode": mode, "calibrated_at": calibrated_at}
 
 
 async def remove_site_rule(domain: str) -> dict:

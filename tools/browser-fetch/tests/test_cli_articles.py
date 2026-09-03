@@ -64,3 +64,27 @@ def test_articles_probe_rejects_file_scheme(run_cli):
     proc, _ = run_cli("articles-probe", "file:///etc/passwd", "--selectors", "{}")
     assert proc.returncode == 2
     assert "only http/https allowed" in proc.stderr
+
+
+def test_articles_output_carries_exactly_the_contract_keys(run_cli, articles_fixture_server):
+    run_cli(
+        "articles-rule", "set", "127.0.0.1",
+        "--selectors", json.dumps(ARTICLE_SELECTORS),
+        "--list-url", articles_fixture_server,
+    )
+    _, payload = run_cli("articles", articles_fixture_server)
+    for article in payload["articles"]:
+        assert set(article) == {"title", "url", "date_text"}
+
+
+def test_articles_urls_stay_absolute_after_normalization(run_cli, articles_fixture_server):
+    # fixture 页面里的 href 是相对的（/posts/1），一档模板用 linkEl.href 已经
+    # 解析成绝对；urljoin 幂等，所以这里断言的是"归一化没有把它弄坏"。
+    run_cli(
+        "articles-rule", "set", "127.0.0.1",
+        "--selectors", json.dumps(ARTICLE_SELECTORS),
+        "--list-url", articles_fixture_server,
+    )
+    _, payload = run_cli("articles", articles_fixture_server)
+    assert all(a["url"].startswith("http://127.0.0.1:") for a in payload["articles"])
+    assert payload["articles"][0]["url"].endswith("/posts/1")

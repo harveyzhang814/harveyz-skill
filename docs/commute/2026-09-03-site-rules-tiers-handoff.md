@@ -2,7 +2,7 @@
 
 **日期**：2026-09-03
 **author 模型**：Claude Opus 5
-**状态**：待执行 <!-- 待执行 → 执行中 → 待验收 → 已验收 / 打回 -->
+**状态**：待验收 <!-- 待执行 → 执行中 → 待验收 → 已验收 / 打回 -->
 **交接目的**：设计与实施计划都已写完并经用户确认，接手方按计划逐任务执行到**阶段一结束为止**——本次交接不重开设计讨论，也不自行推进到阶段二。
 
 > **接手方须知**：你正在接手一个任务。本文档是完整交接与唯一权威入口：从头读到尾，若文档里有「工作流约定」章节按其开工，没有就直接开工。**完成后把上面的状态置为「待验收」并停在这里**——`已验收` / `打回` 由原 session 按「最小验收锚点」判定后写，不要代填。你的自测结果写成独立小节，别写进原 session 的验收记录里。
@@ -40,6 +40,61 @@ cd tools/browser-fetch
 9. 迁移真的发生（计划 Task 8.5 Step 3）：对某个已有域名重跑一次 `articles-rule set` 后，`ls ~/.hskill/browser-fetch/contexts/site_rules/` 显示出现了 `<domain>/` 目录且同名 `.json` 已消失。**把实际命令与输出贴进你的自测小节。**
 
 10. **阶段二（Task 9–14）一行代码都没动。** `git diff` 里不存在 `static_scan.py`、`allow_script`、`extract.js`、`review.md` 相关改动。
+
+---
+
+## 接手方自测（2026-09-03，本 session）
+
+执行方式：`superpowers:subagent-driven-development`，每 Task 一个全新 implementer + 一次独立 task review，全 8 个 Task 完成后跑了一次 opus 全量分支 review，发现的 4 条问题（1 Important + 3 Minor）已修复并过了 scoped re-review。分支 `feature/site-rules-tiers`（从 `doc/site-rules-tiers` 切出，worktree 在 `.worktrees/site-rules-tiers/`），9 个 commit（`a4e6d82`..`e6b6cc9`）。**未合并到任何分支**，按工作流约定只在用户明确说"合并"时才动。
+
+逐条对最小验收锚点实跑：
+
+1. `cd tools/browser-fetch && .venv/bin/pytest -q` → **218 passed**（基线 175 + 43 新增，0 warnings）。`git diff` 在 `tools/browser-fetch/tests/` 下核对过，只有新增文件、新增用例，以及第 6 条点名的那一处改写。✅
+2. `cd skills/feed/sync-website && python3 -m pytest tests -q` → **83 passed**（基线 80 + 3 新增，已有用例零改动）。✅
+3. `cd tools/roster && .venv/bin/pytest -q` → **140 passed**（与基线一模一样）。✅
+4. `npm test` → **328 tests / 321 pass / 0 fail / 7 skipped**（与基线一模一样）。✅
+5. `grep -rn "^import \|^from " skills/feed/sync-website/scripts/*.py` → 全量核对，只有标准库和同目录模块。✅
+6. 唯一改动的已有测试就是 `test_site_rules.py` 里点名的那一条（Task 3 改的），其余已有测试零改动——这条贯穿全程反复核对（包括 Task 3 遇到的一次真实计划缺口，见下）。✅
+7. 一档实测：
+
+```
+$ ./browser-fetch.sh articles https://claude.com/blog | python3 -c "..."
+15
+{'title': 'A guide to the anatomy of effective commerce agents', 'url': 'https://claude.com/blog/the-anatomy-of-effective-commerce-agents', 'date_text': 'Sep 2, 2026'}
+```
+
+条数、标题、URL、date_text 与锚点给出的示例完全一致（用的是本机已有的 claude.com 规则，未触发 NO_RULE 分支）。✅
+
+8. `pytest tests/test_cli_articles_transform.py -k "cookies or target_page"` → 2 passed。二档隔离由 Task 6 的 reviewer 独立复现验证（真的在本机 Chromium 上触发了 `document.cookie` 的 `SecurityError`，不是道听途说），Task 7 wiring 之后端到端再核对了一次。✅
+9. 迁移实测：
+
+```
+$ ./browser-fetch.sh articles-rule set simonwillison.net --selectors '{"item":"div.entry","title":"h3 a","link":"h3 a"}' --list-url 'https://simonwillison.net/'
+{"ok":true,"domain":"simonwillison.net","mode":"selector","calibrated_at":"2026-09-03T09:13:32.037883+00:00"}
+
+$ ls ~/.hskill/browser-fetch/contexts/site_rules/
+claude.com.json
+simonwillison.net
+```
+
+`simonwillison.net/` 目录出现，`simonwillison.net.json` 消失；`claude.com.json` 未被这次操作触碰（仍是扁平文件，符合"迁移只在写入时发生"的设计）。迁移后重新抓取 simonwillison.net 仍是 3 条，行为不变。✅
+
+10. `git diff a5e9cb8..HEAD` 核对过，没有任何 `static_scan.py`/`allow_script`/`extract.js`/`review.md` 相关改动。阶段二一行没动。✅
+
+**全绿，10/10。**
+
+### 过程中的两个非预期发现（不是验收锚点的一部分，供参考）
+
+- **环境问题**：一开始为省事把 worktree 的 `tools/browser-fetch/.venv` 和 `tools/roster/.venv` 软链到主仓库现成的 venv，结果主仓库 venv 里的 editable install `.pth` 硬编码了主仓库的绝对路径——用 `pytest` 脚本直接跑（不加 `python -m`）会悄悄测到主仓库里的旧代码，而不是 worktree 里刚写的改动。已定位并改成 worktree 内独立安装的真实 venv 修复，此后所有测试结果可信。此前 Task 1/2 的通过结果经排查确认没受影响（唯一被"污染"的文件内容本身也完全一致）。
+- **计划缺口（已按 ruling 处理，不是本次改动的错）**：Task 3 把 `set_rule` 改成只写新目录格式后，`list_rules`/`remove_rule`（要到 Task 4 才改）短暂看不到新写入的规则，导致 4 条已有测试（2 条在 `test_site_rules.py`，2 条在 `test_cli_articles_rule.py`）在 Task 3 单独跑时是红的。这是计划本身 Task 3→Task 4 边界的缺口，不是实现错误——已在 ledger 里 ruling 记录，Task 3 按计划原样提交（未碰这 4 条测试），Task 4 落地后全部转绿，独立复核过。
+
+### 留给用户的三个决定（review 发现，不是 bug，是需要你拍板的设计问题）
+
+全量 opus review 发现 4 个 Important 级问题，其中 1 个（transform 求值无超时——自愈路径上模型写的 JS 可能卡死进程）已经修好了。另外 3 个我没有替你决定，原样列出：
+
+1. ~~`articles_client.py` 的 `probe_articles`/`set_rule`（Task 8 新增）目前没有任何生产调用方~~ **已处理（commit `5fa2137`）**：用户选了方案 B——保持 SKILL.md 现有的"模型直接 shell 调 CLI"标定流程不变，不把自愈接到这层 Python 封装；`set_rule` 的 docstring 已改成如实描述现状（零生产调用方，真正的二档上限是 CLI 自己的 `--mode` choices，这道白名单是留给阶段二可能接线的第二道防线）。是否真的接线仍是 Task 13 待决定的问题。
+2. ~~spec §6 说二档 transform 抛错应该跟"抽取到 0 条"一样触发自愈，但目前抛错只会进 `failures`，永远不会触发重新标定~~ **已处理（commit `d6618ba` + `1dde601`）**：用户选了"走自愈"。核对过这条其实不在任何已排期任务里（Task 13 只覆盖三档不自愈，跟这条是两回事）。实现镜像了已有的 `NO_RULE:` 约定：browser-fetch 侧 transform 抛错/超时打 `TRANSFORM_ERROR:` 标记（exit 1），sync-website 侧识别这个标记路由到 `needs_calibration`。两边测试全绿（browser-fetch 220 passed，sync-website 85 passed），过了一轮 scoped review（无 Critical/Important 发现，隔离机制未受影响）。
+3. ~~`tool.json`（browser-fetch）和 SKILL.md 的版本号都没有 bump~~ **已处理（commit `abfcec9`）**：用户选了现在就 bump。browser-fetch `0.3.0→0.4.0`（`tool.json` + `pyproject.toml` 同步），sync-website SKILL.md `0.1.0→0.2.0`（installer 版本号跳过逻辑实际读的就是这个字段）。`npm test` 前后都跑过，绿。
 
 ---
 
