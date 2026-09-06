@@ -1,7 +1,7 @@
 ---
 name: handoff
 description: Use when handing a task across sessions — writing a self-contained handoff doc for a fresh session to pick up (author), sanity-checking an inbound handoff before starting (verify), or accepting completed work against the criteria agreed at handoff time (accept). Triggers on phrases like "write a handoff", "hand this off", "pick up this task", "sign off on this work". Generic skill — project-specific conventions are read from .hskill/handoff/config.md.
-version: "1.3.0"
+version: "1.4.0"
 user_invocable: true
 ---
 
@@ -27,9 +27,18 @@ user_invocable: true
 2. **判断目的**：从当前对话判断这次交接是为了什么——不套预设分类，一句自然语言判断即可（例如"接手方续做同一个实现任务"或"把讨论结论作为背景传给接手方去开展新话题"）。这句话会写进文档开头的"交接目的"，且始终存在，不可省略。
 3. **汇集上下文**：以**当前对话**为真相源。涉及代码时读 `git status` / `git diff` 核对现状、排查受影响文件（若这两类内容按第 4 步判定为必要），并作为门禁的现实校验（纯规划交接可跳过）；spec/plan 作为权威指针。**不把 memory 写进文档**——memory 可能陈旧、且接手方访问不到你的 memory 目录；若某条 memory 是承载性背景，把**核实过的事实**内联进去，别留 `[[memory]]` 死链。现状一律以 git/仓库为准，不以 memory 为准。
 4. **起草**：读 `assets/handoff-template.md`，按其中的候选内容清单逐类过必要性测试——"不写这条信息，接手方会不会出问题"，答案是"会"才写出对应章节，答案是"不会"整节跳过，不留空标题。**交接目的**和**最小验收锚点**这两项任何情况下都必须写。指针式引用权威依据，只内联接手方开工必需的硬核，不重抄 spec 全文。写到 `<output_dir>/YYYY-MM-DD-<topic>-handoff.md`，状态置 `待执行`。
-5. **跑完整性门禁**（见下），不过不放行。
-6. **落库**：接手方若会在**另一个分支或另一个 worktree** 里开工，把交接文档 commit 进这次工作所在的分支——未提交的文档在那边根本看不到，等于没交出去。**提交完成之后**再释放自己的工作区（如 `git worktree remove`）；顺序反了，文档会落回原处成为一份提交不了的孤儿。接手方就在同一目录同一分支续做、或文档整份贴给对方时，此步可省。
-7. **交付**：告知用户文档路径，说明下个 session 直接整份喂入即可。
+5. **画布节点登记**（仅当 `agent-canvas-ctl` 命令存在时做；不在 Agent Canvas 画布节点里就整步跳过，不报错）：
+   - 跑 `agent-canvas-ctl whoami` 取自己的节点 id 与标题，在文档抬头补一行
+     `**交接源节点**：<nodeId> · <title>`。这一行是接手方**唯一**能找回你这个节点的线索——
+     文档路径和分支名都指认不到画布上的节点实体。
+   - 若这次交接**你已经能指认接手节点**（例如接手用的 PTY 节点是你亲手创建的）→ 当场建关系
+     `agent-canvas-ctl link-nodes --from <自己的 nodeId> --to <接手节点 nodeId> --type hands-off-to`，
+     并在抬头那一行末尾注明 `（hands-off-to 已建）`，接手方只核对、不重复建。
+   - 指认不到接手节点（常态：接手方是还不存在的下一个 session）→ 只写抬头那一行，关系留给接手方
+     在 verify 阶段建。归属规则是**谁先能同时指认两端谁建**，另一方只核对。
+6. **跑完整性门禁**（见下），不过不放行。
+7. **落库**：接手方若会在**另一个分支或另一个 worktree** 里开工，把交接文档 commit 进这次工作所在的分支——未提交的文档在那边根本看不到，等于没交出去。**提交完成之后**再释放自己的工作区（如 `git worktree remove`）；顺序反了，文档会落回原处成为一份提交不了的孤儿。接手方就在同一目录同一分支续做、或文档整份贴给对方时，此步可省。
+8. **交付**：告知用户文档路径，说明下个 session 直接整份喂入即可。
 
 ## 完整性门禁（author 收尾硬动作）
 
@@ -42,6 +51,7 @@ user_invocable: true
   - 出现了「范围铁律」→ in/out 是否都点名，没有模糊地带？
   - 出现了「受影响文件/落点」→ 与「相关文档索引」描述是否自洽？
   - 最小验收锚点若是硬判据 → **可证伪**吗？（有明确对/错判定，不是"让它工作"这种软标准）
+- 你**在画布节点里**（`agent-canvas-ctl` 存在）→ 抬头的「交接源节点」行在吗？（缺了接手方就建不出 `hands-off-to`，交接关系在画布上永远不成立）
 - **反向检查**：有没有哪类内容被必要性测试判定为"不需要"，但其实接手方会因此卡住、走错方向、或推翻已定方案？（防止必要性判断本身错判）
 
 任一项答不上 → 补文档、重跑门禁。核对结论可选择性附在文档末尾。
@@ -50,6 +60,16 @@ user_invocable: true
 
 - 读交接文档，以**怀疑视角**核对可执行性，逐项列出缺口/断链/歧义（复用上面的冷读测试项，只核对文档里实际出现的章节）。
 - 有缺口 → 打回原 session 补，别硬开工。
+- **建 `hands-off-to` 关系**（仅当 `agent-canvas-ctl` 存在、且文档抬头有「交接源节点」时做；
+  任一条件不满足就整步跳过，不报错）：
+  1. `agent-canvas-ctl whoami` 取自己的节点 id。
+  2. `agent-canvas-ctl node-relations <自己的 nodeId> --direction in --type hands-off-to` 核对——
+     已经有一条来自交接源节点的边（author 那边建过）就跳过，不重复主张。
+  3. 没有 → `agent-canvas-ctl link-nodes --from <交接源节点 nodeId> --to <自己的 nodeId> --type hands-off-to`。
+
+  **只建这一条边。**不要顺带把自己挂到交接源节点实现的需求上（不建 `implements`），也不要调
+  `capture-requirement` 另立需求——需求已经挂在交接源节点上，接手节点该不该关联需求是另一个
+  问题，不在这次交接的范围内。
 - 无缺口 → 状态置 `执行中`，若文档有「工作流约定」章节按其开工，没有就直接开工。
 
 ## Phase 3 — accept（原 session 验收）
