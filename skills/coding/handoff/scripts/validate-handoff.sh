@@ -92,6 +92,38 @@ else
     fi
   fi
 
+  # worktree：接手方在 verify 回填的绝对路径，供 accept 到位（验收要在被验代码所在的
+  # 工作区跑，不在主工作树/核心分支跑）。分级依据——**路径类问题一律 WARN，结构性
+  # 写错才 ERROR**：ERROR 意味着"这份文档不合规，打回原 session"，而路径是有时效的
+  # （accept 可能几天后、甚至换台机器跑），路径不在不等于文档写错。只有相对路径是
+  # 无论何时都用不了的（accept 方的 cwd 与接手方不同），判 ERROR。
+  if has_field worktree; then
+    wt="$(field worktree)"
+    if [[ -n "$wt" ]]; then
+      if [[ "$wt" != /* ]]; then
+        err "worktree 须是绝对路径，实为「${wt}」（accept 方的 cwd 与接手方不同，相对路径解析不出来）"
+      elif [[ ! -d "$wt" ]]; then
+        warn "worktree 路径不存在：${wt}（可能已被 remove；accept 方退回按 branch 自建 detached worktree）"
+      else
+        wt_top="$(git -C "$wt" rev-parse --show-toplevel 2>/dev/null || true)"
+        wt_real="$(cd "$wt" && pwd -P)"
+        if [[ -z "$wt_top" ]]; then
+          warn "worktree 不是 git 工作区：${wt}"
+        elif [[ "$wt_top" != "$wt_real" ]]; then
+          warn "worktree 不是工作区根目录：${wt}（它所在的工作区根是 ${wt_top}）"
+        else
+          wt_branch="$(git -C "$wt" rev-parse --abbrev-ref HEAD 2>/dev/null || true)"
+          if has_field branch && [[ -n "$(field branch)" ]]; then
+            [[ "$wt_branch" != "$(field branch)" ]] \
+              && warn "worktree 当前分支（${wt_branch}）与 branch 字段（$(field branch)）不一致：${wt}"
+          else
+            warn "填了 worktree 却没填 branch——这个 worktree 一旦被 remove，accept 方就没有兜底线索了"
+          fi
+        fi
+      fi
+    fi
+  fi
+
   # 两个节点字段留空 = 视同未填：target_node 在模板里就是留给接手方回填的占位，
   # author 写完时它本来就该是空的。只有填了非法值才报错。
   for f in source_node target_node; do

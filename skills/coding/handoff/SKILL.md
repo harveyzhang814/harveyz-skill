@@ -1,7 +1,7 @@
 ---
 name: handoff
 description: Use when handing a task across sessions — writing a self-contained handoff doc for a fresh session to pick up (author), sanity-checking an inbound handoff before starting (verify), or accepting completed work against the criteria agreed at handoff time (accept). Triggers on phrases like "write a handoff", "hand this off", "pick up this task", "sign off on this work". Generic skill — project-specific conventions are read from .hskill/handoff/config.md.
-version: "1.5.0"
+version: "1.6.0"
 user_invocable: true
 ---
 
@@ -88,13 +88,34 @@ user_invocable: true
   `capture-requirement` 另立需求——需求已经挂在交接源节点上，接手节点该不该关联需求是另一个
   问题，不在这次交接的范围内。
 - 无缺口 → `status` 置 `执行中`，若文档有「工作流约定」章节按其开工，没有就直接开工。
+- **回填工作区**（建完 worktree、确定在哪条分支开工之后做；就地同分支续做则跳过）：把自己
+  工作区的**绝对路径**填进 frontmatter 的 `worktree`，并核对 `branch` 与实际开工分支一致——
+  不一致以**实际**为准，把字段改对。accept 方靠这两个字段到位；缺了它，验收只能在主工作树上跑，
+  而那里没有你的改动。
+  **`status` 变成「已验收」之前不要 `git worktree remove` 掉自己的工作区**——accept 方还要
+  进去跑验收。
 
 ## Phase 3 — accept（原 session 验收）
 
-1. 找文档里的**最小验收锚点**——这是唯一固定依据。**接手方自填的结论一律不采信，逐条自己跑**：验证产物"存在"不等于"跑得过"，点得出脚本名不等于那个脚本此刻是绿的。frontmatter 的 `acceptance` 指明是哪一档：`hard`（逐条对/错）→ 按锚点描述**逐条实跑**（单测/E2E/核验）；`soft`（定性描述）→ 按其描述做定性判断。字段与锚点正文不符时**以正文为准**并把字段改对——字段是索引，正文才是判据。
-2. 把验收结果（每条 pass/fail，或整体达成/未达成）追加记录到最小验收锚点所在章节末尾。**接手方若已自填过验收记录，另起小节并列，不覆盖也不合并**——两份并排放着，后来人才看得出哪些结论被第二方复核过。其中若有与实跑不符的陈述，**显式写出更正**，不要静默改掉：静默改掉等于把同一个错误留给下一次。
-3. 达成 → `status` 置 `已验收`；未达成 → `status` 置 `打回` 并写明哪里没达成、为什么，退回接手方。
-4. **达成才算真正完成**（硬判据要求逐条全绿；软判据按其描述定性判断是否达成）。
+**先到位，再验收。** 验收在**被验代码所在的工作区**跑——不在主工作树、不在核心分支
+（staging / main / master）上跑。主工作树通常停在集成分支，那里根本没有接手方的改动：
+在那里跑出来的绿是**别的代码的绿**，比不跑更有害，因为它看起来像验过了。
+
+1. **到位**：读 frontmatter 的 `worktree` 与 `branch`。
+   - 两个都没有 → 这次交接不涉及独立工作区（同目录同分支续做），就地验收，跳过本步。
+   - `worktree` 有值、路径在、且 `git -C <worktree> rev-parse --abbrev-ref HEAD` 等于
+     `branch` → 后面**每一条**验收命令都在这个目录里跑（`git -C <worktree>`、`cd`、
+     或把它设成测试命令的 cwd）。依赖与构建产物都是现成的，这条路最省。
+   - 路径不在、或分支对不上（接手方 remove 了自己的工作区、或在那里换过分支）→ 用 `branch`
+     自建：`git worktree add --detach <临时路径> <branch>`，验完 `git worktree remove <临时路径>`。
+     **必须带 `--detach`**——一条分支不能被两个 worktree 同时 checkout，不带就直接失败。
+   - `branch` 也指不到（没写、或分支已被删）→ 打回接手方补，别在主工作树上凑合验。
+   - 跑第一条验收命令之前，确认到位成功：`git -C <验收目录> rev-parse --abbrev-ref HEAD`
+     落在 staging/main/master 上，说明你还在主工作树，停下来查，别接着跑。
+2. 找文档里的**最小验收锚点**——这是唯一固定依据。**接手方自填的结论一律不采信，逐条自己跑**：验证产物"存在"不等于"跑得过"，点得出脚本名不等于那个脚本此刻是绿的。frontmatter 的 `acceptance` 指明是哪一档：`hard`（逐条对/错）→ 按锚点描述**逐条实跑**（单测/E2E/核验）；`soft`（定性描述）→ 按其描述做定性判断。字段与锚点正文不符时**以正文为准**并把字段改对——字段是索引，正文才是判据。
+3. 把验收结果（每条 pass/fail，或整体达成/未达成）追加记录到最小验收锚点所在章节末尾。**接手方若已自填过验收记录，另起小节并列，不覆盖也不合并**——两份并排放着，后来人才看得出哪些结论被第二方复核过。其中若有与实跑不符的陈述，**显式写出更正**，不要静默改掉：静默改掉等于把同一个错误留给下一次。
+4. 达成 → `status` 置 `已验收`；未达成 → `status` 置 `打回` 并写明哪里没达成、为什么，退回接手方。
+5. **达成才算真正完成**（硬判据要求逐条全绿；软判据按其描述定性判断是否达成）。
 
 ## 状态生命周期
 

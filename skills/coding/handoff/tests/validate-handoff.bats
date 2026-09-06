@@ -6,6 +6,9 @@ VALIDATOR="${BATS_TEST_DIRNAME}/../scripts/validate-handoff.sh"
 setup() {
   TMP="$(mktemp -d)"
   cd "$TMP" || exit 1
+  # macOS 的 mktemp -d 给 /var/...，而 git rev-parse --show-toplevel 给 /private/var/...。
+  # 不在这里归一，W24 那条「真实 worktree 不该 WARN」的正向对照会因为路径写法不同而假 WARN。
+  TMP="$(pwd -P)"
   git init -q .
   git config user.email t@example.com
   git config user.name t
@@ -170,4 +173,103 @@ target_node:"
 source_node:"
   run bash "$VALIDATOR" "$DOC"
   [ "$status" -eq 0 ]
+}
+
+# ── worktree 字段（验收到位线索）─────────────────────────────────────────────
+# 分级依据：路径类问题一律 WARN，结构性写错才 ERROR。ERROR 的含义是「这份文档本身不合规，
+# 打回原 session」；而路径是有时效的（accept 可能几天后、甚至换台机器跑），路径不在
+# 不等于文档写错。
+
+# 在 $TMP 仓库里另开一条分支的真实 worktree，回显其路径。
+make_worktree() {
+  git worktree add -q "$TMP/wt" -b "$1" >/dev/null 2>&1
+  echo "$TMP/wt"
+}
+
+@test "19 worktree field absent -> exit 0" {
+  write_doc "$VALID_FM"
+  run bash "$VALIDATOR" "$DOC"
+  [ "$status" -eq 0 ]
+  [[ "$output" != *worktree* ]]
+}
+
+@test "20 worktree present but empty -> exit 0" {
+  write_doc "$VALID_FM
+worktree:"
+  run bash "$VALIDATOR" "$DOC"
+  [ "$status" -eq 0 ]
+  [[ "$output" != *ERROR* ]]
+}
+
+@test "21 worktree relative path -> exit 1" {
+  write_doc "$VALID_FM
+worktree: ../relative/path"
+  run bash "$VALIDATOR" "$DOC"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *绝对路径* ]]
+}
+
+@test "22 worktree absolute but nonexistent -> exit 0 with WARN" {
+  write_doc "$VALID_FM
+worktree: /nonexistent/abs/path"
+  run bash "$VALIDATOR" "$DOC"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *WARN* ]]
+  [[ "$output" == */nonexistent/abs/path* ]]
+}
+
+@test "23 worktree points at a dir that is not a worktree root -> exit 0 with WARN" {
+  mkdir -p "$TMP/plain"
+  write_doc "$VALID_FM
+worktree: $TMP/plain"
+  run bash "$VALIDATOR" "$DOC"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *WARN* ]]
+  [[ "$output" == *plain* ]]
+}
+
+# 正向对照：没有这条，22/23/25 的绿有可能来自「任何 worktree 值都 WARN」。
+# 断言的是「没有 worktree 相关 WARN」，不是「整体无 WARN」——引用路径 WARN 与本次无关。
+@test "24 real worktree whose HEAD branch matches branch field -> no worktree WARN" {
+  wt="$(make_worktree feat/x)"
+  write_doc "$VALID_FM
+branch: feat/x
+worktree: $wt"
+  run bash "$VALIDATOR" "$DOC"
+  [ "$status" -eq 0 ]
+  [[ "$output" != *worktree* ]]
+}
+
+@test "25 real worktree whose HEAD branch differs from branch field -> WARN naming both" {
+  wt="$(make_worktree feat/x)"
+  write_doc "$VALID_FM
+branch: $BRANCH
+worktree: $wt"
+  run bash "$VALIDATOR" "$DOC"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *WARN* ]]
+  [[ "$output" == *feat/x* ]]
+  [[ "$output" == *"$BRANCH"* ]]
+}
+
+@test "26 worktree without branch fallback -> exit 0 with WARN" {
+  wt="$(make_worktree feat/x)"
+  write_doc "$VALID_FM
+worktree: $wt"
+  run bash "$VALIDATOR" "$DOC"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *WARN* ]]
+  [[ "$output" == *branch* ]]
+}
+
+@test "27 worktree relative path alongside another ERROR -> both listed, exit 1" {
+  write_doc "status: 乱填
+date: 2026-09-06
+author_model: opus-5
+acceptance: hard
+worktree: ./rel"
+  run bash "$VALIDATOR" "$DOC"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"status 非法值"* ]]
+  [[ "$output" == *绝对路径* ]]
 }

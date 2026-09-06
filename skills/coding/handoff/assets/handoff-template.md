@@ -4,7 +4,7 @@
 
 ## 固定骨架：frontmatter + 两个锚点
 
-frontmatter 的字段是给机器读的（`status` 驱动三个 phase，`source_node`/`target_node` 驱动画布关系，`branch` 供接手方 `git worktree add`），由 `scripts/validate-handoff.sh` 校验；「交接目的」和「最小验收锚点」是给人读的，任何情况下不能省。文档必须包含以下开头结构和「最小验收锚点」一节：
+frontmatter 的字段是给机器读的（`status` 驱动三个 phase，`source_node`/`target_node` 驱动画布关系，`branch` 供接手方 `git worktree add`、并在 accept 期做到位兜底，`worktree` 供 accept 方直接进到被验代码所在的工作区），由 `scripts/validate-handoff.sh` 校验；「交接目的」和「最小验收锚点」是给人读的，任何情况下不能省。文档必须包含以下开头结构和「最小验收锚点」一节：
 
 ```
 ---
@@ -13,6 +13,7 @@ date: <YYYY-MM-DD>        # 须与文件名的日期段一致
 author_model: <model>
 acceptance: hard          # hard|soft，决定 accept 阶段逐条实跑还是定性判断
 branch: <分支名>          # 可选：接手方要在某条分支上开工时才写
+worktree:                 # 留空，接手方在 verify 开工后回填绝对路径，供 accept 到位
 source_node: <uuid>       # 可选：author 在 Agent Canvas 画布节点里时才写
 target_node:              # 留空，接手方在 verify 建完 hands-off-to 后回填
 ---
@@ -24,6 +25,8 @@ target_node:              # 留空，接手方在 verify 建完 hands-off-to 后
 > **接手方须知**：你正在接手一个任务。本文档是完整交接与唯一权威入口：从头读到尾，若文档里有「工作流约定」章节按其开工，没有就直接开工。**完成后把 frontmatter 的 `status` 置为「待验收」并停在这里**——`已验收` / `打回` 由原 session 按「最小验收锚点」判定后写，不要代填。你的自测结果写成独立小节，别写进原 session 的验收记录里。
 >
 > **开工前**：若 frontmatter 有 `source_node`、且你也在 Agent Canvas 画布节点里，先建一条 `hands-off-to` 关系（`agent-canvas-ctl whoami` 取自己的 id，核对 `node-relations` 里没有后 `link-nodes --from <source_node> --to <自己> --type hands-off-to`），建完把自己的 id 填进 `target_node`。**只建这一条**——别建 `implements`、别另立需求节点。
+>
+> **开工后**：把自己工作区的**绝对路径**填进 frontmatter 的 `worktree`，并核对 `branch` 与实际开工分支一致（不一致以实际为准改字段）。验收要在你这个工作区里跑——主工作树停在集成分支，那里没有你的改动。**`status` 变成「已验收」之前不要 `git worktree remove` 掉自己的工作区。**
 
 ---
 
