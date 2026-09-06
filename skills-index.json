@@ -328,8 +328,8 @@
     {
       "path": "coding/handoff",
       "bundle": "coding",
-      "contentHash": "fc9cd341f1ff4092",
-      "contentVersion": "1.4.0"
+      "contentHash": "7bb002738193f16b",
+      "contentVersion": "1.5.0"
     },
     {
       "path": "feed/manage-creators",
