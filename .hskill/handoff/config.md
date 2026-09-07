@@ -12,6 +12,18 @@ workflow: |
     feat | fix | chore | docs | refactor | test | style | perf
     （注意是 docs 不是 doc——doc(...) 会被 hook 拒绝。）
   - 规范全文：docs/reference/git-workflow.md（自动生成，勿手改）
+  工作区已经建好（frontmatter 的 worktree 给出绝对路径，branch 给出分支名）。
+  **不建 worktree、不建分支**，直接 cd 进那个路径，核对分支一致后开工：
+    cd <worktree>
+    git rev-parse --abbrev-ref HEAD      # 应等于 frontmatter 的 branch
+    git config core.hooksPath .githooks  # 不配，staging/main 直提保护失效
+    git config merge.ff false
+  一条分支不能被两个 worktree 同时 checkout，git worktree add 会直接失败——那是提示不是障碍。
+  **不要 git worktree remove**：交出方验收时要回到这里，验收通过、合并完成之后由它来收。
+  worktree 路径习惯：.claude/worktrees/<slug>，slug 是分支名去掉 feature/、doc/ 等前缀。
+  **完工前不要合并到 staging**，最后一次性合并；**合并只由交出方做**，接手方与验收方都不合。
+  本仓库没有合并脚本，交出方手动 git merge --no-ff 即可。
+  同一时刻只有一方在这个工作区里动手——你做完就停手，交出方才进来验收。
   实施计划：用 superpowers:writing-plans 从 spec 拆任务，
   superpowers:executing-plans 执行。
 
