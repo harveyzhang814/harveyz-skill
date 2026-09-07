@@ -112,15 +112,15 @@
       "path": "feed/sync-xtimeline",
       "bundle": "feed",
       "installScope": "project",
-      "contentHash": "5c8557cc442f9277",
-      "contentVersion": "0.8.0"
+      "contentHash": "650227251dbb2617",
+      "contentVersion": "0.8.1"
     },
     {
       "path": "feed/sync-ytchannel",
       "bundle": "feed",
       "installScope": "project",
-      "contentHash": "a6b9df4e049d169f",
-      "contentVersion": "0.7.0"
+      "contentHash": "d7bf81645a586b8f",
+      "contentVersion": "0.7.1"
     },
     {
       "path": "feed/sync-website",
@@ -335,8 +335,8 @@
       "path": "feed/manage-creators",
       "bundle": "feed",
       "installScope": "project",
-      "contentHash": "93cbe3e047eac8ed",
-      "contentVersion": "0.2.0"
+      "contentHash": "f0c5ca3fbdca9bd6",
+      "contentVersion": "0.2.1"
     },
     {
       "path": "feed/capture-opinion",
