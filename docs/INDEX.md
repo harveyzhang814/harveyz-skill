@@ -74,4 +74,4 @@ methodology: diataxis
 | &nbsp;&nbsp;└ [explanation/permission-research/06-pi.md](explanation/permission-research/06-pi.md) | Pi 权限机制：框架内核零拦截、权限委托给扩展层、`tool_call` hook 暴露的原语边界、无跨会话扩展存储 |
 | [explanation/cron-research/01-hermes-openclaw.md](explanation/cron-research/01-hermes-openclaw.md) | Hermes / OpenClaw 定时任务机制详解：调度语义与至多一次保证、两种执行路径、组装后注入扫描、cron 自限权、投递与静默协议、重试退避、失败态汇总与代价对照 |
 | [explanation/cron-research/02-pi-mvp.md](explanation/cron-research/02-pi-mvp.md) | 在 Pi 上做定时任务：Pi 能力盘点与三处明确缺失、宿主形态三选一、子进程+SDK 的分界、MVP 八项功能（含验收与代价）、明确不做清单与实施顺序 |
-| [explanation/shannon-six-keys.md](explanation/shannon-six-keys.md) | 香农 1952 讲稿的六种解题动作（简化/类比/重述/泛化/分解/反演）：一手事实核查、认知科学给出的失效条件、六把钥匙在 LLM 上的对应技术与翻车记录、对 skill 化的形态含义 |
+| [explanation/shannon-six-keys.md](explanation/shannon-six-keys.md) | 香农六把钥匙详细综述（简化/类比/重述/泛化/分解/反演）：讲稿一手考据与边界、七十年学术线（波利亚→格式塔→西蒙学派→舍恩菲尔德/根特纳/奥尔松）、触发与停止条件草案、LLM 三阶段对应技术与失败记录、证据强度分档与 skill 化含义 |
