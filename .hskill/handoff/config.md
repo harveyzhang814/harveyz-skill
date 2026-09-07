@@ -20,7 +20,8 @@ workflow: |
     git config merge.ff false
   一条分支不能被两个 worktree 同时 checkout，git worktree add 会直接失败——那是提示不是障碍。
   **不要 git worktree remove**：交出方验收时要回到这里，验收通过、合并完成之后由它来收。
-  worktree 路径习惯：.claude/worktrees/<slug>，slug 是分支名去掉 feature/、doc/ 等前缀。
+  worktree 路径习惯：仓库内 .claude/worktrees/<分支名把 / 换成 +>，与 Claude Code 原生
+  worktree 功能一致；早期手工建的 .claude/worktrees/<slug> 与 .worktrees/ 是遗留，不是习惯。
   **完工前不要合并到 staging**，最后一次性合并；**合并只由交出方做**，接手方与验收方都不合。
   本仓库没有合并脚本，交出方手动 git merge --no-ff 即可。
   同一时刻只有一方在这个工作区里动手——你做完就停手，交出方才进来验收。

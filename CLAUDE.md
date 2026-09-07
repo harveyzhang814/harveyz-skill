@@ -87,7 +87,7 @@ hskill CLI 行为（安装、交互、JSON 输出）+ 所有 skill 的 SKILL.md 
 
 **合并方式：** 本仓库没有合并脚本，手动 `git checkout staging && git merge --no-ff <分支>` 即可（`.githooks/commit-msg` 不要求 `Merge-Via` 标记）。别照搬别的仓库的 `scripts/merge-to-staging.sh`，这里没有那个文件。
 
-**worktree 路径习惯：** `.claude/worktrees/<slug>`，slug 是分支名去掉 `feature/`、`doc/` 等前缀（例如 `feature/handoff-node-relation` → `.claude/worktrees/handoff-node-relation`）。仓库里另有历史遗留的 `.worktrees/`，新建一律用前者。
+**worktree 路径习惯：** 仓库内 `.claude/worktrees/<分支名把 / 换成 +>`，与 Claude Code 原生 worktree 功能一致（例如 `feature/foo` → `.claude/worktrees/feature+foo`）。仓库里另有两类历史遗留：早期手工建的 `.claude/worktrees/<slug>`（去掉了分支前缀）和 `.worktrees/`。新建一律用前者，遗留的不动。
 
 ## 跨 session 交接（handoff）
 
@@ -97,7 +97,7 @@ hskill CLI 行为（安装、交互、JSON 输出）+ 所有 skill 的 SKILL.md 
 
 1. 交出方在 worktree 里跑 `/handoff` author 写交接文档（落 `docs/commute/`），连同相关产物一起 commit 到那条分支（feature/doc 分支上随便提交，hook 只拦 staging/main）。**提交完成之后不要 `git worktree remove`**——这个工作区是接手方的落脚点，也是你验收时要回来的地方，它要一直活到验收通过、合并完成。
 2. **交接时不合并到 staging。** 分支停在未合并状态等接手方接着做，最后一次性合并。
-3. **交接文档 frontmatter 的 `branch` 与 `worktree` 成对，都由交出方填。** 分支名是权威载体，worktree 路径是那条分支当下的落脚点，必须写出来、不能让接手方去猜（本仓库两种路径习惯并存，见上）。路径万一失效，用 `git worktree list` 查这条分支现在挂在哪。
+3. **交接文档 frontmatter 的 `branch` 与 `worktree` 成对，都由交出方填。** 分支名是权威载体，worktree 路径是那条分支当下的落脚点，必须写出来、不能让接手方去猜（本仓库多种路径习惯并存，见上——同一条分支由原生功能和手工建出来的目录名就不一样，规则推不出来）。路径万一失效，用 `git worktree list` 查这条分支现在挂在哪。
 4. 接手方**不建 worktree、不建分支**，直接 `cd` 进文档里那个路径，核对当前分支与 `branch` 一致后开工，并补上 `git config core.hooksPath .githooks && git config merge.ff false`。那条分支已经被这个工作区 checkout，`git worktree add` 会直接失败——这是提示，不是障碍。
 5. **验收也在这个工作区里跑，不在主工作树、不在 staging/main 上跑。** 主工作树停在 `staging`，那里根本没有接手方的改动；在那里跑出来的绿是别的代码的绿，比不跑更有害，因为它看起来像验过了。验收方 `cd` 回去，**先在那里重读一遍交接文档**——接手方的自测记录与 `status` 只存在于那一份里，你手上那份是 author 时的旧版。
 6. **只有交出方能合并。** 接手方与验收方都不合。验收通过后由交出方 `git merge --no-ff` 进 staging，合完再 `git worktree remove` 收掉工作区。
