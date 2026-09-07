@@ -273,3 +273,15 @@ worktree: ./rel"
   [[ "$output" == *"status 非法值"* ]]
   [[ "$output" == *绝对路径* ]]
 }
+
+# branch 与 worktree 现在是成对的（author 建好工作区后同时填）。只填一半都要喊出来：
+# 有 branch 无 worktree ⇒ author 可能没建工作区，接手方不知道去哪开工。
+# 反向（有 worktree 无 branch）由 26 覆盖；两个都不填是合法的「就地同分支续做」，由 19 兜底对照。
+@test "28 branch without worktree -> exit 0 with WARN" {
+  write_doc "$VALID_FM
+branch: $BRANCH"
+  run bash "$VALIDATOR" "$DOC"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *WARN* ]]
+  [[ "$output" == *worktree* ]]
+}

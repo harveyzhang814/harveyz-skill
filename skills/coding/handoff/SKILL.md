@@ -1,7 +1,7 @@
 ---
 name: handoff
 description: Use when handing a task across sessions — writing a self-contained handoff doc for a fresh session to pick up (author), sanity-checking an inbound handoff before starting (verify), or accepting completed work against the criteria agreed at handoff time (accept). Triggers on phrases like "write a handoff", "hand this off", "pick up this task", "sign off on this work". Generic skill — project-specific conventions are read from .hskill/handoff/config.md.
-version: "1.6.0"
+version: "1.7.0"
 user_invocable: true
 ---
 
@@ -26,8 +26,19 @@ user_invocable: true
      - 无 → 用通用默认（`output_dir=docs/commute/`），以后不再问。
 2. **判断目的**：从当前对话判断这次交接是为了什么——不套预设分类，一句自然语言判断即可（例如"接手方续做同一个实现任务"或"把讨论结论作为背景传给接手方去开展新话题"）。这句话会写进文档开头的"交接目的"，且始终存在，不可省略。
 3. **汇集上下文**：以**当前对话**为真相源。涉及代码时读 `git status` / `git diff` 核对现状、排查受影响文件（若这两类内容按第 4 步判定为必要），并作为门禁的现实校验（纯规划交接可跳过）；spec/plan 作为权威指针。**不把 memory 写进文档**——memory 可能陈旧、且接手方访问不到你的 memory 目录；若某条 memory 是承载性背景，把**核实过的事实**内联进去，别留 `[[memory]]` 死链。现状一律以 git/仓库为准，不以 memory 为准。
-4. **起草**：读 `assets/handoff-template.md`，按其中的候选内容清单逐类过必要性测试——"不写这条信息，接手方会不会出问题"，答案是"会"才写出对应章节，答案是"不会"整节跳过，不留空标题。**交接目的**和**最小验收锚点**这两项任何情况下都必须写。指针式引用权威依据，只内联接手方开工必需的硬核，不重抄 spec 全文。写到 `<output_dir>/YYYY-MM-DD-<topic>-handoff.md`，按模板填 frontmatter（`status: 待执行`、`date` 与文件名日期段一致、`acceptance` 按最小验收锚点是硬判据还是软判据填 `hard`/`soft`、有分支交接就填 `branch`）。
-5. **画布节点登记**（仅当 `agent-canvas-ctl` 命令存在时做；不在 Agent Canvas 画布节点里就整步跳过，不报错）：
+4. **备好交接工作区**（接手方会在**另一条分支**上开工时才做；就地同分支续做则整步跳过）：
+   分支和 worktree 都由**你**建好，不留给接手方建。这是整条交接链能闭环的关键——工作区是你建的，
+   你就一直知道它在哪；验收时直接回到这里读那份被接手方改过的文档，不必去别处找、更不必扫描。
+   - 已经在一条 feature worktree 里干活 → 就用它，别新建。
+   - 否则 `git worktree add <路径> -b <分支名>`；路径按 `.hskill/handoff/config.md` 的 workflow
+     段给的习惯，没给就自己定一个仓库内的稳定位置。
+   - **建完不要 `git worktree remove`。** 接手方要进来干活，你验收时还要再进来一次。这个工作区
+     在整条交接链上一直活着，直到验收通过。
+   - 把分支名填进 frontmatter 的 `branch`、工作区**绝对路径**填进 `worktree`。
+   - **同一时刻只有一方在这个工作区里动手**：你写完交接就停手，接手方做完停手，再轮到你验收。
+     两个 session 同时在一个工作区里跑 git 会互踩暂存区。
+5. **起草**：读 `assets/handoff-template.md`，按其中的候选内容清单逐类过必要性测试——"不写这条信息，接手方会不会出问题"，答案是"会"才写出对应章节，答案是"不会"整节跳过，不留空标题。**交接目的**和**最小验收锚点**这两项任何情况下都必须写。指针式引用权威依据，只内联接手方开工必需的硬核，不重抄 spec 全文。写到**第 4 步那个工作区**里的 `<output_dir>/YYYY-MM-DD-<topic>-handoff.md`，按模板填 frontmatter（`status: 待执行`、`date` 与文件名日期段一致、`acceptance` 按最小验收锚点是硬判据还是软判据填 `hard`/`soft`；`branch`/`worktree` 第 4 步已填）。
+6. **画布节点登记**（仅当 `agent-canvas-ctl` 命令存在时做；不在 Agent Canvas 画布节点里就整步跳过，不报错）：
    - 跑 `agent-canvas-ctl whoami` 取自己的节点 id，填进 frontmatter 的 `source_node`。
      这个字段是接手方**唯一**能找回你这个节点的线索——文档路径和分支名都指认不到画布上的
      节点实体。不在画布节点里就整个字段删掉，别留空值。
@@ -36,9 +47,11 @@ user_invocable: true
      并把接手节点 id 填进 `target_node`，接手方只核对、不重复建。
    - 指认不到接手节点（常态：接手方是还不存在的下一个 session）→ 只填 `source_node`，`target_node`
      留空给接手方在 verify 阶段回填。归属规则是**谁先能同时指认两端谁建**，另一方只核对。
-6. **跑完整性门禁**（见下），不过不放行。
-7. **落库**：接手方若会在**另一个分支或另一个 worktree** 里开工，把交接文档 commit 进这次工作所在的分支——未提交的文档在那边根本看不到，等于没交出去。**提交完成之后**再释放自己的工作区（如 `git worktree remove`）；顺序反了，文档会落回原处成为一份提交不了的孤儿。接手方就在同一目录同一分支续做、或文档整份贴给对方时，此步可省。
-8. **交付**：告知用户文档路径，说明下个 session 直接整份喂入即可。
+7. **跑完整性门禁**（见下），不过不放行。
+8. **落库**：把交接文档 commit 进这条分支——未提交的文档接手方根本看不到，等于没交出去。
+   **不要 `git worktree remove`**（见第 4 步）：这个工作区既是接手方的落脚点，也是你验收时要回来
+   的地方。接手方就在同一目录同一分支续做、或文档整份贴给对方时，此步可省。
+9. **交付**：告知用户交接文档路径、**worktree 路径与分支名**，说明下个 session 直接整份喂入即可。
 
 ## 完整性门禁（author 收尾硬动作）
 
@@ -61,6 +74,9 @@ user_invocable: true
   - 最小验收锚点若是硬判据 → **可证伪**吗？（有明确对/错判定，不是"让它工作"这种软标准）
     并与 frontmatter 的 `acceptance` 对得上吗？（硬判据填 `hard`，软判据填 `soft`——accept
     阶段按这个字段分叉，填反了验收方式就跑偏）
+- 接手方要在**另一条分支**上开工 → `branch` 与 `worktree` 都填了吗？（脚本只能校验填了的值
+  合不合法，判断不了"你本该填而没填"。这两个字段漏了，接手方不知道去哪开工，而你验收时也
+  找不回它改过的那份文档——整条交接链就断在这里）
 - 你**在画布节点里**（`agent-canvas-ctl` 存在）→ frontmatter 的 `source_node` 填了吗？（脚本
   只能校验填了的值合不合法，判断不了"你本该填而没填"；缺了接手方就建不出 `hands-off-to`，
   交接关系在画布上永远不成立）
@@ -87,13 +103,15 @@ user_invocable: true
   **只建这一条边。**不要顺带把自己挂到交接源节点实现的需求上（不建 `implements`），也不要调
   `capture-requirement` 另立需求——需求已经挂在交接源节点上，接手节点该不该关联需求是另一个
   问题，不在这次交接的范围内。
+- **进 author 备好的工作区开工**（frontmatter 有 `worktree` 时）：`cd <worktree>`，核对
+  `git rev-parse --abbrev-ref HEAD` 与 `branch` 一致，然后就在这里干活。
+  - **不要自己 `git worktree add`。** 那条分支已经被这个工作区 checkout 了，再建会直接失败；
+    而且你另建一个，原 session 验收时会回到它自己建的那个，看不到你的改动。
+  - **不要 `git worktree remove`**，验收还要用。
+  - 路径不存在（被误删了）→ 打回原 session 重建，别自己找地方开工——你选的位置它不知道。
+  - `branch` 与实际不符 → 以**文档**为准打回确认，不要自己改字段：字段是 author 立的约，
+    改它等于单方面改约。
 - 无缺口 → `status` 置 `执行中`，若文档有「工作流约定」章节按其开工，没有就直接开工。
-- **回填工作区**（建完 worktree、确定在哪条分支开工之后做；就地同分支续做则跳过）：把自己
-  工作区的**绝对路径**填进 frontmatter 的 `worktree`，并核对 `branch` 与实际开工分支一致——
-  不一致以**实际**为准，把字段改对。accept 方靠这两个字段到位；缺了它，验收只能在主工作树上跑，
-  而那里没有你的改动。
-  **`status` 变成「已验收」之前不要 `git worktree remove` 掉自己的工作区**——accept 方还要
-  进去跑验收。
 
 ## Phase 3 — accept（原 session 验收）
 
@@ -101,17 +119,17 @@ user_invocable: true
 （staging / main / master）上跑。主工作树通常停在集成分支，那里根本没有接手方的改动：
 在那里跑出来的绿是**别的代码的绿**，比不跑更有害，因为它看起来像验过了。
 
-1. **到位**：读 frontmatter 的 `worktree` 与 `branch`。
-   - 两个都没有 → 这次交接不涉及独立工作区（同目录同分支续做），就地验收，跳过本步。
-   - `worktree` 有值、路径在、且 `git -C <worktree> rev-parse --abbrev-ref HEAD` 等于
-     `branch` → 后面**每一条**验收命令都在这个目录里跑（`git -C <worktree>`、`cd`、
-     或把它设成测试命令的 cwd）。依赖与构建产物都是现成的，这条路最省。
-   - 路径不在、或分支对不上（接手方 remove 了自己的工作区、或在那里换过分支）→ 用 `branch`
-     自建：`git worktree add --detach <临时路径> <branch>`，验完 `git worktree remove <临时路径>`。
-     **必须带 `--detach`**——一条分支不能被两个 worktree 同时 checkout，不带就直接失败。
-   - `branch` 也指不到（没写、或分支已被删）→ 打回接手方补，别在主工作树上凑合验。
-   - 跑第一条验收命令之前，确认到位成功：`git -C <验收目录> rev-parse --abbrev-ref HEAD`
-     落在 staging/main/master 上，说明你还在主工作树，停下来查，别接着跑。
+1. **回到交接工作区**：`cd` 进 author 阶段第 4 步建的那个 worktree（frontmatter 的 `worktree`）。
+   没有这个字段 → 这次交接不涉及独立工作区（同目录同分支续做），就地验收，跳过本步。
+   - **在那里重读一遍交接文档。** 你手上这份可能是 author 时写的旧版；接手方的自测记录、
+     `status`、以及被修正过的字段，全都只存在于那个工作区里的那一份。读错版本不会报错，
+     只会让你对着过时的内容验收。
+   - 后面**每一条**验收命令都在这个目录里跑（`cd` 进去，或 `git -C <worktree>`）。
+   - 路径不在了（被谁 remove 了）→ `git worktree list` 看这条分支现在挂在哪；都没有就用
+     `git worktree add --detach <临时路径> <branch>` 重建，验完 remove。**必须带 `--detach`**——
+     一条分支不能被两个 worktree 同时 checkout。
+   - 跑第一条验收命令之前确认到位：`git -C <验收目录> rev-parse --abbrev-ref HEAD` 落在
+     staging/main/master 上，说明你还在主工作树，停下来查，别接着跑。
 2. 找文档里的**最小验收锚点**——这是唯一固定依据。**接手方自填的结论一律不采信，逐条自己跑**：验证产物"存在"不等于"跑得过"，点得出脚本名不等于那个脚本此刻是绿的。frontmatter 的 `acceptance` 指明是哪一档：`hard`（逐条对/错）→ 按锚点描述**逐条实跑**（单测/E2E/核验）；`soft`（定性描述）→ 按其描述做定性判断。字段与锚点正文不符时**以正文为准**并把字段改对——字段是索引，正文才是判据。
 3. 把验收结果（每条 pass/fail，或整体达成/未达成）追加记录到最小验收锚点所在章节末尾。**接手方若已自填过验收记录，另起小节并列，不覆盖也不合并**——两份并排放着，后来人才看得出哪些结论被第二方复核过。其中若有与实跑不符的陈述，**显式写出更正**，不要静默改掉：静默改掉等于把同一个错误留给下一次。
 4. 达成 → `status` 置 `已验收`；未达成 → `status` 置 `打回` 并写明哪里没达成、为什么，退回接手方。
@@ -121,7 +139,11 @@ user_invocable: true
 
 `待执行`（author 写完）→ `执行中`（verify 通过 / 接手方开工）→ `待验收`（接手方回报完成）→ `已验收`（accept 判定达成）/ `打回`（accept 判定未达成，退回执行中）。
 
-`status` 是三 phase 间唯一协调锚点，无需外部状态存储。它在 frontmatter 里，所以跨文档扫「哪些交接还没验收」是一条 grep 的事。
+`status` 是三 phase 间唯一协调锚点，无需外部状态存储。
+
+要扫「哪些交接还没验收」，**别在当前工作树里 grep**——在途交接的文档都在各自的交接工作区里，
+主工作树上那份（如果有）是合并后的历史归档，状态是旧的。正确做法是先 `git worktree list`
+列出所有工作区，再到每个工作区的 `<output_dir>` 里 grep `status`。
 
 **写入权按 phase 分：接手方最多只能把 `status` 推到「待验收」。`已验收` / `打回` 只能由原 session 在 accept 之后写。**
 
