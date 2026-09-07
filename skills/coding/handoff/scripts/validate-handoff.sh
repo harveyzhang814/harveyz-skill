@@ -92,8 +92,9 @@ else
     fi
   fi
 
-  # worktree：接手方在 verify 回填的绝对路径，供 accept 到位（验收要在被验代码所在的
-  # 工作区跑，不在主工作树/核心分支跑）。分级依据——**路径类问题一律 WARN，结构性
+  # worktree：author 在 author 阶段建好交接工作区后填的绝对路径，与 branch 成对。
+  # 接手方照它进去开工，accept 方照它回来验收——由 author 建、也只有 author 一直知道
+  # 它在哪，这是交接能闭环的前提。分级依据——**路径类问题一律 WARN，结构性
   # 写错才 ERROR**：ERROR 意味着"这份文档不合规，打回原 session"，而路径是有时效的
   # （accept 可能几天后、甚至换台机器跑），路径不在不等于文档写错。只有相对路径是
   # 无论何时都用不了的（accept 方的 cwd 与接手方不同），判 ERROR。
@@ -117,10 +118,19 @@ else
             [[ "$wt_branch" != "$(field branch)" ]] \
               && warn "worktree 当前分支（${wt_branch}）与 branch 字段（$(field branch)）不一致：${wt}"
           else
-            warn "填了 worktree 却没填 branch——这个 worktree 一旦被 remove，accept 方就没有兜底线索了"
+            warn "填了 worktree 却没填 branch——两者成对；工作区一旦被误删，就没有兜底线索能重建了"
           fi
         fi
       fi
+    fi
+  fi
+
+  # branch 填了、worktree 没填：说明接手方要去另一条分支上开工，而 author 没把工作区建好。
+  # 判 WARN 不判 ERROR——「就地同分支续做」时两个字段都不该填，脚本分不出 author 是漏填了
+  # 还是这次交接本就不需要独立工作区；只有「填了一半」才是确定可疑的。
+  if has_field branch && [[ -n "$(field branch)" ]]; then
+    if ! has_field worktree || [[ -z "$(field worktree)" ]]; then
+      warn "填了 branch 却没填 worktree——author 应当建好交接工作区并填上，否则接手方不知道去哪开工"
     fi
   fi
 
