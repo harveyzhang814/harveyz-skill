@@ -1,7 +1,7 @@
 ---
 name: handoff
 description: Use when handing a task across sessions — writing a self-contained handoff doc for a fresh session to pick up (author), sanity-checking an inbound handoff before starting (verify), or accepting completed work against the criteria agreed at handoff time (accept). Triggers on phrases like "write a handoff", "hand this off", "pick up this task", "sign off on this work". Generic skill — project-specific conventions are read from .hskill/handoff/config.md.
-version: "1.8.0"
+version: "1.9.0"
 user_invocable: true
 ---
 
@@ -30,8 +30,22 @@ user_invocable: true
    分支和 worktree 都由**你**建好，不留给接手方建。这是整条交接链能闭环的关键——工作区是你建的，
    你就一直知道它在哪；验收时直接回到这里读那份被接手方改过的文档，不必去别处找、更不必扫描。
    - 已经在一条 feature worktree 里干活 → 就用它，别新建。
-   - 否则 `git worktree add <路径> -b <分支名>`；路径按 `.hskill/handoff/config.md` 的 workflow
-     段给的习惯，没给就自己定一个仓库内的稳定位置。
+   - 否则 `git worktree add <路径> -b <分支名> <基线分支>`；路径按 `.hskill/handoff/config.md`
+     的 workflow 段给的习惯，没给就用 `.claude/worktrees/<分支名把 / 换成 +>`。
+     **基线分支必须显式写出来**（通常是 `staging`）。不写就从主工作树当前 HEAD 拉分支，而主
+     工作树未必停在集成分支上——它可能正停在**别的 session 的分支**上。那样你的新分支会静默
+     夹带别人未合并的提交，合并时等于替对方把没写完的东西发布出去。这种错不会有任何报错，
+     merge 会干净利落地成功。
+   - **建完立刻进去**：`EnterWorktree(path: <工作区绝对路径>)`。不进去的话，你后面每一条裸
+     git 命令都作用在**主工作树**上而不是这个工作区，`worktree add` 的基线、`merge` 的目标
+     分支都会跟着跑偏。`cd` 顶不上：它只在单条命令内有效，下一条又回到原处。
+     - 用 **`path` 模式**，不要用 `name` 模式。`name` 会自己建分支，名字形如
+       `worktree-<name 把 / 换成 +>`（过不了多数仓库的分支命名规范）；基线则由
+       `worktree.baseRef` 决定，默认 `fresh` 取 `origin/<默认分支>`——仓库若不常推远程，
+       那个位置可能落后几百个提交。分支名和基线都得你自己定，所以只能先建后进。
+     - `path` 只认**当前仓库**（或嵌套在其中的仓库）注册过的工作区，跨仓库会被直接拒绝。
+       交接双方在同一仓库时这不是问题；跨仓库场景退回 `git -C <工作区> <命令>` 逐条指定。
+     - 必须由当前会话**直接调**，不能交给 fork/subagent 代调。
    - **建完不要 `git worktree remove`。** 接手方要进来干活，你验收时还要再进来一次。这个工作区
      在整条交接链上一直活着，直到验收通过。
    - 把分支名填进 frontmatter 的 `branch`、工作区**绝对路径**填进 `worktree`。
@@ -57,7 +71,8 @@ user_invocable: true
 
    ```
    接手任务。工作区已建好，不要自己建：
-     cd <worktree 绝对路径>
+     EnterWorktree(path: "<worktree 绝对路径>")
+   跨仓库进不去时退回 git -C <worktree 绝对路径> <命令>，别用裸 cd（只在单条命令内有效）。
    分支 <branch>，已被这个工作区 checkout（git worktree add 会失败，属正常）。
    <若 config.md 的 workflow 段有开工前置命令，原样列在这里>
    交接文档：<相对于工作区的文档路径>
@@ -118,8 +133,13 @@ user_invocable: true
   **只建这一条边。**不要顺带把自己挂到交接源节点实现的需求上（不建 `implements`），也不要调
   `capture-requirement` 另立需求——需求已经挂在交接源节点上，接手节点该不该关联需求是另一个
   问题，不在这次交接的范围内。
-- **进 author 备好的工作区开工**（frontmatter 有 `worktree` 时）：`cd <worktree>`，核对
-  `git rev-parse --abbrev-ref HEAD` 与 `branch` 一致，然后就在这里干活。
+- **进 author 备好的工作区开工**（frontmatter 有 `worktree` 时）：`EnterWorktree(path: <worktree>)`，
+  进去后核对 `git rev-parse --abbrev-ref HEAD` 与 `branch` 一致，然后就在这里干活。
+  - **用 `path` 模式**——`name` 模式会另建工作区和分支，正是这里要避免的事。
+  - 跨仓库进不去时退回 `git -C <worktree> <命令>` 逐条指定，**别用裸 `cd`**：`cd` 只在单条
+    命令内有效，下一条命令又回到原目录，你会以为自己在工作区里，其实每条 git 都打在主工作树上。
+  - 中途要离开用 `ExitWorktree(action: "keep")`。以 `path` 进入的工作区它本来就不会删，
+    但显式 `keep` 更稳——**绝不要 `remove`**，验收还要用。
   - **不要自己 `git worktree add`。** 那条分支已经被这个工作区 checkout 了，再建会直接失败；
     而且你另建一个，原 session 验收时会回到它自己建的那个，看不到你的改动。
   - **不要 `git worktree remove`**，验收还要用。
@@ -134,7 +154,8 @@ user_invocable: true
 （staging / main / master）上跑。主工作树通常停在集成分支，那里根本没有接手方的改动：
 在那里跑出来的绿是**别的代码的绿**，比不跑更有害，因为它看起来像验过了。
 
-1. **回到交接工作区**：`cd` 进 author 阶段第 4 步建的那个 worktree。路径有三个可能来源，
+1. **回到交接工作区**：`EnterWorktree(path: <worktree>)` 进 author 阶段第 4 步建的那个
+   worktree。路径有三个可能来源，
    哪个在手用哪个——你自己的上下文（你就是 author 时）、用户粘贴的验收指令（author 第 9 步
    输出的那段）、或文档 frontmatter 的 `worktree`（文档已在手时）。三个都没有 → 用
    `git worktree list` 按分支名查回来。确认这次交接根本不涉及独立工作区（同目录同分支续做）
@@ -142,7 +163,8 @@ user_invocable: true
    - **在那里重读一遍交接文档。** 你手上这份可能是 author 时写的旧版；接手方的自测记录、
      `status`、以及被修正过的字段，全都只存在于那个工作区里的那一份。读错版本不会报错，
      只会让你对着过时的内容验收。
-   - 后面**每一条**验收命令都在这个目录里跑（`cd` 进去，或 `git -C <worktree>`）。
+   - 后面**每一条**验收命令都在这个工作区里跑。跨仓库进不去时退回 `git -C <worktree>` 逐条
+     指定；别用裸 `cd`，它只在单条命令内有效。
    - 路径不在了（被谁 remove 了）→ `git worktree list` 看这条分支现在挂在哪；都没有就用
      `git worktree add --detach <临时路径> <branch>` 重建，验完 remove。**必须带 `--detach`**——
      一条分支不能被两个 worktree 同时 checkout。
