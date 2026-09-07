@@ -1,13 +1,13 @@
 ---
 name: handoff
 description: Use when handing a task across sessions — writing a self-contained handoff doc for a fresh session to pick up (author), sanity-checking an inbound handoff before starting (verify), or accepting completed work against the criteria agreed at handoff time (accept). Triggers on phrases like "write a handoff", "hand this off", "pick up this task", "sign off on this work". Generic skill — project-specific conventions are read from .hskill/handoff/config.md.
-version: "1.7.0"
+version: "1.8.0"
 user_invocable: true
 ---
 
 # 跨 session 任务交接（handoff）
 
-产出并驱动一份自包含交接文档：接手 session 只读这一份文件即可续做，完成后由原 session 按约定判据验收。文档直接整份喂给新 session，不做可粘贴 prompt。文档内容跟着这次交接的实际目的走——不是无论目的是什么都写一份详实清单，缺了会让接手方出问题的信息才写，其余不写。
+产出并驱动一份自包含交接文档：接手 session 只读这一份文件即可续做，完成后由原 session 按约定判据验收。交付时另给一段**可粘贴的接手指令**，它只负责寻址（工作区路径、分支、文档路径），**不复述文档内容**——一旦指令里塞进摘要，接手方就会读指令不读文档，摘要与文档立刻变成两个真相源。文档内容跟着这次交接的实际目的走——不是无论目的是什么都写一份详实清单，缺了会让接手方出问题的信息才写，其余不写。
 
 ## Phase 触发判定（先做这一步）
 
@@ -51,7 +51,22 @@ user_invocable: true
 8. **落库**：把交接文档 commit 进这条分支——未提交的文档接手方根本看不到，等于没交出去。
    **不要 `git worktree remove`**（见第 4 步）：这个工作区既是接手方的落脚点，也是你验收时要回来
    的地方。接手方就在同一目录同一分支续做、或文档整份贴给对方时，此步可省。
-9. **交付**：告知用户交接文档路径、**worktree 路径与分支名**，说明下个 session 直接整份喂入即可。
+9. **交付**：输出一段**可粘贴的接手指令**给用户，让它成为路径信息的载体——你这个 session
+   的上下文迟早会没，工作区路径不能只活在你的记忆里。指令里**只放寻址信息，不放任何文档内容
+   的摘要**（理由见本文开头）。形如：
+
+   ```
+   接手任务。工作区已建好，不要自己建：
+     cd <worktree 绝对路径>
+   分支 <branch>，已被这个工作区 checkout（git worktree add 会失败，属正常）。
+   <若 config.md 的 workflow 段有开工前置命令，原样列在这里>
+   交接文档：<相对于工作区的文档路径>
+   先 /handoff verify <文档路径> 核对，无缺口再开工。
+   ```
+
+   **同一段指令换个动词就是验收指令**（`/handoff accept <文档路径>`）——一并给用户，
+   将来验收若换了新 session，它靠这段就能回到正确的工作区。用户把这段弄丢了也不致命：
+   `git worktree list` 能查回分支与工作区的对应关系，只是要多问一步。
 
 ## 完整性门禁（author 收尾硬动作）
 
@@ -119,8 +134,11 @@ user_invocable: true
 （staging / main / master）上跑。主工作树通常停在集成分支，那里根本没有接手方的改动：
 在那里跑出来的绿是**别的代码的绿**，比不跑更有害，因为它看起来像验过了。
 
-1. **回到交接工作区**：`cd` 进 author 阶段第 4 步建的那个 worktree（frontmatter 的 `worktree`）。
-   没有这个字段 → 这次交接不涉及独立工作区（同目录同分支续做），就地验收，跳过本步。
+1. **回到交接工作区**：`cd` 进 author 阶段第 4 步建的那个 worktree。路径有三个可能来源，
+   哪个在手用哪个——你自己的上下文（你就是 author 时）、用户粘贴的验收指令（author 第 9 步
+   输出的那段）、或文档 frontmatter 的 `worktree`（文档已在手时）。三个都没有 → 用
+   `git worktree list` 按分支名查回来。确认这次交接根本不涉及独立工作区（同目录同分支续做）
+   才跳过本步。
    - **在那里重读一遍交接文档。** 你手上这份可能是 author 时写的旧版；接手方的自测记录、
      `status`、以及被修正过的字段，全都只存在于那个工作区里的那一份。读错版本不会报错，
      只会让你对着过时的内容验收。
