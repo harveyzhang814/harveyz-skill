@@ -8,6 +8,15 @@ This is the **source maintenance repository** for Harvey's Claude Code skills. S
 
 **Important:** This repo is the authoritative source for all skills. When looking up, reading, or editing any skill's content, always work within the `skills/` directory here — never in the installed copy at `~/.claude/skills/` or any Claude user-level directory. `~/.claude/skills/` is the deployment target; its contents may lag behind this repo.
 
+**同步装机副本一律从集成分支取，不要从工作树 rsync：**
+
+```bash
+git archive staging skills/coding/<skill> | tar -x -C <临时目录>
+rsync -a --exclude '.DS_Store' <临时目录>/skills/coding/<skill>/ ~/.claude/skills/<skill>/
+```
+
+主工作树**不等于** `staging`——它随时可能停在某个 session 的 feature/doc 分支上，那里的 skill 内容比刚合并进 staging 的旧。直接 `rsync` 过去会把旧版本装上，而且不报错：装机副本看起来更新过了，内容却是回退的。同步完必查 `grep '^version:' ~/.claude/skills/<skill>/SKILL.md` 对上预期版本号。
+
 Skills are self-contained directories installed to `~/.claude/skills/` to extend Claude Code's capabilities.
 
 ## Installation

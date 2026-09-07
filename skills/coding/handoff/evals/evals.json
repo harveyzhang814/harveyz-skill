@@ -142,7 +142,7 @@
         {
           "id": "entered-author-worktree",
           "source": "transcript",
-          "text": "执行轨迹显示验收命令是在交接工作区（setup 打印的 wt 目录）里跑的——cd 进去、或 git -C/命令 cwd 指向它——而不是全程只在仓库主工作树里操作"
+          "text": "执行轨迹显示验收命令是在交接工作区（setup 打印的 wt 目录）里跑的——EnterWorktree(path:) 进去、cd 进去、或 git -C / 命令 cwd 指向它——而不是全程只在仓库主工作树里操作。注意：本 fixture 的仓库刻意建在 jail 之外（见 setup.sh 的说明），对被测会话属跨仓库，EnterWorktree 会被拒；走 git -C / cd 兜底是 SKILL.md 明写的预期行为，不扣分。"
         },
         {
           "id": "used-three-criteria-not-stale-two",
