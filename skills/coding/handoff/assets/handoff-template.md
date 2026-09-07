@@ -26,7 +26,7 @@ target_node:              # 留空，接手方在 verify 建完 hands-off-to 后
 >
 > **开工前**：若 frontmatter 有 `source_node`、且你也在 Agent Canvas 画布节点里，先建一条 `hands-off-to` 关系（`agent-canvas-ctl whoami` 取自己的 id，核对 `node-relations` 里没有后 `link-nodes --from <source_node> --to <自己> --type hands-off-to`），建完把自己的 id 填进 `target_node`。**只建这一条**——别建 `implements`、别另立需求节点。
 >
-> **在哪开工**：frontmatter 有 `worktree` 时，用 `EnterWorktree(path: <worktree>)` 进去（**`path` 模式，不是 `name`**——`name` 会另建工作区和分支），核对当前分支与 `branch` 一致，就在那里干活。跨仓库进不去时退回 `git -C <worktree> <命令>` 逐条指定，**别用裸 `cd`**：`cd` 只在单条命令内有效，下一条又回到原目录，你会以为自己在工作区里、其实每条 git 都打在主工作树上。**不要自己 `git worktree add`**（那条分支已被这个工作区占用，再建会失败，而且原 session 验收时回的是它自己建的那个，看不到你的改动），**也不要 `git worktree remove` 或 `ExitWorktree(action: "remove")`**（验收还要用；要离开就 `ExitWorktree(action: "keep")`）。路径不存在就打回原 session 重建，别自己挑地方。
+> **在哪开工**：frontmatter 有 `worktree` 时，进那个工作区干活，核对当前分支与 `branch` 一致。**怎么进按你所在平台来**（Claude Code 用 `EnterWorktree(path: <worktree>)` 的 `path` 模式；没有这类能力就每条命令自带限定 `git -C <worktree>`，读写文件用绝对路径，别靠裸 `cd`——它只在单条命令内有效）。判据只有一条：后续命令的工作目录确实是那个工作区。**不要自己 `git worktree add`**（那条分支已被这个工作区占用，再建会失败，而且原 session 验收时回的是它自己建的那个，看不到你的改动），**也绝不要销毁它**（`git worktree remove`，或平台的"退出并删除"）——验收还要用。路径不存在就打回原 session 重建，别自己挑地方。
 
 ---
 

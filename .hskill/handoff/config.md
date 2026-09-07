@@ -19,7 +19,8 @@ workflow: |
     git config core.hooksPath .githooks  # 不配，staging/main 直提保护失效
     git config merge.ff false
   别用裸 cd：它只在单条命令内有效，下一条又回到原目录，你会以为自己在工作区里，
-  其实每条 git 都打在主工作树上。跨仓库进不去时退回 git -C <worktree> <命令>。
+  其实每条 git 都打在主工作树上。跨仓库、或你所在平台没有这个能力时，退回
+  git -C <worktree> <命令> 逐条限定，读写文件一律用绝对路径。
   要离开用 ExitWorktree(action: "keep")，绝不要 remove——验收还要用。
   一条分支不能被两个 worktree 同时 checkout，git worktree add 会直接失败——那是提示不是障碍。
   **不要 git worktree remove**：交出方验收时要回到这里，验收通过、合并完成之后由它来收。
