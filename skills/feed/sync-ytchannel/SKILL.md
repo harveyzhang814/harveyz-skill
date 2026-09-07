@@ -1,6 +1,6 @@
 ---
 name: sync-ytchannel
-version: "0.7.0"
+version: "0.7.1"
 description: "Run one incremental fetch over every YouTube channel on the roster, produce a translated Markdown digest of what is new since last run, and archive each new video's title, translated title, publish date and URL to a per-channel JSON store. Trigger phrases: '/sync-ytchannel run', '/sync-ytchannel', 'check my YouTube channels for new videos', or a request to run sync-ytchannel on a schedule via /loop or schedule. Adding or removing a watched channel is manage-creators, not this skill. Listing only — never downloads a video, transcript or description, and never ingests into Obsidian (use clip-url or learn-video for a single video). Display of archived videos is left to external tooling reading the JSON archive directly, not this skill."
 user_invocable: true
 ---

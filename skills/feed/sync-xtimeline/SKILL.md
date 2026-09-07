@@ -1,6 +1,6 @@
 ---
 name: sync-xtimeline
-version: "0.8.0"
+version: "0.8.1"
 description: "Run one incremental fetch over every X (Twitter) account on the roster and produce a translated Markdown digest of what is new since last run, plus a per-handle JSON archive. Trigger phrases: '/sync-xtimeline run', '/sync-xtimeline', 'check my X accounts for new tweets', or a request to run sync-xtimeline on a schedule via /loop or schedule. Adding or removing a watched account is manage-creators, not this skill. Not for saving a single article or tweet to Obsidian (use clip-url for that) — this skill never ingests into Obsidian, never tags, never downloads images, and only reports incremental new tweets, not full thread content. Display of archived tweets is left to external tooling reading the JSON archive directly, not this skill."
 user_invocable: true
 ---
