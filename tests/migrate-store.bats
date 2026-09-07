@@ -39,9 +39,22 @@ CFG
 }
 
 _write_legacy_xtimeline() {
+  # Old layout with no config.json: products sit in the skill dir itself.
   mkdir -p "${HSKILL_LEGACY_XTIMELINE}/digests" "${HSKILL_LEGACY_XTIMELINE}/tweets"
   echo "old digest" > "${HSKILL_LEGACY_XTIMELINE}/digests/20260817T192449--digest.md"
   echo '[]' > "${HSKILL_LEGACY_XTIMELINE}/tweets/trq212.json"
+}
+
+_write_legacy_xtimeline_with_data_dir() {
+  # The real old layout: config.json's DATA_DIR points somewhere else
+  # entirely (a vault subdir), and that is where the products live.
+  LEGACY_DATA="${TEST_DIR}/legacy-vault-twitter"
+  mkdir -p "${HSKILL_LEGACY_XTIMELINE}" "${LEGACY_DATA}/digests" "${LEGACY_DATA}/tweets"
+  cat > "${HSKILL_LEGACY_XTIMELINE}/config.json" <<CFG
+{"DATA_DIR": "${LEGACY_DATA}"}
+CFG
+  echo "vault digest" > "${LEGACY_DATA}/digests/20260822T064553--digest.md"
+  echo '[]' > "${LEGACY_DATA}/tweets/trq212.json"
 }
 
 @test "dry-run: hash8 dir with meta.json listed under copied, non-hash dir under skipped" {
@@ -153,7 +166,7 @@ CFG
   grep -q "dest-original" "${ROOT}/articles/deadbeef/meta.json"
 }
 
-@test "--apply: Origin/ and Image/ go to articles/_orphans without a meta.json" {
+@test "--apply: Origin/ and Image/ go to _orphans, outside articles/" {
   _write_vault_config
   mkdir -p "${VAULT}/Origin" "${VAULT}/Image"
   echo "orphan article" > "${VAULT}/Origin/old.md"
@@ -161,12 +174,15 @@ CFG
 
   run bash "$SCRIPT" --apply
   [ "$status" -eq 0 ]
-  [ -f "${ROOT}/articles/_orphans/Origin/old.md" ]
-  [ -f "${ROOT}/articles/_orphans/Image/31e1d2a2_img_1.jpg" ]
+  [ -f "${ROOT}/_orphans/Origin/old.md" ]
+  [ -f "${ROOT}/_orphans/Image/31e1d2a2_img_1.jpg" ]
   # No source_url is recoverable for these, so fabricating one would put a
   # lie into the `find -name meta.json` index.
-  [ ! -e "${ROOT}/articles/_orphans/Origin/meta.json" ]
-  [ ! -e "${ROOT}/articles/_orphans/meta.json" ]
+  [ ! -e "${ROOT}/_orphans/Origin/meta.json" ]
+  [ ! -e "${ROOT}/_orphans/meta.json" ]
+  # Outside articles/ on purpose: scholia's CONTENT_DIR points at articles/ and
+  # lists every .md under it, so orphans parked there showed up as articles.
+  [ ! -e "${ROOT}/articles/_orphans" ]
   [ -d "${VAULT}/Origin" ]
   [ -d "${VAULT}/Image" ]
 }
@@ -194,7 +210,7 @@ CFG
   [ ! -e "${ROOT}" ]
 }
 
-@test "--verify: reports a truncated copy as a size mismatch" {
+@test "--verify: a truncated copy fails" {
   _write_roster_config
   mkdir -p "${DATA_DIR}/tweets/creators"
   echo '[{"id": "1"}]' > "${DATA_DIR}/tweets/creators/alice.json"
@@ -204,7 +220,22 @@ CFG
 
   run bash "$SCRIPT" --verify
   [ "$status" -ne 0 ]
-  [[ "$output" == *"大小不符"* ]]
+  [[ "$output" == *"比源还小"* ]]
+}
+
+@test "--verify: a target that grew past its source passes" {
+  # What live use looks like: the skills start appending to the migrated
+  # feed archive. Only shrinkage means a broken copy.
+  _write_roster_config
+  mkdir -p "${DATA_DIR}/tweets/creators"
+  echo '[{"id": "1"}]' > "${DATA_DIR}/tweets/creators/alice.json"
+  bash "$SCRIPT" --apply
+
+  echo '[{"id": "1"}, {"id": "2"}]' > "${ROOT}/feeds/tweets/creators/alice.json"
+
+  run bash "$SCRIPT" --verify
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"已比源更大"* ]]
 }
 
 @test "unknown flag exits 2" {
@@ -221,4 +252,49 @@ CFG
   [ -f "${ROOT}/feeds/tweets/digest/20260817T192449--digest.md" ]
   [ -f "${ROOT}/feeds/tweets/creators/trq212.json" ]
   [ -f "${HSKILL_LEGACY_XTIMELINE}/digests/20260817T192449--digest.md" ]
+}
+
+@test "--apply: legacy source comes from its config.json DATA_DIR, not the skill dir" {
+  _write_legacy_xtimeline_with_data_dir
+
+  run bash "$SCRIPT" --apply
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"${LEGACY_DATA}"* ]]
+  [ -f "${ROOT}/feeds/tweets/digest/20260822T064553--digest.md" ]
+  [ -f "${ROOT}/feeds/tweets/creators/trq212.json" ]
+  [ -f "${LEGACY_DATA}/digests/20260822T064553--digest.md" ]
+}
+
+@test "--apply: video backfill merges into vdl's own meta.json, never clobbers it" {
+  # vdl writes meta.json itself on completion, carrying file_size / bit_rate /
+  # *_done that we never produce. An overwriting backfill silently drops them.
+  VIDEO_WORK="${ROOT}/videos/work"
+  mkdir -p "${VIDEO_WORK}/t1/writing"
+  echo "body" > "${VIDEO_WORK}/t1/writing/article.md"
+  cat > "${VIDEO_WORK}/t1/meta.json" <<'META'
+{"id": "t1", "file_size": 3552927, "bit_rate": 129410, "transcript_done": true, "focus": ""}
+META
+  python3 -c "
+import sqlite3
+c = sqlite3.connect('${VIDEO_WORK}/database.sqlite')
+c.execute('create table tasks (id TEXT PRIMARY KEY, url TEXT, ts TEXT, title TEXT, uploader TEXT, upload_date TEXT, duration TEXT, mode TEXT, output_lang TEXT)')
+c.execute(\"insert into tasks values ('t1','https://y/1','2026-07-01T00:00:00Z','T','Chan','20260701','120','media','zh-CN')\")
+c.commit()
+"
+
+  run bash "$SCRIPT" --apply
+  [ "$status" -eq 0 ]
+
+  run python3 -c "
+import json; m = json.load(open('${VIDEO_WORK}/t1/meta.json'))
+assert m['source_url'] == 'https://y/1', m
+assert m['title'] == 'T', m
+assert m['file_size'] == 3552927, m
+assert m['bit_rate'] == 129410, m
+assert m['transcript_done'] is True, m
+assert 'focus' not in m, m
+print('MERGED')
+"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"MERGED"* ]]
 }

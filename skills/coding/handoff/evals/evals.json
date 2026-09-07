@@ -5,56 +5,98 @@
       "id": 0,
       "name": "author-high-to-low-model",
       "prompt": "我刚把一个功能模块的重构方案定完了，设计规格已经写好放在仓库里。想把具体实现交给另一个能力较弱的模型 session 去做，帮我写一份交接文档，让它只读这一份就能照着实现，别自由发挥。",
-      "expected_output": "在 config 输出目录（默认 docs/commute/）下生成 YYYY-MM-DD-*-handoff.md；抬头含状态字段 + 交接目的（判断为'接手方续做同一实现任务'一类描述）+ 接手方须知。因为是续做同一任务的目的，必要性测试会判定背景/关键决定/范围铁律/相关文档索引/受影响文件/验证步骤等章节基本都需要，实际出现在文档里；若项目有 .hskill/handoff/config.md 则注入其工作流/验证约定；最小验收锚点是可证伪的硬判据；author 收尾跑完整性门禁。",
+      "expected_output": "在 config 输出目录（默认 docs/commute/）下生成 YYYY-MM-DD-*-handoff.md；frontmatter 含 status/date/acceptance 字段 + 正文含交接目的（判断为'接手方续做同一实现任务'一类描述）+ 接手方须知。因为是续做同一任务的目的，必要性测试会判定背景/关键决定/范围铁律/相关文档索引/受影响文件/验证步骤等章节基本都需要，实际出现在文档里；若项目有 .hskill/handoff/config.md 则注入其工作流/验证约定；最小验收锚点是可证伪的硬判据；author 收尾跑完整性门禁（先跑 scripts/validate-handoff.sh，再做冷读测试）。",
       "files": [],
       "frozen": "2026-08-17",
       "assertions": [
-        { "id": "file-in-output-dir", "source": "artifact",
-          "text": "在 docs/commute/ 下生成了文件名形如 YYYY-MM-DD-<topic>-handoff.md 的文档" },
-        { "id": "header-has-status-and-purpose", "source": "artifact",
-          "text": "文档抬头同时含状态字段与交接目的两项" },
-        { "id": "purpose-is-continuation", "source": "artifact",
-          "text": "交接目的描述为「接手方续做同一实现任务」一类，而不是仅传递背景" },
-        { "id": "continuation-sections-present", "source": "artifact",
-          "text": "文档含范围铁律与相关文档索引两节" },
-        { "id": "anchor-is-falsifiable", "source": "artifact",
-          "text": "最小验收锚点是硬判据，有明确的对错判定，不是「让它工作」这类无法证伪的软标准" }
+        {
+          "id": "file-in-output-dir",
+          "source": "artifact",
+          "text": "在 docs/commute/ 下生成了文件名形如 YYYY-MM-DD-<topic>-handoff.md 的文档"
+        },
+        {
+          "id": "header-has-status-and-purpose",
+          "source": "artifact",
+          "text": "文档 frontmatter 含 status 字段，且正文含交接目的一行"
+        },
+        {
+          "id": "purpose-is-continuation",
+          "source": "artifact",
+          "text": "交接目的描述为「接手方续做同一实现任务」一类，而不是仅传递背景"
+        },
+        {
+          "id": "continuation-sections-present",
+          "source": "artifact",
+          "text": "文档含范围铁律与相关文档索引两节"
+        },
+        {
+          "id": "anchor-is-falsifiable",
+          "source": "artifact",
+          "text": "最小验收锚点是硬判据，有明确的对错判定，不是「让它工作」这类无法证伪的软标准"
+        }
       ]
     },
     {
       "id": 1,
       "name": "author-cross-device-continuation",
       "prompt": "今天先干到这，明天换台电脑接着做这个第三方 SDK 的集成。帮我留一份交接，别让明天的自己丢上下文。",
-      "expected_output": "config 输出目录下生成 handoff.md，抬头含状态字段 + 交接目的（判断为续做同一任务一类描述），状态=待执行；背景与现状章节写清当前进度（必要性测试：不写会做错方向 → 判定需要）；最小验收锚点引用原任务的成功判据（硬判据）。",
+      "expected_output": "config 输出目录下生成 handoff.md，frontmatter 含 status/date/acceptance 字段 + 正文含交接目的（判断为续做同一任务一类描述），status=待执行；背景与现状章节写清当前进度（必要性测试：不写会做错方向 → 判定需要）；最小验收锚点引用原任务的成功判据（硬判据）。",
       "files": [],
       "frozen": "2026-08-17",
       "assertions": [
-        { "id": "file-in-output-dir", "source": "artifact",
-          "text": "在 docs/commute/ 下生成了文件名形如 YYYY-MM-DD-<topic>-handoff.md 的文档" },
-        { "id": "status-is-pending", "source": "artifact",
-          "text": "状态字段的值是「待执行」" },
-        { "id": "background-describes-progress", "source": "artifact",
-          "text": "背景与现状章节写明了当前做到哪一步" },
-        { "id": "anchor-references-original-criteria", "source": "artifact",
-          "text": "最小验收锚点引用原任务的成功判据，且是硬判据" }
+        {
+          "id": "file-in-output-dir",
+          "source": "artifact",
+          "text": "在 docs/commute/ 下生成了文件名形如 YYYY-MM-DD-<topic>-handoff.md 的文档"
+        },
+        {
+          "id": "status-is-pending",
+          "source": "artifact",
+          "text": "frontmatter 的 status 值是「待执行」"
+        },
+        {
+          "id": "background-describes-progress",
+          "source": "artifact",
+          "text": "背景与现状章节写明了当前做到哪一步"
+        },
+        {
+          "id": "anchor-references-original-criteria",
+          "source": "artifact",
+          "text": "最小验收锚点引用原任务的成功判据，且是硬判据"
+        }
       ]
     },
     {
       "id": 2,
       "name": "accept-catches-failing-criterion",
-      "prompt": "接手的 session 说 slugify 那个小任务做完了，交接文档和产物都在 evals/fixtures/accept/ 下（handoff-slugify.md 和 slugify.js）。帮我验收一下，看能不能收。",
+      "prompt": "接手的 session 说 slugify 那个小任务做完了，交接文档和产物都在 evals/fixtures/accept/ 下（2026-08-02-slugify-handoff.md 和 slugify.js）。帮我验收一下，看能不能收。",
       "expected_output": "accept phase：找文档里的最小验收锚点（硬判据，两条 slugify 判据），按其描述逐条实跑(node slugify.js)，发现判据2(去标点)未达标；状态置『打回』而非『已验收』，在最小验收锚点章节追加验收记录点名失败判据。",
-      "files": ["evals/fixtures/accept/handoff-slugify.md", "evals/fixtures/accept/slugify.js"],
+      "files": [
+        "evals/fixtures/accept/2026-08-02-slugify-handoff.md",
+        "evals/fixtures/accept/slugify.js"
+      ],
       "frozen": "2026-08-17",
       "assertions": [
-        { "id": "ran-criteria-not-just-read", "source": "transcript",
-          "text": "执行轨迹显示实际运行了 slugify.js（如 Bash 调用 node slugify.js），而不是只读文档就下判断" },
-        { "id": "status-set-to-rejected", "source": "artifact",
-          "text": "fixture 交接文档的状态被置为「打回」，不是「已验收」" },
-        { "id": "names-failing-criterion", "source": "artifact",
-          "text": "验收记录点名了未达标的是「去标点」那一条判据，而不是笼统说没通过" },
-        { "id": "record-appended-to-anchor-section", "source": "artifact",
-          "text": "验收结果被追加在最小验收锚点章节末尾，而不是另起一节或写在文档开头" }
+        {
+          "id": "ran-criteria-not-just-read",
+          "source": "transcript",
+          "text": "执行轨迹显示实际运行了 slugify.js（如 Bash 调用 node slugify.js），而不是只读文档就下判断"
+        },
+        {
+          "id": "status-set-to-rejected",
+          "source": "artifact",
+          "text": "fixture 交接文档 frontmatter 的 status 被置为「打回」，不是「已验收」"
+        },
+        {
+          "id": "names-failing-criterion",
+          "source": "artifact",
+          "text": "验收记录点名了未达标的是「去标点」那一条判据，而不是笼统说没通过"
+        },
+        {
+          "id": "record-appended-to-anchor-section",
+          "source": "artifact",
+          "text": "验收结果被追加在最小验收锚点章节末尾，而不是另起一节或写在文档开头"
+        }
       ]
     },
     {
@@ -65,14 +107,68 @@
       "files": [],
       "frozen": "2026-08-17",
       "assertions": [
-        { "id": "purpose-is-background-only", "source": "artifact",
-          "text": "交接目的写成「仅传递背景结论，不要求接手方产出可验收的实现」一类描述" },
-        { "id": "has-purpose-and-anchor", "source": "artifact",
-          "text": "交接目的与最小验收锚点两节均存在" },
-        { "id": "no-continuation-sections", "source": "artifact",
-          "text": "文档不含范围铁律、受影响文件、验证步骤、关键决定中的任何一节" },
-        { "id": "anchor-is-soft", "source": "artifact",
-          "text": "最小验收锚点是软判据（如「接手方能复述讨论结论要点」），不是硬判据" }
+        {
+          "id": "purpose-is-background-only",
+          "source": "artifact",
+          "text": "交接目的写成「仅传递背景结论，不要求接手方产出可验收的实现」一类描述"
+        },
+        {
+          "id": "has-purpose-and-anchor",
+          "source": "artifact",
+          "text": "交接目的与最小验收锚点两节均存在"
+        },
+        {
+          "id": "no-continuation-sections",
+          "source": "artifact",
+          "text": "文档不含范围铁律、受影响文件、验证步骤、关键决定中的任何一节"
+        },
+        {
+          "id": "anchor-is-soft",
+          "source": "artifact",
+          "text": "最小验收锚点是软判据（如「接手方能复述讨论结论要点」），不是硬判据"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "name": "accept-goes-to-author-worktree",
+      "prompt": "接手的 session 说 slugify 保留数字那个任务做完了。先跑 evals/fixtures/accept-worktree/setup.sh 把现场准备好（它会打印仓库路径和交接工作区路径），然后按交接文档验收，看能不能收。",
+      "expected_output": "accept phase：先「到位」——cd 进交接文档 frontmatter 指出的 worktree（author 建好的那个），在那里重读交接文档拿到最新版（3 条判据 + 接手方自测记录），而不是在仓库主工作树读那份停在 2 条判据的过期副本。实跑 node slugify.js 发现第三条「保留数字」FAIL，把 worktree 那份文档的 status 置为「打回」并点名失败判据。全程不另建 worktree（author 已建好，分支已被占用）。 断言全部走 transcript：这条 eval 测的是「去了哪个工作区、读了哪一份文档」这种行为，行为证据在执行轨迹里，不在产物里。",
+      "files": [
+        "evals/fixtures/accept-worktree/setup.sh"
+      ],
+      "frozen": "2026-09-06",
+      "assertions": [
+        {
+          "id": "entered-author-worktree",
+          "source": "transcript",
+          "text": "执行轨迹显示验收命令是在交接工作区（setup 打印的 wt 目录）里跑的——cd 进去、或 git -C/命令 cwd 指向它——而不是全程只在仓库主工作树里操作"
+        },
+        {
+          "id": "used-three-criteria-not-stale-two",
+          "source": "transcript",
+          "text": "验收依据是三条判据（含「保留数字」那条），说明读的是 worktree 里的最新文档；只按两条判据验收说明读了主工作树上那份过期副本"
+        },
+        {
+          "id": "ran-the-artifact",
+          "source": "transcript",
+          "text": "实际运行了 slugify.js（如 Bash 调用 node slugify.js），而不是只读代码就下判断"
+        },
+        {
+          "id": "names-failing-number-criterion",
+          "source": "transcript",
+          "text": "验收结论点名未达标的是「保留数字」/「Top 10 Tips」那一条，而不是笼统说没通过"
+        },
+        {
+          "id": "status-rejected-in-worktree-copy",
+          "source": "transcript",
+          "text": "交接工作区里那份文档的 frontmatter status 被置为「打回」，不是「已验收」"
+        },
+        {
+          "id": "no-extra-worktree-created",
+          "source": "transcript",
+          "text": "没有执行 git worktree add 另建工作区——author 已经建好，那条分支已被占用"
+        }
       ]
     }
   ]

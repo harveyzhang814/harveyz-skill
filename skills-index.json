@@ -29,7 +29,7 @@
   ],
   "bundleMeta": {
     "research": "研究工具（learn-video + extract-vision + survey-skillrepo + learn-paper + extract-cognition + probe-session + clip-url + fetch-paper）",
-    "feed": "追更工具（manage-creators — 人与渠道名册；sync-xtimeline + sync-ytchannel — 按名册跑增量抓取；capture-opinion — 给人记一笔判断）",
+    "feed": "追更工具（manage-creators — 人与渠道名册；sync-xtimeline + sync-ytchannel + sync-website — 按名册跑增量抓取；capture-opinion — 给人记一笔判断）",
     "creative": "创意工具（capture-todo + capture-insight）",
     "coding": "程序工具（init-workflow + setup-debug + init-goal + question-me + capture-vocab + rephrase + explain-pm）",
     "writing": "写作工具（forge-doc + draw-diagram + manage-dir + migrate-spec）",
@@ -112,15 +112,22 @@
       "path": "feed/sync-xtimeline",
       "bundle": "feed",
       "installScope": "project",
-      "contentHash": "5c8557cc442f9277",
-      "contentVersion": "0.8.0"
+      "contentHash": "650227251dbb2617",
+      "contentVersion": "0.8.1"
     },
     {
       "path": "feed/sync-ytchannel",
       "bundle": "feed",
       "installScope": "project",
-      "contentHash": "a6b9df4e049d169f",
-      "contentVersion": "0.7.0"
+      "contentHash": "d7bf81645a586b8f",
+      "contentVersion": "0.7.1"
+    },
+    {
+      "path": "feed/sync-website",
+      "bundle": "feed",
+      "installScope": "project",
+      "contentHash": "76c35322ff063827",
+      "contentVersion": "0.1.0"
     },
     {
       "path": "creative/capture-todo",
@@ -321,15 +328,15 @@
     {
       "path": "coding/handoff",
       "bundle": "coding",
-      "contentHash": "3a93302e821d08e8",
-      "contentVersion": "1.3.0"
+      "contentHash": "7e199e1a5f6072f0",
+      "contentVersion": "1.8.0"
     },
     {
       "path": "feed/manage-creators",
       "bundle": "feed",
       "installScope": "project",
-      "contentHash": "93cbe3e047eac8ed",
-      "contentVersion": "0.2.0"
+      "contentHash": "f0c5ca3fbdca9bd6",
+      "contentVersion": "0.2.1"
     },
     {
       "path": "feed/capture-opinion",

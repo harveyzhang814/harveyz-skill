@@ -1,6 +1,6 @@
 ---
 name: manage-creators
-version: "0.2.0"
+version: "0.2.1"
 description: "Maintain the roster of watched creators and their channels — the shared watchlist behind sync-xtimeline and sync-ytchannel. Add a channel URL, merge two handles that turn out to be the same person, rename a placeholder, view the roster with cursor state. Trigger phrases: '/manage-creators add <url>', '/manage-creators list', '/manage-creators merge <a> <b>', '/manage-creators rename <id> <name>', '/manage-creators remove <id>', 'watch this X account', 'watch this YouTube channel', 'who am I following'. Does not fetch anything — running an incremental fetch is sync-xtimeline / sync-ytchannel; writing a creator's profile is the cognition layer."
 user_invocable: true
 ---
@@ -48,7 +48,7 @@ ls ~/.hskill/roster/config.json 2>/dev/null && echo "EXISTS" || echo "NOT_FOUND"
 
 | 用户说 | 运行 | 报告 |
 |---|---|---|
-| `add <url>` | `<roster> registry add <url>` | `OK <id> <platform>:<handle>` → 告知已加入，并提示这是占位人、可用 `rename` 填正式名字 |
+| `add <url>` | `<roster> registry add <url>` | `OK <id> <platform>:<handle>` → 告知已加入，并提示这是占位人、可用 `rename` 填正式名字。`add` 现在也吃网站文章列表页 URL（`platform` 会是 `website`） |
 | `list` | `<roster> registry list` | 原样展示。`EMPTY` 表示还没关注任何人 |
 | `merge <a> <b>` | `<roster> registry merge <a> <b>` | `OK merged b into a` → 告知 b 的 id 已进 aliases，旧引用仍可查到 |
 | `rename <id> <name>` | `<roster> registry rename <id> <name>` | `OK` |

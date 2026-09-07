@@ -28,3 +28,33 @@ def run_cli(tmp_path):
         payload = json.loads(proc.stdout) if proc.returncode == 0 else None
         return proc, payload
     return _run
+
+
+import functools
+import http.server
+import threading
+
+_ARTICLES_FIXTURE_HTML = """<!doctype html>
+<html><body>
+<div class="entry"><h3><a href="/posts/1">First post</a></h3><p class="date">2026-01-01</p></div>
+<div class="entry"><h3><a href="/posts/2">Second post</a></h3><p class="date">2026-01-02</p></div>
+<div class="entry"><h3><a href="/posts/3">Third post</a></h3><p class="date">2026-01-03</p></div>
+<div class="nav"><a href="/about">About</a></div>
+</body></html>"""
+
+
+@pytest.fixture
+def articles_fixture_server(tmp_path):
+    site_dir = tmp_path / "articles-fixture-site"
+    site_dir.mkdir()
+    (site_dir / "index.html").write_text(_ARTICLES_FIXTURE_HTML, encoding="utf-8")
+
+    handler = functools.partial(http.server.SimpleHTTPRequestHandler, directory=str(site_dir))
+    server = http.server.HTTPServer(("127.0.0.1", 0), handler)
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    try:
+        yield f"http://127.0.0.1:{server.server_port}/index.html"
+    finally:
+        server.shutdown()
+        thread.join()

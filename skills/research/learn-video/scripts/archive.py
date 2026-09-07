@@ -16,9 +16,38 @@ Parameters via environment variables:
 """
 import json
 import os
+import sqlite3
 from datetime import datetime, timedelta, timezone
 
 import store_config
+
+# scholia 的 video-source.js 从 meta.json 直接读这些字段来渲染视频卡片和详情页
+# （`url`、`ts` 是它认的名字，跟 §3.2 必填的 `source_url`/`fetched_at` 并存而
+# 不是替代）。值都在 vdl 自己的 database.sqlite 里，不用调用方传。
+_SCHOLIA_COLUMNS = ("url", "uploader", "upload_date", "duration", "mode",
+                    "output_lang", "ts")
+
+
+def _vdl_fields(videos_dir, task_id: str) -> dict:
+    """Pull the display fields scholia wants out of vdl's own DB. Best-effort:
+    a missing DB or row just means a leaner meta.json, never a failed archive."""
+    db_path = videos_dir / "work" / "database.sqlite"
+    if not db_path.is_file():
+        return {}
+    try:
+        conn = sqlite3.connect(f"file:{db_path}?mode=ro", uri=True)
+        cols = ", ".join(_SCHOLIA_COLUMNS)
+        row = conn.execute(f"select {cols} from tasks where id = ?", (task_id,)).fetchone()
+    except sqlite3.Error:
+        return {}
+    finally:
+        try:
+            conn.close()
+        except NameError:
+            pass
+    if row is None:
+        return {}
+    return {k: v for k, v in zip(_SCHOLIA_COLUMNS, row) if v not in (None, "")}
 
 
 def archive(task_id: str, source_url: str, title: str,
@@ -38,6 +67,8 @@ def archive(task_id: str, source_url: str, title: str,
         "title": title,
         "fetched_at": fetched_at or datetime.now(timezone(timedelta(hours=8))).strftime("%Y-%m-%d"),
     }
+    meta.update(_vdl_fields(videos_dir, task_id))
+    meta.setdefault("url", source_url)   # scholia 读 meta.url，DB 没记就退回入参
     meta_path.write_text(json.dumps(meta, ensure_ascii=False, indent=2), encoding="utf-8")
 
     return {"video_dir": video_dir, "meta_path": meta_path}

@@ -13,16 +13,25 @@ from roster import urls
     ("https://x.com/@karpathy", ("x", "karpathy")),
     ("https://twitter.com/karpathy", ("x", "karpathy")),
     ("https://x.com/karpathy/", ("x", "karpathy")),
+    ("https://example.com/karpathy", ("website", "example-com")),
+    ("https://simonwillison.net/", ("website", "simonwillison-net")),
+    ("https://www.openai.com/news", ("website", "openai-com")),
 ])
 def test_parse_channel_url(url, expected):
     assert urls.parse_channel_url(url) == expected
 
 
 @pytest.mark.parametrize("url", [
-    "https://youtube.com/watch?v=abc123",
-    "https://example.com/karpathy",
     "not a url",
     "https://x.com/",
+    "https://youtube.com/watch?v=abc123",
+    "https://www.youtube.com/watch?v=abc",
+    "https://x.com/a/b/c",
+    "ftp://simonwillison.net/",
+    "https://youtu.be/dQw4w9WgXcQ",
+    "https://music.youtube.com/watch?v=abc",
+    "https://m.twitter.com/karpathy",
+    "https://mobile.twitter.com/karpathy",
 ])
 def test_parse_channel_url_rejects(url):
     with pytest.raises(ValueError):

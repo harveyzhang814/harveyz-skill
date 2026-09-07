@@ -2,19 +2,31 @@
 
 不是待填空的固定骨架。每次起草前，先确定这次交接的目的，再对下表逐类内容过一遍必要性测试——测试答案是"会"就写出对应章节，答案是"不会"就跳过，不留空标题、不留占位。
 
-## 两个始终存在的锚点
+## 固定骨架：frontmatter + 两个锚点
 
-无论目的是什么，文档必须包含以下开头结构和「最小验收锚点」一节：
+frontmatter 的字段是给机器读的（`status` 驱动三个 phase，`source_node`/`target_node` 驱动画布关系，`branch` 与 `worktree` 由 author 建好工作区后填，接手方照它进去开工、accept 方照它回来验收），由 `scripts/validate-handoff.sh` 校验；「交接目的」和「最小验收锚点」是给人读的，任何情况下不能省。文档必须包含以下开头结构和「最小验收锚点」一节：
 
 ```
+---
+status: 待执行            # 待执行|执行中|待验收|已验收|打回
+date: <YYYY-MM-DD>        # 须与文件名的日期段一致
+author_model: <model>
+acceptance: hard          # hard|soft，决定 accept 阶段逐条实跑还是定性判断
+branch: <分支名>          # 可选：接手方要在另一条分支上开工时，由 author 建好后填
+worktree: <绝对路径>      # 与 branch 成对：author 建好的交接工作区，接手方与 accept 方都进这里
+source_node: <uuid>       # 可选：author 在 Agent Canvas 画布节点里时才写
+target_node:              # 留空，接手方在 verify 建完 hands-off-to 后回填
+---
+
 # 交接：<任务一句话>
 
-**日期**：<YYYY-MM-DD>
-**author 模型**：<model>
-**状态**：待执行 <!-- 待执行 → 执行中 → 待验收 → 已验收 / 打回 -->
 **交接目的**：<一句话，自由描述这次交接是为了什么，不受预设分类约束>
 
-> **接手方须知**：你正在接手一个任务。本文档是完整交接与唯一权威入口：从头读到尾，若文档里有「工作流约定」章节按其开工，没有就直接开工。**完成后把上面的状态置为「待验收」并停在这里**——`已验收` / `打回` 由原 session 按「最小验收锚点」判定后写，不要代填。你的自测结果写成独立小节，别写进原 session 的验收记录里。
+> **接手方须知**：你正在接手一个任务。本文档是完整交接与唯一权威入口：从头读到尾，若文档里有「工作流约定」章节按其开工，没有就直接开工。**完成后把 frontmatter 的 `status` 置为「待验收」并停在这里**——`已验收` / `打回` 由原 session 按「最小验收锚点」判定后写，不要代填。你的自测结果写成独立小节，别写进原 session 的验收记录里。
+>
+> **开工前**：若 frontmatter 有 `source_node`、且你也在 Agent Canvas 画布节点里，先建一条 `hands-off-to` 关系（`agent-canvas-ctl whoami` 取自己的 id，核对 `node-relations` 里没有后 `link-nodes --from <source_node> --to <自己> --type hands-off-to`），建完把自己的 id 填进 `target_node`。**只建这一条**——别建 `implements`、别另立需求节点。
+>
+> **在哪开工**：frontmatter 有 `worktree` 时，`cd` 进去，核对当前分支与 `branch` 一致，就在那里干活。**不要自己 `git worktree add`**（那条分支已被这个工作区占用，再建会失败，而且原 session 验收时回的是它自己建的那个，看不到你的改动），**也不要 `git worktree remove`**（验收还要用）。路径不存在就打回原 session 重建，别自己挑地方。
 
 ---
 
@@ -42,4 +54,5 @@
 2. 逐类过必要性测试表，决定要写哪些章节。
 3. 按选中的章节撰写：背景 → 关键决定 → 范围铁律 → 相关文档索引 → 受影响文件/落点 → 工作流约定 → 验证步骤（只写选中的，跳过未选中的）。指针式引用权威依据，只内联接手方开工必需的硬核。
 4. 写最小验收锚点（必写，任何情况下不能省）。
-5. 跑 `SKILL.md` 里的完整性门禁。
+5. 若在 Agent Canvas 画布节点里，按 `SKILL.md` author 第 6 步填 `source_node`（并在已能指认接手节点时当场建 `hands-off-to`）。
+6. 跑 `SKILL.md` 里的完整性门禁（先跑 `scripts/validate-handoff.sh`，再做冷读测试）。

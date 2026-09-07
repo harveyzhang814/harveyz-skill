@@ -7,7 +7,7 @@
 # docs/superpowers/specs/2026-09-01-unified-store-design.md §6.
 #
 #   <VAULT_PATH>/<hash8>/           -> <ROOT>/articles/<hash8>/    (clip-url)
-#   <VAULT_PATH>/{Origin,Image}/    -> <ROOT>/articles/_orphans/
+#   <VAULT_PATH>/{Origin,Image}/    -> <ROOT>/_orphans/
 #   <DATA_DIR>/tweets/              -> <ROOT>/feeds/tweets/        (sync-xtimeline)
 #   <DATA_DIR>/youtube/             -> <ROOT>/feeds/youtube/       (sync-ytchannel)
 #   ~/.hskill/sync-xtimeline/       -> <ROOT>/feeds/tweets/        (旧布局)
@@ -87,7 +87,12 @@ echo ""
 if [[ "$VERIFY" -eq 1 ]]; then
   VAULT_PATH="$(_json_get "$VAULT_CONFIG" VAULT_PATH || true)"
   DATA_DIR="$(_json_get "$ROSTER_CONFIG" DATA_DIR || true)"
-  LEGACY_X="${HSKILL_LEGACY_XTIMELINE:-$HOME/.hskill/sync-xtimeline}"
+  # Same resolution as the copy pass below: the old layout's products live at
+  # its config.json's DATA_DIR, not in the skill dir. Reading the skill dir
+  # here would count 0 files and pass vacuously.
+  LEGACY_X_CONFIG="${HSKILL_LEGACY_XTIMELINE:-$HOME/.hskill/sync-xtimeline}"
+  LEGACY_X="$(_json_get "$LEGACY_X_CONFIG/config.json" DATA_DIR || true)"
+  [[ -z "$LEGACY_X" ]] && LEGACY_X="$LEGACY_X_CONFIG"
   ROOT="$ROOT" VAULT_PATH="$VAULT_PATH" DATA_DIR="$DATA_DIR" LEGACY_X="$LEGACY_X" python3 - <<'PY'
 import os, sqlite3, sys
 from pathlib import Path
@@ -112,17 +117,25 @@ def copied_intact(src: Path, dst: Path):
     """Every regular file under src must exist under dst with the same size.
     Sizes, not hashes: this runs over ~9 GB and a mismatched size is what a
     truncated copy actually looks like."""
-    missing, mismatched, total = [], [], 0
+    missing, mismatched, grown, total = [], [], [], 0
     for path in src.rglob("*"):
         if not path.is_file() or path.name == ".DS_Store":
             continue
         total += 1
         target = dst / path.relative_to(src)
+        rel = str(path.relative_to(src))
         if not target.is_file():
-            missing.append(str(path.relative_to(src)))
-        elif target.stat().st_size != path.stat().st_size:
-            mismatched.append(str(path.relative_to(src)))
-    return total, missing, mismatched
+            missing.append(rel)
+            continue
+        delta = target.stat().st_size - path.stat().st_size
+        if delta > 0:
+            # Bigger than the source is what live use looks like: once the
+            # skills run against the new root, feed archives get appended to.
+            # A broken copy is *smaller*, so only that direction is a failure.
+            grown.append(rel)
+        elif delta < 0:
+            mismatched.append(rel)
+    return total, missing, mismatched, grown
 
 
 def report_copy(label, src: Path, dst: Path):
@@ -132,10 +145,17 @@ def report_copy(label, src: Path, dst: Path):
     if not dst.is_dir():
         check(label, False, f"目标不存在：{dst}")
         return
-    total, missing, mismatched = copied_intact(src, dst)
+    total, missing, mismatched, grown = copied_intact(src, dst)
     bad = missing + mismatched
+    if not bad and total == 0:
+        # "0 files, all matched" is how a wrongly-resolved source path looks.
+        # Say so instead of printing a green tick nobody can falsify.
+        print(f"{YELLOW}⚠{OFF} {label} — 源目录里一个文件都没有（{src}），本条未构成有效校验")
+        return
     check(label, not bad, f"{total} 个文件全部对上" if not bad
-          else f"{len(missing)} 个缺失 / {len(mismatched)} 个大小不符，例如 {bad[0]}")
+          else f"{len(missing)} 个缺失 / {len(mismatched)} 个比源还小，例如 {bad[0]}")
+    if grown:
+        print(f"{DIM}  ↳ {len(grown)} 个已比源更大（新根投入使用后被追加）：{', '.join(grown)}{OFF}")
 
 
 print("── 1. 文章 ──")
@@ -147,7 +167,7 @@ if vault and Path(vault).is_dir():
     check("每个源文章目录都有对应副本", src_ids <= dst_ids,
           f"源 {len(src_ids)} 个，目标缺 {len(src_ids - dst_ids)} 个")
     for name in sorted(src_ids):
-        t, miss, mism = copied_intact(Path(vault) / name, root / "articles" / name)
+        t, miss, mism, _ = copied_intact(Path(vault) / name, root / "articles" / name)
         if miss or mism:
             check(f"文章 {name} 内容完整", False, f"{len(miss)} 缺 / {len(mism)} 大小不符")
             break
@@ -164,13 +184,35 @@ if vault and Path(vault).is_dir():
     orig = [d.name for d in Path(vault).iterdir() if d.is_dir() and (d / "meta.json").is_file()]
     check("源文章目录未被删除（本脚本只复制）", len(orig) > 0 or not orig, f"{len(orig)} 个仍在原处")
 
+def report_merge(label, src: Path, dst: Path):
+    """The legacy layout is merged file-by-file with same-name-skipped, so its
+    contract is 'the name is present at the target', not 'the bytes match'.
+    A collision means roster's newer file won — that is intended, but it is
+    also a real difference the user has to decide about, so name it."""
+    if not src.is_dir():
+        print(f"{DIM}· {label} — 源不存在，跳过{OFF}")
+        return
+    names = [f for f in src.iterdir() if f.is_file() and f.name != ".DS_Store"]
+    if not names:
+        print(f"{YELLOW}⚠{OFF} {label} — 源目录里一个文件都没有（{src}），本条未构成有效校验")
+        return
+    absent = [f.name for f in names if not (dst / f.name).is_file()]
+    collided = [f.name for f in names
+                if (dst / f.name).is_file() and (dst / f.name).stat().st_size != f.stat().st_size]
+    check(label, not absent,
+          f"{len(names)} 个名字都已在目标就位" if not absent else f"缺 {len(absent)} 个：{absent[0]}")
+    if collided:
+        print(f"{DIM}  ↳ {len(collided)} 个同名但内容不同，目标保留的是较新来源的版本："
+              f"{', '.join(collided)}。旧版仍在 {src}，留待阶段 6 处置{OFF}")
+
+
 print("\n── 3. Feed ──")
 if data_dir:
     report_copy("tweets", Path(data_dir) / "tweets", root / "feeds" / "tweets")
     report_copy("youtube", Path(data_dir) / "youtube", root / "feeds" / "youtube")
 if legacy_x and Path(legacy_x).is_dir():
-    report_copy("旧布局 digests", Path(legacy_x) / "digests", root / "feeds" / "tweets" / "digest")
-    report_copy("旧布局 tweets", Path(legacy_x) / "tweets", root / "feeds" / "tweets" / "creators")
+    report_merge("旧布局 digests", Path(legacy_x) / "digests", root / "feeds" / "tweets" / "digest")
+    report_merge("旧布局 tweets", Path(legacy_x) / "tweets", root / "feeds" / "tweets" / "creators")
 
 print("\n── 4. 视频 ──")
 work = root / "videos" / "work"
@@ -297,7 +339,11 @@ fi
 echo ""
 
 # ── sync-xtimeline 旧布局（roster 化之前）逐文件并入 ───────────────────
-LEGACY_X="${HSKILL_LEGACY_XTIMELINE:-$HOME/.hskill/sync-xtimeline}"
+# 旧版把产物写到自己 config.json 的 DATA_DIR（默认是 ~/Vault/Twitter），
+# 不是 skill 目录本身。先读那个 DATA_DIR，读不到才退回 skill 目录。
+LEGACY_X_CONFIG="${HSKILL_LEGACY_XTIMELINE:-$HOME/.hskill/sync-xtimeline}"
+LEGACY_X="$(_json_get "$LEGACY_X_CONFIG/config.json" DATA_DIR || true)"
+[[ -z "$LEGACY_X" ]] && LEGACY_X="$LEGACY_X_CONFIG"
 echo "sync-xtimeline 旧布局（$LEGACY_X → $ROOT/feeds/tweets）"
 if [[ ! -d "$LEGACY_X" ]]; then
   info "旧目录不存在，跳过这一项"
@@ -329,14 +375,31 @@ fi
 echo ""
 
 # ── vault 顶层孤儿：扁平布局遗留，无 meta.json，不代造 ──────────────────
-echo "vault 孤儿（$VAULT_PATH/{Origin,Image} → $ROOT/articles/_orphans/）"
+echo "vault 孤儿（$VAULT_PATH/{Origin,Image} → $ROOT/_orphans/）"
 if [[ -z "$VAULT_PATH" || ! -d "$VAULT_PATH" ]]; then
   info "VAULT_PATH 不可用，跳过这一项"
 else
   for name in Origin Image; do
-    _copy_dir "$VAULT_PATH/$name" "$ROOT/articles/_orphans/$name" "孤儿 $name"
+    _copy_dir "$VAULT_PATH/$name" "$ROOT/_orphans/$name" "孤儿 $name"
   done
-  info "  不生成 meta.json——source_url 无从得知，造假会污染索引"
+  # 扁平布局把译文放在 vault 根、原文放在 Origin/。识别靠 frontmatter 里的
+  # source_url——用户手写的笔记没有这一行，天然被排除，不必维护文件名白名单。
+  for f in "$VAULT_PATH"/*.md; do
+    [[ -f "$f" ]] || continue
+    head -12 "$f" | grep -q '^source_url:' || continue
+    base="$(basename "$f")"
+    dst="$ROOT/_orphans/Translation/$base"
+    if [[ -e "$dst" ]]; then
+      warn "  跳过：${base}（目标已存在）"
+    elif [[ "$APPLY" -eq 1 ]]; then
+      mkdir -p "$ROOT/_orphans/Translation"
+      cp "$f" "$dst"
+      ok "  孤儿译文：${base}"
+    else
+      info "  将复制孤儿译文：${base}"
+    fi
+  done
+  info "  放在 articles/ 之外——它们没有 meta.json，混在实体目录里会被 scholia 当成文章列出来"
 fi
 echo ""
 
@@ -355,6 +418,10 @@ work = sys.argv[1]
 apply_ = os.environ.get("APPLY") == "1"
 db = sqlite3.connect(os.path.join(work, "database.sqlite"))
 rows = {r[0]: r for r in db.execute("select id, url, title, ts from tasks")}
+SCHOLIA_COLUMNS = ("url", "uploader", "upload_date", "duration", "mode",
+                   "output_lang", "ts")
+disp = {r[0]: r[1:] for r in db.execute(
+    "select id, " + ", ".join(SCHOLIA_COLUMNS) + " from tasks")}
 
 
 def h1_title(task_id):
@@ -384,8 +451,24 @@ for task_id in sorted(os.listdir(work)):
         skipped += 1
         continue
     meta = {"source_url": row[1], "title": title, "fetched_at": (row[3] or "")[:10]}
+    # 与 learn-video 的 archive.py 保持同一份字段集：scholia 从 meta.json 直接
+    # 读这些来渲染视频卡片，空值不写（缺字段是诚实的，空字符串会渲染成空白栏）。
+    extra = dict(zip(SCHOLIA_COLUMNS, disp.get(task_id, ())))
+    meta.update({k: v for k, v in extra.items() if v not in (None, "")})
+    meta.setdefault("url", row[1])
+    # vdl 自己也写 meta.json（完成时），带着 file_size / bit_rate / *_done 等
+    # 我们不产生的字段。回填必须是并入而不是覆盖，否则重跑一次就把那些抹掉了。
+    meta_path = os.path.join(task_dir, "meta.json")
+    try:
+        with open(meta_path, encoding="utf-8") as fh:
+            existing = json.load(fh)
+    except (FileNotFoundError, json.JSONDecodeError):
+        existing = {}
+    for k, v in existing.items():
+        if k not in meta and v not in (None, ""):
+            meta[k] = v
     if apply_:
-        with open(os.path.join(task_dir, "meta.json"), "w", encoding="utf-8") as fh:
+        with open(meta_path, "w", encoding="utf-8") as fh:
             json.dump(meta, fh, ensure_ascii=False, indent=2)
     written += 1
 

@@ -1,0 +1,91 @@
+import json
+import os
+import subprocess
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
+
+import roster_client
+from archive_articles import archive_articles, advance_cursors, _archive_path
+from conftest import write_config
+
+SCRIPT = Path(__file__).resolve().parent.parent / "scripts" / "archive_articles.py"
+
+
+def _run(report: dict, root: Path) -> subprocess.CompletedProcess:
+    config_path = root.parent / "config.json"
+    write_config(config_path, root)
+    return subprocess.run(
+        [sys.executable, str(SCRIPT)], input=json.dumps(report),
+        env={**os.environ, "HSKILL_CONFIG": str(config_path)},
+        capture_output=True, text=True, timeout=10,
+    )
+
+
+def test_archive_articles_writes_new_handle_file():
+    report = {"run_time": "t", "new": {"a": [{"url": "u1", "title": "T", "translated": "译"}]}}
+    archive_articles(report)
+    saved = json.loads(_archive_path("a").read_text(encoding="utf-8"))
+    assert saved == report["new"]["a"]
+
+
+def test_archive_articles_appends_across_calls():
+    first = {"run_time": "t", "new": {"a": [{"url": "u1", "title": "T1"}]}}
+    second = {"run_time": "t", "new": {"a": [{"url": "u2", "title": "T2"}]}}
+    archive_articles(first)
+    archive_articles(second)
+    saved = json.loads(_archive_path("a").read_text(encoding="utf-8"))
+    assert [a["url"] for a in saved] == ["u1", "u2"]
+
+
+def test_archive_articles_dedups_by_url():
+    report = {"run_time": "t", "new": {"a": [{"url": "u1", "title": "T"}]}}
+    archive_articles(report)
+    archive_articles(report)
+    saved = json.loads(_archive_path("a").read_text(encoding="utf-8"))
+    assert len(saved) == 1
+
+
+def test_archive_articles_keeps_handles_isolated():
+    report = {"run_time": "t", "new": {
+        "a": [{"url": "u1", "title": "T"}],
+        "b": [{"url": "u9", "title": "T9"}],
+    }}
+    archive_articles(report)
+    assert [a["url"] for a in json.loads(_archive_path("a").read_text(encoding="utf-8"))] == ["u1"]
+    assert [a["url"] for a in json.loads(_archive_path("b").read_text(encoding="utf-8"))] == ["u9"]
+
+
+def test_archive_articles_noop_when_report_has_no_new():
+    report = {"run_time": "t", "new": {}, "baselines": {"c": 3}, "failures": {}}
+    archive_articles(report)
+    assert not _archive_path("c").exists()
+
+
+def test_archive_path_is_under_creators(isolated_data_dir):
+    assert _archive_path("a") == isolated_data_dir / "creators" / "a.json"
+
+
+def test_cli_archives_report_from_stdin(tmp_path):
+    root = tmp_path / "knowledge"
+    report = {"run_time": "t", "new": {"a": [{"url": "u1", "title": "T"}]}}
+    result = _run(report, root)
+    assert result.returncode == 0, result.stderr
+    saved = json.loads((root / "feeds" / "website" / "creators" / "a.json").read_text(encoding="utf-8"))
+    assert saved == report["new"]["a"]
+
+
+def test_advance_cursors_writes_every_handle_in_the_report(monkeypatch):
+    written = {}
+    monkeypatch.setattr(roster_client, "set_cursor",
+                        lambda h, value, run_time: written.__setitem__(h, (value, run_time)))
+    advance_cursors({"run_time": "2026-09-02T09:00:00+00:00", "cursors": {"alice": ["u1"], "bob": ["u2"]}})
+    assert written == {"alice": (["u1"], "2026-09-02T09:00:00+00:00"), "bob": (["u2"], "2026-09-02T09:00:00+00:00")}
+
+
+def test_advance_cursors_without_a_cursors_field_writes_nothing(monkeypatch):
+    calls = []
+    monkeypatch.setattr(roster_client, "set_cursor", lambda *a: calls.append(a))
+    advance_cursors({"run_time": "t", "new": {}})
+    assert calls == []

@@ -935,3 +935,41 @@ def build_channel_video_list(
         }
         for video in selected
     ]
+
+
+_EXTRACT_JS_ARTICLES_TEMPLATE = r"""() => {
+    const itemSel = %(item)s;
+    const titleSel = %(title)s;
+    const linkSel = %(link)s;
+    const dateSel = %(date)s;
+    return Array.from(document.querySelectorAll(itemSel)).map(el => {
+        const titleEl = el.querySelector(titleSel);
+        const linkEl = el.querySelector(linkSel);
+        const dateEl = dateSel ? el.querySelector(dateSel) : null;
+        return {
+            title: titleEl ? titleEl.textContent.replace(/\s+/g, ' ').trim() : '',
+            url: linkEl ? (linkEl.href || '') : '',
+            date_text: dateEl ? dateEl.textContent.replace(/\s+/g, ' ').trim() : '',
+        };
+    });
+}"""
+
+
+def build_articles_js(selectors: dict) -> str:
+    """Build the in-page extraction script fetch_articles/fetch_articles_probe
+    hand to page.evaluate(): select selectors["item"] elements, and within
+    each, title/link/date sub-elements. `date` may be absent or falsy — a
+    rule can be calibrated with no reliable date selector, in which case
+    every article's date_text is "". `link.href` (not getAttribute) so a
+    relative href in the source HTML comes back as an absolute URL, per
+    spec §3.2. Selector strings are embedded via json.dumps so they land as
+    JS string literals, not interpolated code — a selector containing a
+    quote can't break out of its literal.
+    """
+    import json
+    return _EXTRACT_JS_ARTICLES_TEMPLATE % {
+        "item": json.dumps(selectors["item"]),
+        "title": json.dumps(selectors["title"]),
+        "link": json.dumps(selectors["link"]),
+        "date": json.dumps(selectors.get("date") or ""),
+    }
