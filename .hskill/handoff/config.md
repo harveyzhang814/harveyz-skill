@@ -30,6 +30,10 @@ workflow: |
   同一时刻只有一方在这个工作区里动手——你做完就停手，交出方才进来验收。
   实施计划：用 superpowers:writing-plans 从 spec 拆任务，
   superpowers:executing-plans 执行。
+  **executing-plans 会要求先调 using-git-worktrees 建隔离工作区——跳过那一步。**
+  工作区已经建好了，它会在 .worktrees/ 下另建一个、还另起一条分支，交接链当场断掉。
+  该 skill 已在 .claude/settings.json 的 skillOverrides 里关掉（两个 id 都关：
+  using-git-worktrees 与 superpowers:using-git-worktrees），但别依赖它，看到就跳过。
 
 verification: |
   npm test —— 覆盖 hskill CLI 行为（安装/交互/JSON 输出）
