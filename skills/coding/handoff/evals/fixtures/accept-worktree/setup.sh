@@ -13,8 +13,11 @@
 # 少了这个差异，"到位"这个行为就测不出来：两处读到的东西一样，怎么走都对。
 set -euo pipefail
 
-ROOT="${1:-$HOME/handoff-eval-repo}"
-rm -rf "$ROOT"
+# 刻意建在 jail 之外（mktemp 在 TMPDIR 下）：harness 会把 jail 里所有变化的文件当产物
+# 收集进 grader 的材料，而 git 仓库的 .git/index、.git/objects 是二进制，里面的 NUL
+# 字节会让 grader 调用直接抛异常、整条 eval 判不了。这条 eval 的断言全部走 transcript，
+# 不需要产物被收集。
+ROOT="${1:-$(mktemp -d)/handoff-eval-repo}"
 mkdir -p "$ROOT"
 cd "$ROOT"
 git init -q .
