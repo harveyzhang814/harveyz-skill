@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.32.0] - 2026-09-07
+
+### Added
+- `sync-website`：新增追更网站文章列表页的第三种渠道类型，与 sync-xtimeline / sync-ytchannel 并列。browser-fetch 新增 per-domain selector 规则存储与 calibrate/run 流水线，roster 支持网站 URL 兜底解析。13 任务计划通过 subagent-driven-development 执行，逐任务 review + 全分支收尾 review（4 处修复：roster URL 守卫缺口、digest 里看不见的自愈、published_at 文档订正、路径穿越与 prompt-injection 加固），并对 simonwillison.net 做了真实 E2E 验证
+- `browser-fetch`：site_rules 新增二档 selector+transform 抽取（`about:blank` 隔离上下文求值），归一化管线三档共用；transform 报错改为触发自愈而非永久失败，超出自愈上限才报错
+- `scripts/rebuild-orphan-articles.py`：一次性重建脚本，把统一存储根迁移后遗留在 `_orphans/` 里、但 frontmatter 带 `source_url`/`origin_title`/`fetch_date` 的孤儿文章重新收进索引；只在无歧义（`hash8` 未被占用且只有一个来源文件对应）时重建，多源冲突留给人工判断
+
+### Changed
+- `handoff`（1.3.0 → 1.8.0）：一次性完成多轮迭代——工作区改由 author 建并留到验收通过（接手方与验收方都不再新建 worktree/分支）、抬头字段搬进 frontmatter 并加 `validate-handoff.sh` 机器校验、author 登记交接源节点与画布 `hands-off-to` 关系、交付时新增可粘贴的接手/验收指令（只放寻址信息不复述文档内容，避免摘要和文档变成两个真相源）。工作区约定同步写进 `CLAUDE.md` 与 `.hskill/handoff/config.md`
+- `feed/manage-creators` / `sync-xtimeline` / `sync-ytchannel`：patch 版本刷新（`skill-publish` F8 contentHash 校验触发的措辞级 drift 修正，无行为变化）
+
+### Fixed
+- `scripts/migrate-store.sh`（v0.31.0 引入的统一存储根一次性迁移脚本）：在真实数据上跑 dry-run 后暴露并修复 7 处问题——旧版 `sync-xtimeline` 产物路径未读取 `config.json` 的 `DATA_DIR`、`--verify` 对旧布局的校验有两处假绿（路径解析未跟进迁移、并入语义被误判成覆盖语义）、`--verify` 未区分"目标被追加变大"（正常）与"被截断变小"（真失败）、vault 顶层孤儿译文未被搬迁、视频回填从无条件覆盖改为按字段并入以保留 vdl 自身写入的 50 份 meta.json / 483 个字段、scholia 视频卡片缺失展示字段（url/uploader/upload_date/duration 等）、`_orphans/` 未移出 `articles/` 导致孤儿被当正式文章重复列出
+
 ## [0.31.0] - 2026-09-02
 
 ### Added
