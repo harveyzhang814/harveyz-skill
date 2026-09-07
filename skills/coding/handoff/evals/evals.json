@@ -133,7 +133,7 @@
       "id": 4,
       "name": "accept-goes-to-author-worktree",
       "prompt": "接手的 session 说 slugify 保留数字那个任务做完了。先跑 evals/fixtures/accept-worktree/setup.sh 把现场准备好（它会打印仓库路径和交接工作区路径），然后按交接文档验收，看能不能收。",
-      "expected_output": "accept phase：先「到位」——cd 进交接文档 frontmatter 指出的 worktree（author 建好的那个），在那里重读交接文档拿到最新版（3 条判据 + 接手方自测记录），而不是在仓库主工作树读那份停在 2 条判据的过期副本。实跑 node slugify.js 发现第三条「保留数字」FAIL，把 worktree 那份文档的 status 置为「打回」并点名失败判据。全程不另建 worktree（author 已建好，分支已被占用）。",
+      "expected_output": "accept phase：先「到位」——cd 进交接文档 frontmatter 指出的 worktree（author 建好的那个），在那里重读交接文档拿到最新版（3 条判据 + 接手方自测记录），而不是在仓库主工作树读那份停在 2 条判据的过期副本。实跑 node slugify.js 发现第三条「保留数字」FAIL，把 worktree 那份文档的 status 置为「打回」并点名失败判据。全程不另建 worktree（author 已建好，分支已被占用）。 断言全部走 transcript：这条 eval 测的是「去了哪个工作区、读了哪一份文档」这种行为，行为证据在执行轨迹里，不在产物里。",
       "files": [
         "evals/fixtures/accept-worktree/setup.sh"
       ],
@@ -156,12 +156,12 @@
         },
         {
           "id": "names-failing-number-criterion",
-          "source": "artifact",
+          "source": "transcript",
           "text": "验收结论点名未达标的是「保留数字」/「Top 10 Tips」那一条，而不是笼统说没通过"
         },
         {
           "id": "status-rejected-in-worktree-copy",
-          "source": "artifact",
+          "source": "transcript",
           "text": "交接工作区里那份文档的 frontmatter status 被置为「打回」，不是「已验收」"
         },
         {
