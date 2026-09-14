@@ -1,6 +1,6 @@
 ---
 name: sync-xtimeline
-version: "0.8.1"
+version: "0.8.2"
 description: "Run one incremental fetch over every X (Twitter) account on the roster and produce a translated Markdown digest of what is new since last run, plus a per-handle JSON archive. Trigger phrases: '/sync-xtimeline run', '/sync-xtimeline', 'check my X accounts for new tweets', or a request to run sync-xtimeline on a schedule via /loop or schedule. Adding or removing a watched account is manage-creators, not this skill. Not for saving a single article or tweet to Obsidian (use clip-url for that) — this skill never ingests into Obsidian, never tags, never downloads images, and only reports incremental new tweets, not full thread content. Display of archived tweets is left to external tooling reading the JSON archive directly, not this skill."
 user_invocable: true
 ---
@@ -30,7 +30,9 @@ python3 scripts/roster_locate.py
 
 若输出 `NOT_FOUND: <error>`（exit 1），向用户报告"roster tool 未安装：{error}"，流程终止。若从未初始化过名册（`~/.hskill/roster/config.json` 不存在），让用户先跑一次 [manage-creators](../manage-creators/)。
 
-所有产物（`digest/`、`creators/<handle>.json`）落在统一存储根下的 `feeds/tweets/` 子目录里（`<knowledgeRoot>/feeds/tweets/`），跟 sync-ytchannel 共用同一份 `knowledgeRoot` 配置（各自渠道各占 `feeds/` 下一个子目录）。运行 `python3 scripts/store_config.py check`，若输出 `MISSING:`，询问用户"抓取产物统一存到哪个目录？（直接回车使用默认：`~/Documents/knowledge`）"，写入 `~/.hskill/config.json` 的 `knowledgeRoot` 字段（若已有 `skillDir` 等字段，只增改 `knowledgeRoot`）。
+所有产物（`digest/`、`creators/<handle>.json`）落在统一存储根下的 `feeds/tweets/` 子目录里（`<knowledgeRoot>/feeds/tweets/`），跟 sync-ytchannel 共用同一份 `knowledgeRoot` 配置（各自渠道各占 `feeds/` 下一个子目录）。运行 `python3 scripts/store_config.py check`，若输出 `MISSING:`，询问用户"抓取产物统一存到哪个目录？（直接回车使用默认：`~/knowledge`）"，写入 `~/.hskill/config.json` 的 `knowledgeRoot` 字段（若已有 `skillDir` 等字段，只增改 `knowledgeRoot`）。**默认值刻意不选 `~/Documents/...`、`~/Desktop/...`、`~/Downloads/...`**——这几个目录受 macOS TCC 隐私保护，无 Full Disk Access 的 agent 执行环境写入会被拒绝；`$HOME` 下的普通目录（如 `~/knowledge`）不受此限制。
+
+**运行中写入失败时的处理。** 若 `store_config.py check` 通过、但 `render_digest.py`/`archive_tweets.py` 实际写入 `<knowledgeRoot>/feeds/tweets/` 时仍然失败（权限不足、目录只读等），必须原样把错误报告给用户并停下来，禁止擅自把 `knowledgeRoot` 改指到别的路径来"绕过"——这是多个 skill 共用的配置，擅自改会让产物静默散落到不同目录，用户毫不知情，且难以事后排查。
 
 ## 用法
 
