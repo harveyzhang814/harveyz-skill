@@ -1,6 +1,6 @@
 ---
 name: clip-url
-version: "0.9.0"
+version: "0.9.1"
 description: "Use this the instant a URL is shared with any intent to save, archive, clip, or translate-and-keep it in Obsidian — a bare link with no comment, \"save this\", \"archive this\", \"clip this\", \"add to obsidian\", \"save it\", \"save to vault/obsidian\", \"keep a record of this\", \"translate and save\", \"help me save/grab this link\", or a request to fetch a page via browser-fetch — including these requests phrased in Chinese. Covers arXiv papers, WeChat official account posts, X/Twitter threads, Hacker News links, blog posts, news articles, and general webpages — including sites needing special handling (login walls, images, JS-rendered content). Do not use for translate-or-summarize-only requests with no save intent, in-page actions like clicking buttons or filling forms, retagging or fixing metadata on an article already saved, links shared purely for reaction or jokes, or topic searches with no specific URL given."
 user_invocable: true
 ---
@@ -29,12 +29,17 @@ user_invocable: true
 **② 检查共享配置**
 
 运行 `python3 scripts/store_config.py check`。若输出 `MISSING:`，询问用户"抓取产物
-统一存到哪个目录？（直接回车使用默认：`~/Documents/knowledge`）"，将回答展开为绝对
+统一存到哪个目录？（直接回车使用默认：`~/knowledge`）"，将回答展开为绝对
 路径，写入 `~/.hskill/config.json` 的 `knowledgeRoot` 字段（文件不存在则新建；若已
-存在 `skillDir` 等其他字段，只增改 `knowledgeRoot`，不覆盖）。再确保
+存在 `skillDir` 等其他字段，只增改 `knowledgeRoot`，不覆盖）。**默认值刻意不选
+`~/Documents/...`、`~/Desktop/...`、`~/Downloads/...`**——这几个目录受 macOS TCC
+隐私保护，无 Full Disk Access 的 agent 执行环境写入会被拒绝；`$HOME` 下的普通目录
+（如 `~/knowledge`）不受此限制。再确保
 `~/.hskill/url-extract/` 目录存在（`mkdir -p ~/.hskill/url-extract/`）并在其中创建
 空的 `fixed_tags.txt`（若不存在）——这份历史目录现在只承载固定词表，文章存储路径
 已改由 `knowledgeRoot` 统一解析，不再读取其中的 `VAULT_PATH` 字段。
+
+**运行中写入失败时的处理。** 若 `store_config.py check` 通过、但实际写入 `<knowledgeRoot>/articles/` 时仍然失败（权限不足、目录只读等），必须原样把错误报告给用户并停下来，禁止擅自把 `knowledgeRoot` 改指到别的路径来"绕过"——这是多个 skill 共用的配置，擅自改会让产物静默散落到不同目录，用户毫不知情，且难以事后排查。
 
 ## 执行流程
 

@@ -1,6 +1,6 @@
 ---
 name: learn-video
-version: "1.8.0"
+version: "1.8.1"
 description: "Process a YouTube or Bilibili video using the vdl CLI: transcribe, generate article and summary. Triggers when the user provides a YouTube or Bilibili URL and wants to learn from, summarize, transcribe, or extract key points from the video — e.g. 'help me understand this talk', 'summarize this YouTube video', 'summarize this Bilibili video', 'get the transcript', 'process this video', 'summarize it'."
 user_invocable: true
 ---
@@ -28,7 +28,7 @@ npm link
 
 ## 前置：检查统一存储根
 
-运行 `cd "$HOME/Projects/harveyz-skill/skills/research/learn-video" && python3 scripts/store_config.py check`（或本 skill 安装后的实际目录）。若输出 `MISSING:`，询问用户"抓取产物统一存到哪个目录？（直接回车使用默认：`~/Documents/knowledge`）"，将回答展开为绝对路径，写入 `~/.hskill/config.json` 的 `knowledgeRoot` 字段（文件不存在则新建；若已存在 `skillDir` 等其他字段，只增改 `knowledgeRoot`，不覆盖）。
+运行 `cd "$HOME/Projects/harveyz-skill/skills/research/learn-video" && python3 scripts/store_config.py check`（或本 skill 安装后的实际目录）。若输出 `MISSING:`，询问用户"抓取产物统一存到哪个目录？（直接回车使用默认：`~/knowledge`）"，将回答展开为绝对路径，写入 `~/.hskill/config.json` 的 `knowledgeRoot` 字段（文件不存在则新建；若已存在 `skillDir` 等其他字段，只增改 `knowledgeRoot`，不覆盖）。**默认值刻意不选 `~/Documents/...`、`~/Desktop/...`、`~/Downloads/...`**——这几个目录受 macOS TCC 隐私保护，无 Full Disk Access 的 agent 执行环境写入会被拒绝；`$HOME` 下的普通目录（如 `~/knowledge`）不受此限制。
 
 **再核对 vdl 的落点。** vdl 直接往统一存储根里写，所以它的 `WORK_ROOT` 必须等于 `<knowledgeRoot>/videos`：
 
@@ -39,6 +39,8 @@ vdl config get | grep -i work
 不一致就提示用户运行 `vdl config set work-root <knowledgeRoot>/videos`（该命令会问是否迁移旧任务，交互式，让用户自己确认）。**不要代替用户改 `~/.config/vdl/settings.conf`**——那是另一个程序的配置文件。
 
 这两个值存在两个不同的文件里，没有任何机制保证同步；漂了的话归档步骤会当场报错，不会静默写出孤儿 `meta.json`。
+
+**运行中写入失败时的处理。** 若上述核对都通过、但实际归档/写入时仍然失败（权限不足、目录只读等），必须原样把错误报告给用户并停下来，禁止擅自把 `knowledgeRoot` 或 vdl 的 `WORK_ROOT` 改指到别的路径来"绕过"。这两个值是多个 skill 共用的配置，擅自改会让产物静默散落到不同目录，用户毫不知情，且难以事后排查。
 
 ---
 

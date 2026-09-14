@@ -2,6 +2,17 @@
 
 ## 🚧 待开发
 
+### 统一存储根写入代理（特权隔离后台）
+**优先级**: P3 | **日期**: 2026-09-14
+
+背景：`learn-video`/`clip-url`/`sync-xtimeline`/`sync-ytchannel`/`sync-website` 五个 skill 共用 `knowledgeRoot` 写产物。这次排查发现，当执行环境（如 Agent Canvas 宿主的 Claude Code 会话）对 `knowledgeRoot` 所在目录没有写权限时，agent 有过"静默把 `knowledgeRoot` 改到别的路径"来绕过失败的先例——本轮已经用两个动作缓解：① 把默认根从 `~/Documents/knowledge` 换成 `~/knowledge`（`$HOME` 下普通目录不受 macOS TCC 对 Documents/Desktop/Downloads 的隐私保护限制，从根源避免权限问题）；② 在五份 SKILL.md 里加了"写入失败必须停下问用户，禁止擅自换路径"的护栏指令。
+
+这两步是本期够用的最小修复。更彻底、但代价也更高的方向是做权限隔离：写一个独立的小后台程序，只有它持有 Full Disk Access（如果以后确实需要放在受保护目录下），路径硬编码在程序里（不从 agent 可写的配置文件读取），agent 只能通过它暴露的固定语义接口（如"写 `<root>/articles/<hash8>/`"）间接写入，自己拿不到高权限、也改不了目标路径——利用 macOS TCC 授权绑定代码签名身份的特性，后台程序被重新构建/签名后旧授权失效，必须人工在系统设置里重新同意，从而把"agent 能不能把写入路径导向别处"这件事提高到"需要人工介入"的门槛。
+
+当前规模下① + ②已经够用，这一项只在以后出现"确实需要放在受保护目录下"或"需要更强审计/隔离"的场景时才启动。
+
+---
+
 ### 按 description-trigger-role 研究优化所有 skill 的 description
 **优先级**: P3 | **日期**: 2026-07-04
 

@@ -15,7 +15,7 @@ import os
 import sys
 from pathlib import Path
 
-_INIT_HINT = "抓取产物统一存到哪个目录？（直接回车使用默认：~/Documents/knowledge）"
+_INIT_HINT = "抓取产物统一存到哪个目录？（直接回车使用默认：~/knowledge）"
 
 
 def _config_path() -> Path:
