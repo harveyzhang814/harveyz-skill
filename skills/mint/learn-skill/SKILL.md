@@ -2,7 +2,7 @@
 name: learn-skill
 description: "Deep-reads a single skill's SKILL.md to help you understand its internal logic. Analyzes across four dimensions: Execution Flow (how it runs and all branches), Standards (design thinking and hard specs), Boundary Conditions (what it's designed for and not), and Design Philosophy (synthesized from the first three). Use when you want to understand a skill's design intent, execution flow, condition branches, applicable boundaries, or the reasoning behind its design. Trigger phrases: 'help me understand this skill', 'how does this skill work', 'explain this skill', 'what is this skill doing', 'walk me through this skill', 'what's the design philosophy of this skill', 'what are the branches in this skill', 'what are the limitations of this skill'."
 user_invocable: true
-version: "2.0.0"
+version: "2.0.1"
 ---
 
 # learn-skill
