@@ -1,7 +1,7 @@
 ---
 name: handoff
-description: Use when handing a task across sessions — writing a self-contained handoff doc for a fresh session to pick up (author), sanity-checking an inbound handoff before starting (verify), or accepting completed work against the criteria agreed at handoff time (accept). Triggers on phrases like "write a handoff", "hand this off", "pick up this task", "sign off on this work". Generic skill — project-specific conventions are read from .hskill/handoff/config.md.
-version: "1.10.0"
+description: Use when handing a task across sessions — writing a self-contained handoff doc for a fresh session to pick up (author), sanity-checking an inbound handoff before starting (verify), self-testing against the agreed criteria before reporting the work done or re-submitting after a rejection (self-test), or accepting completed work against the criteria agreed at handoff time (accept). Triggers on phrases like "write a handoff", "hand this off", "pick up this task", "sign off on this work". Generic skill — project-specific conventions are read from .hskill/handoff/config.md.
+version: "1.11.0"
 user_invocable: true
 ---
 
@@ -14,6 +14,10 @@ user_invocable: true
 1. 解析斜杠命令后文本：`author` / `verify` / `accept`（如 `/handoff accept <file>`）。
 2. 文本未指明 → 看上下文：刚做完规划 → author；拿到别人的交接文档准备开工 → verify；接手方回报完成、要核收 → accept。
 3. 仍不确定 → **问用户，不猜**。
+
+**Phase 2.5（自测）没有对应的斜杠命令**，因为它不是谁"调"出来的：接手方干完活、准备把
+`status` 推到「待验收」的那一刻就该执行它，被打回后复修完再执行一遍。它写在 Phase 2 与
+Phase 3 之间。
 
 判定后跳到对应 phase 段执行。
 
@@ -138,6 +142,45 @@ user_invocable: true
     改它等于单方面改约。
 - 无缺口 → `status` 置 `执行中`，若文档有「工作流约定」章节按其开工，没有就直接开工。
 
+## Phase 2.5 — 自测（接手方推 `status` 到「待验收」之前的硬闸门）
+
+**「待验收」不是「我改完了」，是「我自己已经按锚点跑过一遍、拿得出结果」。** 这两件事之间
+隔着一整轮 accept：没自测就推上来，红的那条要等 accept 方耗掉整轮才发现，而它本来可以由你
+自己在几分钟内跑掉。
+
+推 `status` 之前做完这四件事，缺一件就别推：
+
+1. **逐条实跑「最小验收锚点」全集**——不是只跑你改动相关的那几条。`acceptance: hard`
+   逐条判对错；`soft` 按其描述做定性判断。文档若还点名了「必须复跑的既有资产」，一并跑。
+   项目自己的验证约定（跑什么测、要不要真产物 E2E）见 `.hskill/handoff/config.md` 的
+   `verification` 段。
+2. **判成败的命令不接管道。** `cmd | tail` 的退出码是 `tail` 的，它恒为 0；输出还被截断，
+   连哪些用例根本没被发现都看不出来——两个信息一起丢。
+3. **结果写成独立小节**，标题形如 `## 接手方自测记录（<日期>）`——**标题里必须有「自测」
+   二字**，`validate-handoff.sh` 按这个词认这一节。逐条列 pass/fail，附实际跑的命令。
+   写进你自己这一节，别混进原 session 的验收记录。
+4. **有红就不许推 `status`。** 两条出路，没有第三条：
+   - 修到绿；
+   - 或者认为那条红不构成未达成（例如它在你动手之前就红），**在自测记录里那一条旁边写出
+     归因证据**（比如在分叉点上跑同一条命令的结果），并显式声明「带着这条红送验」。
+     **沉默地推上来不行**——accept 方一定会跑到它，届时你既丢了一轮，也丢了信用。
+
+自测**不替代** accept：accept 方一律不采信接手方结论、逐条自己重跑（Phase 3）。自测的作用
+是让「送验」这个动作有成本、有记录，不是让 accept 省事。
+
+### 复修轮（被打回之后）
+
+打回不是「改那一条就完事」。范围小、心态是「就改一行」，恰恰是二次打回最常见的来源。
+
+- 复修完**重新走一遍本 phase**，`status` 才能再置回「待验收」。
+- **自测范围默认是锚点全集，不是被打回的那几条。** 要缩小，必须在复修自测记录里给出两样
+  东西：改动范围证据（`git diff --name-only <打回点提交>..HEAD`）+「为什么其余条目不可能
+  被这些改动波及」的论证。给不出就跑全集。
+- 记录**另起一节**，标题形如 `## 接手方复修自测记录（第 N 轮）`，同样必须含「自测」二字。
+  不覆盖、不合并前几轮——几轮并排放着，后来人才看得出哪条判据反复红过。
+- 打回记录点名了修法就照做；**不认同要在复修记录里写出理由退回讨论，不要静默换一种改法**。
+  尤其不要把一条刚开始真的会红的断言改回恒真——那不是修复，是把判据废掉。
+
 ## Phase 3 — accept（原 session 验收）
 
 **先到位，再验收。** 验收在**被验代码所在的工作区**跑——不在主工作树、不在核心分支
@@ -159,24 +202,38 @@ user_invocable: true
      一条分支不能被两个 worktree 同时 checkout。
    - 跑第一条验收命令之前确认到位：`git -C <验收目录> rev-parse --abbrev-ref HEAD` 落在
      staging/main/master 上，说明你还在主工作树，停下来查，别接着跑。
-2. 找文档里的**最小验收锚点**——这是唯一固定依据。**接手方自填的结论一律不采信，逐条自己跑**：验证产物"存在"不等于"跑得过"，点得出脚本名不等于那个脚本此刻是绿的。frontmatter 的 `acceptance` 指明是哪一档：`hard`（逐条对/错）→ 按锚点描述**逐条实跑**（单测/E2E/核验）；`soft`（定性描述）→ 按其描述做定性判断。字段与锚点正文不符时**以正文为准**并把字段改对——字段是索引，正文才是判据。
-3. 把验收结果（每条 pass/fail，或整体达成/未达成）追加记录到最小验收锚点所在章节末尾。**接手方若已自填过验收记录，另起小节并列，不覆盖也不合并**——两份并排放着，后来人才看得出哪些结论被第二方复核过。其中若有与实跑不符的陈述，**显式写出更正**，不要静默改掉：静默改掉等于把同一个错误留给下一次。
-4. 达成 → `status` 置 `已验收`；未达成 → `status` 置 `打回` 并写明哪里没达成、为什么，退回接手方。
-5. **达成才算真正完成**（硬判据要求逐条全绿；软判据按其描述定性判断是否达成）。
+2. **先跑一次机器校验**：`bash <skill 目录>/scripts/validate-handoff.sh <文档路径>`。
+   `status` 是「待验收」却没有含「自测」的小节 → 脚本直接 exit 1。**这种情况按未达成处理，
+   当场置「打回」退回去，不必开始逐条重跑**：接手方连自己那一遍都没跑，你这一轮多半是在
+   替它跑第一遍。
+
+3. 找文档里的**最小验收锚点**——这是唯一固定依据。**接手方自填的结论一律不采信，逐条自己跑**：验证产物"存在"不等于"跑得过"，点得出脚本名不等于那个脚本此刻是绿的。frontmatter 的 `acceptance` 指明是哪一档：`hard`（逐条对/错）→ 按锚点描述**逐条实跑**（单测/E2E/核验）；`soft`（定性描述）→ 按其描述做定性判断。字段与锚点正文不符时**以正文为准**并把字段改对——字段是索引，正文才是判据。
+4. 把验收结果（每条 pass/fail，或整体达成/未达成）追加记录到最小验收锚点所在章节末尾。**接手方若已自填过验收记录，另起小节并列，不覆盖也不合并**——两份并排放着，后来人才看得出哪些结论被第二方复核过。其中若有与实跑不符的陈述，**显式写出更正**，不要静默改掉：静默改掉等于把同一个错误留给下一次。
+5. 达成 → `status` 置 `已验收`；未达成 → `status` 置 `打回`。打回记录必须写清三件事，
+   缺了接手方只能猜：**哪几条未达成**、**为什么**（判据原文 vs 实跑结果）、以及
+   **复修后要重跑的范围**（默认全集；认为可以只跑子集就在这里点名）。退回接手方后，
+   它重新走 Phase 2.5 才能再置回「待验收」。
+6. **达成才算真正完成**（硬判据要求逐条全绿；软判据按其描述定性判断是否达成）。
 
 ## 状态生命周期
 
-`待执行`（author 写完）→ `执行中`（verify 通过 / 接手方开工）→ `待验收`（接手方回报完成）→ `已验收`（accept 判定达成）/ `打回`（accept 判定未达成，退回执行中）。
+`待执行`（author 写完）→ `执行中`（verify 通过 / 接手方开工）→ `待验收`（接手方**自测通过后**
+回报完成，见 Phase 2.5）→ `已验收`（accept 判定达成）/ `打回`（accept 判定未达成，退回执行中）。
 
-`status` 是三 phase 间唯一协调锚点，无需外部状态存储。
+`打回` 之后的回路是闭合的：**接手方复修 → 重新走一遍 Phase 2.5 → 才能再置回 `待验收`**。
+直接从复修跳回「待验收」不算数。
+
+`status` 是各 phase 间唯一协调锚点，无需外部状态存储。
 
 要扫「哪些交接还没验收」，**别在当前工作树里 grep**——在途交接的文档都在各自的交接工作区里，
 主工作树上那份（如果有）是合并后的历史归档，状态是旧的。正确做法是先 `git worktree list`
 列出所有工作区，再到每个工作区的 `<output_dir>` 里 grep `status`。
 
-**写入权按 phase 分：接手方最多只能把 `status` 推到「待验收」。`已验收` / `打回` 只能由原 session 在 accept 之后写。**
+**写入权按 phase 分：接手方最多只能把 `status` 推到「待验收」，且推之前必须过 Phase 2.5。`已验收` / `打回` 只能由原 session 在 accept 之后写。**
 
-校验脚本查不了这条——它看不出某个值是谁写的。这是约定，靠 accept 方兜底（见本节末）。
+校验脚本查不了「谁写的」——它看不出某个值出自哪一方。这是约定，靠 accept 方兜底（见本节末）。
+它查得了的是「有没有自测记录」：`status` 为「待验收」而正文没有含「自测」的小节，脚本 exit 1。
+这一条堵的是「改完就推」，堵不住「自测跑了但结论是编的」——后者仍然只能靠 accept 方逐条重跑。
 
 这条不是流程洁癖。「已验收」的全部信息量就是**做事的人之外的另一方查过**；做事的人一旦能自己写它，它就退化成「做事的人说做完了」——而这个信息「待验收」里已经有了，两个状态变成同义词，字段失效。风险还会反向放大：一份自填的「已验收」通常附着一张全 PASS 的表，比没有记录更难被怀疑。
 
@@ -184,7 +241,7 @@ user_invocable: true
 
 ## 平台适配（怎么进出交接工作区）
 
-三个 phase 都要求"到被验代码所在的工作区里去"。**这个要求是平台无关的，实现手段不是**——
+author 之后的每个 phase 都要求"到被验代码所在的工作区里去"。**这个要求是平台无关的，实现手段不是**——
 所以正文只说"进去"，具体动作查本节。你所在的平台不在下表里，按「通用兜底」办。
 
 判据只有一条：**后续命令的工作目录是不是那个工作区**。谁能做到都行。
