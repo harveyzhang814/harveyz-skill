@@ -1,6 +1,6 @@
 ---
 name: clip-url
-version: "0.9.1"
+version: "0.9.2"
 description: "Use this the instant a URL is shared with any intent to save, archive, clip, or translate-and-keep it in Obsidian — a bare link with no comment, \"save this\", \"archive this\", \"clip this\", \"add to obsidian\", \"save it\", \"save to vault/obsidian\", \"keep a record of this\", \"translate and save\", \"help me save/grab this link\", or a request to fetch a page via browser-fetch — including these requests phrased in Chinese. Covers arXiv papers, WeChat official account posts, X/Twitter threads, Hacker News links, blog posts, news articles, and general webpages — including sites needing special handling (login walls, images, JS-rendered content). Do not use for translate-or-summarize-only requests with no save intent, in-page actions like clicking buttons or filling forms, retagging or fixing metadata on an article already saved, links shared purely for reaction or jokes, or topic searches with no specific URL given."
 user_invocable: true
 ---
@@ -38,6 +38,8 @@ user_invocable: true
 `~/.hskill/url-extract/` 目录存在（`mkdir -p ~/.hskill/url-extract/`）并在其中创建
 空的 `fixed_tags.txt`（若不存在）——这份历史目录现在只承载固定词表，文章存储路径
 已改由 `knowledgeRoot` 统一解析，不再读取其中的 `VAULT_PATH` 字段。
+
+**再核对下游是否同步。** 运行 `python3 scripts/store_config.py check-downstream` 核对 vdl、scholia 当前配置是否等于 `knowledgeRoot` 推出的期望值。输出 `DRIFT:` 时把对应的 `fix:` 命令原样报告给用户，由用户决定要不要执行——不要代替用户改这些下游程序的配置文件；输出 `SKIP:` 表示对应工具未安装，忽略即可。
 
 **运行中写入失败时的处理。** 若 `store_config.py check` 通过、但实际写入 `<knowledgeRoot>/articles/` 时仍然失败（权限不足、目录只读等），必须原样把错误报告给用户并停下来，禁止擅自把 `knowledgeRoot` 改指到别的路径来"绕过"——这是多个 skill 共用的配置，擅自改会让产物静默散落到不同目录，用户毫不知情，且难以事后排查。
 
