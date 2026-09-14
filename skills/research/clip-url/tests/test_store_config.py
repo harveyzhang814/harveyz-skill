@@ -92,3 +92,104 @@ def test_cli_check_prints_missing_and_exits_one_when_config_absent(tmp_path):
     )
     assert result.returncode == 1
     assert result.stderr.strip().startswith("MISSING:")
+
+
+def _write_fake_executable(bin_dir: Path, name: str, stdout: str) -> None:
+    path = bin_dir / name
+    lines = "\n".join(f"echo '{line}'" for line in stdout.splitlines())
+    path.write_text(f"#!/bin/sh\n{lines}\n", encoding="utf-8")
+    path.chmod(0o755)
+
+
+def _run_check_downstream(config_path: Path, path_env: str):
+    return subprocess.run(
+        [sys.executable, str(SCRIPT), "check-downstream"],
+        env={**os.environ, "HSKILL_CONFIG": str(config_path), "PATH": path_env},
+        capture_output=True, text=True, timeout=10,
+    )
+
+
+def test_check_downstream_all_ok(isolated_config, tmp_path):
+    root = tmp_path / "root"
+    _write(isolated_config, knowledgeRoot=str(root))
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    _write_fake_executable(bin_dir, "vdl", f"workRoot: {root / 'videos'}")
+    _write_fake_executable(
+        bin_dir, "scholia",
+        "\n".join([
+            f"work-dir = {root / 'videos' / 'work'}",
+            f"content-dir = {root / 'articles'}",
+            f"x-dir = {root / 'feeds' / 'tweets' / 'creators'}",
+        ]),
+    )
+    result = _run_check_downstream(isolated_config, f"{bin_dir}:{os.environ['PATH']}")
+    assert result.returncode == 0
+    assert "OK: vdl WORK_ROOT" in result.stdout
+    assert "OK: scholia work-dir" in result.stdout
+    assert "OK: scholia content-dir" in result.stdout
+    assert "OK: scholia x-dir" in result.stdout
+    assert "DRIFT" not in result.stdout
+
+
+def test_check_downstream_reports_vdl_drift_and_fix_command(isolated_config, tmp_path):
+    root = tmp_path / "root"
+    _write(isolated_config, knowledgeRoot=str(root))
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    _write_fake_executable(bin_dir, "vdl", "workRoot: /some/stale/path")
+    _write_fake_executable(
+        bin_dir, "scholia",
+        "\n".join([
+            f"work-dir = {root / 'videos' / 'work'}",
+            f"content-dir = {root / 'articles'}",
+            f"x-dir = {root / 'feeds' / 'tweets' / 'creators'}",
+        ]),
+    )
+    result = _run_check_downstream(isolated_config, f"{bin_dir}:{os.environ['PATH']}")
+    assert result.returncode == 1
+    assert f"DRIFT: vdl WORK_ROOT=/some/stale/path (expect {root / 'videos'})" in result.stdout
+    assert f"fix: vdl config set work-root {root / 'videos'}" in result.stdout
+
+
+def test_check_downstream_reports_partial_scholia_drift(isolated_config, tmp_path):
+    root = tmp_path / "root"
+    _write(isolated_config, knowledgeRoot=str(root))
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    _write_fake_executable(bin_dir, "vdl", f"workRoot: {root / 'videos'}")
+    _write_fake_executable(
+        bin_dir, "scholia",
+        "\n".join([
+            "work-dir = /some/stale/videos/work",
+            f"content-dir = {root / 'articles'}",
+            f"x-dir = {root / 'feeds' / 'tweets' / 'creators'}",
+        ]),
+    )
+    result = _run_check_downstream(isolated_config, f"{bin_dir}:{os.environ['PATH']}")
+    assert result.returncode == 1
+    assert "DRIFT: scholia work-dir=/some/stale/videos/work" in result.stdout
+    assert "OK: scholia content-dir" in result.stdout
+    assert "OK: scholia x-dir" in result.stdout
+
+
+def test_check_downstream_skips_when_tools_not_installed(isolated_config, tmp_path):
+    root = tmp_path / "root"
+    _write(isolated_config, knowledgeRoot=str(root))
+    empty_bin = tmp_path / "empty-bin"
+    empty_bin.mkdir()
+    result = _run_check_downstream(isolated_config, str(empty_bin))
+    assert result.returncode == 0
+    assert "SKIP: vdl not installed (command not found)" in result.stdout
+    assert "SKIP: scholia not installed (command not found)" in result.stdout
+
+
+def test_check_downstream_prints_missing_when_config_absent(tmp_path):
+    missing_path = tmp_path / "does-not-exist.json"
+    result = subprocess.run(
+        [sys.executable, str(SCRIPT), "check-downstream"],
+        env={**os.environ, "HSKILL_CONFIG": str(missing_path)},
+        capture_output=True, text=True, timeout=10,
+    )
+    assert result.returncode == 1
+    assert result.stderr.strip().startswith("MISSING:")
