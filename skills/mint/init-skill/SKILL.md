@@ -2,7 +2,7 @@
 name: init-skill
 description: "Initialize a new skill from scratch in the harveyz-skill repo — scaffolds SKILL.md, directory structure, and a feature branch from a design spec or free-form notes. Applies the condensed skill design standard (16 philosophies + system mechanisms). Triggers: 'create new skill', 'scaffold a skill', 'init skill', 'bootstrap skill from notes', 'create skill from spec', 'help me start a new skill', 'initialize a skill'."
 user_invocable: true
-version: "1.2.0"
+version: "1.2.1"
 ---
 
 # 从设计文档初始化新 Skill
