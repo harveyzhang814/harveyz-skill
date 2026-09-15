@@ -1,12 +1,12 @@
 ---
-status: 待执行
+status: 执行中
 date: 2026-09-15
 author_model: claude-opus-5
 acceptance: hard
 branch: feature/video-creator-index
 worktree: /Users/harveyzhang96/Projects/harveyz-skill/.claude/worktrees/feature+video-creator-index
 source_node: d6dd597f-9fb4-48b2-b9b0-eb51bd0d7854
-target_node:
+target_node: 36327bcc-7915-4b62-8cde-538ff83f811d
 ---
 
 # 交接：把 learn-video 的深读产物接入 creator 主数据，让前端能按人检索
