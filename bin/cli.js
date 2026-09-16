@@ -2,7 +2,7 @@
 import { select, input, confirm } from '@inquirer/prompts'
 import chalk from 'chalk'
 import { execSync, spawnSync } from 'child_process'
-import { existsSync, writeFileSync, unlinkSync } from 'fs'
+import { existsSync, readFileSync, writeFileSync, unlinkSync, mkdtempSync } from 'fs'
 import { createRequire } from 'module'
 import os from 'os'
 import path from 'path'
@@ -50,10 +50,12 @@ function printHelp() {
     hskill uninstall <tool>            uninstall a shell tool and clean up all files
     hskill uninstall <tool> --yes      skip all confirmations (incl. config files)
     hskill uninstall <skill> --scope <s> --target <t>  uninstall a skill
-    hskill update                  update hskill to the latest version
+    hskill update                  update hskill (sticky: refreshes from whichever source is installed)
+    hskill update --local <path>   switch to / refresh a local repo (npm pack + install)
+    hskill update --npm            switch back to npm registry
     hskill mcp                     start an MCP server (stdio) exposing hskill's tools to MCP-capable agent hosts
-    hskill version                 show version
-    hskill version --check         compare local version against npm registry (no install)
+    hskill version                 show version (adds source/branch/commit lines when installed from a local repo)
+    hskill version --check         compare against npm registry, or against the local source repo's HEAD
     hskill --help                  show this help
 
   ${chalk.cyan('Examples:')}
@@ -138,7 +140,11 @@ if (args[0] === '--help' || args[0] === '-h') {
         },
         {
           name: 'update',
-          description: 'Update hskill to the latest version via npm',
+          description: 'Update hskill; sticky to whichever source (npm or local repo) is currently installed',
+          flags: [
+            { name: '--local', arg: '<path>', description: 'Switch to / refresh a local repo source (npm pack + install -g)' },
+            { name: '--npm',   description: 'Switch back to the npm registry source' },
+          ],
         },
         {
           name: 'mcp',
@@ -157,7 +163,32 @@ if (args[0] === '--help' || args[0] === '-h') {
 }
 
 if (args[0] === '--version' || args[0] === '-v' || subcommand === 'version') {
+  const { readSource, gitInfo } = await import('../lib/install-source.js')
+  const source = readSource()
+
   if (subcommand === 'version' && args.includes('--check')) {
+    if (source) {
+      let current
+      try {
+        current = gitInfo(source.repo)
+      } catch (err) {
+        console.error(chalk.red(`  ✗ Could not read local source repo: ${err.message}`))
+        process.exit(1)
+      }
+      const upToDate = current.commit === source.commit && !current.dirty
+      if (jsonFlag) {
+        console.log(JSON.stringify({ source: 'local', repo: source.repo, installedCommit: source.commit, currentCommit: current.commit, dirty: current.dirty, upToDate }, null, 2))
+      } else if (upToDate) {
+        console.log(chalk.green(`  ✔ hskill is up to date with local source (${source.repo}@${current.commit})`))
+      } else if (current.commit !== source.commit) {
+        console.log(chalk.yellow(`  ⚠ local source has new commits: ${source.commit} → ${current.commit}`))
+        console.log(chalk.dim('  Run: hskill update'))
+      } else {
+        console.log(chalk.yellow('  ⚠ local source has uncommitted changes not yet packed'))
+        console.log(chalk.dim('  Run: hskill update'))
+      }
+      process.exit(0)
+    }
     try {
       const { checkNpmVersion } = await import('../lib/version-check.js')
       const { current, latest, upToDate } = await checkNpmVersion('harveyz-skill', version)
@@ -176,6 +207,11 @@ if (args[0] === '--version' || args[0] === '-v' || subcommand === 'version') {
     process.exit(0)
   }
   console.log(version)
+  if (source) {
+    console.log('')
+    console.log(`source: local  ${source.repo}`)
+    console.log(`branch: ${source.branch}  commit: ${source.commit}${source.dirty ? ' (dirty)' : ''}`)
+  }
   process.exit(0)
 }
 
@@ -223,15 +259,112 @@ async function checkArchivedInstalls() {
 }
 
 // ── Update ───────────────────────────────────────────────────────────────────
-if (subcommand === 'update') {
+// Sticky: whichever source is currently installed (recorded in .hskill-source.json
+// inside the global install dir) is what a bare `update` refreshes from. `--local`
+// and `--npm` explicitly switch the source. See docs/superpowers/specs/2026-09-15-hskill-install-source-design.md
+async function updateToNpm(priorSource) {
   console.log(chalk.dim('  · Updating hskill…'))
   try {
     execSync('npm install -g harveyz-skill@latest', { stdio: 'inherit' })
-    console.log(chalk.green('  ✔ hskill updated'))
   } catch {
     console.error(chalk.red('  ✗ Update failed. Try: npm install -g harveyz-skill@latest'))
     process.exit(1)
   }
+  if (priorSource) {
+    const { globalRoot } = await import('../lib/install-source.js')
+    const newVersion = JSON.parse(readFileSync(path.join(globalRoot(), 'harveyz-skill', 'package.json'), 'utf8')).version
+    console.log(`  ${priorSource.version}+local (${priorSource.branch}@${priorSource.commit}) → ${newVersion} (npm)`)
+  }
+  console.log(chalk.green('  ✔ hskill updated'))
+}
+
+async function updateToLocal(repoPath, priorSource) {
+  if (!existsSync(repoPath)) {
+    console.error(chalk.red(`  ✗ 本地来源仓库不存在：${repoPath}`))
+    console.error(chalk.dim('    改用 npm：   hskill update --npm'))
+    console.error(chalk.dim(`    指向新路径： hskill update --local <新路径>`))
+    process.exit(1)
+  }
+
+  const { gitInfo, writeSource, globalRoot } = await import('../lib/install-source.js')
+  // git info must be collected before `npm pack` — its `prepack` hook rewrites
+  // the tracked .npmignore, which would otherwise poison the dirty check.
+  const info = gitInfo(repoPath)
+  const origVersion = JSON.parse(readFileSync(path.join(repoPath, 'package.json'), 'utf8')).version
+
+  console.log(chalk.dim('  · Packing local repo…'))
+  const tmpDir = mkdtempSync(path.join(os.tmpdir(), 'hskill-pack-'))
+  const packResult = spawnSync('npm', ['pack', '--pack-destination', tmpDir], { cwd: repoPath, encoding: 'utf8' })
+  if (packResult.status !== 0) {
+    console.error(chalk.red('  ✗ npm pack failed'))
+    process.exit(1)
+  }
+  const tarballName = packResult.stdout.trim().split('\n').pop()
+
+  console.log(chalk.dim('  · Installing packed tarball…'))
+  const installResult = spawnSync('npm', ['install', '-g', path.join(tmpDir, tarballName)], { stdio: 'inherit' })
+  if (installResult.status !== 0) {
+    console.error(chalk.red('  ✗ Install failed'))
+    process.exit(1)
+  }
+
+  const installedPkgPath = path.join(globalRoot(), 'harveyz-skill', 'package.json')
+  const installedPkg = JSON.parse(readFileSync(installedPkgPath, 'utf8'))
+  installedPkg.version = `${origVersion}+local`
+  writeFileSync(installedPkgPath, JSON.stringify(installedPkg, null, 2) + '\n')
+
+  writeSource({
+    repo: repoPath,
+    branch: info.branch,
+    commit: info.commit,
+    dirty: info.dirty,
+    version: origVersion,
+    installedAt: new Date().toISOString(),
+  })
+
+  if (priorSource === null) {
+    console.log(`  ${version} (npm) → ${origVersion}+local (${info.branch}@${info.commit})`)
+  } else if (priorSource.repo !== repoPath) {
+    console.log(`  ${priorSource.version}+local (${priorSource.branch}@${priorSource.commit}) → ${origVersion}+local (${info.branch}@${info.commit})`)
+  }
+
+  const npmignoreStatus = execSync('git status --porcelain -- .npmignore', { cwd: repoPath, encoding: 'utf8' }).trim()
+  if (npmignoreStatus) {
+    console.log(chalk.dim('  · .npmignore changed by prepack — left as-is, review with `git diff .npmignore`'))
+  }
+
+  console.log(chalk.green('  ✔ hskill updated'))
+}
+
+if (subcommand === 'update') {
+  const updateArgs = args.slice(1)
+  const localIdx   = updateArgs.indexOf('--local')
+  const npmFlag    = updateArgs.includes('--npm')
+  const localGiven = localIdx !== -1
+  const localPath  = localGiven ? updateArgs[localIdx + 1] : undefined
+
+  if (localGiven && npmFlag) {
+    console.error(chalk.red('  ✗ --local and --npm are mutually exclusive'))
+    process.exit(1)
+  }
+  if (localGiven && (!localPath || localPath.startsWith('--'))) {
+    console.error(chalk.red('  ✗ --local requires a path: hskill update --local <path>'))
+    process.exit(1)
+  }
+
+  const { readSource } = await import('../lib/install-source.js')
+  const priorSource = readSource()
+
+  if (npmFlag) {
+    await updateToNpm(priorSource)
+  } else if (localGiven) {
+    await updateToLocal(localPath, priorSource)
+  } else if (priorSource) {
+    await updateToLocal(priorSource.repo, priorSource)
+  } else {
+    await updateToNpm(priorSource)
+  }
+
   // Run skill rename migrations
   const { renames = [], skills: skillDefs = [] } = require('../skills-index.json')
   if (renames.length > 0) {
