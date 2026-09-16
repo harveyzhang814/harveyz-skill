@@ -336,8 +336,8 @@
       "path": "feed/manage-creators",
       "bundle": "feed",
       "installScope": "project",
-      "contentHash": "f0c5ca3fbdca9bd6",
-      "contentVersion": "0.2.1"
+      "contentHash": "36b5dbeb3bd46336",
+      "contentVersion": "0.3.0"
     },
     {
       "path": "feed/capture-opinion",
