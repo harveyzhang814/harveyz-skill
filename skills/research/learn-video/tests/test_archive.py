@@ -1,9 +1,8 @@
-"""Unit tests for archive.py — learn-video's only piece of local logic:
-writing meta.json into the task directory vdl already produced at
-<ROOT>/videos/work/<task_id>/."""
+"""Unit tests for archive.py — now a pure validator: vdl already wrote
+meta.json (see docs/superpowers/specs/2026-09-15-video-creator-index-design.md
+§1.3), this script just checks it satisfies the unified-store contract."""
 import json
 import os
-import sqlite3
 import subprocess
 import sys
 from pathlib import Path
@@ -17,73 +16,80 @@ from archive import archive  # noqa: E402
 SCRIPT = Path(__file__).resolve().parent.parent / "scripts" / "archive.py"
 
 
-def _vdl_task_dir(root: Path, task_id: str) -> Path:
-    """Stand in for what vdl leaves behind once WORK_ROOT == <ROOT>/videos."""
+def _vdl_task_dir(root: Path, task_id: str, meta: dict | None = None) -> Path:
+    """Stand in for what vdl leaves behind: task dir + artifacts + meta.json
+    (vdl writes meta.json itself now — this helper mirrors that)."""
     task_dir = root / "videos" / "work" / task_id
     (task_dir / "transcript").mkdir(parents=True, exist_ok=True)
     (task_dir / "writing").mkdir(parents=True, exist_ok=True)
     (task_dir / "transcript" / "original_zh.md").write_text("raw", encoding="utf-8")
     (task_dir / "writing" / "article.md").write_text("body", encoding="utf-8")
+    if meta is not None:
+        (task_dir / "meta.json").write_text(json.dumps(meta, ensure_ascii=False), encoding="utf-8")
     return task_dir
 
 
-def test_archive_writes_meta_into_vdl_task_dir(tmp_path, isolated_store_config):
-    task_dir = _vdl_task_dir(isolated_store_config, "t1")
+VALID_META = {
+    "source_url": "https://youtube.com/watch?v=t1",
+    "title": "My Video",
+    "fetched_at": "2026-09-15",
+    "uploader_id": "@alejandro_ao",
+    "channel_id": "UC1oXUA7qgs0GZc_yk46K2OQ",
+    "uploader_url": "https://www.youtube.com/@alejandro_ao",
+}
 
-    result = archive("t1", "https://youtube.com/watch?v=t1", "My Video",
-                     fetched_at="2026-09-01")
+
+def test_archive_accepts_meta_with_all_required_fields(isolated_store_config):
+    task_dir = _vdl_task_dir(isolated_store_config, "t1", VALID_META)
+
+    result = archive("t1")
 
     assert result["video_dir"] == task_dir
     assert result["meta_path"] == task_dir / "meta.json"
-    meta = json.loads(result["meta_path"].read_text(encoding="utf-8"))
-    assert meta == {
-        "source_url": "https://youtube.com/watch?v=t1",
-        "title": "My Video",
-        "fetched_at": "2026-09-01",
-        # scholia reads meta.url; with no vdl DB around it falls back to the
-        # source_url we were handed rather than rendering an empty link.
-        "url": "https://youtube.com/watch?v=t1",
-    }
+    # archive() must not modify meta.json — it's read-only now
+    assert json.loads(result["meta_path"].read_text(encoding="utf-8")) == VALID_META
 
 
-def test_archive_leaves_vdl_artifacts_untouched(tmp_path, isolated_store_config):
-    task_dir = _vdl_task_dir(isolated_store_config, "t1")
+@pytest.mark.parametrize("missing_field", ["source_url", "title", "fetched_at"])
+def test_archive_rejects_meta_missing_a_required_field(isolated_store_config, missing_field):
+    meta = {k: v for k, v in VALID_META.items() if k != missing_field}
+    _vdl_task_dir(isolated_store_config, "t1", meta)
 
-    archive("t1", "u", "T", fetched_at="2026-09-01")
+    with pytest.raises(SystemExit) as excinfo:
+        archive("t1")
+
+    assert missing_field in str(excinfo.value)
+
+
+def test_archive_rejects_when_meta_json_absent(isolated_store_config):
+    """vdl hasn't finished writing meta.json yet (task not 'completed')."""
+    _vdl_task_dir(isolated_store_config, "t1", meta=None)
+
+    with pytest.raises(SystemExit) as excinfo:
+        archive("t1")
+
+    assert "meta.json 不存在" in str(excinfo.value)
+
+
+def test_archive_refuses_when_task_dir_missing(isolated_store_config):
+    with pytest.raises(FileNotFoundError) as excinfo:
+        archive("missing")
+
+    assert "vdl config set work-root" in str(excinfo.value)
+
+
+def test_archive_leaves_vdl_artifacts_untouched(isolated_store_config):
+    task_dir = _vdl_task_dir(isolated_store_config, "t1", VALID_META)
+
+    archive("t1")
 
     assert (task_dir / "transcript" / "original_zh.md").read_text(encoding="utf-8") == "raw"
     assert (task_dir / "writing" / "article.md").read_text(encoding="utf-8") == "body"
 
 
-def test_archive_is_idempotent_for_same_task_id(tmp_path, isolated_store_config):
-    _vdl_task_dir(isolated_store_config, "t1")
-    archive("t1", "u", "T", fetched_at="2026-09-01")
-
-    result = archive("t1", "u", "T2", fetched_at="2026-09-02")
-
-    meta = json.loads(result["meta_path"].read_text(encoding="utf-8"))
-    assert meta["title"] == "T2"
-    assert meta["fetched_at"] == "2026-09-02"
-
-
-def test_archive_refuses_to_create_an_orphan_meta(tmp_path, isolated_store_config):
-    """WORK_ROOT drifting away from <ROOT>/videos must fail loudly rather
-    than leave a meta.json in a directory holding no vdl artifacts."""
-    with pytest.raises(FileNotFoundError) as excinfo:
-        archive("missing", "u", "T")
-
-    assert "vdl config set work-root" in str(excinfo.value)
-    assert not (isolated_store_config / "videos" / "work" / "missing").exists()
-
-
-def test_cli_prints_video_dir_and_meta_path(tmp_path, isolated_store_config):
-    task_dir = _vdl_task_dir(isolated_store_config, "t1")
-    env = {
-        **os.environ,
-        "TASK_ID": "t1", "SOURCE_URL": "u", "TITLE": "T",
-        "FETCHED_AT": "2026-09-01",
-        "HSKILL_CONFIG": os.environ["HSKILL_CONFIG"],
-    }
+def test_cli_prints_video_dir_and_meta_path(isolated_store_config):
+    task_dir = _vdl_task_dir(isolated_store_config, "t1", VALID_META)
+    env = {**os.environ, "TASK_ID": "t1", "HSKILL_CONFIG": os.environ["HSKILL_CONFIG"]}
     result = subprocess.run(
         [sys.executable, str(SCRIPT)], env=env, capture_output=True, text=True, timeout=10,
     )
@@ -92,12 +98,8 @@ def test_cli_prints_video_dir_and_meta_path(tmp_path, isolated_store_config):
     assert f"META_PATH: {task_dir / 'meta.json'}" in result.stdout
 
 
-def test_cli_exits_nonzero_when_task_dir_missing(tmp_path, isolated_store_config):
-    env = {
-        **os.environ,
-        "TASK_ID": "nope", "SOURCE_URL": "u", "TITLE": "T",
-        "HSKILL_CONFIG": os.environ["HSKILL_CONFIG"],
-    }
+def test_cli_exits_nonzero_when_task_dir_missing(isolated_store_config):
+    env = {**os.environ, "TASK_ID": "nope", "HSKILL_CONFIG": os.environ["HSKILL_CONFIG"]}
     result = subprocess.run(
         [sys.executable, str(SCRIPT)], env=env, capture_output=True, text=True, timeout=10,
     )
@@ -105,61 +107,12 @@ def test_cli_exits_nonzero_when_task_dir_missing(tmp_path, isolated_store_config
     assert "vdl config set work-root" in result.stderr
 
 
-def _vdl_db(root: Path, rows):
-    """vdl's own database, which is what actually knows the uploader/duration."""
-    db_path = root / "videos" / "work" / "database.sqlite"
-    db_path.parent.mkdir(parents=True, exist_ok=True)
-    conn = sqlite3.connect(db_path)
-    conn.execute("create table tasks (id TEXT PRIMARY KEY, url TEXT, uploader TEXT, "
-                 "upload_date TEXT, duration TEXT, mode TEXT, output_lang TEXT, ts TEXT)")
-    conn.executemany("insert into tasks values (?,?,?,?,?,?,?,?)", rows)
-    conn.commit()
-    conn.close()
-
-
-def test_archive_pulls_display_fields_from_vdl_db(tmp_path, isolated_store_config):
-    _vdl_task_dir(isolated_store_config, "t1")
-    _vdl_db(isolated_store_config, [
-        ("t1", "https://youtube.com/watch?v=t1", "Some Channel", "20260701",
-         "1830", "media", "zh-CN", "2026-07-01T00:00:00Z"),
-    ])
-
-    result = archive("t1", "https://youtube.com/watch?v=t1", "My Video", fetched_at="2026-09-01")
-
-    meta = json.loads(result["meta_path"].read_text(encoding="utf-8"))
-    assert meta["source_url"] == "https://youtube.com/watch?v=t1"
-    assert meta["fetched_at"] == "2026-09-01"
-    assert meta["uploader"] == "Some Channel"
-    assert meta["upload_date"] == "20260701"
-    assert meta["duration"] == "1830"
-    assert meta["mode"] == "media"
-    assert meta["output_lang"] == "zh-CN"
-    assert meta["ts"] == "2026-07-01T00:00:00Z"
-
-
-def test_archive_omits_display_fields_the_db_left_empty(tmp_path, isolated_store_config):
-    """uploader/upload_date/duration are null for most of vdl's history. An
-    absent key is honest; an empty string would render as a blank field."""
-    _vdl_task_dir(isolated_store_config, "t1")
-    _vdl_db(isolated_store_config, [
-        ("t1", "https://youtube.com/watch?v=t1", None, "", None, "media", "zh-CN", "2026-07-01T00:00:00Z"),
-    ])
-
-    result = archive("t1", "https://youtube.com/watch?v=t1", "My Video", fetched_at="2026-09-01")
-
-    meta = json.loads(result["meta_path"].read_text(encoding="utf-8"))
-    assert "uploader" not in meta
-    assert "upload_date" not in meta
-    assert "duration" not in meta
-    assert meta["mode"] == "media"
-
-
-def test_archive_survives_a_missing_vdl_db(tmp_path, isolated_store_config):
-    """Enrichment is best-effort — no DB must not turn into a failed archive."""
-    _vdl_task_dir(isolated_store_config, "t1")
-
-    result = archive("t1", "u", "T", fetched_at="2026-09-01")
-
-    meta = json.loads(result["meta_path"].read_text(encoding="utf-8"))
-    assert meta["title"] == "T"
-    assert meta["url"] == "u"
+def test_cli_exits_nonzero_when_required_field_missing(isolated_store_config):
+    meta = {k: v for k, v in VALID_META.items() if k != "fetched_at"}
+    _vdl_task_dir(isolated_store_config, "t1", meta)
+    env = {**os.environ, "TASK_ID": "t1", "HSKILL_CONFIG": os.environ["HSKILL_CONFIG"]}
+    result = subprocess.run(
+        [sys.executable, str(SCRIPT)], env=env, capture_output=True, text=True, timeout=10,
+    )
+    assert result.returncode != 0
+    assert "fetched_at" in result.stderr
