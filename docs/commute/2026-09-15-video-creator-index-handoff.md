@@ -1,5 +1,5 @@
 ---
-status: 执行中
+status: 已验收
 date: 2026-09-15
 author_model: claude-opus-5
 acceptance: hard
@@ -37,6 +37,49 @@ target_node: 36327bcc-7915-4b62-8cde-538ff83f811d
 8. `check` 能在磁盘多出实体、索引未重算时输出 `STALE`。
 
 **第 5 条是整个设计的核心验收点**：它证明 `watched` 没有被写进索引。若实现时图省事把 `watched` 存进了 `creators.json`，这条会当场挂掉。
+
+### 验收记录（原 session，2026-09-16）
+
+接手方未填写自测记录，本节是唯一一份验收结论。八条全部由验收方**独立实跑**，不采信任何未经复跑的陈述。
+
+| # | 结果 | 实跑依据 |
+|---|---|---|
+| 1 | **PASS** | 新跑 `jNQXAC9IVRw`（19s，task `8dbb590783f6`，68s 完成）。`meta.json` 六字段齐全：`uploader_id=@jawed`、`channel_id=UC4QobU6STFB0P71PMvOGN5A`、`uploader_url`、`source_url`、`title`、`fetched_at`。`archive.py` 校验 exit 0 |
+| 2 | **PASS** | `fetch_info.sh:51` 已加 `--no-playlist`。实跑对照 `watch?v=…&list=UU…`：带它 1 行，不带它 4 行 |
+| 3 | **PASS** | 68 实体中 65 个有 `uploader_id`；3 个进 `unresolved`（1 个视频已下架 + 2 个非 YouTube）。无任务消失 |
+| 4 | **PASS** | 65 + 3 = 68 = 磁盘 `meta.json` 数。新跑一条后重算：66 + 3 = 69 = 69 |
+| 5 | **PASS（核心）** | 隔离 HOME：**同一份 `creators.json` 字节未变**，空 registry 下 `aidotengineer` 为 `watched=false`，写入模拟 `add` 后的 registry 立刻变 `watched=true, creator_id=aidotengineer`。真实数据只读核对：名册上 4 人全 `true`，其余 26 人全 `false` |
+| 6 | **PASS** | 隔离 HOME 模拟 merge（一个 creator 名下两个 YouTube 渠道）：从任一 handle 查询均返回合并后 5 条（4+1），`creator_id` 均指向主 id |
+| 7 | **PASS** | 写入为 `tmp + rename`（`build_creator_index.py:write_index`）。实跑：work 目录消失导致 build 失败后，旧索引字节完全一致，无残留 `.tmp` |
+| 8 | **PASS** | 计数不符 → `STALE: 索引 3 条 / 磁盘 4 条`（exit 1）；索引文件损坏 → `STALE: 索引文件损坏`（exit 1） |
+
+**§7 七项未验证项** —— 接手方只记录了 2 项（§7.1 两项硬阻塞）。其余 5 项在交回时没有结论，由验收方在本次验收中补测：
+
+| 项 | 结论 | 谁测的 |
+|---|---|---|
+| 50 个文件字段并存的成因 | 是 `scripts/migrate-store.sh:459-469` 的一次性并入式回填，非第三个持续写入方 | 接手方记录，**验收方已独立复核该行号与合并逻辑** |
+| handle 大小写不敏感 | 是，有 Google 官方文档佐证 | 接手方记录 |
+| playlist 多行 JSON 是否为脏数据成因 | **是**。不带 `--no-playlist` 时每个视频吐一行 | 验收方补测 |
+| 卡在 `isTaskCompleted` 门槛外的任务数 | 用契约字段覆盖度实测：69 个中 68 个齐全，唯一缺 `title` 的是那个已下架视频（`66e0fe1afa7a`）。风险未成真 | 验收方补测（注：DB `status` 列全为 NULL，不能当完成度代理） |
+| yt-dlp 对 Bilibili 返不返 `uploader_id` | 不返。2 个非 YouTube 来源（Bilibili、Weibo）按设计落 `unresolved` | 接手方间接记录 + 验收方核对 |
+| scholia 侧约 30 行 | **估低了 3 倍**：`creator-source.js` 实际 98 行。只影响工作量预估，不影响设计 | 验收方补测 |
+| 全量重算耗时 | 69 条实体三次实测 0.04 / 0.03 / 0.03 秒。§3.1"毫秒级"成立，不做增量的判断站得住 | 验收方补测 |
+
+**对接手方一处陈述的更正（不静默改，显式记下）**：spec §7.1 末段写「§2.1 那三个新增字段若只改一处会被后写者抹掉，**必须两处都改**——这正是 spec §1.2 / 关键决定 #2 已经定的方案」。这句与 §1.3 / 关键决定 #2 的实际内容不符——那条决定是「`meta.json` 归 vdl 独有，`archive.py` 从写降级为校验」，即**只有一个写入方**，不是"两处都改"。所交付的代码是对的（`archive.py` 确已降级为纯校验），错的只是这段文字。
+
+**范围核对**：本仓库改动 11 个文件，全部在铁律 IN 之内；`clip-url` 等范围外目录零改动（`git diff --name-only` 命中 0）。
+
+**`npm test` 状态**：**不通过**，但与本次改动无关。失败的是 `skills/research/clip-url` 的 7 个测试，原因是本机未装 Playwright 浏览器（`playwright install`）——环境问题。`learn-video` 自身 36 个测试全过。另注意：`run-skill-tests.sh:96` 在有失败时确实 `exit 1`，我前两次用 `npm test | tail` 拿到的 exit 0 是管道换掉的退出码，不可信。
+
+**三处交接约定偏差（不影响技术判定，但记录在案）**：
+
+1. **接手方自行把分支合进了 `staging`**（`2bbcb0c`，2026-09-16 02:10）。约定为「只有交出方能合并」「完工前不要合并到 staging」。后果：验收发生在代码已进集成分支之后，若判打回，回退的是已发布状态。Video-Learner（`ec71ce8`）与 scholia（`8731bd8`）同样未验收先合。
+2. **`status` 从未推到「待验收」**，一直停在「执行中」。
+3. **交接文档无接手方自测记录**，正文与 author 时一字未变，实施结论散落在 spec 与 commit message 中。
+
+**判定：达成。** 八条硬判据逐条实跑全绿，§7 七项现已全部有实测结论（5 项由验收方补齐）。上述三处为流程偏差，不推翻技术结论。
+
+**遗留物**：验收用的测试视频 `~/knowledge/videos/work/8dbb590783f6`（19 秒）未删——删除操作被拒，索引已按 69 条重算，状态一致。要清理则删该目录后重跑 `build_creator_index.py build`。
 
 ---
 
