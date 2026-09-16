@@ -91,3 +91,29 @@ def test_drop_channel(data_dir):
 
 def test_drop_missing_channel_is_silent(data_dir):
     state.drop_channel(state.load(data_dir), "x", "nobody")
+
+
+def test_get_cursor_is_case_insensitive_on_handle(data_dir):
+    """守住 spec §3.0 的承诺：sync-* 传大小写不同的 handle 也要查到同一条游标。"""
+    st = state.load(data_dir)
+    state.set_cursor(st, "youtube", "TingHu888", "seen_urls", ["u1"], RUN)
+    assert state.get_cursor(st, "youtube", "tinghu888") == {
+        "type": "seen_urls", "value": ["u1"]
+    }
+    assert state.get_cursor(st, "youtube", "TingHu888") == \
+           state.get_cursor(st, "youtube", "tinghu888")
+
+
+def test_set_cursor_with_different_case_handle_updates_same_entry(data_dir):
+    st = state.load(data_dir)
+    state.set_cursor(st, "x", "TingHu888", "last_seen_id", "1", RUN)
+    state.set_cursor(st, "x", "tinghu888", "last_seen_id", "2", RUN)
+    assert len(st["channels"]) == 1
+    assert state.get_cursor(st, "x", "TingHu888")["value"] == "2"
+
+
+def test_drop_channel_is_case_insensitive(data_dir):
+    st = state.load(data_dir)
+    state.set_cursor(st, "x", "TingHu888", "last_seen_id", "1", RUN)
+    state.drop_channel(st, "x", "tinghu888")
+    assert st["channels"] == {}
