@@ -178,3 +178,37 @@ console.log(compareVersions('0.33.0+local', '0.32.0') > 0)
   [ "$status" -eq 0 ]
   [ "$output" = "$expected" ]
 }
+
+# ── npm absent from PATH ──────────────────────────────────────────────────────
+# `version` must not depend on npm being reachable: before source tracking it
+# only read package.json. readSource() reaches globalRoot() on every call, so an
+# unguarded `npm root -g` turns `hskill --version` into a hard crash anywhere npm
+# is off PATH (cron, restricted PATH, minimal images).
+
+_node_only_path() {
+  local dir="${TEST_DIR}/nodeonly"
+  mkdir -p "$dir"
+  ln -sf "$(command -v node)" "${dir}/node"
+  echo "${dir}:/usr/bin:/bin"
+}
+
+@test "readSource: npm unreachable returns null instead of throwing" {
+  local p
+  p="$(_node_only_path)"
+  run env -u HSKILL_GLOBAL_ROOT PATH="$p" node --input-type=module -e "
+import { readSource } from '${REPO_ROOT}/lib/install-source.js'
+console.log(JSON.stringify(readSource()))
+"
+  [ "$status" -eq 0 ]
+  [ "$output" = "null" ]
+}
+
+@test "version: npm absent from PATH still prints the bare version" {
+  local expected p
+  expected="$(node -e "console.log(require('${REPO_ROOT}/package.json').version)")"
+  p="$(_node_only_path)"
+
+  run env -u HSKILL_GLOBAL_ROOT PATH="$p" node "${CLI}" version
+  [ "$status" -eq 0 ]
+  [ "$output" = "$expected" ]
+}
