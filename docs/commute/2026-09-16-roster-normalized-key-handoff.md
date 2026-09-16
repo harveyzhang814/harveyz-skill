@@ -1,12 +1,12 @@
 ---
-status: 待执行
+status: 执行中
 date: 2026-09-16
 author_model: claude-opus-5
 acceptance: hard
 branch: feature/roster-normalized-key
 worktree: /Users/harveyzhang96/Projects/harveyz-skill/.claude/worktrees/feature+roster-normalized-key
 source_node: d6dd597f-9fb4-48b2-b9b0-eb51bd0d7854
-target_node:
+target_node: d7543930-6dc7-4ca1-a897-b5364a40199c
 ---
 
 # 交接：名册渠道键归一化（修一个会把同一个博主变成两个人的现行缺陷）
