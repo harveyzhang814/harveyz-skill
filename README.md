@@ -96,13 +96,42 @@ hskill install --bundle dev                     # 安装整个 bundle
 hskill install --skill git-workflow-init        # 安装单个 skill
 hskill install --tool hub                       # 安装 shell 工具
 hskill list                                     # 查看可用 skill
-hskill update                                   # 更新到最新版
+hskill update                                   # 更新 hskill 自身（沿用当前来源）
+hskill version                                  # 查看版本与安装来源
 hskill --help                                   # 查看帮助
 ```
 
 Skills 安装到 `~/.claude/skills/`，shell 工具安装到 `~/.local/bin/`。
 
+**从本地仓库安装 hskill 自身**
+
+发版前想先用一阵子工作树里的改动，可以把 hskill 装成本地来源：
+
+```bash
+hskill update --local ~/Projects/harveyz-skill   # 从本地仓库打包安装
+hskill update                                    # 之后裸跑就一直走本地，不会跳回 npm
+hskill update --npm                              # 显式切回 npm registry
+```
+
+`--local` 走的是 `npm pack` + 安装 tarball，**不是软链**——产出独立快照，并且真实执行 `prepack` 与 `package.json` 的 `files[]` 白名单，等于在发 npm 之前预演一次真实发布，能提前暴露打包问题。
+
+两种来源共存于同一个命令，`update` 是**粘性**的：本地装的就从原仓库重新打包，npm 装的就走 registry，**裸 `update` 永远不跨来源**。跨来源只能由 `--local` / `--npm` 显式触发，触发时会打印完整迁移行。
+
+安装来源记在全局安装目录里（`.hskill-source.json` + 版本号后缀 `+local`）。因为任何一次 `npm install -g` 都会清空重建该目录，绕过 hskill 手工安装也会自动抹掉痕迹，所以记录的来源不会与实际情况脱节：
+
+```console
+$ hskill version
+0.34.0+local
+
+source: local  /Users/you/Projects/harveyz-skill
+branch: staging  commit: 3d4192a
+```
+
+本地来源下 `hskill version --check` 比对的是**记录的 commit 与仓库 HEAD**，不是版本号——开发分支上版本号常常几十个提交不动，能动的只有 commit。
+
 **本地源码开发**
+
+不安装、直接从仓库跑 CLI 来装 skill：
 
 ```bash
 node bin/cli.js install --skill mermaid-diagram --target claude
@@ -149,7 +178,7 @@ hskill hooks uninstall check-similar-branch --scope project    # 从当前项目
 | **hskill_install** | 安装一个 bundle、指定 skill 或 shell 工具 |
 | **hskill_uninstall** | 卸载指定的 skill 或 shell 工具 |
 | **hskill_hooks** | 查看、安装或卸载 hskill git hooks |
-| **hskill_update** | 将 hskill 自身更新到最新版本 |
+| **hskill_update** | 更新 hskill 自身，沿用当前安装来源（npm 或本地仓库）；切换来源需用 CLI 的 `--npm` / `--local` |
 
 在 MCP host 的配置中注册（假设已通过 `npm install -g harveyz-skill` 全局安装）：
 
