@@ -1,5 +1,5 @@
 ---
-status: 待验收
+status: 已验收
 date: 2026-09-16
 author_model: claude-opus-5
 acceptance: hard
@@ -103,6 +103,61 @@ Task 1-8 逐任务 review 全部通过之后，跑了一次最终全分支 revie
 **这个 Critical bug 在本次交接期间是真实上线过的**：Task 8 已经把这条分支的代码部署到 `~/.hskill/tools/roster`（装机版），所以 bug 修复后又重新部署了一次，`roster registry list` 现在正确显示 `x:TingHu888`、`youtube:PlatoStone` 的游标。验收时如果要复查装机版，直接跑 `~/.local/bin/roster registry list` 看这两条渠道是否显示真实游标而不是 `(none)`。
 
 另有两处 Minor 一并修了：`manage-creators/SKILL.md` 里 `migrate-schema` 说明段落错位到了解释 `migrate` 参数的句子前面（已挪到后面）；Task 8 部署时 `cp -r` 误操作在装机版留下的嵌套重复目录 `~/.hskill/tools/roster/roster/roster/`（已清理）。三处 Minor 判定为可接受，未处理：迁移的两次文件写入不是原子的（已有备份步骤兜底，对单用户 CLI 可接受）、`state.json` 键格式异常时的处理（只有手工改坏数据才会触发）、两处测试文件里的未使用 import（plan 自带的，无害）。
+
+---
+
+## 验收记录（原 session，2026-09-16）
+
+与上方接手方自测记录**并列**，不覆盖不合并。九条全部由验收方**独立实跑**，不采信任何未经复跑的陈述。
+
+| # | 结果 | 验收方的实跑依据 |
+|---|---|---|
+| 1 | **PASS** | 隔离环境（`HSKILL_ROSTER_CONFIG`）：`@TingHu888` 后加 `@tinghu888` → `youtube:tinghu888 已在名册中`，exit 1，creator 数=1 渠道数=1 |
+| 2 | **PASS** | 真实 `registry.json`：`schema_version=2`，8 条渠道 `key == normalize(handle)` 全部成立，0 例外 |
+| 3 | **PASS** | 对比迁移前备份 `/tmp/state.json.bak-2026-09-16`：`x:TingHu888`→`x:tinghu888`、`youtube:PlatoStone`→`youtube:platostone`，两条 cursor 逐字节相同 |
+| 4 | **PASS** | 真 v1 夹具：首次 `channels_updated=1 cursors_renamed=1`，二次 `0/0`，两文件逐字节相同，游标值 `['u1','u2']` 保留 |
+| 5 | **PASS** | 真实抓取 4 个 YouTube 频道：`failures={}`、`baselines={}`。**这是决定性的**——若迁移破坏了游标查找，`get_cursor` 返回 None 会让 `compute_update` 走 `baseline` 分支，`baselines` 就会非空 |
+| 6 | **PASS** | 30 个 key 逐个比对，**0 不一致**，恰好 4 个 `watched=true`。before 用真实迁移前备份（schema 1、无 `key` 字段）跑旧逻辑，after 跑 scholia 现行代码 + 迁移后数据 |
+| 7 | **PASS** | `registry channels --platform youtube` 每条带 `key`；`PlatoStone` 的 handle 保原样、key 归一 |
+| 8 | **PASS** | 隔离环境 `rename` + `merge` 后，两条渠道 `key` 均等于 `normalize(handle)` |
+| 9 | **PASS** | `state get youtube:PlatoStone` 与 `...platostone`、`x:TingHu888` 与 `x:tinghu888`，两组输出逐字节相同且非空 |
+
+**接手方声称的三处修复，逐一独立复核，全部属实：**
+
+- **Critical（`registry list` 游标查找）**：`x:TingHu888` 显示 `cursor=2100102512800092652`、`youtube:PlatoStone` 显示 `cursor=22 urls`，不再是 `(none)`。
+- **迁移撞键防护**：构造两个归一后相撞的原始键，报错 exit 1，`registry.json` 与 `state.json` **都停在 schema 1 未落盘**。
+- **schema 守卫**：v1 数据上 `registry list` / `state get` 提示先跑 `migrate-schema`；`data-dir` / `migrate-schema` 豁免正常；迁移后恢复正常。
+
+**装机版一致性**：`~/.hskill/tools/roster/roster` 与本分支逐文件一致（`diff -rq` 无差异），误建的嵌套目录已清理，`~/.local/bin/roster` 实跑正常。
+
+**§7 四项未验证项**：孤儿游标成因、`sync-*` 不直接读 `state.json`、`profile` 按 `creator_id` 索引——三项有实测结论且我已复核；`website` 平台归一为恒等变换（两个 handle 本就小写），成立。
+
+**测试**：`tools/roster` 167 passed。仓库级 `npm test` 真实退出码 **1**，失败是 `skills/research/clip-url` 的 7 个 Playwright 依赖测试——与交接前基线完全相同，本次**未引入新失败**。
+
+### 验收过程中查清的一件环境问题（与本次改动无关）
+
+锚点 5 起初跑不了，4 个频道全部报 `chromium_headless_shell-1243 Executable doesn't exist`。根因**不是机器缺 Playwright**：
+
+- 主仓库 `tools/browser-fetch/.venv` 是 playwright **1.62.0**，它要浏览器 **1234**，而 1234 装着 → **日常 `sync-*` 一直是好的**。
+- 本工作区有**自己独立的** `tools/browser-fetch/.venv`（`browser-fetch.sh` 在 venv 不存在时自建并装当时最新版），拿到的是 **1.63.0**，它要 **1243**，从没下过。
+
+所以"从工作区里跑 `sync-*` 或 `npm test` 会失败"是**工作区独有的**，不是机器级问题。`clip-url` 那 7 个测试失败也是同一个原因。已给本工作区的 venv 补装 1243（94 MB），锚点 5 随后真跑通过。
+
+**这条值得记进仓库约定**：每新建一个工作区，`browser-fetch` 都会自建一个 venv 并可能拿到比主仓库更新的 playwright，届时需要单独 `playwright install`。
+
+### 验收方自己的两处过程失误（记下来，免得当成证据）
+
+1. 锚点 3 第一版脚本判 FAIL，实为判据过严——中间插了一次真实 sync 让 `youtube:claude` 从 33→35（旧集合完整包含于新集合、**零丢失**），不是迁移缺陷。
+2. 锚点 4 第一版夹具没写进去（`roster init` 不预建 `data/`），`migrate-schema` 跑在空数据上得到假绿；换真夹具重跑才算数。
+3. 锚点 5 中途我一度断言"空 `cursors` 等于一个频道都没进循环"——错的。`fetch_new_videos.py` 在 `kind == "none"` 分支**先 `continue`** 再轮到写 `cursors`，所以空 `cursors` 正是"抓成功、无新视频"。
+
+另：我那次失败的抓取给 4 个 YouTube 频道写了 `last_error`（下次成功运行自动清除），**游标一条未动**，已逐条核对。
+
+### 交接协议执行情况（对比上一轮）
+
+本轮交回协议三条**全部照做**：未自行合并（`harveyz-skill` 与 `scholia` 两条分支都停在未合并状态）、`status` 停在「待验收」、自测记录写成了独立小节。上一轮那三处偏差没有重演。
+
+**判定：达成。** 九条硬判据逐条实跑全绿，§7 四项均有结论。
 
 ---
 
