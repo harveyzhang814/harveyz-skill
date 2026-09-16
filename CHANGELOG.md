@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.33.0] - 2026-09-15
+
+### Added
+- `store_config.py`（`learn-video`/`clip-url`/`sync-xtimeline`/`sync-ytchannel`/`sync-website` 共用）：新增 `check-downstream`，核对统一存储根的产物与 vdl / scholia 两个下游读取方是否同步，五份 SKILL.md 的前置检查步骤接入该核对
+
+### Changed
+- `handoff`（1.8.0 → 1.11.0）：新增 Phase 2.5 接手方自测闸门 + 打回复修回路（此前「接手方完工 → 待验收」这个状态转移毫无前置条件）；建工作区改为显式给基线分支并 `EnterWorktree(path:)` 进去，三方指令统一，修复了两次因裸 git 命令落到主工作树而夹带他人未合并提交的翻车；关闭 `using-git-worktrees` 前置调用（它会另起一个 `.worktrees/` 下的第二工作区，与 handoff 自己的工作区约定冲突）；平台专属指令（`EnterWorktree` 等 Claude Code harness 特性）拆进独立「平台适配」章节，避免 pi/hermes/Codex 上的接手方读到卡住
+- `publish-skill` 审计：`init-skill`（1.2.0→1.2.1）、`learn-skill`（2.0.0→2.0.1）、`research/survey-skillrepo`（2.0.1→2.0.2）——内容已变但 version 未 bump，属于 F8 硬性检查项，现已按 patch 补齐；另有 6 个 skill（`handoff`/`sync-website`/`sync-xtimeline`/`sync-ytchannel`/`clip-url`/`learn-video`）此前 version 已 bump 但 `skills-index.json` 里的 `contentHash` 记录没跟上，已同步
+
+### Fixed
+- `learn-video` / `clip-url` / `sync-xtimeline` / `sync-ytchannel` / `sync-website` 共用的 `knowledgeRoot` 默认建议路径从 `~/Documents/knowledge` 改为 `~/knowledge`：前者在无 Full Disk Access 的 agent 执行环境下写入会静默失败，且此前没有护栏阻止 agent 擅自把配置改到别的路径绕过，导致产物在用户不知情的情况下分裂到两个根目录；五份 SKILL.md 加"写入失败必须如实报告并停下问用户"的护栏指令
+- `tests/install.bats` / `tests/interactive.bats`：`survey-skillrepo` 测试夹具的硬编码版本号随上面的 F8 审计一并更新为 `2.0.2`，此前的 bump 一度导致 3 个断言失败
+
 ## [0.32.0] - 2026-09-07
 
 ### Added
