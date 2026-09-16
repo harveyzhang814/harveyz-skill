@@ -31,11 +31,19 @@ def build_index(work_dir: Path) -> dict:
 
     for meta_path in sorted(work_dir.glob("*/meta.json")):
         task_id = meta_path.parent.name
+        scanned += 1
         try:
             meta = json.loads(meta_path.read_text(encoding="utf-8"))
         except (json.JSONDecodeError, OSError):
+            # Unreadable meta.json still counts as scanned — it can't produce
+            # a video_entry, so file it under unresolved by its own task_id
+            # (same fallback chain as a meta.json with no uploader/title).
+            entry = unresolved.setdefault(task_id, {
+                "display_name": task_id,
+                "task_ids": [],
+            })
+            entry["task_ids"].append(task_id)
             continue
-        scanned += 1
 
         video_entry = {
             "task_id": task_id,

@@ -74,6 +74,26 @@ def test_every_scanned_entity_is_accounted_for(isolated_store_config):
     assert video_count + unresolved_count == index["scanned"]["entities"] == 3
 
 
+def test_unreadable_meta_json_is_scanned_and_lands_in_unresolved(isolated_store_config):
+    """Acceptance criterion #4 (restored): a corrupt/unreadable meta.json must
+    still be accounted for — scanned, and filed into unresolved under its own
+    task_id — not silently dropped from every bucket."""
+    root = isolated_store_config
+    _meta(root, "t1", title="V1", uploader="A", uploader_id="@a")
+    bad_dir = root / "videos" / "work" / "t_bad"
+    bad_dir.mkdir(parents=True, exist_ok=True)
+    (bad_dir / "meta.json").write_text("not valid json {{{", encoding="utf-8")
+
+    index = build_index(root / "videos" / "work")
+
+    assert index["scanned"]["entities"] == 2
+    all_task_ids = {tid for u in index["unresolved"] for tid in u["task_ids"]}
+    assert "t_bad" in all_task_ids
+    video_count = sum(len(c["videos"]) for c in index["creators"])
+    unresolved_count = sum(len(u["task_ids"]) for u in index["unresolved"])
+    assert video_count + unresolved_count == index["scanned"]["entities"]
+
+
 def test_build_index_raises_when_work_dir_missing(isolated_store_config):
     """If vdl's WORK_ROOT drifted away from <knowledgeRoot>/videos, work_dir
     won't exist. Path.glob on a missing dir silently returns [], which would
