@@ -8,6 +8,15 @@ This is the **source maintenance repository** for Harvey's Claude Code skills. S
 
 **Important:** This repo is the authoritative source for all skills. When looking up, reading, or editing any skill's content, always work within the `skills/` directory here — never in the installed copy at `~/.claude/skills/` or any Claude user-level directory. `~/.claude/skills/` is the deployment target; its contents may lag behind this repo.
 
+**同步装机副本一律从集成分支取，不要从工作树 rsync：**
+
+```bash
+git archive staging skills/coding/<skill> | tar -x -C <临时目录>
+rsync -a --exclude '.DS_Store' <临时目录>/skills/coding/<skill>/ ~/.claude/skills/<skill>/
+```
+
+主工作树**不等于** `staging`——它随时可能停在某个 session 的 feature/doc 分支上，那里的 skill 内容比刚合并进 staging 的旧。直接 `rsync` 过去会把旧版本装上，而且不报错：装机副本看起来更新过了，内容却是回退的。同步完必查 `grep '^version:' ~/.claude/skills/<skill>/SKILL.md` 对上预期版本号。
+
 Skills are self-contained directories installed to `~/.claude/skills/` to extend Claude Code's capabilities.
 
 ## Installation
@@ -87,7 +96,19 @@ hskill CLI 行为（安装、交互、JSON 输出）+ 所有 skill 的 SKILL.md 
 
 **合并方式：** 本仓库没有合并脚本，手动 `git checkout staging && git merge --no-ff <分支>` 即可（`.githooks/commit-msg` 不要求 `Merge-Via` 标记）。别照搬别的仓库的 `scripts/merge-to-staging.sh`，这里没有那个文件。
 
-**worktree 路径习惯：** `.claude/worktrees/<slug>`，slug 是分支名去掉 `feature/`、`doc/` 等前缀（例如 `feature/handoff-node-relation` → `.claude/worktrees/handoff-node-relation`）。仓库里另有历史遗留的 `.worktrees/`，新建一律用前者。
+**worktree 路径习惯：** 仓库内 `.claude/worktrees/<分支名把 / 换成 +>`，与 Claude Code 原生 worktree 功能一致（例如 `feature/foo` → `.claude/worktrees/feature+foo`）。仓库里另有两类历史遗留：早期手工建的 `.claude/worktrees/<slug>`（去掉了分支前缀）和 `.worktrees/`。新建一律用前者，遗留的不动。
+
+**建 worktree 的硬动作（三条，顺序不能反）：**
+
+```
+git worktree add .claude/worktrees/feature+<slug> -b feature/<slug> staging
+EnterWorktree(path: "<绝对路径>")
+git config core.hooksPath .githooks && git config merge.ff false
+```
+
+1. **基线分支 `staging` 必须显式写出来。** 不写就从主工作树当前 HEAD 拉分支，而主工作树未必停在 `staging`——它可能正停在**别的 session 的分支**上。那样你的新分支会静默夹带别人未合并的提交，合并时等于替对方把没写完的东西发布出去。merge 会干净利落地成功，没有任何报错。
+2. **建完立刻 `EnterWorktree(path:)` 进去。** 不进去的话后面每一条裸 git 命令都作用在主工作树上。用 `path` 模式，**不要用 `name`**：`name` 会自己建分支（名字形如 `worktree-feature+foo`，过不了本仓库的命名规范），基线还默认取 `origin/<默认分支>`。`cd` 顶不上——它只在单条命令内有效，下一条又回到原目录。
+3. **合并前 `git rev-parse --abbrev-ref HEAD` 真的核对一次。** 本仓库手动合并，没有任何护栏；打印出来不算，要对上。
 
 ## 跨 session 交接（handoff）
 
@@ -97,8 +118,8 @@ hskill CLI 行为（安装、交互、JSON 输出）+ 所有 skill 的 SKILL.md 
 
 1. 交出方在 worktree 里跑 `/handoff` author 写交接文档（落 `docs/commute/`），连同相关产物一起 commit 到那条分支（feature/doc 分支上随便提交，hook 只拦 staging/main）。**提交完成之后不要 `git worktree remove`**——这个工作区是接手方的落脚点，也是你验收时要回来的地方，它要一直活到验收通过、合并完成。
 2. **交接时不合并到 staging。** 分支停在未合并状态等接手方接着做，最后一次性合并。
-3. **交接文档 frontmatter 的 `branch` 与 `worktree` 成对，都由交出方填。** 分支名是权威载体，worktree 路径是那条分支当下的落脚点，必须写出来、不能让接手方去猜（本仓库两种路径习惯并存，见上）。路径万一失效，用 `git worktree list` 查这条分支现在挂在哪。
-4. 接手方**不建 worktree、不建分支**，直接 `cd` 进文档里那个路径，核对当前分支与 `branch` 一致后开工，并补上 `git config core.hooksPath .githooks && git config merge.ff false`。那条分支已经被这个工作区 checkout，`git worktree add` 会直接失败——这是提示，不是障碍。
-5. **验收也在这个工作区里跑，不在主工作树、不在 staging/main 上跑。** 主工作树停在 `staging`，那里根本没有接手方的改动；在那里跑出来的绿是别的代码的绿，比不跑更有害，因为它看起来像验过了。验收方 `cd` 回去，**先在那里重读一遍交接文档**——接手方的自测记录与 `status` 只存在于那一份里，你手上那份是 author 时的旧版。
-6. **只有交出方能合并。** 接手方与验收方都不合。验收通过后由交出方 `git merge --no-ff` 进 staging，合完再 `git worktree remove` 收掉工作区。
+3. **交接文档 frontmatter 的 `branch` 与 `worktree` 成对，都由交出方填。** 分支名是权威载体，worktree 路径是那条分支当下的落脚点，必须写出来、不能让接手方去猜（本仓库多种路径习惯并存，见上——同一条分支由原生功能和手工建出来的目录名就不一样，规则推不出来）。路径万一失效，用 `git worktree list` 查这条分支现在挂在哪。
+4. 接手方**不建 worktree、不建分支**，用 `EnterWorktree(path: <文档里那个路径>)` 进去（`path` 模式，不是 `name`），核对当前分支与 `branch` 一致后开工，并补上 `git config core.hooksPath .githooks && git config merge.ff false`。那条分支已经被这个工作区 checkout，`git worktree add` 会直接失败——这是提示，不是障碍。要离开用 `ExitWorktree(action: "keep")`，**绝不 `remove`**。
+5. **验收也在这个工作区里跑，不在主工作树、不在 staging/main 上跑。** 主工作树上根本没有接手方的改动（而且它未必停在你以为的分支上）；在那里跑出来的绿是别的代码的绿，比不跑更有害，因为它看起来像验过了。验收方用 `EnterWorktree(path:)` 回去，**先在那里重读一遍交接文档**——接手方的自测记录与 `status` 只存在于那一份里，你手上那份是 author 时的旧版。
+6. **只有交出方能合并。** 接手方与验收方都不合。验收通过后由交出方合并进 staging，**合并前先 `git rev-parse --abbrev-ref HEAD` 核对自己站在哪条分支上**——`staging` 若没被任何工作区 checkout，建个临时工作区在上面合、合完删掉，别去改别人主工作树的分支。合完再 `git worktree remove` 收掉交接工作区。
 7. **同一时刻只有一方在这个工作区里动手。** 交出方写完停手、接手方做完停手、再轮到验收方。两个 session 同时在一个工作区里跑 git 会互踩暂存区。

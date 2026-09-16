@@ -17,5 +17,9 @@
         ]
       }
     ]
+  },
+  "skillOverrides": {
+    "using-git-worktrees": "off",
+    "superpowers:using-git-worktrees": "off"
   }
 }

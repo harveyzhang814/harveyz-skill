@@ -1,6 +1,6 @@
 ---
 name: sync-website
-version: "0.2.0"
+version: "0.2.2"
 description: "Run one incremental fetch over every website channel on the roster, produce a translated Markdown digest of what is new since last run, and archive each new article's title, translated title, publish date and URL to a per-channel JSON store. Trigger phrases: '/sync-website run', '/sync-website calibrate <handle>', '/sync-website', 'check my watched websites for new articles', or a request to run sync-website on a schedule via /loop or schedule. Adding or removing a watched website is manage-creators, not this skill. Listing only — never downloads article bodies or images, and never ingests into Obsidian (use clip-url for a single article). Display of archived articles is left to external tooling reading the JSON archive directly, not this skill."
 user_invocable: true
 ---
@@ -41,8 +41,19 @@ python3 scripts/roster_locate.py
 sync-xtimeline / sync-ytchannel 共用同一份 `knowledgeRoot` 配置（各自渠道
 各占 `feeds/` 下一个子目录）。运行 `python3 scripts/store_config.py check`，
 若输出 `MISSING:`，询问用户"抓取产物统一存到哪个目录？（直接回车使用默认：
-`~/Documents/knowledge`）"，写入 `~/.hskill/config.json` 的 `knowledgeRoot`
-字段（若已有 `skillDir` 等字段，只增改 `knowledgeRoot`）。
+`~/knowledge`）"，写入 `~/.hskill/config.json` 的 `knowledgeRoot`
+字段（若已有 `skillDir` 等字段，只增改 `knowledgeRoot`）。**默认值刻意不选
+`~/Documents/...`、`~/Desktop/...`、`~/Downloads/...`**——这几个目录受 macOS
+TCC 隐私保护，无 Full Disk Access 的 agent 执行环境写入会被拒绝；`$HOME` 下
+的普通目录（如 `~/knowledge`）不受此限制。
+
+**再核对下游是否同步。** 运行 `python3 scripts/store_config.py check-downstream` 核对 vdl、scholia 当前配置是否等于 `knowledgeRoot` 推出的期望值。输出 `DRIFT:` 时把对应的 `fix:` 命令原样报告给用户，由用户决定要不要执行——不要代替用户改这些下游程序的配置文件；输出 `SKIP:` 表示对应工具未安装，忽略即可。
+
+**运行中写入失败时的处理。** 若 `store_config.py check` 通过、但实际写入
+`<knowledgeRoot>/feeds/website/` 时仍然失败（权限不足、目录只读等），必须
+原样把错误报告给用户并停下来，禁止擅自把 `knowledgeRoot` 改指到别的路径来
+"绕过"——这是多个 skill 共用的配置，擅自改会让产物静默散落到不同目录，用户
+毫不知情，且难以事后排查。
 
 ## 用法
 

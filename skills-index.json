@@ -42,8 +42,8 @@
       "path": "mint/learn-skill",
       "bundle": "mint",
       "installScope": "global",
-      "contentHash": "542f333a8a72024c",
-      "contentVersion": "2.0.0"
+      "contentHash": "5255c96c742fbab8",
+      "contentVersion": "2.0.1"
     },
     {
       "path": "research/extract-vision",
@@ -56,15 +56,15 @@
       "path": "research/learn-video",
       "bundle": "research",
       "installScope": "global",
-      "contentHash": "3409d9ccb39ed0c9",
-      "contentVersion": "1.8.0"
+      "contentHash": "f01282325e8af7b9",
+      "contentVersion": "1.8.2"
     },
     {
       "path": "research/survey-skillrepo",
       "bundle": "research",
       "installScope": "global",
-      "contentHash": "ea823301b039a8aa",
-      "contentVersion": "2.0.1"
+      "contentHash": "e9d46ca1e90ee289",
+      "contentVersion": "2.0.2"
     },
     {
       "path": "research/learn-paper",
@@ -105,29 +105,29 @@
       "path": "research/clip-url",
       "bundle": "research",
       "installScope": "project",
-      "contentHash": "9162d358b877b375",
-      "contentVersion": "0.9.0"
+      "contentHash": "c0edb5a08216af41",
+      "contentVersion": "0.9.2"
     },
     {
       "path": "feed/sync-xtimeline",
       "bundle": "feed",
       "installScope": "project",
-      "contentHash": "650227251dbb2617",
-      "contentVersion": "0.8.1"
+      "contentHash": "0964a94da21c8e3c",
+      "contentVersion": "0.8.3"
     },
     {
       "path": "feed/sync-ytchannel",
       "bundle": "feed",
       "installScope": "project",
-      "contentHash": "d7bf81645a586b8f",
-      "contentVersion": "0.7.1"
+      "contentHash": "04bcc5b8d2545249",
+      "contentVersion": "0.7.3"
     },
     {
       "path": "feed/sync-website",
       "bundle": "feed",
       "installScope": "project",
-      "contentHash": "76c35322ff063827",
-      "contentVersion": "0.1.0"
+      "contentHash": "6406f3fee5577ab7",
+      "contentVersion": "0.2.2"
     },
     {
       "path": "creative/capture-todo",
@@ -245,8 +245,8 @@
       "path": "mint/init-skill",
       "bundle": "mint",
       "installScope": "project",
-      "contentHash": "4053e6476d1c3f09",
-      "contentVersion": "1.2.0"
+      "contentHash": "ff8aeceb83b17a1e",
+      "contentVersion": "1.2.1"
     },
     {
       "path": "mint/publish-skill",
@@ -328,8 +328,8 @@
     {
       "path": "coding/handoff",
       "bundle": "coding",
-      "contentHash": "7e199e1a5f6072f0",
-      "contentVersion": "1.8.0"
+      "contentHash": "46ff373cb7104791",
+      "contentVersion": "1.11.0"
     },
     {
       "path": "feed/manage-creators",

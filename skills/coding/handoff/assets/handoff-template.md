@@ -4,7 +4,7 @@
 
 ## 固定骨架：frontmatter + 两个锚点
 
-frontmatter 的字段是给机器读的（`status` 驱动三个 phase，`source_node`/`target_node` 驱动画布关系，`branch` 与 `worktree` 由 author 建好工作区后填，接手方照它进去开工、accept 方照它回来验收），由 `scripts/validate-handoff.sh` 校验；「交接目的」和「最小验收锚点」是给人读的，任何情况下不能省。文档必须包含以下开头结构和「最小验收锚点」一节：
+frontmatter 的字段是给机器读的（`status` 驱动各 phase，`source_node`/`target_node` 驱动画布关系，`branch` 与 `worktree` 由 author 建好工作区后填，接手方照它进去开工、accept 方照它回来验收），由 `scripts/validate-handoff.sh` 校验；「交接目的」和「最小验收锚点」是给人读的，任何情况下不能省。文档必须包含以下开头结构和「最小验收锚点」一节：
 
 ```
 ---
@@ -22,11 +22,17 @@ target_node:              # 留空，接手方在 verify 建完 hands-off-to 后
 
 **交接目的**：<一句话，自由描述这次交接是为了什么，不受预设分类约束>
 
-> **接手方须知**：你正在接手一个任务。本文档是完整交接与唯一权威入口：从头读到尾，若文档里有「工作流约定」章节按其开工，没有就直接开工。**完成后把 frontmatter 的 `status` 置为「待验收」并停在这里**——`已验收` / `打回` 由原 session 按「最小验收锚点」判定后写，不要代填。你的自测结果写成独立小节，别写进原 session 的验收记录里。
+> **接手方须知**：你正在接手一个任务。本文档是完整交接与唯一权威入口：从头读到尾，若文档里有「工作流约定」章节按其开工，没有就直接开工。
+>
+> **完成后不是直接推状态，先自测**（skill 的 Phase 2.5）：逐条实跑「最小验收锚点」**全集**（不是只跑你改动相关的那几条），外加文档点名要复跑的既有资产；判成败的命令不接管道（`| tail` 的退出码是 `tail` 的，恒为 0）。把结果写成**独立小节**，标题里必须有「自测」二字（如「接手方自测记录（日期）」），逐条列 pass/fail 并附实际命令——写你自己这一节，别混进原 session 的验收记录。**有红就别推状态**：要么修到绿，要么在那一条旁边写出归因证据并显式声明「带着这条红送验」，不许沉默推上来。`validate-handoff.sh` 会拦：`status` 是「待验收」而正文没有含「自测」的小节直接 exit 1。
+>
+> 自测过了，才把 frontmatter 的 `status` 置为「待验收」并**停在这里**——`已验收` / `打回` 由原 session 按「最小验收锚点」判定后写，不要代填。
+>
+> **被打回之后同理，而且默认跑全集**：打回轮范围小、容易觉得「就改一行」，恰恰是二次打回最常见的来源。复修完重新走一遍自测才能再置回「待验收」；要只跑子集，必须在记录里附改动范围证据（`git diff --name-only <打回点提交>..HEAD`）和「其余条目不可能被波及」的论证。复修记录另起一节（如「接手方复修自测记录（第 N 轮）」，同样含「自测」二字），不覆盖前几轮。
 >
 > **开工前**：若 frontmatter 有 `source_node`、且你也在 Agent Canvas 画布节点里，先建一条 `hands-off-to` 关系（`agent-canvas-ctl whoami` 取自己的 id，核对 `node-relations` 里没有后 `link-nodes --from <source_node> --to <自己> --type hands-off-to`），建完把自己的 id 填进 `target_node`。**只建这一条**——别建 `implements`、别另立需求节点。
 >
-> **在哪开工**：frontmatter 有 `worktree` 时，`cd` 进去，核对当前分支与 `branch` 一致，就在那里干活。**不要自己 `git worktree add`**（那条分支已被这个工作区占用，再建会失败，而且原 session 验收时回的是它自己建的那个，看不到你的改动），**也不要 `git worktree remove`**（验收还要用）。路径不存在就打回原 session 重建，别自己挑地方。
+> **在哪开工**：frontmatter 有 `worktree` 时，进那个工作区干活，核对当前分支与 `branch` 一致。**怎么进按你所在平台来**（Claude Code 用 `EnterWorktree(path: <worktree>)` 的 `path` 模式；没有这类能力就每条命令自带限定 `git -C <worktree>`，读写文件用绝对路径，别靠裸 `cd`——它只在单条命令内有效）。判据只有一条：后续命令的工作目录确实是那个工作区。**不要自己 `git worktree add`**（那条分支已被这个工作区占用，再建会失败，而且原 session 验收时回的是它自己建的那个，看不到你的改动），**也绝不要销毁它**（`git worktree remove`，或平台的"退出并删除"）——验收还要用。路径不存在就打回原 session 重建，别自己挑地方。
 
 ---
 

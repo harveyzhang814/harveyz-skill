@@ -285,3 +285,68 @@ branch: $BRANCH"
   [[ "$output" == *WARN* ]]
   [[ "$output" == *worktree* ]]
 }
+
+# ── status=待验收 时必须有接手方自测小节 ───────────────────────────────────
+# 「待验收」的全部信息量是「接手方声称做完了」。接手方若没自测就推这个状态，accept 方
+# 要花一整轮才发现锚点根本是红的。这条把它变成开跑前一条命令就能查出来的事。
+# 只认**标题行**里的「自测」，不认正文里顺嘴提到的——散文提一句不构成一份记录。
+# 其余 status 一律不受这条约束（30/31/32 是对照臂：规则确实按 status 分叉，不是恒真）。
+
+@test "29 pending-accept status without self-test section -> exit 1" {
+  write_doc 'status: 待验收
+date: 2026-09-06
+author_model: opus-5
+acceptance: hard'
+  run bash "$VALIDATOR" "$DOC"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *自测* ]]
+}
+
+@test "30 pending-accept status with self-test section -> exit 0" {
+  write_doc 'status: 待验收
+date: 2026-09-06
+author_model: opus-5
+acceptance: hard' "$(printf '# 交接：示例\n\n**交接目的**：把实现交给下一个 session\n\n## 最小验收锚点\n- demo() 返回 1\n\n## 接手方自测记录（2026-09-06）\n- demo() 返回 1 → PASS\n')"
+  run bash "$VALIDATOR" "$DOC"
+  [ "$status" -eq 0 ]
+  [[ "$output" != *ERROR* ]]
+}
+
+@test "31 pending-accept with selftest word in prose only -> exit 1" {
+  write_doc 'status: 待验收
+date: 2026-09-06
+author_model: opus-5
+acceptance: hard' "$(printf '# 交接：示例\n\n**交接目的**：把实现交给下一个 session\n\n我已经自测过了，没问题。\n\n## 最小验收锚点\n- demo() 返回 1\n')"
+  run bash "$VALIDATOR" "$DOC"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *自测* ]]
+}
+
+@test "32 todo status without self-test section -> exit 0" {
+  write_doc "$VALID_FM"
+  run bash "$VALIDATOR" "$DOC"
+  [ "$status" -eq 0 ]
+  [[ "$output" != *自测* ]]
+}
+
+@test "33 other statuses without self-test section -> exit 0" {
+  for s in 执行中 已验收 打回; do
+    write_doc "status: $s
+date: 2026-09-06
+author_model: opus-5
+acceptance: hard"
+    run bash "$VALIDATOR" "$DOC"
+    [ "$status" -eq 0 ]
+    [[ "$output" != *自测* ]]
+  done
+}
+
+@test "34 pending-accept with rework self-test heading -> exit 0" {
+  write_doc 'status: 待验收
+date: 2026-09-06
+author_model: opus-5
+acceptance: hard' "$(printf '# 交接：示例\n\n**交接目的**：把实现交给下一个 session\n\n## 最小验收锚点\n- demo() 返回 1\n\n### 接手方复修自测记录（第 2 轮）\n- demo() 返回 1 → PASS\n')"
+  run bash "$VALIDATOR" "$DOC"
+  [ "$status" -eq 0 ]
+  [[ "$output" != *ERROR* ]]
+}
