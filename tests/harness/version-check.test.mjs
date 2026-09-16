@@ -19,6 +19,12 @@ test('compareVersions：段数不同时缺失段按 0 处理', () => {
   assert.ok(compareVersions('1.2.1', '1.2') > 0)
 })
 
+test('compareVersions：+local build metadata 不参与比较', () => {
+  assert.equal(compareVersions('0.33.0+local', '0.33.0'), 0)
+  assert.ok(compareVersions('0.33.0+local', '0.34.0') < 0)
+  assert.ok(compareVersions('0.33.0+local', '0.32.0') > 0)
+})
+
 test('checkNpmVersion：registry 返回更高版本时 upToDate 为 false，并带出 latest', async (t) => {
   t.mock.method(globalThis, 'fetch', async () => ({
     ok: true,

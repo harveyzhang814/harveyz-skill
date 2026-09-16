@@ -35,7 +35,8 @@
     "writing": "写作工具（forge-doc + draw-diagram + manage-dir + migrate-spec）",
     "design": "设计工具（scout-brand + build-style + sync-design）",
     "mint": "Skill 生命周期工具（init-skill + publish-skill + archive-skill + dedup-skill + contribute-skill + fix-skill + runby-opencode + scout-philosophy + learn-skill）",
-    "devops": "项目运维工具（clean-git + release-project + sync-hotfix + sync-agent）"
+    "devops": "项目运维工具（clean-git + release-project + sync-hotfix + sync-agent）",
+    "agent-canvas": "Agent Canvas 内置 skill（agent-canvas-control — 节点与画布操控；describe-node/relate-node/capture-requirement/relation-review/close-node — 画布节点生命周期治理）"
   },
   "skills": [
     {
@@ -344,6 +345,30 @@
       "installScope": "project",
       "contentHash": "27a9cb1a55b0036a",
       "contentVersion": "0.2.0"
+    },
+    {
+      "path": "agent-canvas/agent-canvas-control",
+      "bundle": "agent-canvas"
+    },
+    {
+      "path": "agent-canvas/describe-node",
+      "bundle": "agent-canvas"
+    },
+    {
+      "path": "agent-canvas/relate-node",
+      "bundle": "agent-canvas"
+    },
+    {
+      "path": "agent-canvas/capture-requirement",
+      "bundle": "agent-canvas"
+    },
+    {
+      "path": "agent-canvas/relation-review",
+      "bundle": "agent-canvas"
+    },
+    {
+      "path": "agent-canvas/close-node",
+      "bundle": "agent-canvas"
     }
   ],
   "hooks": [
