@@ -1,5 +1,5 @@
 ---
-status: 执行中
+status: 待验收
 date: 2026-09-15
 author_model: Claude Opus 5
 acceptance: hard
@@ -93,6 +93,23 @@ target_node: b31eb508-df5d-4ad3-953b-049404986d31
 1. `npm test` —— 覆盖 hskill CLI 行为 + 所有 skill 的 SKILL.md 格式校验。
 2. 新增测试按 spec §7 的七类覆盖，用 `HSKILL_GLOBAL_ROOT` 把全局安装目录指到临时目录、PATH 上放 `npm` shim 拦真实安装。**真实的 `npm install -g` 不进自动化测试**（会改动跑测试那台机器的全局环境）。
 3. spec §8 那份人工清单（六条）由你实跑一遍，结果写进本文档的自测小节。这部分拦不住自动化测试——spec §2 那四条 npm 行为事实全是实测得来的，只有真装一次才验得到。
+
+## 自测小节（接手方 Claude Sonnet 5，2026-09-15）
+
+**实施**：新建 `lib/install-source.js`（`globalRoot`/`readSource`/`writeSource`/`gitInfo`）；改 `lib/version-check.js` 的 `compareVersions` 剥离 `+` 后 build metadata；改 `bin/cli.js` 的 `update`（拆成 `updateToNpm`/`updateToLocal`，加 `--local <path>` / `--npm` 两个互斥旗标）与 `version`/`version --check`（local 来源展示与三分支比对）；补 `printHelp()`/`--help --json` 用法行。pack/install 用 `spawnSync` 传参数数组，不拼 shell 字符串。
+
+**`npm test`**：PASS。新增 `tests/install-source.bats`（12 例）+ `tests/harness/version-check.test.mjs` 追加的 `+local` 三组断言，全绿；`tests/version-check.bats` 原有用例不受影响。唯一失败项是 `skills/research/clip-url` 的 pytest（Playwright headless-shell 可执行文件在本机缺失，`playwright install` 未跑），与本次改动无关——已用 `git diff --stat da797e8 HEAD` 核对该目录本分支未触碰,且失败信息是 `BrowserType.launch_persistent_context: Executable doesn't exist`，纯环境问题。
+
+**spec §8 人工清单（六条，真实对本机全局 npm 环境操作，事后已恢复原状）**：
+
+1. `hskill update --local <本工作区路径>` → `hskill version` 输出 `0.33.0+local` / `source: local <路径>` / `branch: feature/hskill-install-source  commit: 6769610 (dirty)`。**PASS**（dirty 是因为当时工作区确有未提交改动，符合预期）。
+2. 安装目录内容与 `package.json` 的 `files[]` 白名单逐项 diff：完全一致，`skills/mint`、`skills/coding` 等类别里未进白名单的 skill 均未出现在安装目录。**PASS**。
+3. 不带旗标再跑一次 `hskill update` → 仍走 local（重新 pack + install），版本/来源不变，未跳去 npm。**PASS**。
+4. 手工 `npm i -g harveyz-skill@latest` 绕过 hskill → `hskill version` 输出裸 `0.33.0`，`.hskill-source.json` 自动消失（npm 清空重建安装目录带走的，不是代码主动删的）。**PASS**——这是 §0 主线论点的直接证据。
+5. 显式 `hskill update --local <路径>` 再 `hskill update --npm`：两次都打印了完整迁移行（`0.33.0 (npm) → 0.33.0+local (...)` 和反向），且 `--npm` 后裸版本、痕迹文件消失。**PASS**。
+6. 全程结束后工作区 `git status`：只有 `.npmignore` 被 `prepack` 改动过（已 `git checkout -- .npmignore` 还原成 tracked 版本），没有其他非预期改动。**PASS**。
+
+验证结束后已把本机全局 `harveyz-skill` 恢复到验证前的基线（`npm i -g harveyz-skill@0.32.0`，来源 npm，无痕迹文件）。
 
 ## 最小验收锚点
 
