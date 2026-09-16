@@ -96,7 +96,10 @@ def check_index(work_dir: Path, index_path: Path) -> tuple[bool, str]:
     disk_count = len(list(work_dir.glob("*/meta.json")))
     if not index_path.is_file():
         return False, f"STALE: 索引缺失（{index_path}），磁盘 {disk_count} 条"
-    index = json.loads(index_path.read_text(encoding="utf-8"))
+    try:
+        index = json.loads(index_path.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError):
+        return False, f"STALE: 索引文件损坏（{index_path}），磁盘 {disk_count} 条"
     indexed_count = index.get("scanned", {}).get("entities", 0)
     if indexed_count != disk_count:
         return False, f"STALE: 索引 {indexed_count} 条 / 磁盘 {disk_count} 条"

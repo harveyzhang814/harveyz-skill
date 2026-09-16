@@ -157,6 +157,19 @@ def test_check_reports_stale_when_disk_has_more_entities(isolated_store_config):
     assert "STALE" in message
 
 
+def test_check_reports_stale_when_index_corrupt(isolated_store_config):
+    root = isolated_store_config
+    work_dir = root / "videos" / "work"
+    output_path = root / "videos" / "creators.json"
+    _meta(root, "t1", title="V1", uploader="A", uploader_id="@a")
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_text("not valid json {{{", encoding="utf-8")
+
+    ok, message = check_index(work_dir, output_path)
+    assert ok is False
+    assert "STALE" in message
+
+
 def test_check_reports_stale_when_index_missing(isolated_store_config):
     root = isolated_store_config
     work_dir = root / "videos" / "work"
