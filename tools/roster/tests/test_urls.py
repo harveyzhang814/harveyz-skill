@@ -50,3 +50,18 @@ def test_slugify(text, expected):
 
 def test_channel_key():
     assert urls.channel_key("x", "karpathy") == "x:karpathy"
+
+
+@pytest.mark.parametrize("handle,expected", [
+    ("TingHu888", "tinghu888"),
+    ("@TingHu888", "tinghu888"),
+    ("  @Foo  ", "foo"),
+    ("already-lower", "already-lower"),
+])
+def test_normalize(handle, expected):
+    assert urls.normalize(handle) == expected
+
+
+def test_channel_key_normalizes_handle():
+    assert urls.channel_key("x", "TingHu888") == "x:tinghu888"
+    assert urls.channel_key("x", "@TingHu888") == "x:tinghu888"

@@ -65,5 +65,9 @@ def slugify(text: str) -> str:
     return slug
 
 
+def normalize(handle: str) -> str:
+    return handle.strip().lstrip("@").lower()
+
+
 def channel_key(platform: str, handle: str) -> str:
-    return f"{platform}:{handle}"
+    return f"{platform}:{normalize(handle)}"
