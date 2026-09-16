@@ -283,6 +283,12 @@ node scripts/backfill_meta_json.js         # 从 DB 重新生成全部 meta.json
 1. 新跑一个 YouTube 视频，`meta.json` 含 `uploader_id` / `channel_id` / `uploader_url` 与三个契约字段，且 `archive.py` 校验通过。
 2. 播放列表 URL 不再产生多行 `uploader`。
 3. 回填后，67 个历史 YouTube 任务中可访问的那些都有 `uploader_id`；不可访问的出现在索引 `unresolved` 里，**没有任何一个任务从索引中消失**。
+
+   **已实测（2026-09-16，Video-Learner `feature/creator-index-fields` 分支，已合并 staging）**：真实回填针对 68 个真实任务（非 175 个 `example.com` 测试夹具）运行。65 个有 `uploader_id`，3 个没有——1 个真实抓取失败（视频不可访问）、2 个非 YouTube 来源（Weibo、Bilibili，按设计本就该落 `unresolved`）。没有任何任务消失。
+
+   **实测过程中发现并处理的两个问题**（详见 Video-Learner 仓库该分支的 SDD 复审记录）：
+   - **`vdl rerun` CLI 有个跟本次改动无关的既有 bug**：`cli/commands/rerun.js` 轮询 `task.status === 'done'`，但 orchestrator 从未写过这个值（只写 `running`/`failed`/`completed`/`aborted`），导致 `vdl rerun` 对任何调用者都无法正常结束。已修复（改判 `'completed'`，同时补上此前也漏掉的 `'aborted'` 分支），并补了回归测试。
+   - **回填过程暴露了 `scripts/db.sh` 里 `create_task` 的一个破坏性写法**：用的是 `INSERT OR REPLACE`（先删后插），导致 `fetch_info.sh` 对已存在的任务重跑时，会把 `ts`/`created_at`/`mode`/`opencode_session_id` 等不在 `(id, url, ts)` 里的字段静默重置为 schema 默认值。这个 bug 之所以之前没暴露，正是因为上面那个 CLI hang 让 `vdl rerun` 从未真正跑完过。回填的 66 个真实任务因此受影响，**已从回填前的 meta.json 备份 + `index.jsonl` 完整恢复** `ts`/`created_at`/`mode`；`opencode_session_id`（22 个任务）无法恢复——它从未被序列化到 meta.json 或 index.jsonl，只存在于被覆盖的数据库列里，影响仅限于这些任务今后无法复用旧的摘要生成会话，不影响已生成的文章/摘要内容。已修复根因（改成 `INSERT OR IGNORE`）并补了回归测试。
 4. `creators.json` 里视频总数 + `unresolved` 中的 task_id 总数 == 磁盘上 `meta.json` 个数。
 5. 在 `manage-creators` 里 `add` 一个此前只在候选集出现的人，**不重跑 `build`**，scholia 上他的 `watched` 立刻变真。（这是 §3.3 路 2 的核心验收点。）
 6. `merge` 两个 handle 后，被合并方的视频仍能通过主 id 查到（`aliases` 解析生效）。
