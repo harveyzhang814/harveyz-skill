@@ -130,9 +130,11 @@ roster state fail  <platform>:<handle> ...
 | `registry.json` 现有渠道 | 8 |
 | 归一后 `key ≠ handle` 的 | 2（`x:TingHu888`、`youtube:PlatoStone`；后者在 `state.json` 里没有游标条目） |
 
-**迁移做的是重命名，不是丢弃**，所以那 1 条的游标值原样保留 → **漏报为零**。
+**迁移做的是重命名，不是丢弃**，所以那些游标值原样保留 → **漏报为零**。
 
-**顺带发现（本文范围外）**：`state.json` 里有一条 `x:fanli1688`，`registry.json` 里没有对应渠道——孤儿游标，渠道删了游标没删。不在本次范围，但 `remove_channel` 可能有漏。记在 §7 未验证项里。
+**更正（2026-09-16 实跑真实数据后）**：上表"归一后键会变的"一栏原写 1 条，实测是 **2 条**——`youtube:PlatoStone` 在 `state.json` 里其实**有**游标条目（22 条 `seen_urls`），跟本节原表述"后者在 state.json 里没有游标条目"不符。真实迁移跑出来是 `channels_updated=8`（8 条渠道全部回填 `key`，因为这是从 schema v1 首次升级）、`cursors_renamed=2`（`x:TingHu888`→`x:tinghu888`、`youtube:PlatoStone`→`youtube:platostone`）。迁移逻辑本身不受影响——它对所有需要归一的键一视同仁，不是只处理"预计的那 1 条"——只是这张表当初的实测数字要更正。两条游标的值都逐字节保留，验证见 `docs/commute/2026-09-16-roster-normalized-key-handoff.md` 的自测记录。
+
+**顺带发现（本文范围外）**：`state.json` 里有一条 `x:fanli1688`，`registry.json` 里没有对应渠道——孤儿游标，渠道删了游标没删。不在本次范围，但 `remove_channel` 可能有漏。结论见 §7。
 
 ### 3.3 迁移
 
@@ -204,7 +206,7 @@ roster state fail  <platform>:<handle> ...
 
 | 项 | 所在 | 风险 |
 |---|---|---|
-| `state.json` 里的孤儿游标 `x:fanli1688` 是怎么来的——`remove_channel` 是否有漏 | §3.2 | 若 `remove` 确实不删游标，迁移会把孤儿一并带进新 schema；低，但该弄清 |
+| `state.json` 里的孤儿游标 `x:fanli1688` 是怎么来的——`remove_channel` 是否有漏 | §3.2 | **结论（2026-09-16）**：`registry.py` 的 `remove_channel` 本身只改 `registry.json`，从不碰 `state.json`——真正调用 `state.drop_channel` 的是 `__main__.py` 的 `_cmd_registry_remove`（CLI 层，删渠道和删游标在同一个命令里一起做）。这条孤儿游标若真是被 `remove` 产生的，说明当时走的不是这条 CLI 路径（比如手工编辑过 `registry.json`，或用的是本次改动之前更早版本的代码）。本次不修，迁移会把它原样带进新 schema——已验证：迁移后 `x:fanli1688` 仍在 `state.json` 里，未被处理。 |
 | ~~`sync-*` 是否直接读 `state.json`~~ **已实测（2026-09-16）**：全部经 roster CLI，无一例外。但它们传的是原始 handle —— 由此推出 §3.0 | §3.0 | 已消解，且转化成了一条硬要求 |
 | `website` 平台 handle 的大小写敏感性 | §5.3 | 当前恒等变换，无实际风险 |
-| `roster` 的 `profile` 层是否按 handle 索引 | §3 | 画像按 creator `id` 索引（`id` 不变），预期无影响，但没查 |
+| `roster` 的 `profile` 层是否按 handle 索引 | §3 | **结论（2026-09-16）**：`tools/roster/roster/profiles.py` 全部函数（`profile_path`/`read`/`_write`/`append_observation`/`set_summary`/`archive`/`merge`）都按 `creator_id` 索引，完全不读 `handle` 或 `key`。本次改动对画像层零影响，已确认不是"预期无影响"，而是代码里查得到、确认无影响。 |

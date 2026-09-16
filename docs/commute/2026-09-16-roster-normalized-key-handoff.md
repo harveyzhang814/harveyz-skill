@@ -1,5 +1,5 @@
 ---
-status: 执行中
+status: 待验收
 date: 2026-09-16
 author_model: claude-opus-5
 acceptance: hard
@@ -50,6 +50,28 @@ target_node: d7543930-6dc7-4ca1-a897-b5364a40199c
 **第 9 条是最容易被漏掉的**：它守的是"三个 sync skill 零代码改动"这个承诺（见 spec §3.0）。漏了它，`sync-*` 会在迁移后集体查不到游标、全部刷新基线、漏报一批物料——而且不报错。
 
 **第 3、5 条必须真跑**，不能靠推演：它们守的是"迁移不丢游标"。
+
+---
+
+## 接手方自测记录（2026-09-16，harveyz-skill 侧，subagent-driven-development 执行）
+
+九条验收标准逐条结果（跑在真实 `~/.hskill/roster` 数据上，跑之前已备份到 `/tmp/registry.json.bak-2026-09-16` / `/tmp/state.json.bak-2026-09-16`）：
+
+1. **PASS** — `roster registry add https://x.com/tinghu888`（已存在 `x:TingHu888`）报 `x:tinghu888 已在名册中`，exit 1，名册未新增创作者。
+2. **PASS** — 迁移后 `registry.json` 全部 8 条渠道都有 `key == normalize(handle)`；`schema_version == 2`。
+3. **PASS** — `state.json` 里 `x:TingHu888` → `x:tinghu888`，cursor 值逐字节相同；**顺带验证 `youtube:PlatoStone` → `youtube:platostone` 同样成立**（实测是 2 条键变，不是 spec §3.2 原表述的 1 条，已在 spec 里更正，迁移逻辑本身不受影响）。
+4. **PASS** — 连跑两次 `migrate-schema`，第二次 `channels_updated=0 cursors_renamed=0`，`diff` 确认两个文件逐字节相同。
+5. **PASS** — 真实跑了一次 `/sync-ytchannel run`：`baselines: {}`（零重刷）、`platostone` 的 22 条 `seen_urls` 原样保留、`claude` 频道正常抓到 2 条新视频（33→35）。**注意**：这一步发现装机版 `~/.hskill/tools/roster`（`~/.local/bin/roster` 指向的实际执行体）当时还停留在 8 月 28 日的旧代码，不含本次修复；若不升级直接跑，会因为真实数据已迁移、旧代码仍按原始大小写精确匹配 `state.json`，导致 `PlatoStone`、`TingHu888` 两个渠道被误判为新渠道重刷基线。已按用户确认，把这条分支的 `tools/roster/roster/*.py` 直接覆盖部署到 `~/.hskill/tools/roster/roster/`，验证通过后再运行本条。**这个装机路径的差异应该被记进最终验收 checklist**：确认 `~/.hskill/tools/roster` 与本分支代码一致，是 criterion 5 有效性的前提。
+6. **未验**——依赖 scholia 分支（`feature/registry-key-join`）。scholia 侧已完成实现（用户 2026-09-16 报告），但两边联调验收尚未做。
+7. **PASS** — `roster registry channels --platform youtube` 输出每条渠道都带 `key`。
+8. **PASS**（单测覆盖，见 `tools/roster/tests/test_registry_merge.py::test_key_stays_normalized_after_rename_and_merge`）——`merge`/`rename` 不改 `handle`，`key` 全程等于 `normalize(handle)`。
+9. **PASS** — 真实数据上 `roster state get youtube:PlatoStone` 与 `roster state get youtube:platostone` 返回同一条游标（22 条 `seen_urls`，逐字节相同）。
+
+§7 未验证项结论：孤儿游标 `x:fanli1688` 的成因、`profile` 层索引方式的结论，已写入 spec 文档 §7（详见 `docs/superpowers/specs/2026-09-16-roster-normalized-channel-key-design.md`）。
+
+**harveyz-skill 侧的实现（Task 1-7）**：163/163 单测通过（140 基线 + 23 新增），全部通过 subagent-driven-development 的逐任务 review（一处 plan 遗漏——`test_config.py` 有个硬编码 `SCHEMA_VERSION==1` 的测试，已判定为 ruling 接受，不算实现缺陷）。仓库级 `npm test` 唯一失败源是 `skills/research/clip-url` 本机缺 Playwright 浏览器（与本次改动无关，基线已知是红的）。
+
+**待办**：criterion 6 等 scholia 那边联调（两边都已完成实现，需要一次联合验证：迁移前后 `watched` 结果不变）。
 
 ---
 
