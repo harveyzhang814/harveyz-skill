@@ -55,6 +55,16 @@ def _cmd_migrate(args) -> int:
     return 0
 
 
+def _cmd_migrate_schema(args) -> int:
+    from . import migrate_schema
+
+    data_dir = config.get_data_dir()
+    result = migrate_schema.migrate_schema(data_dir)
+    print(f"OK channels_updated={result['channels_updated']} "
+          f"cursors_renamed={result['cursors_renamed']}")
+    return 0
+
+
 def _cmd_data_dir(args) -> int:
     print(config.get_data_dir())
     return 0
@@ -232,6 +242,10 @@ def _build_parser() -> argparse.ArgumentParser:
     p_mig.add_argument("--from-xtimeline", dest="from_xtimeline", default=None)
     p_mig.add_argument("--from-ytchannel", dest="from_ytchannel", default=None)
     p_mig.set_defaults(func=_cmd_migrate)
+
+    p_ms = groups.add_parser(
+        "migrate-schema", help="registry/state 升级到 schema v2（回填 key、游标键归一，幂等）")
+    p_ms.set_defaults(func=_cmd_migrate_schema)
 
     groups.add_parser("data-dir", help="打印数据目录").set_defaults(func=_cmd_data_dir)
 

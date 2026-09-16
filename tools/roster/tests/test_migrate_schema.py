@@ -1,3 +1,5 @@
+import json
+
 from roster import SCHEMA_VERSION, migrate_schema, registry, state
 
 TODAY = "2026-08-26"
@@ -97,3 +99,28 @@ def test_migrate_schema_leaves_already_normalized_channel_untouched(data_dir):
     registry.save(data_dir, reg)
     result = migrate_schema.migrate_schema(data_dir)
     assert result["channels_updated"] == 0
+
+
+def test_cli_migrate_schema(data_dir, capsys):
+    from roster.__main__ import main
+
+    reg = {
+        "schema_version": 1,
+        "creators": [{
+            "id": "k", "display_name": "K", "aliases": [], "placeholder": True,
+            "added_at": TODAY,
+            "channels": [{"platform": "x", "handle": "TingHu888",
+                          "url": "https://x.com/TingHu888"}],
+        }],
+    }
+    st = {"schema_version": 1, "channels": {
+        "x:TingHu888": {"cursor": {"type": "last_seen_id", "value": "1"},
+                         "last_run": RUN, "last_error": None},
+    }}
+    registry.save(data_dir, reg)
+    state.save(data_dir, st)
+
+    code = main(["migrate-schema"])
+    out = capsys.readouterr().out.strip()
+    assert code == 0
+    assert out == "OK channels_updated=1 cursors_renamed=1"
