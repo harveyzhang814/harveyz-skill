@@ -8,4 +8,4 @@
 渠道数据可重建，画像不可重建。这条线决定了它们为什么分三份存。
 """
 
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2

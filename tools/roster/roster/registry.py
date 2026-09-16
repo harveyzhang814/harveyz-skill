@@ -10,7 +10,7 @@ import json
 from pathlib import Path
 
 from . import SCHEMA_VERSION
-from .urls import parse_channel_url, slugify
+from .urls import normalize, parse_channel_url, slugify
 
 
 def _path(data_dir: Path) -> Path:
@@ -38,9 +38,10 @@ def find_creator(reg: dict, creator_id: str) -> dict | None:
 
 
 def find_channel(reg: dict, platform: str, handle: str) -> tuple[dict, dict] | None:
+    key = normalize(handle)
     for c in reg["creators"]:
         for ch in c["channels"]:
-            if ch["platform"] == platform and ch["handle"] == handle:
+            if ch["platform"] == platform and ch.get("key", normalize(ch["handle"])) == key:
                 return c, ch
     return None
 
@@ -68,7 +69,10 @@ def add_channel(reg: dict, url: str, today: str) -> tuple[str, bool]:
         "aliases": [],
         "placeholder": True,
         "added_at": today,
-        "channels": [{"platform": platform, "handle": handle, "url": url}],
+        "channels": [{
+            "platform": platform, "handle": handle,
+            "key": normalize(handle), "url": url,
+        }],
     })
     return creator_id, True
 

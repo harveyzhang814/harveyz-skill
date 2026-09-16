@@ -1,6 +1,7 @@
 import pytest
 
 from roster import registry
+from roster.urls import normalize
 
 TODAY = "2026-08-26"
 
@@ -83,3 +84,13 @@ def test_merge_missing_raises(data_dir):
     reg = _two_creators(data_dir)
     with pytest.raises(ValueError):
         registry.merge_creators(reg, "karpathy", "nobody")
+
+
+def test_key_stays_normalized_after_rename_and_merge(data_dir):
+    """criterion 8：merge/rename 不碰 handle，key 应该照旧等于 normalize(handle)。"""
+    reg = _two_creators(data_dir)
+    registry.rename_creator(reg, "karpathy", "Andrej Karpathy")
+    registry.merge_creators(reg, "karpathy", "andrejkarpathy")
+    merged = registry.find_creator(reg, "karpathy")
+    for ch in merged["channels"]:
+        assert ch["key"] == normalize(ch["handle"])

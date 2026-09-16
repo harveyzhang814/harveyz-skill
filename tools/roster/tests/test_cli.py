@@ -66,7 +66,7 @@ def test_registry_channels_outputs_json(data_dir, capsys):
     assert code == 0
     assert json.loads(out) == [{
         "creator_id": "karpathy", "platform": "x",
-        "handle": "karpathy", "url": "https://x.com/karpathy",
+        "handle": "karpathy", "key": "karpathy", "url": "https://x.com/karpathy",
     }]
 
 
