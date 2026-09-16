@@ -1,12 +1,12 @@
 ---
-status: 待执行
+status: 执行中
 date: 2026-09-15
 author_model: Claude Opus 5
 acceptance: hard
 branch: feature/hskill-install-source
 worktree: /Users/harveyzhang96/Projects/harveyz-skill/.claude/worktrees/feature+hskill-install-source
 source_node: 094dd366-9af1-490c-b001-23e8458cc1b0
-target_node:
+target_node: b31eb508-df5d-4ad3-953b-049404986d31
 ---
 
 # 交接：实施 hskill 双来源安装与粘性更新
