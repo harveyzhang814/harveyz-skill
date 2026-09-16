@@ -92,6 +92,18 @@ ALL MATCH - criterion 6 PASS
 
 **两个分支现在都到了"全部验收标准通过、等最终合并"这一步**：`harveyz-skill` 的 `feature/roster-normalized-key`（本分支）与 `scholia` 的 `feature/registry-key-join`。**都不要现在合并**——按交回协议第 1 条，合并只由各自的交出方在验收通过后做；两边互相独立，不必同时合并，但 criterion 6 是唯一跨仓库的依赖，现在已经清掉，两边可以各自按自己的验收流程推进。
 
+### 最终全分支 review 与修复（2026-09-16）
+
+Task 1-8 逐任务 review 全部通过之后，跑了一次最终全分支 review（opus，对比 `staging` 合并基点 `7fbd706` 到 `63b10b3`），发现并修完三处真实问题（`908f0e7`，167/167 通过）：
+
+- **Critical**：`registry list` 用原始 `handle` 拼游标查找键，而不是走 `channel_key()` 归一——迁移之后，任何 `key ≠ handle` 的渠道（`TingHu888`、`PlatoStone`）在 `list` 里永远显示 `cursor=(none)`，且悄悄吞掉 `last_error`。已修（`__main__.py` 的 `_cmd_registry_list` 改用 `channel_key()` 做查找，展示仍用原始大小写）。
+- **Important**：`migrate_schema()` 遇到两条原始键归一后相撞时会静默覆盖游标（reviewer 复现了真实的游标丢失）。已修：迁移前先检测相撞，撞了就整体报错、两个文件都不落盘。
+- **Important**：没有任何地方检查 `schema_version`，未迁移的数据会被静默错误处理而不是报错。已修：`main()` 里加了检查，`init`/`data-dir`/`migrate`/`migrate-schema` 四个命令豁免（它们本来就要处理未迁移或不存在的数据），其余命令遇到 v1 数据会提示先跑 `migrate-schema`。
+
+**这个 Critical bug 在本次交接期间是真实上线过的**：Task 8 已经把这条分支的代码部署到 `~/.hskill/tools/roster`（装机版），所以 bug 修复后又重新部署了一次，`roster registry list` 现在正确显示 `x:TingHu888`、`youtube:PlatoStone` 的游标。验收时如果要复查装机版，直接跑 `~/.local/bin/roster registry list` 看这两条渠道是否显示真实游标而不是 `(none)`。
+
+另有两处 Minor 一并修了：`manage-creators/SKILL.md` 里 `migrate-schema` 说明段落错位到了解释 `migrate` 参数的句子前面（已挪到后面）；Task 8 部署时 `cp -r` 误操作在装机版留下的嵌套重复目录 `~/.hskill/tools/roster/roster/roster/`（已清理）。三处 Minor 判定为可接受，未处理：迁移的两次文件写入不是原子的（已有备份步骤兜底，对单用户 CLI 可接受）、`state.json` 键格式异常时的处理（只有手工改坏数据才会触发）、两处测试文件里的未使用 import（plan 自带的，无害）。
+
 ---
 
 ## 背景与现状
