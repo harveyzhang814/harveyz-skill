@@ -6,6 +6,8 @@ import json
 import sys
 from pathlib import Path
 
+import pytest
+
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
 
 from build_creator_index import build_index, check_index, write_index  # noqa: E402
@@ -72,6 +74,19 @@ def test_every_scanned_entity_is_accounted_for(isolated_store_config):
     assert video_count + unresolved_count == index["scanned"]["entities"] == 3
 
 
+def test_build_index_raises_when_work_dir_missing(isolated_store_config):
+    """If vdl's WORK_ROOT drifted away from <knowledgeRoot>/videos, work_dir
+    won't exist. Path.glob on a missing dir silently returns [], which would
+    otherwise let build_index return an empty-but-successful result that
+    clobbers a good creators.json (see SKILL.md's WORK_ROOT drift warning)."""
+    root = isolated_store_config
+    missing_work_dir = root / "videos" / "work"
+    assert not missing_work_dir.exists()
+
+    with pytest.raises(SystemExit):
+        build_index(missing_work_dir)
+
+
 def test_write_index_is_atomic_on_failure(isolated_store_config, monkeypatch):
     """Acceptance criterion #7: a failed/killed build must not corrupt or
     remove the previous creators.json."""
@@ -79,13 +94,15 @@ def test_write_index_is_atomic_on_failure(isolated_store_config, monkeypatch):
     output_path = root / "videos" / "creators.json"
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_text('{"schema_version": 1, "old": true}', encoding="utf-8")
+    work_dir = root / "videos" / "work"
+    work_dir.mkdir(parents=True, exist_ok=True)
 
     def _boom(self, target):
         raise OSError("simulated crash mid-write")
 
     monkeypatch.setattr(Path, "rename", _boom)
 
-    index = build_index(root / "videos" / "work")
+    index = build_index(work_dir)
     try:
         write_index(index, output_path)
     except OSError:

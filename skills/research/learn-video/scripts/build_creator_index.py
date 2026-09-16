@@ -22,6 +22,9 @@ def _normalize_handle(uploader_id: str) -> str:
 
 
 def build_index(work_dir: Path) -> dict:
+    if not work_dir.is_dir():
+        raise SystemExit(f"work 目录不存在：{work_dir}（vdl WORK_ROOT 漂了？）")
+
     creators: dict[str, dict] = {}
     unresolved: dict[str, dict] = {}
     scanned = 0
