@@ -1,5 +1,5 @@
 ---
-status: 待验收
+status: 已验收
 date: 2026-09-15
 author_model: Claude Opus 5
 acceptance: hard
@@ -120,3 +120,52 @@ target_node: b31eb508-df5d-4ad3-953b-049404986d31
 3. `compareVersions('0.33.0+local', '0.33.0') === 0` 且 `compareVersions('0.33.0+local', '0.34.0') < 0`。
 4. `grep -rn "hskill-source" lib/ bin/` 的所有结果，路径基准都是 `globalRoot()`，**没有任何一处**用 `path.join(__dirname, '..')` 或指向 `~/.hskill/` —— 这条是关键决定 3 的可证伪形式。
 5. 本文档里有你留下的 spec §8 人工清单六条实跑记录，每条写明实际观察到什么（不是"已完成"三个字）。
+
+## 验收记录（原 session Claude Opus 5，2026-09-15）
+
+在交接工作区 `feature/hskill-install-source`（HEAD `547d827`，工作树干净）逐条实跑，**未采信接手方自填结论**。
+
+| # | 锚点 | 结果 |
+|---|---|---|
+| 1 | `npm test` 全绿 | **PASS（带限定，见下）** |
+| 2 | `tests/install-source.bats` 覆盖七类断言 | **PASS** — 12 例全绿实跑，七类逐条对上 |
+| 3 | `compareVersions` build metadata | **PASS** — 两条断言实跑通过，另加三条回归断言（`>0` 方向、纯版本相等、`0.9.0 < 0.10.0`）均通过 |
+| 4 | 痕迹路径基准只能是 `globalRoot()` | **PASS** — `grep -rn "hskill-source" lib/ bin/` 仅两处命中，唯一路径构造在 `lib/install-source.js:14`，基准是 `globalRoot()`；该文件无 `__dirname`、无 `homedir`、无 `~/.hskill` |
+| 5 | 文档内有六条人工清单实跑记录 | **PASS** — 六条均写明实际观察。另核对本机全局环境为 npm 0.32.0 且无痕迹文件，与自测小节结尾的复原声明一致 |
+
+### 对锚点 1 的限定与对自测小节的更正
+
+**`npm test` 在本机并非全绿**，自测小节「`npm test`：PASS」一句与实跑不符，此处显式更正而非静默改写。实跑结果是 `custom skill tests: 11 passed, 2 failed`。
+
+自测小节另称「唯一失败项是 `skills/research/clip-url` 的 pytest」，这一句也不完整——我的实跑里 `tools/browser-fetch` 同样失败。
+
+两个失败逐一定性，结论是**都与本次改动无关**：
+
+- `skills/research/clip-url`：在基线 `staging`（`8f63508`）的独立 detached worktree 上实跑同样失败（基线 8 failed / 分支 7 failed，基线还多一条 `test_chrome_profile_config.py::test_get_reports_not_configured_initially`）。既有失败，非本次引入。
+- `tools/browser-fetch`：失败的是 `test_download_images_real_network`（真实下载 python.org 图片）。基线上通过（14 passed），**分支上复跑也通过（14 passed）**，判定为网络抖动。
+
+与本次改动直接相关的三处全部实跑为绿：`tests/install-source.bats` 12/12、`tests/version-check.bats` 1/1、`node --test tests/mcp.test.mjs tests/harness/*.test.mjs` 329 tests / 322 pass / **0 fail**。
+
+据此判定锚点 1 的立意——「本次改动不破坏测试套件」——已达成。
+
+### 遗留缺陷（不属任何锚点，合并前需决定）
+
+`hskill version` / `hskill --version` 现在在 **npm 不在 PATH 上时直接崩溃**，抛原始堆栈、退出码 1：
+
+```
+$ env PATH=/usr/bin:/bin node bin/cli.js --version
+/bin/sh: npm: command not found
+Error: Command failed: npm root -g
+    at globalRoot (lib/install-source.js:9:45)
+    at sourceFilePath (lib/install-source.js:14:20)
+    at readSource (lib/install-source.js:18:16)
+    at bin/cli.js:167
+```
+
+成因：`bin/cli.js:166` 对**每一次** `version` 调用都跑 `readSource()`，它必然经 `globalRoot()` 打一次 `execSync('npm root -g')`；`readSource()` 只 try/catch 了 JSON 解析，没有兜住 `globalRoot()` 的失败。改动前 `--version` 只读 `package.json`，不碰 npm，任何环境都不会失败。
+
+附带一项可测量的退化：`--version` 由约 60ms 变为约 150ms（`npm root -g` 本身约 80ms），每次调用都付。
+
+**不构成任何锚点的失败**——锚点 2 只要求「`version` 在 npm 来源下输出不变」，正常环境下输出确实逐字节未变，测试也因此照绿。这是锚点覆盖不到的地方，由验收方的独立核查发现。
+
+修法很小：`globalRoot()` 失败时 `readSource()` 返回 `null`（回落到"npm 来源"这一缺省语义，与 spec §3 一致），并对 `globalRoot()` 的结果做进程内缓存以摊薄开销。**是否在合并前修，由原 session 与用户决定。**
