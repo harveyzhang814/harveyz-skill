@@ -302,3 +302,26 @@ process.stdout.write(JSON.stringify(r))
   echo "$output" | node -e "JSON.parse(require('fs').readFileSync('/dev/stdin','utf8'))"
   [[ "$output" == *'"removed": false'* ]]
 }
+
+# ── stdout flushing ───────────────────────────────────────────────────────────
+# Writing to a pipe is asynchronous in Node, and process.exit() discards whatever
+# is still buffered. Payloads past the 64KiB pipe buffer were silently truncated
+# mid-string: exit code 0, output that looks like JSON but does not parse.
+
+@test "status --json: piped output is byte-identical to a direct redirect" {
+  local direct piped
+  HOME="${MOCK_HOME}" node "${CLI}" status --json 2>/dev/null > "${TEST_DIR}/direct.json"
+  HOME="${MOCK_HOME}" node "${CLI}" status --json 2>/dev/null | cat > "${TEST_DIR}/piped.json"
+
+  direct=$(wc -c < "${TEST_DIR}/direct.json" | tr -d ' ')
+  piped=$(wc -c < "${TEST_DIR}/piped.json" | tr -d ' ')
+
+  # A payload under the pipe buffer cannot exercise the bug — say so rather than
+  # passing vacuously.
+  if [ "$direct" -le 65536 ]; then
+    skip "status --json payload is ${direct} bytes, below the 64KiB pipe buffer"
+  fi
+
+  [ "$direct" -eq "$piped" ]
+  node -e "JSON.parse(require('fs').readFileSync('${TEST_DIR}/piped.json','utf8'))"
+}

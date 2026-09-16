@@ -24,6 +24,16 @@ const args = process.argv.slice(2)
 const subcommand = args[0]
 const jsonFlag = args.includes('--json')
 
+// Writing to a pipe is asynchronous in Node, and process.exit() throws away
+// whatever is still buffered. Anything past the 64KiB pipe buffer was being cut
+// mid-string, so `hskill status --json | jq` got exit code 0 and unparseable
+// JSON. Every --json emitter goes through here, which resolves only once the
+// write has actually landed.
+async function emitJson(value) {
+  const text = JSON.stringify(value, null, 2) + '\n'
+  await new Promise(resolve => process.stdout.write(text, resolve))
+}
+
 // ── Help ─────────────────────────────────────────────────────────────────────
 function printHelp() {
   console.log(`
@@ -76,7 +86,7 @@ function printHelp() {
 
 if (args[0] === '--help' || args[0] === '-h') {
   if (jsonFlag || args.includes('--json')) {
-    console.log(JSON.stringify({
+    await emitJson({
       name: 'hskill',
       version,
       description: 'Skill manager for Claude Code, Cursor, Codex, OpenClaw, Hermes, OpenCode, and Pi',
@@ -155,7 +165,7 @@ if (args[0] === '--help' || args[0] === '-h') {
           description: 'Print version and exit',
         },
       ],
-    }, null, 2))
+    })
     process.exit(0)
   }
   printHelp()
@@ -177,7 +187,7 @@ if (args[0] === '--version' || args[0] === '-v' || subcommand === 'version') {
       }
       const upToDate = current.commit === source.commit && !current.dirty
       if (jsonFlag) {
-        console.log(JSON.stringify({ source: 'local', repo: source.repo, installedCommit: source.commit, currentCommit: current.commit, dirty: current.dirty, upToDate }, null, 2))
+        await emitJson({ source: 'local', repo: source.repo, installedCommit: source.commit, currentCommit: current.commit, dirty: current.dirty, upToDate })
       } else if (upToDate) {
         console.log(chalk.green(`  ✔ hskill is up to date with local source (${source.repo}@${current.commit})`))
       } else if (current.commit !== source.commit) {
@@ -193,7 +203,7 @@ if (args[0] === '--version' || args[0] === '-v' || subcommand === 'version') {
       const { checkNpmVersion } = await import('../lib/version-check.js')
       const { current, latest, upToDate } = await checkNpmVersion('harveyz-skill', version)
       if (jsonFlag) {
-        console.log(JSON.stringify({ current, latest, upToDate }, null, 2))
+        await emitJson({ current, latest, upToDate })
       } else if (upToDate) {
         console.log(chalk.green(`  ✔ hskill v${current} is up to date`))
       } else {
@@ -409,10 +419,10 @@ if (subcommand === 'list') {
   const { skills, tools = [] } = require('../skills-index.json')
   const sorted = [...skills].sort((a, b) => a.bundle.localeCompare(b.bundle) || a.path.split('/').pop().localeCompare(b.path.split('/').pop()))
   if (jsonFlag) {
-    console.log(JSON.stringify({
+    await emitJson({
       skills: sorted.map(s => ({ name: s.path.split('/').pop(), path: s.path, bundle: s.bundle, global: s.global ?? false })),
       tools: tools.map(t => t.name),
-    }, null, 2))
+    })
     process.exit(0)
   }
   const nw = Math.max(...sorted.map(s => s.path.split('/').pop().length), 4)
@@ -513,12 +523,12 @@ if (subcommand === 'status' || subcommand === 'outdated') {
       return { name: h.name, description: h.description, user: inst.user, project: inst.project }
     })
     if (outdatedOnly) {
-      console.log(JSON.stringify({
+      await emitJson({
         skills: jsonSkills.filter(s => Object.values(s.user).some(v => v.status === 'update') || Object.values(s.project).some(v => v.status === 'update')),
         tools:  jsonTools.filter(t => t.status === 'update'),
-      }, null, 2))
+      })
     } else {
-      console.log(JSON.stringify({ skills: jsonSkills, tools: jsonTools, hooks: jsonHooks }, null, 2))
+      await emitJson({ skills: jsonSkills, tools: jsonTools, hooks: jsonHooks })
     }
     process.exit(0)
   }
@@ -646,17 +656,17 @@ if (subcommand === 'info') {
   if (jsonFlag) {
     if (skill) {
       const inst = checkInstalled(skill.skillName, skill.version ?? '—')
-      console.log(JSON.stringify({
+      await emitJson({
         name: skill.skillName, type: 'skill', version: skill.version ?? '—',
         user:    Object.fromEntries(targets.map(t => [t, inst.user[t]])),
         project: Object.fromEntries(targets.map(t => [t, inst.project[t]])),
-      }, null, 2))
+      })
     } else {
       const inst = checkToolInstalled(tool.toolName, tool.srcPath)
-      console.log(JSON.stringify({
+      await emitJson({
         name: tool.toolName, type: 'tool', version: tool.version ?? '—',
         installed: inst,
-      }, null, 2))
+      })
     }
     process.exit(0)
   }
@@ -723,7 +733,7 @@ if (subcommand === 'uninstall') {
     const { removed, failed } = await uninstallTool(nameToRemove, { yes: yesFlag })
     if (jsonFlag) {
       console.error = originalError
-      console.log(JSON.stringify({ removed: removed.length > 0, failed: failed.length > 0 }, null, 2))
+      await emitJson({ removed: removed.length > 0, failed: failed.length > 0 })
     } else if (removed.length > 0) {
       console.error(chalk.green.bold(`✔ ${nameToRemove} uninstalled`))
     }
@@ -750,7 +760,7 @@ if (subcommand === 'uninstall') {
   }
   if (jsonFlag) {
     console.error = originalError2
-    console.log(JSON.stringify({ removed: anyRemoved, failed: anyFailed }, null, 2))
+    await emitJson({ removed: anyRemoved, failed: anyFailed })
   } else if (anyRemoved) {
     console.error(chalk.green.bold(`✔ ${nameToRemove} uninstalled`))
   }
@@ -796,7 +806,7 @@ if (subcommand === 'hooks') {
           codex: inst.codex,
         }
       })
-      console.log(JSON.stringify({ hooks: out }, null, 2))
+      await emitJson({ hooks: out })
       process.exit(0)
     }
     function hookIcon(s) {
@@ -857,7 +867,7 @@ if (subcommand === 'hooks') {
     const { installed, skipped, failed } = await installHooksForTarget(toInstall, hookTargetArg, hookScopeArg, hookProjectArg, hookForce)
 
     if (hookJsonFlag) {
-      console.log(JSON.stringify({ installed, skipped, failed }, null, 2))
+      await emitJson({ installed, skipped, failed })
       process.exit(failed.length ? 1 : 0)
     } else {
       if (installed.length) console.error(chalk.green.bold(`✔ Hooks installed (${hookScopeArg}):`), installed.join(', '))
@@ -879,7 +889,7 @@ if (subcommand === 'hooks') {
     }
     const { removed } = await uninstallHook(nameToRemove, hookScopeArg, hookProjectArg)
     if (hookJsonFlag) {
-      console.log(JSON.stringify({ removed }, null, 2))
+      await emitJson({ removed })
     } else if (!removed) {
       console.log(chalk.dim(`  · ${nameToRemove} was not installed in ${hookScopeArg} scope`))
     }
@@ -931,9 +941,9 @@ if (subcommand === 'upgrade') {
   const nothingUpgraded = Object.keys(summary).length === 0
   if (jsonFlag) {
     if (nothingUpgraded) {
-      console.log(JSON.stringify({ skills: {}, upToDate: true }, null, 2))
+      await emitJson({ skills: {}, upToDate: true })
     } else {
-      console.log(JSON.stringify({ skills: summary }, null, 2))
+      await emitJson({ skills: summary })
     }
   } else {
     if (nothingUpgraded) {
@@ -1645,7 +1655,7 @@ try {
     const out = {}
     if (skillSummary !== null) out.skills = skillSummary
     if (toolSummary  !== null) out.tools  = toolSummary
-    console.log(JSON.stringify(out, null, 2))
+    await emitJson(out)
   } else {
     printSummary(skillSummary, toolSummary)
   }
