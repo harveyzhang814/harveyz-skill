@@ -62,16 +62,35 @@ target_node: d7543930-6dc7-4ca1-a897-b5364a40199c
 3. **PASS** — `state.json` 里 `x:TingHu888` → `x:tinghu888`，cursor 值逐字节相同；**顺带验证 `youtube:PlatoStone` → `youtube:platostone` 同样成立**（实测是 2 条键变，不是 spec §3.2 原表述的 1 条，已在 spec 里更正，迁移逻辑本身不受影响）。
 4. **PASS** — 连跑两次 `migrate-schema`，第二次 `channels_updated=0 cursors_renamed=0`，`diff` 确认两个文件逐字节相同。
 5. **PASS** — 真实跑了一次 `/sync-ytchannel run`：`baselines: {}`（零重刷）、`platostone` 的 22 条 `seen_urls` 原样保留、`claude` 频道正常抓到 2 条新视频（33→35）。**注意**：这一步发现装机版 `~/.hskill/tools/roster`（`~/.local/bin/roster` 指向的实际执行体）当时还停留在 8 月 28 日的旧代码，不含本次修复；若不升级直接跑，会因为真实数据已迁移、旧代码仍按原始大小写精确匹配 `state.json`，导致 `PlatoStone`、`TingHu888` 两个渠道被误判为新渠道重刷基线。已按用户确认，把这条分支的 `tools/roster/roster/*.py` 直接覆盖部署到 `~/.hskill/tools/roster/roster/`，验证通过后再运行本条。**这个装机路径的差异应该被记进最终验收 checklist**：确认 `~/.hskill/tools/roster` 与本分支代码一致，是 criterion 5 有效性的前提。
-6. **未验**——依赖 scholia 分支（`feature/registry-key-join`）。scholia 侧已完成实现（用户 2026-09-16 报告），但两边联调验收尚未做。
+6. **PASS**（2026-09-16 补验）——scholia 分支 `feature/registry-key-join` 完成后跑了联合验证：用一段独立脚本分别复现 scholia 旧 join 逻辑（`normalizeHandle(c.handle)` 现算）+ 迁移前的 `registry.json` 备份，和新 join 逻辑（直接读 `c.key`）+ 迁移后的真实 `registry.json`，对同一批 key 求 `watched`。结果：名册上 4 个 YouTube 渠道（`mattpocockuk`/`claude`/`ycombinator`/`platostone`）前后均为 `true`，另外抽样 5 个未关注的 key（`aidotengineer`/`alejandro_ao`/`anthropic-ai`/`bmdavis419`/`brandon-melville`）前后均为 `false`，全部一致。脚本与结果见下方"scholia 联合验证"小节。
 7. **PASS** — `roster registry channels --platform youtube` 输出每条渠道都带 `key`。
 8. **PASS**（单测覆盖，见 `tools/roster/tests/test_registry_merge.py::test_key_stays_normalized_after_rename_and_merge`）——`merge`/`rename` 不改 `handle`，`key` 全程等于 `normalize(handle)`。
 9. **PASS** — 真实数据上 `roster state get youtube:PlatoStone` 与 `roster state get youtube:platostone` 返回同一条游标（22 条 `seen_urls`，逐字节相同）。
+
+九条全部 PASS。
 
 §7 未验证项结论：孤儿游标 `x:fanli1688` 的成因、`profile` 层索引方式的结论，已写入 spec 文档 §7（详见 `docs/superpowers/specs/2026-09-16-roster-normalized-channel-key-design.md`）。
 
 **harveyz-skill 侧的实现（Task 1-7）**：163/163 单测通过（140 基线 + 23 新增），全部通过 subagent-driven-development 的逐任务 review（一处 plan 遗漏——`test_config.py` 有个硬编码 `SCHEMA_VERSION==1` 的测试，已判定为 ruling 接受，不算实现缺陷）。仓库级 `npm test` 唯一失败源是 `skills/research/clip-url` 本机缺 Playwright 浏览器（与本次改动无关，基线已知是红的）。
 
-**待办**：criterion 6 等 scholia 那边联调（两边都已完成实现，需要一次联合验证：迁移前后 `watched` 结果不变）。
+### scholia 联合验证（criterion 6，2026-09-16）
+
+跑在 `~/Projects/scholia` 当前 checkout 上（其时在 `feature/registry-key-join` 分支，已含 `creator-source.js` 的 `c.key` 改动）。方法：不起 HTTP server，直接内联复现 `resolveRegistryMatch` 的新旧两版逻辑，分别喂旧（`/tmp/registry.json.bak-2026-09-16`，迁移前备份）和新（`~/.hskill/roster/registry.json`，迁移后真实数据）两份 registry 数据，对同一批 9 个 key 求 `watched`，逐个比较：
+
+```
+mattpocockuk: before=true after=true MATCH
+claude: before=true after=true MATCH
+ycombinator: before=true after=true MATCH
+platostone: before=true after=true MATCH
+aidotengineer: before=false after=false MATCH
+alejandro_ao: before=false after=false MATCH
+anthropic-ai: before=false after=false MATCH
+bmdavis419: before=false after=false MATCH
+brandon-melville: before=false after=false MATCH
+ALL MATCH - criterion 6 PASS
+```
+
+**两个分支现在都到了"全部验收标准通过、等最终合并"这一步**：`harveyz-skill` 的 `feature/roster-normalized-key`（本分支）与 `scholia` 的 `feature/registry-key-join`。**都不要现在合并**——按交回协议第 1 条，合并只由各自的交出方在验收通过后做；两边互相独立，不必同时合并，但 criterion 6 是唯一跨仓库的依赖，现在已经清掉，两边可以各自按自己的验收流程推进。
 
 ---
 
