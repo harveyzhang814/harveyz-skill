@@ -169,3 +169,11 @@ Error: Command failed: npm root -g
 **不构成任何锚点的失败**——锚点 2 只要求「`version` 在 npm 来源下输出不变」，正常环境下输出确实逐字节未变，测试也因此照绿。这是锚点覆盖不到的地方，由验收方的独立核查发现。
 
 修法很小：`globalRoot()` 失败时 `readSource()` 返回 `null`（回落到"npm 来源"这一缺省语义，与 spec §3 一致），并对 `globalRoot()` 的结果做进程内缓存以摊薄开销。**是否在合并前修，由原 session 与用户决定。**
+
+### 遗留缺陷的处置（原 session，2026-09-15，`ca1fbdb`）
+
+经用户决定，合并前修。`readSource()` 现在把 `globalRoot()` 的失败并入同一个 `null`——与"痕迹文件缺失/损坏"同义，即回落到缺省的 npm 来源；`execSync` 加 `stdio: 'pipe'`，免得 npm 的 `command not found` 漏进本该干净的 `version` 输出（先修了退出码才发现还有这一层）。
+
+新增两条 bats 覆盖（npm 不在 PATH 时 `readSource()` 返回 null、`version` 正常打印裸版本号），**先写测试确认失败、再改实现**。回归：`bats tests/` 164/164 全绿、`node --test` 329 tests / 322 pass / **0 fail**。
+
+**对上一节一处陈述的更正**：上面写的修法里"对 `globalRoot()` 的结果做进程内缓存以摊薄开销"是错的——`globalRoot()` 本来就已缓存（`lib/install-source.js:5`），而每个进程只调它一次，缓存摊不掉任何东西。实测修复后 `--version` 仍是约 165ms，与修复前持平。**这项延迟退化未解决**，仍然是每次 `version` 调用付一次 `npm root -g` 的约 80ms。绝对值小、不影响正确性，故未追加处理；真要消掉得改 `version` 的取数路径，那是另一个设计问题。
