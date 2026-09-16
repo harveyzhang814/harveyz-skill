@@ -40,6 +40,8 @@ ls ~/.hskill/roster/config.json 2>/dev/null && echo "EXISTS" || echo "NOT_FOUND"
   --from-ytchannel "$(python3 -c "import json,pathlib;print(pathlib.Path(json.loads((pathlib.Path.home()/'.hskill/sync-ytchannel/config.json').read_text())['DATA_DIR']).expanduser()/'watchlist.json')")"
 ```
 
+任一旧配置不存在就省掉对应的参数。迁移是幂等的，重复跑安全。迁移后告诉用户：每个 handle 现在各自是一个人，同一个人的 X 和 YouTube 需要用 `merge` 合并，并主动列出名字相近的候选对给用户确认——**不要自己替用户合并**。
+
 **若已有名册是旧 schema（`registry.json` 里的渠道没有 `key` 字段）**，先跑一次：
 
 ```bash
@@ -47,8 +49,6 @@ ls ~/.hskill/roster/config.json 2>/dev/null && echo "EXISTS" || echo "NOT_FOUND"
 ```
 
 幂等，可重复跑。升级后名册按归一 `key` 去重，`state.json` 的游标键也同步改写成归一形态——不跑这一步，新版 roster 找旧游标会找不到，表现为该渠道被当成新渠道重刷一次基线。
-
-任一旧配置不存在就省掉对应的参数。迁移是幂等的，重复跑安全。迁移后告诉用户：每个 handle 现在各自是一个人，同一个人的 X 和 YouTube 需要用 `merge` 合并，并主动列出名字相近的候选对给用户确认——**不要自己替用户合并**。
 
 ## 用法
 

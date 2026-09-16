@@ -12,8 +12,21 @@ import sys
 from datetime import date, datetime
 from pathlib import Path
 
-from . import config, profiles, registry, state
-from .urls import parse_channel_url
+from . import SCHEMA_VERSION, config, profiles, registry, state
+from .urls import channel_key, parse_channel_url
+
+
+_SCHEMA_CHECK_EXEMPT = {"init", "data-dir", "migrate", "migrate-schema"}
+
+
+def _check_schema_version(data_dir) -> None:
+    reg = registry.load(data_dir)
+    version = reg.get("schema_version", SCHEMA_VERSION)
+    if version < SCHEMA_VERSION:
+        raise ValueError(
+            f"名册数据是旧 schema（v{version}），请先跑一次 "
+            f"`roster migrate-schema` 升级到 v{SCHEMA_VERSION}。"
+        )
 
 
 def _split_ref(ref: str) -> tuple[str, str]:
@@ -138,7 +151,8 @@ def _cmd_registry_list(args) -> int:
         print(f"{creator['id']}  {creator['display_name']}{mark}")
         for channel in creator["channels"]:
             key = f"{channel['platform']}:{channel['handle']}"
-            entry = st["channels"].get(key) or {}
+            lookup_key = channel_key(channel["platform"], channel["handle"])
+            entry = st["channels"].get(lookup_key) or {}
             cursor = entry.get("cursor")
             if cursor is None:
                 shown = "(none)"
@@ -303,6 +317,8 @@ def _build_parser() -> argparse.ArgumentParser:
 def main(argv: list[str] | None = None) -> int:
     args = _build_parser().parse_args(argv)
     try:
+        if args.group not in _SCHEMA_CHECK_EXEMPT:
+            _check_schema_version(config.get_data_dir())
         return args.func(args)
     except (ValueError, KeyError, FileNotFoundError) as e:
         print(str(e), file=sys.stderr)

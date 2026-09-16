@@ -1,5 +1,7 @@
 import json
 
+import pytest
+
 from roster import SCHEMA_VERSION, migrate_schema, registry, state
 
 TODAY = "2026-08-26"
@@ -124,3 +126,32 @@ def test_cli_migrate_schema(data_dir, capsys):
     out = capsys.readouterr().out.strip()
     assert code == 0
     assert out == "OK channels_updated=1 cursors_renamed=1"
+
+
+def test_migrate_schema_raises_on_key_collision_and_touches_nothing(data_dir):
+    reg = {
+        "schema_version": 1,
+        "creators": [{
+            "id": "a", "display_name": "A", "aliases": [], "placeholder": True,
+            "added_at": TODAY,
+            "channels": [{"platform": "x", "handle": "TingHu888",
+                          "url": "https://x.com/TingHu888"}],
+        }],
+    }
+    st = {
+        "schema_version": 1,
+        "channels": {
+            "x:TingHu888": {"cursor": {"type": "last_seen_id", "value": "1"},
+                            "last_run": RUN, "last_error": None},
+            "x:tinghu888": {"cursor": {"type": "last_seen_id", "value": "2"},
+                            "last_run": RUN, "last_error": None},
+        },
+    }
+    registry.save(data_dir, reg)
+    state.save(data_dir, st)
+
+    with pytest.raises(ValueError, match="相撞"):
+        migrate_schema.migrate_schema(data_dir)
+
+    assert registry.load(data_dir) == reg
+    assert state.load(data_dir) == st

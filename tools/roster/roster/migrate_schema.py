@@ -16,22 +16,35 @@ def migrate_schema(data_dir: Path) -> dict:
     channels_updated = 0
     for creator in reg["creators"]:
         for ch in creator["channels"]:
-            new_key = normalize(ch["handle"])
-            if ch.get("key") != new_key:
-                ch["key"] = new_key
+            if ch.get("key") != normalize(ch["handle"]):
                 channels_updated += 1
-    reg["schema_version"] = SCHEMA_VERSION
-    registry.save(data_dir, reg)
 
     st = state.load(data_dir)
-    cursors_renamed = 0
     new_channels: dict = {}
+    collisions = []
+    cursors_renamed = 0
     for old_key, entry in st["channels"].items():
         platform, _, handle = old_key.partition(":")
         new_key = channel_key(platform, handle)
+        if new_key in new_channels:
+            collisions.append((old_key, new_key))
+            continue
         if new_key != old_key:
             cursors_renamed += 1
         new_channels[new_key] = entry
+
+    if collisions:
+        raise ValueError(
+            f"游标键归一后相撞，请先用 `roster state`/`registry` 手工合并涉及的渠道再重试："
+            f"{collisions}"
+        )
+
+    for creator in reg["creators"]:
+        for ch in creator["channels"]:
+            ch["key"] = normalize(ch["handle"])
+    reg["schema_version"] = SCHEMA_VERSION
+    registry.save(data_dir, reg)
+
     st["channels"] = new_channels
     st["schema_version"] = SCHEMA_VERSION
     state.save(data_dir, st)
