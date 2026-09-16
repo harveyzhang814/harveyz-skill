@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.34.0] - 2026-09-16
+
+### Added
+- `hskill` 双来源安装与粘性更新：`hskill update --local <路径>` 从本地仓库 `npm pack` 出 tarball 再全局安装（真实拷贝，走 `prepack` 与 `files[]` 白名单，等于在发 npm 前预演一次真实发布），`hskill update --npm` 切回 registry，裸 `hskill update` 沿用当前来源不跨轨道。此前 `update` 是一行硬编码的 `npm install -g harveyz-skill@latest`，手工装的本地版会被它静默替换掉且事后无从察觉。来源痕迹（`.hskill-source.json` + 版本号后缀 `+local`）只写在全局安装目录内，因而任何一次 `npm install -g`——包括绕过 hskill 的手工安装——都会自动抹掉它，"记录的来源"与"实际的来源"不可能分叉。`hskill version` 展示来源与 branch/commit，`version --check` 在本地来源下比对 commit 而非版本号（开发分支上版本号常常不动）。设计见 `docs/superpowers/specs/2026-09-15-hskill-install-source-design.md`
+- `agent-canvas` bundle：新增 `agent-canvas-control`、`capture-requirement`、`close-node`、`describe-node`、`relate-node`、`relation-review` 六个 skill，在 Agent Canvas 画布节点里操控节点实体、摆放画布、梳理节点间语义关系
+
+### Fixed
+- `hskill <任意子命令> --json` 在输出走管道时被截断：Node 写管道是异步的，而每个子命令块以 `process.exit()` 结尾，不等缓冲区排空。`status --json` 的输出刚随 agent-canvas 六个 skill 涨到 66,739 字节、越过 64KiB 管道缓冲区，于是 `hskill status --json | jq` 拿到退出码 0 和一段从字符串中间断掉的 JSON——**静默失败**，退出码还宣称成功。16 处 `--json` 出口统一改走等待写入落地的 `emitJson()`；回归测试逐字节比对管道输出与直接重定向输出，且在负载跌回缓冲区以下时显式 skip 而非假绿
+- `hskill version` / `hskill --version` 在 npm 不在 PATH 上时抛原始堆栈崩溃（cron、受限 PATH、精简镜像）：来源追踪让 `readSource()` 每次都经 `globalRoot()` 打一次 `npm root -g`，而它只兜住了 JSON 解析失败。现在 `globalRoot()` 的失败并入同一个 `null`，即回落到缺省的 npm 来源
+- `compareVersions()` 遇到 semver build metadata（`0.33.0+local`）会解析出 `NaN` 导致比较结果无意义，现按规范在比较前截断 `+` 及其后内容
+
 ## [0.33.0] - 2026-09-15
 
 ### Added
