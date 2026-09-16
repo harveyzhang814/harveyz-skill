@@ -10,7 +10,12 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
 
-from build_creator_index import build_index, check_index, write_index  # noqa: E402
+from build_creator_index import (  # noqa: E402
+    _normalize_handle,
+    build_index,
+    check_index,
+    write_index,
+)
 
 
 def _meta(root: Path, task_id: str, **fields) -> Path:
@@ -19,6 +24,13 @@ def _meta(root: Path, task_id: str, **fields) -> Path:
     meta_path = task_dir / "meta.json"
     meta_path.write_text(json.dumps(fields, ensure_ascii=False), encoding="utf-8")
     return meta_path
+
+
+def test_normalize_handle_strips_whitespace_before_at():
+    """Whitespace must be stripped before '@' so a padded handle like
+    " @Foo " still loses its leading '@' (lstrip("@") only strips literal
+    '@' characters from the very start, so it must run after strip())."""
+    assert _normalize_handle(" @Foo ") == "foo"
 
 
 def test_build_groups_videos_by_normalized_handle(isolated_store_config):

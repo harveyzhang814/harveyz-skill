@@ -18,7 +18,7 @@ import store_config
 
 
 def _normalize_handle(uploader_id: str) -> str:
-    return uploader_id.lstrip("@").strip().lower()
+    return uploader_id.strip().lstrip("@").lower()
 
 
 def build_index(work_dir: Path) -> dict:
