@@ -1,7 +1,8 @@
 ---
 name: describe-node
-description: 为 Agent Canvas 中你所在的这个画布节点自动生成标题与描述——总结/摘要当前会话在做什么、给节点起名、更新节点标题或描述时使用；仅在画布节点里可用
-version: "1.0.0"
+description: Auto-generate a title and description for the Agent Canvas node you are running in — use it to summarize what the session is doing, name the node, or update its title/description; only usable inside an Agent Canvas node.
+user_invocable: true
+version: "1.0.1"
 ---
 
 # 为当前节点生成标题与描述（describe-node）

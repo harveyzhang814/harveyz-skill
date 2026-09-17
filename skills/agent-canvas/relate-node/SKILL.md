@@ -1,7 +1,8 @@
 ---
 name: relate-node
-description: 在 Agent Canvas 里为当前节点梳理与其他节点的语义关系（依赖/交接/实现需求/产出或引用文档）——闸门2定稿后、收尾汇报前，判断要不要给已有节点连一条关系时使用；仅在画布节点里可用
-version: "1.0.0"
+description: Work out the current node's semantic relations to other Agent Canvas nodes (depends-on/hands-off-to/implements/produces or references docs) — use after Gate 2 is finalized and before the closing report, when deciding whether to link an existing node; only usable inside an Agent Canvas node.
+user_invocable: true
+version: "1.0.1"
 ---
 
 # 梳理节点关系（relate-node）

@@ -1,8 +1,8 @@
 ---
 name: relation-review
-description: 全局 Pilot 专用的 relation 类型治理循环——扫描待议区、按四道关卡审议是否升格新
-  type；由 cron 定时调起，不应在项目画布节点里手动调用
-version: "1.0.0"
+description: Global-Pilot-only relation-type governance loop — scans the pending queue and runs proposed types through four gates before promotion; invoked on a cron schedule, must not be manually called from a project canvas node.
+user_invocable: false
+version: "1.0.1"
 ---
 
 # Relation 类型治理循环（relation-review）
