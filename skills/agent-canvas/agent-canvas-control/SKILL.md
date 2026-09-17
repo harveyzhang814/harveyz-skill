@@ -1,7 +1,8 @@
 ---
 name: agent-canvas-control
-description: 在 Agent Canvas 的 claude-code/codex/pi 节点里操控节点实体与画布摆放（创建/查询/修改/删除节点、把节点放上或收起画布）；也可在 shell/hermes-tui 节点内或画布外的终端里用 `--canvas`/`resolve-canvas`/`resolve` 操控
-version: "1.0.0"
+description: Control Agent Canvas node entities and layout from claude-code/codex/pi nodes — create, query, update, delete nodes, and put or hide them on the canvas; also usable from shell/hermes-tui nodes or terminals outside the canvas via `--canvas`/`resolve-canvas`/`resolve`.
+user_invocable: true
+version: "1.0.1"
 ---
 
 # 操控节点与画布（agent-canvas-control）

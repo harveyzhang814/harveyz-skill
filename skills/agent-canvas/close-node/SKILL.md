@@ -1,8 +1,9 @@
 ---
 name: close-node
-description: 一轮工作做完时给当前画布节点收尾——推进需求状态、核对 handoff 收口、合并分支、停进程并从画布收起；仅在画布节点里可用
+description: Wrap up the current canvas node when a round of work is done — advance requirement status, verify handoff closure, merge the branch, stop the process, and hide the node from the canvas; only usable inside an Agent Canvas node.
 disable-model-invocation: true
-version: "1.0.0"
+user_invocable: true
+version: "1.0.1"
 ---
 
 # 节点收尾（close-node）

@@ -348,27 +348,39 @@
     },
     {
       "path": "agent-canvas/agent-canvas-control",
-      "bundle": "agent-canvas"
+      "bundle": "agent-canvas",
+      "contentHash": "e6ab728e4108a137",
+      "contentVersion": "1.0.1"
     },
     {
       "path": "agent-canvas/describe-node",
-      "bundle": "agent-canvas"
+      "bundle": "agent-canvas",
+      "contentHash": "bf7551628799fb20",
+      "contentVersion": "1.0.1"
     },
     {
       "path": "agent-canvas/relate-node",
-      "bundle": "agent-canvas"
+      "bundle": "agent-canvas",
+      "contentHash": "d61712f45de4d4ec",
+      "contentVersion": "1.0.1"
     },
     {
       "path": "agent-canvas/capture-requirement",
-      "bundle": "agent-canvas"
+      "bundle": "agent-canvas",
+      "contentHash": "db7f19ea77a3da50",
+      "contentVersion": "1.0.1"
     },
     {
       "path": "agent-canvas/relation-review",
-      "bundle": "agent-canvas"
+      "bundle": "agent-canvas",
+      "contentHash": "7b7e69fb78bcaa45",
+      "contentVersion": "1.0.1"
     },
     {
       "path": "agent-canvas/close-node",
-      "bundle": "agent-canvas"
+      "bundle": "agent-canvas",
+      "contentHash": "e95e278361abc518",
+      "contentVersion": "1.0.1"
     }
   ],
   "hooks": [

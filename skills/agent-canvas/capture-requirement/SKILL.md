@@ -1,7 +1,8 @@
 ---
 name: capture-requirement
-description: 把当前会话正在实现的需求立项成一个独立的需求节点，并挂一条 implements 关系到自己身上——闸门2定稿后调用一次；仅在画布节点里可用
-version: "1.0.0"
+description: File the requirement the current session is implementing as a standalone requirement node and link an implements relation to it — call once after Gate 2 is finalized; only usable inside an Agent Canvas node.
+user_invocable: true
+version: "1.0.1"
 ---
 
 # 需求立项（capture-requirement）
