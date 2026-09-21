@@ -381,6 +381,13 @@
       "bundle": "agent-canvas",
       "contentHash": "e95e278361abc518",
       "contentVersion": "1.0.1"
+    },
+    {
+      "path": "coding/analyze-claudemd",
+      "bundle": "coding",
+      "installScope": "global",
+      "contentHash": "8dafe21cdfff97e6",
+      "contentVersion": "1.0.0"
     }
   ],
   "hooks": [

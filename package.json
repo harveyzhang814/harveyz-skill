@@ -68,6 +68,7 @@
     "skills/agent-canvas/capture-requirement/",
     "skills/agent-canvas/relation-review/",
     "skills/agent-canvas/close-node/",
+    "skills/coding/analyze-claudemd/",
     "tools/hub/",
     "tools/sync-agent/",
     "tools/browser-fetch/",
