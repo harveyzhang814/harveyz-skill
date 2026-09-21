@@ -128,8 +128,9 @@ def cmd_lookup(sections, term):
 
 def cmd_list(sections):
     for sec in sections:
-        if sec['avoid_raw']:
-            print(f"{sec['name']} | {sec['avoid_raw']}")
+        aliases = extract_aliases(sec['avoid_raw'])
+        if aliases:
+            print(f"{sec['name']} | {','.join(aliases)}")
         else:
             print(sec['name'])
     return 0

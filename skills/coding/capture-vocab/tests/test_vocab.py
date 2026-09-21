@@ -106,6 +106,22 @@ def test_list_line_count_matches_section_count(tmp_path):
     assert len(lines) == section_count
 
 
+def test_list_lines_are_structurally_bounded(tmp_path):
+    result = run_vocab(["list"], cwd=FIXTURE_DIR)
+    assert result.returncode == 0
+    lines = [l for l in result.stdout.splitlines() if l.strip()]
+    for line in lines:
+        assert len(line) <= 80, f"line exceeds structural bound: {line!r}"
+
+
+def test_list_prose_only_avoid_yields_bare_name(tmp_path):
+    result = run_vocab(["list"], cwd=FIXTURE_DIR)
+    assert result.returncode == 0
+    seat_lines = [l for l in result.stdout.splitlines() if l.startswith("席位")]
+    assert seat_lines, result.stdout
+    assert seat_lines[0] == "席位"
+
+
 def test_refs_same_file(tmp_path):
     result = run_vocab(
         ["refs", "src/renderer/src/components/PanelArea.tsx"], cwd=FIXTURE_DIR
