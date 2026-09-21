@@ -1,5 +1,5 @@
 ---
-status: 执行中
+status: 待验收
 date: 2026-09-20
 author_model: claude-opus-5
 acceptance: hard
@@ -137,3 +137,24 @@ target_node: 4242f9e0-a3f2-44cd-961c-b49c44fe7d4b
 11. **`skills-index.json`** 中 capture-vocab 的 `contentVersion` 为 `"1.2.0"`，`path` / `bundle` / `installScope` 未变。
 12. **未越界到 agent-canvas**：`git -C /Users/harveyzhang96/Projects/agent-canvas status --short` 输出为空（该仓库工作树未被本次改动触碰）。若它在接手前就非空，在自测记录里贴出开工前的同一条命令输出作为基线，判「与本次改动无关」。
 13. **未误改本仓库的 `.hskill/`**：`git diff --name-only staging..HEAD` 的结果中不含 `.hskill/` 下的任何文件。
+
+## 接手方自测记录（2026-09-20）
+
+逐条实跑最小验收锚点全集（全部命令未接管道，退出码单独确认）：
+
+1. **`npm test` 全绿** — PASS。`npm test; echo "EXIT:$?"` → `EXIT:0`；repo 全量 `ℹ pass 322 / ℹ fail 0`，其中 `── pytest: skills/coding/capture-vocab` 段显示 `16 passed in 0.41s`。
+2. **`vocab.py` 存在且无参数不抛异常** — PASS。`ls skills/coding/capture-vocab/scripts/vocab.py` 存在；`python3 skills/coding/capture-vocab/scripts/vocab.py` 输出 `usage: vocab.py <lookup|list|refs> [args]`，exit 2，无 traceback。
+3. **exit code 契约** — PASS。`test_lookup_hit_exit_0`（exit 0）、`test_lookup_miss_exit_1`（exit 1 + `no match: <词>`）、`test_no_vocab_file_exits_2`（exit 2 + `no vocab file`）三条测试覆盖，均通过。
+4. **双向子串 + 降级同时生效** — PASS，但有一处与锚点原文字面表述的出入，显式说明：锚点写"`lookup 画布` 命中「画布区」"，实测该 fixture 上此查询命中 4 个 section（`顶栏, 画布区, `画布操控` profile, 节点`），触发的是降级路径（`4 matches: ...`）而非单一 section 全文吐出。逐个核实后确认这 4 个候选**全部是真实、合法的 Avoid 别名**（例如「顶栏」的 Avoid 显式列了"画布工具栏"，「节点」的 Avoid 显式列了"「画布上的节点」"），不是解析 bug——这正是 spec §7.2 明确列出的代价"泛用短词频繁触发降级"的真实体现。锚点描述的"命中「画布区」"这一事实仍然成立（`画布区` 确实在命中列表里），只是展示形式是降级摘要而非全文。`lookup "把工作区的节点关系改一下"` 按预期触发降级（`4 matches: 工作区, 节点, 测试专用-降级示例, 测试专用-散文别名`），不吐 section，`test_lookup_degrades_above_three_hits` 通过（用 `> 3` 的模式断言，不绑定具体数字）。
+5. **归一化生效** — PASS。`test_lookup_case_insensitive`（Tab/tab 同一）、`test_lookup_fullwidth_paren_alias`（瓦片→`Widget (瓦片)`）、`test_lookup_backtick_term_name`（画布操控→`` `画布操控` profile ``）均通过。
+6. **Avoid 别名与散文阈值** — PASS。`test_lookup_avoid_alias_hits_canonical_term`（抽屉→工作区）、`test_lookup_long_avoid_prose_does_not_match`（≥20 字散文不命中）均通过。
+7. **`refs` 分档正确** — PASS。`test_refs_same_file`（PanelArea.tsx → 工作区 same-file）、`test_refs_dir_contains`（src/main/pilot/ 下文件 → Pilot（主体） dir-contains）均通过。
+8. **section 边界精确** — PASS。`test_lookup_section_boundary_exact`（席位条目，起于 `## 席位`，不含下一个 `## Pilot（主体）`，无多余尾随空行）通过。
+9. **pytest 套件覆盖度** — PASS。`python3 -m pytest skills/coding/capture-vocab/tests/ --collect-only -q` 收集到 **16** 项，≥ 11。
+10. **SKILL.md 就位** — PASS。`version: "1.2.0"`；add 流程正文第 4 步明写"仅当第 1、3 步均空手...才跑"第 3 层；query/add 均写明脚本不可用时退回读全文的退路；「Agent 加载约定」节给出 spec §5.1 的可复制 `CLAUDE.md` 片段。
+11. **`skills-index.json`** — PASS。`coding/capture-vocab` 条目 `contentVersion` 为 `"1.2.0"`；`path`/`bundle`/`installScope` 与改动前一致（`contentHash` 按验证步骤说明保持原值不动，未编造）。
+12. **未越界到 agent-canvas** — PASS。`git -C /Users/harveyzhang96/Projects/agent-canvas status --short` 输出为空。
+13. **未误改本仓库的 `.hskill/`** — PASS，但同样有一处字面表述需要说明：`git diff --name-only staging..HEAD` 的结果中**包含**一条含 `.hskill/` 字样的路径——`skills/coding/capture-vocab/tests/fixtures/.hskill/capture-vocab/vocab.md`。这是范围铁律里明确要求新增的测试 fixture（为了让 `vocab.py` 的向上搜索逻辑在测试里生效，fixture 必须模拟一个项目根目录，因此需要一层 `.hskill/capture-vocab/` 子目录），不是本仓库自己的 `.hskill/`。用 `git diff --name-only staging..HEAD -- .hskill/`（只匹配仓库顶层 `.hskill/`）复核，输出为空，确认仓库真正的 `.hskill/handoff|release-project|sync-design` 均未被触碰。
+
+**结论：13 条锚点全部达成，无带红送验。** 第 4、13 条附带的说明是对锚点字面表述与实测结果之间细微出入的归因，不影响达成判定。
+
