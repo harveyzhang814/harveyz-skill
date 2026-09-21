@@ -156,17 +156,30 @@ src/main/pilot/、src/pilotGate/、docs/explanation/copilot-north-star.md §1.1-
 
 ## 4. 三条执行路径
 
-### 4.1 高频路径（场景 2/3）——完全绕开 skill
+### 4.1 高频路径（场景 2/3）——走 skill，不直接调脚本
 
-```
-python3 ~/.claude/skills/capture-vocab/scripts/vocab.py lookup "<词或整句>"
-```
+> **2026-09-20 修订。** 本节初稿主张「完全绕开 skill、项目 `CLAUDE.md` 直接写脚本路径」，
+> 已推翻。下面是定稿，保留初稿主张与推翻理由，因为那个取舍本身是这份 spec 的主要内容之一。
 
-不 invoke skill、不读 SKILL.md。全部成本就是那次 bash 的输出。
+agent 遇到看起来像项目术语的词，**invoke `capture-vocab` skill**，由 skill 内部按
+§3.1 的契约调 `vocab.py`（流程见 §4.2 的 `query`）。项目 `CLAUDE.md` 只声明
+**什么时候查**，不声明**怎么查**。
 
-- exit 0 → 按吐出来的词条定义理解
-- exit 1 → 没有定义，按字面理解，不追问
-- `N matches:` → 挑最相关的再 lookup 一次
+**推翻初稿的理由**：脚本路径、子命令、退出码语义写进每个项目的 `CLAUDE.md`，等于
+把 skill 的调用契约复制若干份到 skill 管不到的地方。skill 换子命令、改路径、换实现
+语言时，这些副本会**静默失效**——不报错，只是从此查不到词，而表面上看一切照旧。
+调用契约必须由 skill 自己持有。
+
+**代价，明确记下来**：每次查词要加载一次 `SKILL.md`（当前 5700 字节 ≈ 2k token），
+而直接调脚本是命中 200–400、未命中 ~20。高频路径上贵 10–100 倍。
+
+接受这个代价的依据：**它是固定开销，不随词汇表增长**。本设计要守的性质是「成本与
+词汇表总量无关」（§4.5），这条性质不受影响；涨的是一笔定额过路费，不是斜率。
+
+**未验证**：走 skill 之后触发率会更高还是更低，没有数据。调 skill 比跑一条 bash 是
+更「重」的动作，模型可能更不愿意为一个随口的词去调；但 skill 的 description 常驻
+上下文，本身就是触发钩子，可能比 `CLAUDE.md` 里一段话更容易命中。两个方向都讲得通，
+用过才知道。
 
 ### 4.2 `query`（用户显式调用）
 
@@ -238,33 +251,32 @@ O(N) 只在一种情况触发——新词没有 `_Reference_`（纯 spec 术语�
 ```markdown
 ## 术语澄清
 
-遇到定义含糊的词或特殊称谓，不要凭猜测理解。跑：
-
-    python3 ~/.claude/skills/capture-vocab/scripts/vocab.py lookup "<词或整句>"
-
-exit 0：按吐出来的词条定义理解。
-exit 1（`no match`）：没有定义，按字面理解，不必追问。
-输出 `N matches: ...`：命中太多，挑最相关的再 lookup 一次。
-exit 2 或脚本不可用：才退回 grep `.hskill/capture-vocab/vocab.md`，
-不要把整篇文档读进上下文。
+遇到定义含糊的词或特殊称谓，不要凭猜测理解，用 `capture-vocab` skill 查该词条。
+两种时机都要查：
+(1) 用户消息里出现不像通用软件概念、像本项目自造的名词；
+(2) 要在回复、文档或 commit message 里首次使用某个项目名词时
+    （避免用上 `_Avoid_` 里的旧叫法）。
 ```
 
-常驻成本 ~120 token，是本方案唯一的固定开销。
+常驻成本 ~80 token。**这段里不出现任何脚本路径、子命令或退出码**——理由见 §4.1。
 
-### 5.2 什么时候该跑
+### 5.2 什么时候该查
 
-两条判据，写进上面那段：
+两条判据，已写进上面那段：
 
 1. 用户消息里出现**不像通用软件概念、像本项目自造**的名词
 2. 要在回复、文档或 commit message 里**首次使用**某个项目名词时
 
-第 2 条是输出侧的，目的是避免用上 `_Avoid_` 里的旧叫法。成本极低（多半 exit 1），顺手做。
+第 2 条是输出侧的，目的是避免用上 `_Avoid_` 里的旧叫法。
+
+**项目侧只写这两条。** 「怎么查」属于 skill 的内部契约（§3.1 / §4.2），不外泄。
 
 ### 5.3 脚本放在哪
 
-`~/.claude/skills/capture-vocab/scripts/vocab.py`，**单一副本，不往项目里拷**。
-好处是不会有装机副本漂移；代价是 clone 了 agent-canvas 但未安装此 skill 的人，
-`CLAUDE.md` 里那行路径是死的（有 exit 2 退路兜底）。
+`~/.claude/skills/capture-vocab/scripts/vocab.py`，**单一副本，不往项目里拷**，
+且这个路径**只出现在本 skill 的 `SKILL.md` 里**，不出现在任何项目的 `CLAUDE.md`（§4.1）。
+好处是不会有装机副本漂移，也不会有调用契约的散落副本；代价是 skill 未安装时
+`SKILL.md` 里那条路径是死的，由 `query` 流程的 exit 2 退路兜底。
 
 ### 5.4 迁移清单
 
@@ -316,7 +328,8 @@ exit 2 或脚本不可用：才退回 grep `.hskill/capture-vocab/vocab.md`，
    (a) 按 1→2→3 顺序走；(b) 新词带 Reference 时不触发第 3 层；
    (c) 查重结论被显式说出来并等待确认
 3. **人工**：在 agent-canvas 上按 §5.1 改完 `CLAUDE.md` 后，用一个 `_Avoid_` 里的旧叫法
-   （如「抽屉」）提问，确认 agent 自发跑了 lookup 并命中「工作区」
+   （如「抽屉」）提问，确认 agent 自发 invoke 了 `capture-vocab` 并命中「工作区」。
+   这一条同时是 §4.1「走 skill 之后触发率未知」那个未验证项的唯一观测点
 
 ---
 

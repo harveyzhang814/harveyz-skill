@@ -99,15 +99,13 @@ _Reference_: src/models/order.ts:42, docs/business/order-flow.md
 ```markdown
 ## 术语澄清
 
-遇到定义含糊的词或特殊称谓，不要凭猜测理解。跑：
-
-    python3 ~/.claude/skills/capture-vocab/scripts/vocab.py lookup "<词或整句>"
-
-exit 0：按吐出来的词条定义理解。
-exit 1（`no match`）：没有定义，按字面理解，不必追问。
-输出 `N matches: ...`：命中太多，挑最相关的再 lookup 一次。
-exit 2 或脚本不可用：才退回 grep `.hskill/capture-vocab/vocab.md`，
-不要把整篇文档读进上下文。
+遇到定义含糊的词或特殊称谓，不要凭猜测理解，用 `capture-vocab` skill 查该词条。
+两种时机都要查：
+(1) 用户消息里出现不像通用软件概念、像本项目自造的名词；
+(2) 要在回复、文档或 commit message 里首次使用某个项目名词时
+    （避免用上 `_Avoid_` 里的旧叫法）。
 ```
 
-两条触发判据：(1) 用户消息里出现不像通用软件概念、像本项目自造的名词；(2) 要在回复、文档或 commit message 里首次使用某个项目名词时（避免用上 `_Avoid_` 里的旧叫法）。这条路径完全绕开本 skill——不 invoke、不读这份 SKILL.md，成本只是那次脚本调用的输出。
+**项目侧只声明「什么时候查」，不声明「怎么查」。** 脚本路径、子命令、退出码语义全部留在本 skill 内（见上面的 `query`）。把这些写进项目 `CLAUDE.md` 等于把调用契约复制一份出去——本 skill 换子命令、改路径、换实现语言时，那些副本会静默失效，不报错。
+
+**代价**：走 skill 意味着每次查词要加载这份 SKILL.md，比直接调脚本贵。这是**固定开销，不随词汇表增长**——设计要守的「成本与词汇表总量无关」那条性质不受影响。
