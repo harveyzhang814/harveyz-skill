@@ -1,12 +1,12 @@
 ---
-status: 待执行
+status: 执行中
 date: 2026-09-20
 author_model: claude-opus-5
 acceptance: hard
 branch: feature/capture-vocab-retrieval
 worktree: /Users/harveyzhang96/Projects/harveyz-skill/.claude/worktrees/feature+capture-vocab-retrieval
 source_node: 563e3f7c-bb73-400b-a45a-bc5ab090c2e6
-target_node:
+target_node: 4242f9e0-a3f2-44cd-961c-b49c44fe7d4b
 ---
 
 # 交接：capture-vocab 检索机制重构（加切片脚本，词汇文件零迁移）
