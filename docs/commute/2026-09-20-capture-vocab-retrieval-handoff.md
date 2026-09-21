@@ -1,5 +1,5 @@
 ---
-status: 待验收
+status: 已验收
 date: 2026-09-20
 author_model: claude-opus-5
 acceptance: hard
@@ -239,4 +239,45 @@ skills/coding/capture-vocab/tests/test_vocab.py | 16 ++++++++++++++++
     - `test_list_prose_only_avoid_yields_bare_name`：`席位` 条目（Avoid 为跨行散文，`extract_aliases` 返回空列表）输出为裸术语名 `席位`，不带 ` | ` 分隔符。
 
 **结论：14 条锚点全部达成，无带红送验。** 修复范围已按要求给出改动范围证据与影响论证，且仍完整实跑了全集作为交叉验证。
+
+## 原 session 验收记录（第 2 轮，2026-09-20）
+
+在交接工作区内逐条**自己重跑锚点全集 1–14**，不采信接手方结论。环境：`feature/capture-vocab-retrieval`，工作树干净，打回点 `bd9804b` 之后 2 个提交（`176d33d` 修复 + `fc8b0a6` 复修自测记录）。
+
+**先审了复修 diff**：`git diff bd9804b..HEAD` 只动了三个文件——交接文档、`vocab.py`、`test_vocab.py`。`vocab.py` 的改动仅在 `cmd_list` 函数体内 3 行，改为调用既有的 `extract_aliases()`；函数外无任何改动。与接手方给出的范围论证一致，未夹带。
+
+**新增的两条测试是真判据，不是恒真断言**：`len(line) <= 80` 与「席位 输出为裸名」在旧代码下都会红——我在第 1 轮打回时**直接量过**旧输出（最长 244 字符，席位那行是 `席位 | <跨行散文>`）。
+
+**逐条实跑结果（全部 PASS）**：
+
+| # | 我实跑的结果 |
+|---|---|
+| 1 | 全量套件退出码 0；`ℹ pass 322 / ℹ fail 0`；capture-vocab 段 `18 passed in 0.40s`（较打回前 +2） |
+| 2 | 无参数 → `usage: vocab.py <lookup\|list\|refs> [args]`，exit 2，无 traceback |
+| 3 | `lookup 席位` exit 0；未命中 → 单行 `no match: ...` exit 1；`/tmp` 下 → 单行 `no vocab file` exit 2 |
+| 4 | `lookup 画布` → `4 matches: 顶栏, 画布区, \`画布操控\` profile, 节点`；整句 → `4 matches: ...` 单行不吐 section |
+| 5 | `tab`/`Tab` 输出字节级相同；`瓦片` → `## Widget (瓦片)`；`画布操控` → ``## `画布操控` profile`` |
+| 6 | `抽屉` → `## 工作区`；长散文片段 `只有在确实要强调` → `no match`，exit 1 |
+| 7 | `PanelArea.tsx` → 工作区/视图 皆 `same-file`；`src/main/pilot/pilotConfig.ts` → Pilot（主体）`dir-contains` + `画布操控` profile `same-file` |
+| 8 | `lookup 席位` 仅 1 个 `## `，末行止于 `_Reference_:`，未溢出到下一条 |
+| 9 | `--collect-only -q` → **18 tests collected**（≥ 11） |
+| 10 | `version: "1.2.0"`；「均空手」条件触发表述在位；3 处退路表述在位 |
+| 11 | `contentVersion` `"1.2.0"`；`path`/`bundle`/`installScope` 未变；`contentHash` 保持原值未编造 |
+| 12 | agent-canvas 仓库 `status --short` 输出为空 |
+| 13 | 本仓库顶层 `.hskill/` 在 `staging..HEAD` 改动列表中为空 |
+| 14 | **独立量了一遍**：35 行，总 **783** 字符 / 均 **22.37** / 最长 **51**（`工作区 \| 抽屉,Drawer,RightPanel,SidePanel,InspectorPanel`）；超 80 字符的行 **0** 条；`席位` 输出为裸名 `席位`，不带 ` \| ` |
+
+**补充复跑了上限边界**（不在锚点内，第 1 轮我加验过，本轮复核未回归）：`lookup 节点列表` 恰好 3 条命中 → 吐 3 个完整 section、不降级；`lookup 进程` 4 条 → 降级。
+
+### 整体判定：达成 → 已验收
+
+打回时那条唯一的缺陷已修复，且修得对：`cmd_list` 现在复用既有的 `extract_aliases()`，spec §4.5 依赖的「每条 ~15 token 是结构性上界」恢复成立——实测均 22.37 字符/条，且由 `test_list_lines_are_structurally_bounded` 常驻守住，同类回归今后测得出来。
+
+本次交接的实施部分到此完成。**尚未合并到 `staging`**，按仓库约定由交出方在用户明确说「合并/完成」后执行。
+
+**遗留事项（不属于本次交接范围，供后续单独处理）**：
+
+1. **agent-canvas 的 `CLAUDE.md` 术语澄清节**尚未替换（spec §5.1 给了可复制片段）。那是另一个仓库，本次范围铁律明确划出。
+2. **`contentHash` 算法未查清**，本次按交代保持原值未动。全仓库 50 条按旧 plan 文档的配方复算 0 条匹配，值得单开一个 chore 查清或明确废弃该字段。
+3. **装机副本尚未同步**到 `~/.claude/skills/capture-vocab/`。按 CLAUDE.md，必须在合并进 `staging` 之后用 `git archive staging` 取，不从工作树 rsync，同步完核对 `version` 为 `1.2.0`。
 
