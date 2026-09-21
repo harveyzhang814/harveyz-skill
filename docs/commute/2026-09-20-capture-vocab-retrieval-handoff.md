@@ -1,5 +1,5 @@
 ---
-status: 待验收
+status: 打回
 date: 2026-09-20
 author_model: claude-opus-5
 acceptance: hard
@@ -137,6 +137,7 @@ target_node: 4242f9e0-a3f2-44cd-961c-b49c44fe7d4b
 11. **`skills-index.json`** 中 capture-vocab 的 `contentVersion` 为 `"1.2.0"`，`path` / `bundle` / `installScope` 未变。
 12. **未越界到 agent-canvas**：`git -C /Users/harveyzhang96/Projects/agent-canvas status --short` 输出为空（该仓库工作树未被本次改动触碰）。若它在接手前就非空，在自测记录里贴出开工前的同一条命令输出作为基线，判「与本次改动无关」。
 13. **未误改本仓库的 `.hskill/`**：`git diff --name-only staging..HEAD` 的结果中不含 `.hskill/` 下的任何文件。
+14. **（accept 阶段补立，见打回记录）`list` 的每行只含术语名与提取出的短别名**：fixture 上 `list` 的输出中，**没有任何一行长度超过 80 字符**，且「席位」那条（Avoid 为跨行散文、`extract_aliases` 返回空）输出为**裸术语名、不带 ` | ` 分隔符**。这条把 spec §4.5「~15 token/条是结构性上界」变成可证伪的断言。
 
 ## 接手方自测记录（2026-09-20）
 
@@ -157,4 +158,40 @@ target_node: 4242f9e0-a3f2-44cd-961c-b49c44fe7d4b
 13. **未误改本仓库的 `.hskill/`** — PASS，但同样有一处字面表述需要说明：`git diff --name-only staging..HEAD` 的结果中**包含**一条含 `.hskill/` 字样的路径——`skills/coding/capture-vocab/tests/fixtures/.hskill/capture-vocab/vocab.md`。这是范围铁律里明确要求新增的测试 fixture（为了让 `vocab.py` 的向上搜索逻辑在测试里生效，fixture 必须模拟一个项目根目录，因此需要一层 `.hskill/capture-vocab/` 子目录），不是本仓库自己的 `.hskill/`。用 `git diff --name-only staging..HEAD -- .hskill/`（只匹配仓库顶层 `.hskill/`）复核，输出为空，确认仓库真正的 `.hskill/handoff|release-project|sync-design` 均未被触碰。
 
 **结论：13 条锚点全部达成，无带红送验。** 第 4、13 条附带的说明是对锚点字面表述与实测结果之间细微出入的归因，不影响达成判定。
+
+## 原 session 验收记录（2026-09-20）
+
+在交接工作区内逐条**自己重跑**，不采信接手方结论。环境：`feature/capture-vocab-retrieval`，工作树干净，`staging..HEAD` 共 4 个实施提交。
+
+**锚点 1–13：逐条实跑，全部 PASS。** 摘关键实测：
+
+- **1** 全量测试套件退出码 0；`ℹ pass 322 / ℹ fail 0`；`── pytest: skills/coding/capture-vocab` 段 `16 passed in 0.43s`。命令输出重定向到文件后单独取退出码，未接管道。
+- **2** 无参数运行 → `usage: vocab.py <lookup|list|refs> [args]`，exit 2，无 traceback。
+- **3** `lookup 席位` exit 0；`lookup 完全不存在的词` → `no match: ...` exit 1；`/tmp` 下 → `no vocab file` exit 2。
+- **4** 两个方向都成立。接手方标注的出入属实且归因正确：`lookup 画布` 命中 4 条走降级。我**独立复核了这 4 条的合法性**——`extract_aliases` 实跑结果为 顶栏→`['canvas header','画布工具栏']`、节点→`['「画布上的节点」','卡片']`、席位→`[]`（跨行散文全被 20 字阈值挡掉），4 条命中全部来自真实短别名，不是解析 bug。
+- **5/6/7/8** 全部实跑通过。`refs src/renderer/src/components/PanelArea.tsx` 同时返回「工作区」与「视图」且皆为 `same-file`——正是 spec §1.2 那个「同一实体 vs 父子实体」场景的真实样本；`refs src/main/pilot/pilotConfig.ts` 正确区分出 `dir-contains`（Pilot（主体））与 `same-file`（`画布操控` profile）。
+- **补验了接手方未覆盖的上限边界**：`lookup 节点列表` 恰好 3 条命中 → 吐 3 个完整 section、**不降级**；`lookup 进程` 4 条 → 降级。`lookup 区` 未命中是 `len < 2` 守卫生效，符合 spec §3.2，不是缺陷。
+- **9** 收集到 **16 tests**（≥ 11）。核对了实质而非仅数量：双向子串两个方向分别由 `test_lookup_hit_exit_0`（画布→画布区）与 `test_lookup_degrades_above_three_hits`（整句）覆盖。
+- **11** `contentVersion` 为 `"1.2.0"`；`path`/`bundle`/`installScope` 未变；`contentHash` 保持原值未编造——**按「验证步骤」的交代处理，正确**。
+- **12/13** agent-canvas 仓库 `status --short` 输出为空；本仓库顶层 `.hskill/` 在 `staging..HEAD` 的改动列表中为空。接手方对第 13 条的说明属实：diff 中那条含 `.hskill/` 字样的路径是 `tests/fixtures/.hskill/...`，是范围铁律明确要求的 fixture。
+
+### 整体判定：未达成 → 打回
+
+**13 条锚点逐条实跑确实全绿，没有一条字面未达成。** 打回的依据不是那 13 条，是「关键决定（别改动）」里被违反的一条。
+
+**哪一条未达成**：新立的锚点 14（`list` 输出格式）。
+
+**为什么**：
+
+- 判据原文（本文档「关键决定」倒数第 2 行，及 spec §3.1 / §4.5）：「第 3 层只输出**术语名 | 别名**，不含定义正文 —— 术语名和别名在构造上就是短词，**~15 token/条是结构性上界，不是估算值**」。
+- 实跑结果：`cmd_list`（`scripts/vocab.py:129-136`）打印的是 `sec['avoid_raw']`——**Avoid 行的原文**，不是 `extract_aliases()` 提取出的短别名。fixture 35 条实测：总 2572 字符 / 均 73 / **最长 244**；若按 spec 改用 `extract_aliases`：总 783 / 均 22 / 最长 51。**超出 3.3 倍**。
+- 真正的问题不是倍数，是**结构性上界没了**：`avoid_raw` 是散文，长度不受任何约束。spec §4.5 那张「1000 条 ~15k」的成本表、以及「这块以后不需要再动」的结论，全部建立在这个上界上。用户在设计阶段明确要求这个问题当场解决、不要留给以后，现在它被原样留回去了。
+- 旁证：`SKILL.md:56` 自己写的是「人工比对全量**术语名+别名**」——文档与脚本此刻互相矛盾。
+- `extract_aliases()` 已经存在且工作正常（`section_hits` 一直在用它），`cmd_list` 只是没调它。
+
+**这个缺口是我（author）的责任，不是接手方漏做**：spec §6「测什么」里我给 `list` 写的断言只有「行数等于 `## ` 数」，没写内容格式；接手方照着做了、测试也照着写了（`test_list_line_count_matches_section_count`），锚点 1–13 因此全绿。锚点 14 是我在 accept 阶段补立的，用来把这条既有的关键决定变成可证伪的断言。
+
+**复修后要重跑的范围**：**锚点全集（1–14）**。理由：改动落在 `cmd_list` 上，而 `list` 与 `lookup` 共用 `parse_sections` / `extract_aliases` / `normalize`；`extract_aliases` 同时是 `section_hits` 的依赖，动它会波及 `lookup` 的全部命中行为。要缩小范围，按 Phase 2.5 的要求给出改动范围证据与「其余条目不可能被波及」的论证。
+
+**顺带一条不构成打回、复修时建议一并处理的观察**：`test_list_line_count_matches_section_count` 只断言行数，建议补上锚点 14 的两条内容断言，否则同类回归仍然测不出来。`SKILL.md:56` 与脚本的表述在修好之后会自动一致，无需另改。
 
