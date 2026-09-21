@@ -695,11 +695,17 @@ Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>"
 这一步是人跑的烟雾测试，没有自动化断言：`check` 的输出是自然语言报告，
 断言它的措辞只会锁死排版、拦不住判断逻辑出错。
 
+**此刻 skill 还没装到 `~/.claude/skills/`，`/init-project check` 这条斜杠命令不存在。**
+改成直接读工作区里的 `skills/coding/init-project/SKILL.md`，按它的「路由 → 探测」手工走一遍；
+SKILL.md 里的模板路径 `~/.claude/skills/init-project/assets/templates/code.yml` 在自测时
+换成 `skills/coding/init-project/assets/templates/code.yml`。**只在自测时替换，不要改 SKILL.md**——
+那个路径对装机后的运行时是对的。
+
 ```bash
-mkdir -p /tmp/init-project-smoke && cd /tmp/init-project-smoke
+mkdir -p /tmp/init-project-smoke
 ```
 
-在该目录跑 `/init-project check /tmp/init-project-smoke`。
+对 `/tmp/init-project-smoke` 走一遍 `check`。
 
 Expected：骨架四项全部「缺失」；skill 表只列本机全局没装的那些（多数应落在
 「已在全局、跳过」那行）；初始化相位两条——`init-workflow` 标注「总会跑一遍」，
@@ -708,7 +714,7 @@ Expected：骨架四项全部「缺失」；skill 表只列本机全局没装的
 
 - [ ] **Step 3: 验证场景二——成熟仓库**
 
-在 harveyz-skill 仓库根跑 `/init-project check`（本仓库跑了很久，是真实的补缺场景）。
+在交接工作区根上按 Step 2 的同样方式走一遍 `check`（本仓库跑了很久，是真实的补缺场景）。
 
 Expected：
 - `README.md` / `CLAUDE.md` / `TODO.md` / `docs/` 全部**不出现在表里**（已存在）
