@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { readFileSync, readdirSync } from 'node:fs'
+import { readFileSync, readdirSync, existsSync } from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { load } from 'js-yaml'
@@ -43,6 +43,14 @@ for (const { file, doc } of templates) {
       if (f.on_exists === undefined) continue
       assert.ok(['skip', 'append-missing-lines'].includes(f.on_exists),
         `${f.path}: 非法 on_exists=${f.on_exists}`)
+    }
+  })
+
+  test(`${file}: scaffold.files 的 from 路径都存在`, () => {
+    const assetDir = path.join(templateDir, '..')
+    for (const f of doc.scaffold.files) {
+      const src = path.join(assetDir, f.from)
+      assert.ok(existsSync(src), `找不到骨架资产: ${f.from}`)
     }
   })
 }
