@@ -1,5 +1,5 @@
 ---
-status: 待验收
+status: 已验收
 date: 2026-09-21
 author_model: claude-opus-5
 acceptance: hard
@@ -312,3 +312,77 @@ spec 里写成了可证伪的形式：如果实施中发现必须由它亲自写
 交接期间有别的 session 合并了东西进去。**这不影响你干活**（本次改动的文件与它们没有重叠面），
 也**不需要你去 rebase 或 merge**。合并时的冲突处理由原 session 负责。
 你只管在 `feature/init-project` 上把 Task 1–4 做完。
+
+---
+
+## 原 session 验收记录（2026-09-21）
+
+在交接工作区 `/Users/harveyzhang96/Projects/harveyz-skill/.claude/worktrees/feature+init-project`
+（分支 `feature/init-project`）内逐条重跑，**不采信接手方结论**。与接手方自测记录并列，不覆盖。
+机器校验 `validate-handoff.sh` exit 0。
+
+| 锚点 | 结果 | 实跑证据 |
+|---|---|---|
+| 1 模板校验器 | PASS | `node --test tests/templates.test.mjs` exit 0，`pass 6`（≥6） |
+| 2 校验器真会拦 | PASS | 改 `no-such-skill` 后 exit 1；还原后 exit 0；`git status --short` 确认 code.yml 干净 |
+| 3 skill 格式校验 | PASS | `bats tests/skills.bats` exit 0，8/8 `ok` |
+| 4 索引条目 | PASS | 校验脚本输出 `OK` |
+| 5 frontmatter | PASS | `name: init-project` / `version: "0.1.0"` / `user_invocable: true`，description 含 `/init-project` 与 `check` |
+| 6 打包清单 | PASS | 校验脚本输出 `OK` |
+| 7 骨架资产 | PASS | 四份齐；`grep -q '^\.hskill/\*/state\.json$'` exit 0 |
+| 8 check 零写入（空目录） | PASS | 见下 |
+| 9 check 零写入（成熟仓库） | PASS | 见下 |
+| 10 `npm test` | **红，归因为既有环境抖动，判定不构成未达成** | 见下 |
+| 11 提交落分支 | PASS | HEAD=`feature/init-project`；四个 Task 提交 `8f75877`/`794002f`/`cf9f403`/`3b38e4c` 均在本分支 |
+
+### 锚点 8 实跑
+
+对新建空目录 `/tmp/accept-smoke` 按 SKILL.md 的「路由 → 探测」手工走一遍：
+
+- 骨架：`docs`/`README.md`/`CLAUDE.md`/`TODO.md`/ignore 文件全部「缺失」
+- skill：`hskill status --json` exit 0，模板声明的 9 个全部 `user.claude.status = up-to-date`，
+  待装清单为空
+- 相位：`release-project` probe 路径不存在 →「未跑过」；`init-workflow` 无 probe →「总会跑一遍」
+- **`ls -A /tmp/accept-smoke` 计数 0**——零写入确认
+
+### 锚点 9 实跑
+
+对本工作区根同样走一遍：
+
+- `docs`/`README.md`/`CLAUDE.md`/`TODO.md` 全部「存在（skip，无差距）」，不进缺失表
+- ignore 文件：两条状态规则 `.hskill/*/state.json`、`.hskill/sync-design/html/` 逐行比对均「缺」，
+  按 `append-missing-lines` 列为待补
+- **`git status --short` 为空**——零写入确认
+
+**更正接手方自测记录中锚点 9 的一处描述**（显式写出，不静默改）：自测记录称
+`release-project` 的实际探测结果与锚点原文「未跑过」不符。我复核确认**接手方是对的**——
+`.hskill/release-project/release-profile.md` 在本仓库确实存在，
+`git log --oneline -1 -- .hskill/release-project/release-profile.md` 输出 `fb95985`，
+且 `git merge-base --is-ancestor fb95985 bae7082` 成立，即该文件早于本分支基线。
+**错在撰写锚点的我**（对仓库现状预判有误），不在探测逻辑，也不在接手方。
+接手方没有为迁就过时描述去改 SKILL.md，处理正确。
+
+### 锚点 10：红，以及为什么判定不构成未达成
+
+我这次 `npm test` 实跑 **REAL_EXIT=1**（退出码直接落盘，未接管道），7 条失败：
+
+- `skills/research/clip-url`：3 条
+- `tools/browser-fetch`：4 条
+
+接手方自测记录该条写的是 `REAL_EXIT:0`。**两个结果都是真的**——这套用例是抖的。归因证据三项：
+
+1. **被测代码两端逐字节相同**：`git diff --stat bae7082..HEAD -- tools/browser-fetch/ skills/research/clip-url/`
+   无输出。本分支改动的 16 个文件（见 `git diff --name-only bae7082..HEAD`）与这两个目录不相交。
+2. **失败集合在不同轮次间不一致**：把 browser-fetch 那 4 条单独重跑，2 条转绿、2 条仍红；
+   再把其中一条 `test_page_auth_with_empty_profile_injects_nothing` 完全单跑 → exit 0 通过。
+   稳定回归不会这样。
+3. **失败形态全是网络**：7 条的报错都是 `Page.goto: Timeout 30000ms exceeded` 访问
+   `https://example.com/`；同一时刻 `curl https://example.com` 返回 HTTP 200。
+   是沙箱内无头浏览器网络栈的环境限制。
+
+**判定：达成。** 锚点 10 字面是红的，此处显式记录，不粉饰；但红因可归到本次改动之外的既有
+环境抖动，不作为未达成的依据。
+
+**遗留给后续的一笔**（不属于本次交接范围）：`tools/browser-fetch` 与 `skills/research/clip-url`
+有 7 条用例依赖真实外网，在受限网络下会随机变红，使 `npm test` 不再是可靠的门禁信号。
+建议后续单开一条分支把这些用例改成打桩或标记为 network-gated。
