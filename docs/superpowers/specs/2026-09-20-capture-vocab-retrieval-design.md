@@ -77,6 +77,9 @@ gitignore 掉的派生缓存」，权威源永远是文本。
 ## 3. 脚本契约
 
 ```
+skills/coding/capture-vocab/SKILL.md                    # 只留查词路径（§4.1）
+skills/coding/capture-vocab/references/manage.md        # add/update/remove 细则
+skills/coding/capture-vocab/references/project-setup.md # 项目接入说明
 skills/coding/capture-vocab/scripts/vocab.py     # python3，无第三方依赖
 skills/coding/capture-vocab/tests/test_*.py      # pytest，npm test 自动发现
 ```
@@ -170,11 +173,28 @@ agent 遇到看起来像项目术语的词，**invoke `capture-vocab` skill**，
 语言时，这些副本会**静默失效**——不报错，只是从此查不到词，而表面上看一切照旧。
 调用契约必须由 skill 自己持有。
 
-**代价，明确记下来**：每次查词要加载一次 `SKILL.md`（当前 5700 字节 ≈ 2k token），
-而直接调脚本是命中 200–400、未命中 ~20。高频路径上贵 10–100 倍。
+**代价，明确记下来**：每次 invoke 都会把整份 `SKILL.md` 注入一次上下文，而直接调脚本
+是命中 200–400、未命中 ~20。
 
-接受这个代价的依据：**它是固定开销，不随词汇表增长**。本设计要守的性质是「成本与
+**「每次」是实测的，不是推测**：本设计讨论期间同一 session 内 invoke 了 `handoff` skill
+三次，上下文里出现了三份完整副本（各约 11.5k 字符）。所以这不是一次性开销——没有任何
+机制限制一个 session 里 invoke 几次，成本从「确定的、随查词次数增长」变成「2k × 模型
+决定 invoke 几次」，后者不受设计控制。
+
+**顺带一个可复用的观察**：本地会话 JSONL（`~/.claude/projects/.../*.jsonl`）对同一次
+交互只记了 1 份，正文是组请求时才展开的。**不能拿 JSONL 推算上下文窗口里有什么**，
+它会系统性低估。
+
+**缓解（已实施）**：`SKILL.md` 只保留查词路径，写操作细则与项目接入说明按渐进式披露
+挪进 `references/`，**5700 → 2582 字节（降 55%）**，只在真要做那些事时才读。
+
+接受这个代价的依据：**它是固定开销，不随词汇表条数增长**。本设计要守的性质是「成本与
 词汇表总量无关」（§4.5），这条性质不受影响；涨的是一笔定额过路费，不是斜率。
+
+**评估并否决了「拆成两个 skill」**（`search-vocab` 只读 + `capture-vocab` 读写）：拆完
+每次查词约 350 token，比瘦身后的 ~900 省得有限；而两个 skill 要共用同一个 `vocab.py`
+和同一套 `vocab.md` 格式，脚本放哪个目录里都尴尬，调用契约又散成两份——正是本节要消除
+的那类问题。两个描述里都带「vocab」还会给触发判断多加一层可能出错的分辨。
 
 **未验证**：走 skill 之后触发率会更高还是更低，没有数据。调 skill 比跑一条 bash 是
 更「重」的动作，模型可能更不愿意为一个随口的词去调；但 skill 的 description 常驻
@@ -287,6 +307,7 @@ O(N) 只在一种情况触发——新词没有 `_Reference_`（纯 spec 术语�
 | `SKILL.md` 「Agent 加载约定」节 | 重写，给出 §5.1 的可复制片段 |
 | `SKILL.md` add/query/update/remove | 按 §4 改写 |
 | 新增 `scripts/vocab.py` + `tests/` | — |
+| 新增 `references/manage.md` + `references/project-setup.md` | 渐进式披露，低频内容不进每次 invoke（§4.1） |
 | 版本号 | `1.1.2` → `1.2.0` |
 | `skills-index.json` | 不动（path 与 bundle 均未变） |
 
