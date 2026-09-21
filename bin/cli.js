@@ -9,7 +9,7 @@ import path from 'path'
 import { fileURLToPath } from 'url'
 import {
   getAllSkillItems, getAllToolItems, getAllHookItems, checkHookInstalled,
-  checkInstalled, checkToolInstalled, scopeSummary,
+  checkInstalled, checkToolInstalled, scopeSummary, toSkillItems,
   resolveSkills, resolveSkillsByName, resolveTools, resolveToolsByName,
   TOOL_BUNDLE_CHOICES,
 } from '../lib/bundles.js'
@@ -375,13 +375,32 @@ if (subcommand === 'update') {
     await updateToNpm(priorSource)
   }
 
+  // Re-require fresh: the self-update above just replaced this install
+  // directory's skills-index.json on disk, but bin/cli.js's own top-level
+  // import of lib/bundles.js already cached the *old* skillDefs at process
+  // start. A plain require() here is the first hit for this path in this
+  // process, so it reads what's actually on disk now.
+  const { renames = [], skills: freshSkillDefs = [] } = require('../skills-index.json')
+  const skillsRoot = path.join(__dirname, '..', 'skills')
+
+  // Auto-upgrade skills opted into `autoUpdate: true` (skills-index.json),
+  // scoped to `user` to match `hskill upgrade`'s default scope.
+  const autoUpdateRows = buildSkillRows(null, toSkillItems(freshSkillDefs, skillsRoot))
+    .filter(r => r.autoUpdate)
+  if (autoUpdateRows.length > 0) {
+    const autoTargets = resolveTargets(['all'], 'user')
+    const autoSummary = await upgradeOutdatedSkills(autoUpdateRows, autoTargets, 'userDetail')
+    const upgraded = [...new Set(Object.values(autoSummary).flatMap(s => s.installed ?? []))]
+    const failed   = [...new Set(Object.values(autoSummary).flatMap(s => (s.failed ?? []).map(f => f.name)))]
+    if (upgraded.length > 0) console.log(chalk.green(`  ✔ Auto-updated ${upgraded.length} skill(s): ${upgraded.join(', ')}`))
+    if (failed.length   > 0) console.log(chalk.yellow(`  ⚠ Auto-update failed for: ${failed.join(', ')}`))
+  }
+
   // Run skill rename migrations
-  const { renames = [], skills: skillDefs = [] } = require('../skills-index.json')
   if (renames.length > 0) {
     console.log(chalk.dim('  · Migrating renamed skills…'))
     const targets = SKILL_TARGETS.map(name => ({ name, dir: userSkillDir(name) }))
-    const skillsRoot = path.join(__dirname, '..', 'skills')
-    const migrationSummary = await migrateRenamedSkills(renames, targets, skillsRoot, skillDefs)
+    const migrationSummary = await migrateRenamedSkills(renames, targets, skillsRoot, freshSkillDefs)
     const totalMigrated = Object.values(migrationSummary).reduce((n, s) => n + s.migrated.length, 0)
     const totalFailed   = Object.values(migrationSummary).reduce((n, s) => n + s.failed.length, 0)
     if (totalMigrated > 0) console.log(chalk.green(`  ✔ Migrated ${totalMigrated} skill(s)`))
@@ -453,10 +472,11 @@ function resolveHookDisplayVersion(inst, sourceVersion) {
 }
 
 // ── Shared skill scan ─────────────────────────────────────────────────────────
-function buildSkillRows(nameFilter = null) {
+function buildSkillRows(nameFilter = null, sourceItems = null) {
+  const allItems = sourceItems ?? getAllSkillItems()
   const items = nameFilter
-    ? getAllSkillItems().filter(s => s.skillName === nameFilter)
-    : getAllSkillItems()
+    ? allItems.filter(s => s.skillName === nameFilter)
+    : allItems
   return items.map(s => {
     const inst = checkInstalled(s.skillName, s.version ?? '—')
     return {
@@ -464,6 +484,7 @@ function buildSkillRows(nameFilter = null) {
       bundle:       s.bundle        ?? '—',
       version:      s.version       ?? '—',
       installScope: s.installScope  ?? null,
+      autoUpdate:   s.autoUpdate    ?? false,
       srcPath:      s.srcPath,
       userStatus:   scopeSummary(inst.user),
       projectStatus: scopeSummary(inst.project),
@@ -471,6 +492,26 @@ function buildSkillRows(nameFilter = null) {
       projectDetail: inst.project,
     }
   })
+}
+
+// Shared by `upgrade` and the post-`update` auto-upgrade step: for each
+// target, install whichever rows are outdated (status === 'update') on that
+// target's scope. Rows not carrying the given scope's detail are left alone.
+async function upgradeOutdatedSkills(rows, targetList, scopeKey) {
+  const summary = {}
+  for (const { name: targetName, dir } of targetList) {
+    const upgradeList = rows
+      .filter(r => r[scopeKey]?.[targetName]?.status === 'update')
+      .map(r => ({ skillName: r.name, srcPath: r.srcPath, version: r.version }))
+
+    if (!upgradeList.length) continue
+
+    console.log('')
+    const result = await installSkills(upgradeList, [{ name: targetName, dir }], true)
+    Object.assign(summary, result)
+    console.log('')
+  }
+  return summary
 }
 
 // ── Status / Outdated ─────────────────────────────────────────────────────────
@@ -924,19 +965,7 @@ if (subcommand === 'upgrade') {
   const targetList  = resolveTargets(upgradeTargetArg ? [upgradeTargetArg] : ['all'], upgradeScopeArg)
   const scopeKey    = upgradeScopeArg + 'Detail'   // 'userDetail' or 'projectDetail'
 
-  const summary = {}
-  for (const { name: targetName, dir } of targetList) {
-    const upgradeList = rows
-      .filter(r => r[scopeKey]?.[targetName]?.status === 'update')
-      .map(r => ({ skillName: r.name, srcPath: r.srcPath, version: r.version }))
-
-    if (!upgradeList.length) continue
-
-    console.log('')
-    const result = await installSkills(upgradeList, [{ name: targetName, dir }], true)
-    Object.assign(summary, result)
-    console.log('')
-  }
+  const summary = await upgradeOutdatedSkills(rows, targetList, scopeKey)
 
   const nothingUpgraded = Object.keys(summary).length === 0
   if (jsonFlag) {
