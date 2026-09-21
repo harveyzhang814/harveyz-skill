@@ -31,7 +31,13 @@ harveyz-skill 目前有 50 个 skill，其中 24 个标记 `installScope: projec
 第一次用 `/handoff` 时问一次交接约定，第一次发版时问一遍 release profile，
 第一次清分支时问一遍清理规则。每一次都发生在你正想干别的事的时候。
 
-触发场景：从空目录（或刚 clone 的空仓库）起建一个新项目。
+触发场景有两个，**第二个很可能才是主要用法**：
+
+1. 从空目录（或刚 clone 的空仓库）起建一个新项目
+2. 在一个已经管理了一段时间的仓库上**补缺**——它缺哪几个 skill、缺哪几份骨架文件、
+   哪几个 init 相位还没跑过
+
+整套流程为此按幂等设计（§4.2），并提供一个只读的诊断模式（见 §3 末尾的 `check` 模式）。
 
 ### 1.2 「需要初始化的东西」实际有几类
 
@@ -81,9 +87,9 @@ name: code
 scaffold:                      # 1. 仓库骨架
   git_init: true
   dirs: [docs]
-  files:
+  files:                       # on_exists 默认 skip
     - {path: README.md,  from: skeleton/README.md}
-    - {path: .gitignore, from: skeleton/gitignore-code}
+    - {path: .gitignore, from: skeleton/gitignore-code, on_exists: append-missing-lines}
     - {path: CLAUDE.md,  from: skeleton/CLAUDE.md}
     - {path: TODO.md,    from: skeleton/TODO.md}
 skills:                        # 2. 要保证可用的 skill（不预设装哪一级）
@@ -104,7 +110,7 @@ register:                      # 5. 登记
   hub: true
 ```
 
-### 2.2 两个字段的取舍
+### 2.2 三个字段的取舍
 
 **`ask_first` 是模板里唯一的条件逻辑口子**，只接一句是非问，不可嵌套。这是有意识的收窄：
 条件逻辑一旦能嵌套，模板就变成了脚本语言，而脚本语言应该写在 SKILL.md 里而不是 YAML 里。
@@ -113,6 +119,18 @@ register:                      # 5. 登记
 **`probe` 解决重跑安全**（见 §4.2），指向一份配置文件；文件已存在则整条 init_phase 跳过。
 **它是可选字段，只加在「重复调用有破坏性」的条目上。** `init-workflow` 不加——它自己有
 差量检测，重跑不但安全，还能检出配置漂移；给它加 probe 反而会把这个能力关掉。
+
+**`on_exists` 解决老仓库上的幂等粒度**，两个取值：
+
+| 取值 | 行为 | 用在 |
+|---|---|---|
+| `skip`（默认） | 文件已存在则整体不动 | README、CLAUDE.md、TODO.md——内容是项目自己的，不能被模板插手 |
+| `append-missing-lines` | 文件已存在则逐行比对，只追加缺失的行 | `.gitignore` |
+
+不加这个字段的话，老仓库上 `.gitignore` 一定已存在、于是整体跳过，
+`.hskill/*/state.json` 那条永远补不上——而那恰好是这个 skill 该带来的东西。
+代价：`append-missing-lines` 是纯文本行比对，不理解 ignore 文件的语义，
+已有整目录 ignore 规则时它仍会追加更细的那条，产生一条冗余规则（无害，但难看）。
 
 ### 2.3 两个骨架层面的判断
 
@@ -140,8 +158,13 @@ register:                      # 5. 登记
 
 ### Step 1 — 骨架落盘
 
-按 `scaffold` 建目录、拷文件。**已存在的文件一律不覆盖，只记「已跳过」**——
-这条让整个 skill 可以在半成品仓库上重跑。
+按 `scaffold` 建目录、拷文件。**已存在的文件按 `on_exists` 处理，默认整体不覆盖，
+只记「已跳过」**——这条让整个 skill 可以在半成品仓库、乃至成熟仓库上重跑。
+`append-missing-lines` 的条目改为逐行补齐，并记录实际追加了哪几行。
+
+**能力上限，收尾清单里要明说**：这一步只认同名文件。老仓库里若已有一套自己的
+钩子目录，或 `CONTRIBUTING.md` 已经承担了 CLAUDE.md 的部分职责，
+init-project 照样会新建一个 CLAUDE.md——它看不出「同一件事换了个名字」。
 
 ### Step 2 — 解析已装，差量安装
 
@@ -193,13 +216,38 @@ hub projects add <name> --path <abs> --desc <一句话>
 
 ### Step 5 — 收尾清单
 
-四段：
+五段：
 
 1. 已建的文件 / 已跳过的（因已存在）
 2. 已装到项目级的 skill / 已跳过的（因全局已有）
 3. 已跑完的 init 相位 / 跳过的及原因
 4. **待办**：`language_hints` 里的语言脚手架命令、那六个「首次使用时会问你配置」的
    skill、需要时的 `hskill outdated`、以及建远程仓库的命令
+5. **请自行核对**：本次新建的文件清单，提示用户确认有没有和仓库既有约定重复
+   （只在确实新建了文件时输出）
+
+### 模式分支 — `check`：只诊断不动手
+
+`/init-project check` 走同一套模板，但**不写任何文件、不装任何 skill、不调任何 init 相位**。
+它跑三件只读的事，然后输出一张「缺什么」的表：
+
+| 检查项 | 数据来源 |
+|---|---|
+| 骨架缺哪些文件、`.gitignore` 缺哪几行 | 文件系统 |
+| 模板声明的 skill 里哪些两级都没装 | `hskill status --json` |
+| 哪些 init 相位还没跑过 | 各条的 `probe` 路径是否存在 |
+
+**这是为老仓库加的。** 在一个跑了半年的仓库上，你多半想先看见差距再决定动不动，
+而上面三项本来就全是只读操作——执行模式里它们各自是 Step 1/2/3 的前半段，
+`check` 只是跑到那里停住。
+
+代价：SKILL.md 多一条路由分支，而且两条路径的判断逻辑必须共用同一段描述，
+否则 `check` 报「缺 X」而执行模式没装 X，这种分叉比没有 check 更糟。
+实现上的约束：把三项检查写成 SKILL.md 里一节独立的「探测」，两条路径都引用它，
+不各写一遍。
+
+`check` 不问任何问题，包括 `ask_first`——它只报告「这条相位有 `ask_first`，
+执行时会先问你」。
 
 ---
 
@@ -267,11 +315,12 @@ harveyz-skill 仓库内使用，情况正相反。
 
 ## 6. 测试
 
-接 `npm test` 现有的 SKILL.md 格式校验，新增三条模板校验：
+接 `npm test` 现有的 SKILL.md 格式校验，新增四条模板校验：
 
 1. `assets/templates/*.yml` 五段齐全
 2. `init_phases[].skill` 必须出现在同模板的 `skills` 清单里
 3. **`skills` 清单里每个名字必须能在 `skills-index.json` 里查到**
+4. `scaffold.files[].on_exists` 若出现，取值必须是 `skip` 或 `append-missing-lines`
 
 第三条最值钱：skill 被归档或改名时它会立刻失败，否则模板会静默引用一个不存在的 skill，
 而这种失败要到某人初始化新项目时才暴露。
