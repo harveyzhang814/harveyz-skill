@@ -336,8 +336,8 @@
       "path": "feed/manage-creators",
       "bundle": "feed",
       "installScope": "project",
-      "contentHash": "36b5dbeb3bd46336",
-      "contentVersion": "0.3.0"
+      "contentHash": "7db2fbcbf26017d9",
+      "contentVersion": "0.3.1"
     },
     {
       "path": "feed/capture-opinion",
@@ -355,14 +355,14 @@
     {
       "path": "agent-canvas/describe-node",
       "bundle": "agent-canvas",
-      "contentHash": "bf7551628799fb20",
-      "contentVersion": "1.0.1"
+      "contentHash": "391ae8eadb205708",
+      "contentVersion": "1.0.2"
     },
     {
       "path": "agent-canvas/relate-node",
       "bundle": "agent-canvas",
-      "contentHash": "d61712f45de4d4ec",
-      "contentVersion": "1.0.1"
+      "contentHash": "395d08fedfa3a113",
+      "contentVersion": "1.0.2"
     },
     {
       "path": "agent-canvas/capture-requirement",
