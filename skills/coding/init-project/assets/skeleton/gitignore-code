@@ -1,0 +1,19 @@
+# --- harveyz-skill 运行时状态 ---
+# .hskill/ 下的配置文件（workflow-config.yml、config.md、vocab.md）要进版本库，
+# 团队共享；只有运行时状态不进。
+.hskill/*/state.json
+.hskill/sync-design/html/
+
+# --- 通用 ---
+.DS_Store
+*.log
+.env
+.env.local
+
+# --- 依赖与构建产物 ---
+node_modules/
+dist/
+build/
+__pycache__/
+.venv/
+target/
