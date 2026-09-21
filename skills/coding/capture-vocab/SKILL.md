@@ -1,6 +1,6 @@
 ---
 name: capture-vocab
-version: "1.1.2"
+version: "1.2.0"
 description: Use when you need to add, query, update, or remove project-specific domain terms — invoke with /capture-vocab add|query|update|remove <term> to manage a shared vocabulary file at .hskill/capture-vocab/vocab.md
 user_invocable: true
 ---
@@ -39,15 +39,26 @@ _Reference_: src/models/order.ts:42, docs/business/order-flow.md
 
 ## 操作
 
+### query `<term>`
+
+1. 跑 `python3 ~/.claude/skills/capture-vocab/scripts/vocab.py lookup "<term>"`
+2. exit 0：按输出的 section 定义回答
+3. exit 1：跑 `python3 ~/.claude/skills/capture-vocab/scripts/vocab.py list`，列出全部术语名供用户挑选
+4. exit 2 或脚本不可用（如 python3 缺失）：退回读取整份 `.hskill/capture-vocab/vocab.md`，用 `## <term>` 标题手动定位（大小写不敏感）
+
 ### add `<term>`
 
-1. 检查 `.hskill/capture-vocab/vocab.md` 是否存在 `## <term>` section（大小写不敏感匹配）
-2. 若已存在：输出"术语 '<term>' 已存在，请用 `update` 修改"并退出
-3. 若不存在，**先从当前对话上下文推断**各字段：
-   - **定义**：从对话中该词的使用方式推断一到两句话的定义；无法推断则留空
-   - **Avoid**：从对话中出现过的同义词或混用叫法推断；无法推断则留空
-   - **Reference**：从对话中提到的代码文件/文档位置推断；无法推断则留空
-4. 展示推断结果，格式如下，请用户确认或修改：
+**分层查重，按成本从低到高，严格顺序：**
+
+1. 跑 `python3 ~/.claude/skills/capture-vocab/scripts/vocab.py lookup "<term>"`。命中（exit 0）→ 输出"术语 '<term>' 已存在，请用 `update` 修改"并退出
+2. 从当前对话上下文推断该词的**定义 / Avoid / Reference**（Reference 留空则跳过第 3 层）
+3. 对推断出的每个 Reference 路径，跑 `python3 ~/.claude/skills/capture-vocab/scripts/vocab.py refs "<path>"`，收集分档候选（`same-file` / `dir-contains`）
+4. **仅当第 1、3 步均空手**（`lookup` 未命中 且 `refs` 无候选）时，才跑 `python3 ~/.claude/skills/capture-vocab/scripts/vocab.py list`，人工比对全量术语名+别名找语义相近候选；否则跳过这一步，不付这个 O(N) 成本
+5. 对已得到的候选（第 3 或第 4 步产出的）逐个 `lookup` 取完整定义，**必须显式判一个结论并说给用户**，三选一：
+   - **同一实体两个名字** → 建议改用 `update`，把新叫法并进该条目的 `_Avoid_`
+   - **父子实体各有其名** → 正常新增，建议在两条定义里互相点名
+   - **无关** → 正常新增
+6. 展示条目 + 查重结论，等用户确认（`y` 或直接输入修改内容），格式：
    ```
    准备添加以下条目，请确认或直接修改：
 
@@ -56,30 +67,26 @@ _Reference_: src/models/order.ts:42, docs/business/order-flow.md
    _Avoid_: <推断的 avoid，或省略>
    _Reference_: <推断的 reference，或省略>
 
+   查重结论：<同一实体两个名字 / 父子实体各有其名 / 无关，附简要理由>
+
    确认添加？(y / 直接输入修改内容)
    ```
-5. 用户确认后（输入 `y` 或不输入内容直接回车）写入；若用户输入了修改内容，用修改后的值写入
-6. 若目录 `.hskill/capture-vocab/` 不存在，创建它；若 `vocab.md` 不存在，创建并写入 `# Domain Vocabulary\n`
-7. 在文件末尾追加新 section，Avoid/Reference 为空时省略对应行
+7. 若目录 `.hskill/capture-vocab/` 不存在，创建它；若 `vocab.md` 不存在，创建并写入 `# Domain Vocabulary\n`
+8. 在文件末尾追加新 section，Avoid/Reference 为空时省略对应行
 
-### query `<term>`
-
-1. 检查 `.hskill/capture-vocab/vocab.md` 是否存在；若不存在，输出"词汇表尚未初始化，请先用 `add` 添加术语"并退出
-2. 按 `## <term>` 标题匹配（大小写不敏感），读取该 section 直到下一个 `##` 或文件末尾
-3. 返回该 section 的完整内容（定义 + Avoid + Reference）
-4. 若未找到，输出"未找到术语 '<term>'"，然后列出 vocab.md 中所有 `##` 标题作为已有术语名
+**退路**：`vocab.py` 不存在或 python3 不可用时，退回读取整份 `vocab.md` 手动检查 `## <term>` 是否已存在，跳过第 3/4 层查重（无法自动化），仅凭对话上下文判断是否重复。
 
 ### update `<term>`
 
-1. 检查词汇表存在且包含该术语；若文件不存在或术语不存在，输出对应错误后退出
+1. 跑 `python3 ~/.claude/skills/capture-vocab/scripts/vocab.py lookup "<term>"` 确认存在；exit 1 或 2 → 输出对应错误后退出
 2. 展示当前条目的完整内容
 3. **从当前对话上下文推断**需要更新的字段（定义/Avoid/Reference）；若无新信息可推断，各字段显示为原值
-4. 展示推断后的新条目，请用户确认或修改（格式同 add 步骤 4）
+4. 展示推断后的新条目，请用户确认或修改（格式同 add 步骤 6）
 5. 用最终值替换该 section 内容，写回文件；未修改的字段保持原值不变
 
 ### remove `<term>`
 
-1. 检查词汇表存在且包含该术语；若不存在，输出对应错误后退出
+1. 跑 `python3 ~/.claude/skills/capture-vocab/scripts/vocab.py lookup "<term>"` 确认存在；exit 1 或 2 → 输出对应错误后退出
 2. 展示该术语的当前条目
 3. 提示"确认删除 '<term>'？(y/N)"，等待用户输入
 4. 若输入 `y`：删除该 section（含前后空行），写回文件
@@ -87,8 +94,20 @@ _Reference_: src/models/order.ts:42, docs/business/order-flow.md
 
 ## Agent 加载约定
 
-本 Skill 不自动注入词汇表到 session 上下文。如需在每次 session 开始时加载术语，在项目 `CLAUDE.md` 中加入：
+**不要在 session 开始时读取整份 `vocab.md`。** 在项目 `CLAUDE.md` 中加入：
 
 ```markdown
-每次 session 开始，读取 `.hskill/capture-vocab/vocab.md`（如存在）。
+## 术语澄清
+
+遇到定义含糊的词或特殊称谓，不要凭猜测理解。跑：
+
+    python3 ~/.claude/skills/capture-vocab/scripts/vocab.py lookup "<词或整句>"
+
+exit 0：按吐出来的词条定义理解。
+exit 1（`no match`）：没有定义，按字面理解，不必追问。
+输出 `N matches: ...`：命中太多，挑最相关的再 lookup 一次。
+exit 2 或脚本不可用：才退回 grep `.hskill/capture-vocab/vocab.md`，
+不要把整篇文档读进上下文。
 ```
+
+两条触发判据：(1) 用户消息里出现不像通用软件概念、像本项目自造的名词；(2) 要在回复、文档或 commit message 里首次使用某个项目名词时（避免用上 `_Avoid_` 里的旧叫法）。这条路径完全绕开本 skill——不 invoke、不读这份 SKILL.md，成本只是那次脚本调用的输出。
