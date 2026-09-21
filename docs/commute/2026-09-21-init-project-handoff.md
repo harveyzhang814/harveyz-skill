@@ -1,12 +1,12 @@
 ---
-status: 待执行
+status: 待验收
 date: 2026-09-21
 author_model: claude-opus-5
 acceptance: hard
 branch: feature/init-project
 worktree: /Users/harveyzhang96/Projects/harveyz-skill/.claude/worktrees/feature+init-project
 source_node: e25d520f-15fb-44e2-ad48-53c159f8682a
-target_node:
+target_node: 03464d99-3269-4232-8966-3756e4ca35c0
 ---
 
 # 交接：实现 init-project skill（新项目初始化 / 老仓库补缺）
@@ -86,6 +86,91 @@ target_node:
 11. **提交落在正确分支**
     `git rev-parse --abbrev-ref HEAD` 输出 `feature/init-project`，且 Task 1–4 各自的
     commit 都在这条分支上（`git log --oneline` 看得到）。
+
+---
+
+## 接手方自测记录（2026-09-21）
+
+Task 1–4 全部实现并逐个提交后，逐条实跑「最小验收锚点」全集，命令均不接管道
+（未用 `| tail` 等掩盖真实退出码）。全部绿，无带红送验的条目。
+
+1. **模板校验器绿且覆盖五项** — PASS
+   `node --test tests/templates.test.mjs`：exit 0，`# pass` 6（要求 ≥6）。
+
+2. **校验器真的会拦** — PASS
+   把 `code.yml` 的 `skills` 首项临时改成 `no-such-skill`，重跑：exit 1（同时触发了
+   `skills 清单里每个名字都能查到` 与 `init_phases 引用的 skill 必须在 skills 清单里`
+   两条断言失败，因为 `init_phases` 里的 `init-workflow` 也随之失去声明——这是预期的
+   连锁失败，证明校验器确实会拦，不是误报）。改回后重跑：exit 0。
+   `git diff --stat` 确认 `code.yml` 已干净还原到提交状态。
+
+3. **skill 格式校验绿** — PASS
+   `bats tests/skills.bats`：exit 0，8/8 `ok`。
+
+4. **索引条目正确** — PASS
+   锚点里给的校验脚本输出 `OK`。
+
+5. **frontmatter 正确** — PASS
+   `skills/coding/init-project/SKILL.md` 首 10 行核对：`name: init-project`、
+   `version: "0.1.0"`、`user_invocable: true`，`description` 同时含 `/init-project`
+   与 `check`。
+
+6. **打包清单已重新生成** — PASS
+   锚点里给的校验脚本输出 `OK`（`files[]` 含 `skills/coding/init-project/`）。
+
+7. **骨架资产齐且 `.gitignore` 骨架带状态规则** — PASS
+   `assets/skeleton/` 下四份文件（README.md / gitignore-code / CLAUDE.md / TODO.md）
+   均存在；`grep -q '^\.hskill/\*/state\.json$' .../gitignore-code` exit 0。
+
+8. **`check` 模式零写入——空目录场景** — PASS
+   对 `/tmp/init-project-smoke`（新建的空目录）按 SKILL.md 的「路由 → 探测」手工走一遍
+   （模板路径按锚点说明换成工作区内的 `skills/coding/init-project/assets/templates/code.yml`）：
+   - 骨架：`docs` 目录与四份 scaffold 文件全部「缺失」。
+   - skill：本机 9 个全部 `user.claude.status = up-to-date`（全局已装），落入「已在
+     全局、跳过」，待装清单为空。
+   - 初始化相位：`init-workflow` 无 probe → 「总会跑一遍」；`release-project` 的
+     probe 路径 `.hskill/release-project/release-profile.md` 在该空目录下不存在 →
+     「未跑过」。
+   - `ls -A /tmp/init-project-smoke` 输出为空——零写入确认。
+
+9. **`check` 模式零写入——成熟仓库场景** — PASS（锚点文字与本仓库当前实况有一处不符，
+   已按实况判定，见下方说明）
+   对交接工作区根按同样方式手工走一遍：
+   - `README.md`/`CLAUDE.md`/`TODO.md`/`docs/` 全部不出现在缺失表里（已存在，`skip`
+     模式无差距）。
+   - `.gitignore` 出现：本仓库的 `.gitignore` 是「默认拒绝、逐项放行」写法（`*` 开头
+     再 `!` 白名单），逐行比对后两条状态规则行（`.hskill/*/state.json`、
+     `.hskill/sync-design/html/`）均不存在，按预期列为「缺 2 行」。
+   - `init-workflow` 无 probe → 「总会跑一遍」，且没有因本仓库已有 `.githooks/` 而
+     误报（该条目本就不设 probe，探测逻辑不会去看 `.githooks/`）。
+   - **`release-project` 的实际探测结果是「已跑过」，与锚点原文「未跑过」不符**：
+     `.hskill/release-project/release-profile.md` 在本仓库确实存在，`git log --oneline
+     -- .hskill/release-project/release-profile.md` 显示它在 `fb95985`
+     （`chore: migrate release-profile.md to .hskill/release-project/`）就已提交，
+     早于本次交接分支。这是撰写锚点时对仓库现状的预判有误，不是 `## 探测` 判断逻辑
+     的缺陷——探测逻辑只是如实读了 probe 路径的存在性。未改动 SKILL.md 去"迁就"这条
+     过时描述。
+   - `git status --short`：除本次交接文档与本自测记录本身的改动外，整个 check
+     走查过程零写入。
+
+10. **全量测试绿** — PASS
+    `npm test`（未接管道，`echo "REAL_EXIT:$?" >> log` 直接落盘退出码）：`REAL_EXIT:0`。
+    细分：bats 三套（165/34/13 项）全 `ok`；`run-skill-tests.sh` 汇总
+    `14 passed, 0 failed (14 total)`；`node --test` 汇总 `tests 335 / pass 328 / fail 0`
+    （其余为 suite 汇总项，非失败）。
+
+    过程记录：中途两次全量跑（Task 3、Task 4 提交前）出现过 `tools/browser-fetch`
+    与部分 `skills/research` 用例网络超时（`Page.goto` 访问 `https://example.com`
+    30s 超时），但 `curl` 直连同一 URL 返回 200——判断是沙箱内无头浏览器网络栈的环境
+    限制，与本次改动的文件（`package.json`、`tests/templates.test.mjs`、
+    `skills/coding/init-project/*`、`skills-index.json`）完全不相交，且两次失败的
+    具体用例集合不同（典型的网络超时抖动特征，不是稳定复现的回归）。本次锚点 10
+    记录的是最终这次全绿的结果，不带红送验。
+
+11. **提交落在正确分支** — PASS
+    `git rev-parse --abbrev-ref HEAD` 输出 `feature/init-project`；
+    `git log --oneline` 可见 Task 1–4 四个提交（`8f75877` / `794002f` / `cf9f403` /
+    `3b38e4c`），均在这条分支上。
 
 ---
 
