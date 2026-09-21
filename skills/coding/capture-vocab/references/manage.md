@@ -8,6 +8,19 @@
 python3 ~/.claude/skills/capture-vocab/scripts/vocab.py <子命令> [参数]
 ```
 
+## exit 0 ≠ 该术语存在（三个命令都踩这个坑）
+
+`lookup` 是**双向子串匹配**，术语名和 `_Avoid_` 里的短别名都算。所以 exit 0 只说明"匹配到了什么"，**不说明你给的那个名字是一条已有术语**：
+
+| 你给的 term | lookup 命中 | 它本身是已有术语吗 |
+|---|---|---|
+| 左抽屉 | `## 工作区`（「抽屉」在其 `_Avoid_` 里） | **否** |
+| 卡片 | `## Widget (瓦片)`、`## 节点` | **否** |
+
+**所以 `add` / `update` / `remove` 的第 1 步在 exit 0 之后都必须多做一件事：把命中的 section 名与你给的 `<term>` 比一次**，归一化规则与脚本一致（大小写、全/半角括号、反引号都忽略）。名字不等就不是"这个术语"，三个命令各自的处理见下。
+
+漏掉这一步的后果，按严重度排：`remove 卡片` 会删掉「Widget (瓦片)」；`update 左抽屉` 会改到「工作区」；`add 左抽屉` 会报一句假的"已存在"，并且把查重最该抓的那类重复直接短路掉。
+
 ## 词汇文件格式
 
 `<project-root>/.hskill/capture-vocab/vocab.md`
@@ -29,7 +42,10 @@ _Reference_: src/models/order.ts:42, docs/business/order-flow.md
 
 **分层查重，按成本从低到高，严格顺序：**
 
-1. 跑 `vocab.py lookup "<term>"`。命中（exit 0）→ 输出"术语 '<term>' 已存在，请用 `update` 修改"并退出
+1. 跑 `vocab.py lookup "<term>"`，**然后看命中的 section 名是不是就是 `<term>`**（见下面的「exit 0 ≠ 该术语存在」）：
+   - **名字相等** → 输出"术语 '<term>' 已存在，请用 `update` 修改"并退出
+   - **命中了但名字不等** → **不要报"已存在"**。这是查重候选，带着它直接跳到第 5 步判三选一（这类多半是「同一实体两个名字」，正是本流程最该抓住的那种重复）
+   - **exit 1** → 继续第 2 步
 2. 从当前对话上下文推断该词的**定义 / Avoid / Reference**（Reference 留空则跳过第 3 层）
 3. 对推断出的每个 Reference 路径，跑 `vocab.py refs "<path>"`，收集分档候选（`same-file` / `dir-contains`）
 4. **仅当第 1、3 步均空手**（`lookup` 未命中 且 `refs` 无候选）时，才跑 `vocab.py list`，比对全量术语名+别名找语义相近候选；否则跳过这一步，不付这个 O(N) 成本
@@ -59,7 +75,10 @@ _Reference_: src/models/order.ts:42, docs/business/order-flow.md
 
 ## update `<term>`
 
-1. 跑 `vocab.py lookup "<term>"` 确认存在；exit 1 或 2 → 输出对应错误后退出
+1. 跑 `vocab.py lookup "<term>"`，确认**命中的 section 名就是 `<term>`**：
+   - 名字相等 → 继续第 2 步
+   - **命中但名字不等** → 输出"没有名为 '<term>' 的术语；`lookup` 命中的是〈列出命中的术语名〉。要改哪一个？"并**停下**，不改任何条目
+   - exit 1 或 2 → 输出对应错误后退出
 2. 展示当前条目的完整内容
 3. **从当前对话上下文推断**需要更新的字段（定义/Avoid/Reference）；若无新信息可推断，各字段显示为原值
 4. 展示推断后的新条目，请用户确认或修改（格式同 add 第 6 步）
@@ -67,9 +86,12 @@ _Reference_: src/models/order.ts:42, docs/business/order-flow.md
 
 ## remove `<term>`
 
-1. 跑 `vocab.py lookup "<term>"` 确认存在；exit 1 或 2 → 输出对应错误后退出
+1. 跑 `vocab.py lookup "<term>"`，确认**命中的 section 名就是 `<term>`**：
+   - 名字相等 → 继续第 2 步
+   - **命中但名字不等** → 输出"没有名为 '<term>' 的术语；`lookup` 命中的是〈列出命中的术语名〉。确认要删哪一个？"并**停下**。**这一步绝不能跳**——跳了就会把一个名字完全不同的词条删掉，而删除是本 skill 唯一不可逆的操作
+   - exit 1 或 2 → 输出对应错误后退出
 2. 展示该术语的当前条目
-3. 提示"确认删除 '<term>'？(y/N)"，等待用户输入
+3. 提示"确认删除 '<term>'？(y/N)"，等待用户输入。**提示里必须写出将被删除的那条 section 的真实名字**，不要只回显用户输入的 `<term>`
 4. 若输入 `y`：删除该 section（含前后空行），写回文件
 5. 若输入其他：输出"已取消"并退出
 
