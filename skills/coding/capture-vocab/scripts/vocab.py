@@ -41,7 +41,7 @@ def _split_top_level(s):
         elif ch in '）)':
             depth = max(0, depth - 1)
             buf.append(ch)
-        elif depth == 0 and ch in ',，;；':
+        elif depth == 0 and ch in ',，;；、':
             parts.append(''.join(buf))
             buf = []
         else:

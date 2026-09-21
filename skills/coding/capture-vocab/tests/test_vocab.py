@@ -80,6 +80,17 @@ def test_lookup_avoid_alias_hits_canonical_term(tmp_path):
     assert "## 工作区" in result.stdout
 
 
+def test_avoid_aliases_split_on_ideographic_comma(tmp_path):
+    # 「编辑器」的 _Avoid_ 用顿号分隔两个别名，中间那个还带括号说明：
+    #   编辑器模式（…canvasVisible 取反）、PanelArea 全屏模式
+    # 顿号若不在切分符集合里，整行会被当成一个超长片段、被 20 字阈值丢弃，
+    # 两个别名一起失效。
+    for alias in ("编辑器模式", "PanelArea 全屏模式"):
+        result = run_vocab(["lookup", alias], cwd=FIXTURE_DIR)
+        assert result.returncode == 0, f"{alias!r} 应命中「编辑器」"
+        assert "## 编辑器" in result.stdout, f"{alias!r} -> {result.stdout[:80]!r}"
+
+
 def test_lookup_long_avoid_prose_does_not_match(tmp_path):
     result = run_vocab(
         ["lookup", "这是一段刻意写得很长用来验证别名清洗阈值确实生效而不会被当成短别名参与子串匹配的散文说明文字"],
