@@ -1,5 +1,5 @@
 ---
-status: 打回
+status: 待验收
 date: 2026-09-20
 author_model: claude-opus-5
 acceptance: hard
@@ -194,4 +194,49 @@ target_node: 4242f9e0-a3f2-44cd-961c-b49c44fe7d4b
 **复修后要重跑的范围**：**锚点全集（1–14）**。理由：改动落在 `cmd_list` 上，而 `list` 与 `lookup` 共用 `parse_sections` / `extract_aliases` / `normalize`；`extract_aliases` 同时是 `section_hits` 的依赖，动它会波及 `lookup` 的全部命中行为。要缩小范围，按 Phase 2.5 的要求给出改动范围证据与「其余条目不可能被波及」的论证。
 
 **顺带一条不构成打回、复修时建议一并处理的观察**：`test_list_line_count_matches_section_count` 只断言行数，建议补上锚点 14 的两条内容断言，否则同类回归仍然测不出来。`SKILL.md:56` 与脚本的表述在修好之后会自动一致，无需另改。
+
+## 接手方复修自测记录（第 2 轮，2026-09-20）
+
+**改动范围证据**：`git diff --stat -- skills/coding/capture-vocab/scripts/vocab.py skills/coding/capture-vocab/tests/test_vocab.py`（相对打回点提交 `bd9804b`）：
+
+```
+skills/coding/capture-vocab/scripts/vocab.py    |  5 +++--
+skills/coding/capture-vocab/tests/test_vocab.py | 16 ++++++++++++++++
+2 files changed, 19 insertions(+), 2 deletions(-)
+```
+
+`vocab.py` 的改动逐字如下（`cmd_list` 内部，函数外无改动）：
+
+```diff
+ def cmd_list(sections):
+     for sec in sections:
+-        if sec['avoid_raw']:
+-            print(f"{sec['name']} | {sec['avoid_raw']}")
++        aliases = extract_aliases(sec['avoid_raw'])
++        if aliases:
++            print(f"{sec['name']} | {','.join(aliases)}")
+         else:
+             print(sec['name'])
+     return 0
+```
+
+**为什么其余条目不可能被这些改动波及**：`cmd_list` 是叶子函数，只在 `main()` 的 `cmd == "list"` 分支被调用一次；`cmd_lookup`、`cmd_refs`、`section_hits`、`parse_sections`、`normalize`、`extract_aliases`、`main` 的其余分支均未改动一行（`extract_aliases` 本身没变，`cmd_list` 只是开始调用它）。因此这次改动理论上只能影响锚点 9（`list` 覆盖度）与锚点 14（`list` 格式），不可能波及 1–8、10–13。**尽管如此，仍按默认要求逐条实跑锚点全集**，理由：验证成本低（本地 pytest 0.4 秒、`npm test` 全量约 90 秒），没有必要为了省这点时间去赌论证有没有漏洞。
+
+**逐条实跑结果**：
+
+1. `npm test`：`EXIT:0`；`ℹ pass 322 / ℹ fail 0`；`── pytest: skills/coding/capture-vocab` 段 `18 passed in 0.40s`（较上一轮多 2 条，即本轮新增的锚点 14 测试）。PASS。
+2. `python3 skills/coding/capture-vocab/scripts/vocab.py` 无参数：`usage: vocab.py <lookup|list|refs> [args]`，exit 2，无 traceback。PASS（未受影响，符合范围论证）。
+3. exit code 契约：`test_lookup_hit_exit_0` / `test_lookup_miss_exit_1` / `test_no_vocab_file_exits_2` 均 PASS（未受影响）。
+4. 双向子串 + 降级：`test_lookup_hit_exit_0`、`test_lookup_degrades_above_three_hits` 均 PASS，行为与第 1 轮一致（未受影响，`cmd_lookup`/`section_hits` 未改动）。
+5–8. 归一化、Avoid 别名与散文阈值、`refs` 分档、section 边界：对应测试全部 PASS，未受影响。
+9. `python3 -m pytest skills/coding/capture-vocab/tests/ --collect-only -q` 收集到 **18** 项（≥ 11）。
+10. `SKILL.md`：未改动，`version: "1.2.0"` 与三层查重描述仍在。PASS。
+11. `skills-index.json`：未改动，`contentVersion` 仍为 `"1.2.0"`。PASS。
+12. `git -C /Users/harveyzhang96/Projects/agent-canvas status --short` 输出为空。PASS。
+13. `git diff --name-only staging..HEAD -- .hskill/`（仅匹配仓库顶层）输出为空。PASS。
+14. **`list` 每行只含术语名与短别名**：修复后实测 `list` 输出（fixture 35 条）——总 **783** 字符 / 均 **22.37** / 最长 **51**（`工作区 | 抽屉,Drawer,RightPanel,SidePanel,InspectorPanel`），与原 session 打回记录里给出的预期数字（总 783 / 均 22 / 最长 51）**精确吻合**。新增两条测试均 PASS：
+    - `test_list_lines_are_structurally_bounded`：全部行 ≤ 80 字符。
+    - `test_list_prose_only_avoid_yields_bare_name`：`席位` 条目（Avoid 为跨行散文，`extract_aliases` 返回空列表）输出为裸术语名 `席位`，不带 ` | ` 分隔符。
+
+**结论：14 条锚点全部达成，无带红送验。** 修复范围已按要求给出改动范围证据与影响论证，且仍完整实跑了全集作为交叉验证。
 
