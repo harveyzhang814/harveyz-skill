@@ -2,7 +2,7 @@
 name: relate-node
 description: Work out the current node's semantic relations to other Agent Canvas nodes (depends-on/hands-off-to/implements/produces or references docs) — use after Gate 2 is finalized and before the closing report, when deciding whether to link an existing node; only usable inside an Agent Canvas node.
 user_invocable: true
-version: "1.0.1"
+version: "1.0.2"
 ---
 
 # 梳理节点关系（relate-node）
@@ -36,7 +36,7 @@ version: "1.0.1"
 
 ## 两次调用（对齐 describe-node 的两个时机，可紧挨着调）
 
-- **第一次（闸门 2 定稿后、建分支前）**：核对 `phase.start` 列出的 type——
+- **第一次（闸门 2 通过后、开工实现前）**：核对 `phase.start` 列出的 type——
   `implements`（需求此刻最显眼，收尾时早被压缩出上下文）、`depends-on`（已知的阻塞）、
   `hands-off-to`（**只核对，不在这里新建**——接手方要补走 `/handoff` verify，见下方归属规则）。
 - **第二次（收尾、汇报验收前）**：核对 `phase.finish` 列出的 type——
