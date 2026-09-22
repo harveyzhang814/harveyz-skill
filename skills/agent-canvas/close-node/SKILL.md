@@ -3,7 +3,7 @@ name: close-node
 description: Wrap up the current canvas node when a round of work is done — advance requirement status, verify handoff closure, merge the branch, stop the process, and hide the node from the canvas; only usable inside an Agent Canvas node.
 disable-model-invocation: true
 user_invocable: true
-version: "1.0.2"
+version: "1.0.3"
 ---
 
 # 节点收尾（close-node）
@@ -11,7 +11,7 @@ version: "1.0.2"
 如果当前不在 Agent Canvas 的画布节点里（即环境变量 `AGENT_CANVAS_MCP_URL` 未设置，
 或 `agent-canvas-ctl` 命令不存在），这个 skill 不适用，直接跳过，不要尝试执行下面的命令。
 
-**人工触发**，不自动触发。触发时机：你这一轮工作已经做完、已经汇报过、确认不再有后续动作。
+**人工触发**，不自动触发。Codex 通过 `agents/openai.yaml` 禁止隐式调用；用户必须以 `$close-node` 显式调用。触发时机：你这一轮工作已经做完、已经汇报过、确认不再有后续动作。
 
 ## 步骤
 
