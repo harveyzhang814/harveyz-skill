@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.35.0] - 2026-09-21
+
 ### Added
 - `learn-video`：新增 `build_creator_index.py`（`build`/`check` 两个子命令）。扫描 vdl 写出的全部 `meta.json`，按归一化后的 YouTube handle（去 `@`、转小写）分组，产出 `<knowledgeRoot>/videos/creators.json`。不读、不写 `registry.json`——"是不是在关注这个人"是判断，判断不落盘在事实旁边，完全交给下游（scholia）现查决定，索引本身永远不含 `watched`/`creator_id`。原子写（临时文件 + rename），构建失败旧索引原样保留；单个 `meta.json` 损坏时归入 `unresolved` 而不是从统计里静默消失；`work` 目录不存在（vdl 的 `WORK_ROOT` 漂了）时报错退出，不会把一个正常的索引悄悄替换成空索引
 
