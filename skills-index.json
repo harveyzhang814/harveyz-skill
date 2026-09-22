@@ -384,8 +384,8 @@
     {
       "path": "agent-canvas/close-node",
       "bundle": "agent-canvas",
-      "contentHash": "954e586f748299ad",
-      "contentVersion": "1.0.2"
+      "contentHash": "726d72d355c1d875",
+      "contentVersion": "1.0.3"
     },
     {
       "path": "coding/analyze-claudemd",
