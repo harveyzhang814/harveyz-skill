@@ -1,7 +1,8 @@
 ---
 name: describe-node
-description: 为 Agent Canvas 中你所在的这个画布节点自动生成标题与描述——总结/摘要当前会话在做什么、给节点起名、更新节点标题或描述时使用；仅在画布节点里可用
-version: "1.0.0"
+description: Auto-generate a title and description for the Agent Canvas node you are running in — use it to summarize what the session is doing, name the node, or update its title/description; only usable inside an Agent Canvas node.
+user_invocable: true
+version: "1.0.2"
 ---
 
 # 为当前节点生成标题与描述（describe-node）
@@ -12,14 +13,18 @@ version: "1.0.0"
 ## 怎么调
 
 ```
-agent-canvas-ctl summarize-self [--spec <规格文档路径>]
+agent-canvas-ctl summarize-self [--spec <规格文档绝对路径>]
 ```
 
 **不需要传节点 id**——它按祖先进程链反查你所在的节点，"谁调用就摘要谁"。
 
-- `--spec` 指定据以撰写的规格文档。不传时会从本会话记录里自动发现你写过或读过的
-  `docs/superpowers/specs/*.md`；返回值里的 `specUsed` 为 null 就表示没找到，
-  如果你知道该用哪份，用 `--spec` 补传一次会明显更准。
+- `--spec` 指定据以撰写的规格文档，**必须是绝对路径**。相对路径不报错、退出码照样是
+  0，只是读不到文件，`specUsed` 静默返回 null——和"没找到"长得一模一样。它是在主进程
+  里按主进程的 cwd 解析的，不是你会话的当前目录，所以"从我这儿看是对的"不作数。
+- 不传 `--spec` 时会从本会话记录里自动发现你写过或读过的 `docs/superpowers/specs/*.md`，
+  按 Write > Edit > Read 取最后一次；**只有 Read 命中、且读过不止一份不同的 spec 时，
+  自动发现会直接放弃**（归属不明，它不猜）。会话里读过别人的 spec 就属于这种情况。
+  `specUsed` 为 null 就表示没用上，知道该用哪份就补传 `--spec`。
 - 成功时 stdout 返回 `{nodeId, title, description, taskType?, specUsed}`，退出码 0；
   失败时错误写 stderr、退出码非 0。
 - 要跑一次模型调用，通常 5–15 秒，属正常。

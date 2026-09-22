@@ -1,6 +1,6 @@
 ---
 name: learn-video
-version: "1.8.2"
+version: "1.9.0"
 description: "Process a YouTube or Bilibili video using the vdl CLI: transcribe, generate article and summary. Triggers when the user provides a YouTube or Bilibili URL and wants to learn from, summarize, transcribe, or extract key points from the video — e.g. 'help me understand this talk', 'summarize this YouTube video', 'summarize this Bilibili video', 'get the transcript', 'process this video', 'summarize it'."
 user_invocable: true
 ---
@@ -234,7 +234,7 @@ vdl result <task_id> --type article
 
 ```
 <knowledgeRoot>/videos/work/<task_id>/
-├── meta.json                 # 归档步骤写入
+├── meta.json                 # vdl 写入（fetch 步骤完成时）
 ├── media/                    # vdl 下载的音视频，体积大
 ├── transcript/
 │   ├── original_zh.md        # 带时间戳逐字稿（语言后缀随视频而定）
@@ -250,16 +250,22 @@ vdl result <task_id> --type article
 
 ## 归档到统一存储根
 
-vdl 的产物已经落在统一存储根里了（`WORK_ROOT` 指向 `<knowledgeRoot>/videos`），所以归档**不搬任何文件**，只补一份 `meta.json` 把这个目录标成实体：
+vdl 的产物已经落在统一存储根里了（`WORK_ROOT` 指向 `<knowledgeRoot>/videos`），meta.json 也已经由 vdl 自己写好——本 skill 不再写它，只校验：
 
 ```bash
 cd "$HOME/Projects/harveyz-skill/skills/research/learn-video"  # 或本 skill 安装后的实际目录
-TASK_ID="<task_id>" SOURCE_URL="<URL>" TITLE="<视频标题>" python3 scripts/archive.py
+TASK_ID="<task_id>" python3 scripts/archive.py
 ```
 
-输出两行 `VIDEO_DIR: <path>` 和 `META_PATH: <path>`。同一个 `task_id` 重复归档时覆盖，幂等——`rerun`/更换 focus 之后重新归档不会产生重复目录。
+成功输出两行 `VIDEO_DIR: <path>` 和 `META_PATH: <path>`。**若报错说缺统一存储契约必填字段**（`source_url`/`title`/`fetched_at`），说明 vdl 那次没有把任务跑到 `completed`，不要试图在这里补字段——回去确认 vdl 那边的任务状态，或联系维护者核对 vdl 版本。
 
-`meta.json` 是索引的唯一凭据（`find <knowledgeRoot> -name meta.json` 就是全量实体清单），所以任务目录不存在时脚本直接报错退出，不会凭空建目录写一份指向空气的 `meta.json`。真报了这个错，先回「前置」小节核对 `WORK_ROOT`。
+校验通过后，顺手重建一次 creator 索引（零额外成本——流程本来就在跑脚本）：
+
+```bash
+python3 scripts/build_creator_index.py build
+```
+
+`meta.json` 是索引的唯一凭据（`find <knowledgeRoot> -name meta.json` 就是全量实体清单）；`creators.json` 是这份清单按 uploader 归好的第二层索引，不含 `registry.json` 的任何信息。
 
 ---
 
@@ -278,4 +284,5 @@ TASK_ID="<task_id>" SOURCE_URL="<URL>" TITLE="<视频标题>" python3 scripts/ar
 | 文件 | 用途 |
 |------|------|
 | `scripts/store_config.py` | 读共享 `knowledgeRoot`（`~/.hskill/config.json`），四个入范围 skill 各存一份内容相同的副本 |
-| `scripts/archive.py` | 往 vdl 已经写好的 `<knowledgeRoot>/videos/work/<task_id>/` 里补 `meta.json`；不搬文件，目录不存在则报错退出，同 `task_id` 重跑幂等 |
+| `scripts/archive.py` | 校验 vdl 已写好的 `meta.json` 是否满足统一存储契约（`source_url`/`title`/`fetched_at`）；不写文件，不足则报错退出 |
+| `scripts/build_creator_index.py` | 全量重算 `<knowledgeRoot>/videos/creators.json`（`build`），或核对索引是否与磁盘实体数一致（`check`）——不读 `registry.json` |

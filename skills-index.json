@@ -31,7 +31,7 @@
     "research": "研究工具（learn-video + extract-vision + survey-skillrepo + learn-paper + extract-cognition + probe-session + clip-url + fetch-paper）",
     "feed": "追更工具（manage-creators — 人与渠道名册；sync-xtimeline + sync-ytchannel + sync-website — 按名册跑增量抓取；capture-opinion — 给人记一笔判断）",
     "creative": "创意工具（capture-todo + capture-insight）",
-    "coding": "程序工具（init-workflow + setup-debug + init-goal + question-me + capture-vocab + rephrase + explain-pm）",
+    "coding": "程序工具（init-project + init-workflow + setup-debug + init-goal + question-me + capture-vocab + rephrase + explain-pm）",
     "writing": "写作工具（forge-doc + draw-diagram + manage-dir + migrate-spec）",
     "design": "设计工具（scout-brand + build-style + sync-design）",
     "mint": "Skill 生命周期工具（init-skill + publish-skill + archive-skill + dedup-skill + contribute-skill + fix-skill + runby-opencode + scout-philosophy + learn-skill）",
@@ -57,8 +57,8 @@
       "path": "research/learn-video",
       "bundle": "research",
       "installScope": "global",
-      "contentHash": "f01282325e8af7b9",
-      "contentVersion": "1.8.2"
+      "contentHash": "b29cad00bd925bef",
+      "contentVersion": "1.9.0"
     },
     {
       "path": "research/survey-skillrepo",
@@ -176,8 +176,8 @@
       "path": "coding/capture-vocab",
       "bundle": "coding",
       "installScope": "project",
-      "contentHash": "0ef9e2c82f9876f4",
-      "contentVersion": "1.1.2"
+      "contentHash": "b0afd3daf914c309",
+      "contentVersion": "1.2.1"
     },
     {
       "path": "coding/rephrase",
@@ -192,6 +192,11 @@
       "installScope": "global",
       "contentHash": "64612c19ac2c0afa",
       "contentVersion": "1.2.0"
+    },
+    {
+      "path": "coding/init-project",
+      "bundle": "coding",
+      "installScope": "global"
     },
     {
       "path": "writing/forge-doc",
@@ -336,8 +341,8 @@
       "path": "feed/manage-creators",
       "bundle": "feed",
       "installScope": "project",
-      "contentHash": "f0c5ca3fbdca9bd6",
-      "contentVersion": "0.2.1"
+      "contentHash": "7db2fbcbf26017d9",
+      "contentVersion": "0.3.1"
     },
     {
       "path": "feed/capture-opinion",
@@ -348,27 +353,46 @@
     },
     {
       "path": "agent-canvas/agent-canvas-control",
-      "bundle": "agent-canvas"
+      "bundle": "agent-canvas",
+      "contentHash": "e6ab728e4108a137",
+      "contentVersion": "1.0.1"
     },
     {
       "path": "agent-canvas/describe-node",
-      "bundle": "agent-canvas"
+      "bundle": "agent-canvas",
+      "contentHash": "391ae8eadb205708",
+      "contentVersion": "1.0.2"
     },
     {
       "path": "agent-canvas/relate-node",
-      "bundle": "agent-canvas"
+      "bundle": "agent-canvas",
+      "contentHash": "395d08fedfa3a113",
+      "contentVersion": "1.0.2"
     },
     {
       "path": "agent-canvas/capture-requirement",
-      "bundle": "agent-canvas"
+      "bundle": "agent-canvas",
+      "contentHash": "db7f19ea77a3da50",
+      "contentVersion": "1.0.1"
     },
     {
       "path": "agent-canvas/relation-review",
-      "bundle": "agent-canvas"
+      "bundle": "agent-canvas",
+      "contentHash": "7b7e69fb78bcaa45",
+      "contentVersion": "1.0.1"
     },
     {
       "path": "agent-canvas/close-node",
-      "bundle": "agent-canvas"
+      "bundle": "agent-canvas",
+      "contentHash": "e95e278361abc518",
+      "contentVersion": "1.0.1"
+    },
+    {
+      "path": "coding/analyze-claudemd",
+      "bundle": "coding",
+      "installScope": "global",
+      "contentHash": "8dafe21cdfff97e6",
+      "contentVersion": "1.0.0"
     }
   ],
   "hooks": [

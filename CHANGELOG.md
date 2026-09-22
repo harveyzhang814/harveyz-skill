@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.35.0] - 2026-09-21
+
+### Added
+- `learn-video`：新增 `build_creator_index.py`（`build`/`check` 两个子命令）。扫描 vdl 写出的全部 `meta.json`，按归一化后的 YouTube handle（去 `@`、转小写）分组，产出 `<knowledgeRoot>/videos/creators.json`。不读、不写 `registry.json`——"是不是在关注这个人"是判断，判断不落盘在事实旁边，完全交给下游（scholia）现查决定，索引本身永远不含 `watched`/`creator_id`。原子写（临时文件 + rename），构建失败旧索引原样保留；单个 `meta.json` 损坏时归入 `unresolved` 而不是从统计里静默消失；`work` 目录不存在（vdl 的 `WORK_ROOT` 漂了）时报错退出，不会把一个正常的索引悄悄替换成空索引
+
+### Changed
+- **破坏性变更** `learn-video`：`archive.py` 从"写 `meta.json`"降级为"校验 `meta.json`"。vdl（Video-Learner 仓库）现在自己把 `uploader_id`/`channel_id`/`uploader_url` 三个新字段与统一存储契约的三个必填字段（`source_url`/`title`/`fetched_at`）全部写好，`archive.py` 只剩读一遍 `meta.json` 核对必填字段是否齐全，不再从 vdl 的 sqlite 捞取任何展示字段，也不再写文件。CLI 入参从 `TASK_ID`/`SOURCE_URL`/`TITLE`/`FETCHED_AT` 四个环境变量精简到只剩 `TASK_ID`。version 1.8.2 → 1.9.0
+  - **升级路径**：这是 vdl 那一侧先落地的改动的下游收尾。若本机 vdl 版本落后（写出的 `meta.json` 还没有新增字段/契约字段），归档步骤会直接报错停下并列出缺的字段名，不会再像过去那样悄悄补一份缺字段的 `meta.json`。看到这个报错，先确认 Video-Learner 是否需要升级
+
 ## [0.34.0] - 2026-09-16
 
 ### Added

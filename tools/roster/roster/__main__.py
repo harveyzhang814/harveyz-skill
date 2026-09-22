@@ -12,8 +12,21 @@ import sys
 from datetime import date, datetime
 from pathlib import Path
 
-from . import config, profiles, registry, state
-from .urls import parse_channel_url
+from . import SCHEMA_VERSION, config, profiles, registry, state
+from .urls import channel_key, parse_channel_url
+
+
+_SCHEMA_CHECK_EXEMPT = {"init", "data-dir", "migrate", "migrate-schema"}
+
+
+def _check_schema_version(data_dir) -> None:
+    reg = registry.load(data_dir)
+    version = reg.get("schema_version", SCHEMA_VERSION)
+    if version < SCHEMA_VERSION:
+        raise ValueError(
+            f"名册数据是旧 schema（v{version}），请先跑一次 "
+            f"`roster migrate-schema` 升级到 v{SCHEMA_VERSION}。"
+        )
 
 
 def _split_ref(ref: str) -> tuple[str, str]:
@@ -52,6 +65,16 @@ def _cmd_migrate(args) -> int:
     )
     print(f"OK creators={result['creators']} channels={result['channels']} "
           f"cursors={result['cursors']}")
+    return 0
+
+
+def _cmd_migrate_schema(args) -> int:
+    from . import migrate_schema
+
+    data_dir = config.get_data_dir()
+    result = migrate_schema.migrate_schema(data_dir)
+    print(f"OK channels_updated={result['channels_updated']} "
+          f"cursors_renamed={result['cursors_renamed']}")
     return 0
 
 
@@ -128,7 +151,8 @@ def _cmd_registry_list(args) -> int:
         print(f"{creator['id']}  {creator['display_name']}{mark}")
         for channel in creator["channels"]:
             key = f"{channel['platform']}:{channel['handle']}"
-            entry = st["channels"].get(key) or {}
+            lookup_key = channel_key(channel["platform"], channel["handle"])
+            entry = st["channels"].get(lookup_key) or {}
             cursor = entry.get("cursor")
             if cursor is None:
                 shown = "(none)"
@@ -233,6 +257,10 @@ def _build_parser() -> argparse.ArgumentParser:
     p_mig.add_argument("--from-ytchannel", dest="from_ytchannel", default=None)
     p_mig.set_defaults(func=_cmd_migrate)
 
+    p_ms = groups.add_parser(
+        "migrate-schema", help="registry/state 升级到 schema v2（回填 key、游标键归一，幂等）")
+    p_ms.set_defaults(func=_cmd_migrate_schema)
+
     groups.add_parser("data-dir", help="打印数据目录").set_defaults(func=_cmd_data_dir)
 
     reg_sub = groups.add_parser("registry", help="人与渠道的定义").add_subparsers(
@@ -289,6 +317,8 @@ def _build_parser() -> argparse.ArgumentParser:
 def main(argv: list[str] | None = None) -> int:
     args = _build_parser().parse_args(argv)
     try:
+        if args.group not in _SCHEMA_CHECK_EXEMPT:
+            _check_schema_version(config.get_data_dir())
         return args.func(args)
     except (ValueError, KeyError, FileNotFoundError) as e:
         print(str(e), file=sys.stderr)

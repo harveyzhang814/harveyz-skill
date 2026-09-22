@@ -59,6 +59,14 @@ def test_registry_list_shows_cursor_from_state(data_dir, capsys):
     assert "123" in out
 
 
+def test_registry_list_shows_cursor_for_mixed_case_handle(data_dir, capsys):
+    _run(capsys, "registry", "add", "https://www.youtube.com/@TingHu888")
+    _run(capsys, "state", "set", "youtube:TingHu888",
+         "--type", "seen_urls", "--value-json", '["u1"]', "--run-time", RUN)
+    _, out, _ = _run(capsys, "registry", "list")
+    assert "1 urls" in out
+
+
 def test_registry_channels_outputs_json(data_dir, capsys):
     _run(capsys, "registry", "add", "https://x.com/karpathy")
     _run(capsys, "registry", "add", "https://youtube.com/@AK")
@@ -66,7 +74,7 @@ def test_registry_channels_outputs_json(data_dir, capsys):
     assert code == 0
     assert json.loads(out) == [{
         "creator_id": "karpathy", "platform": "x",
-        "handle": "karpathy", "url": "https://x.com/karpathy",
+        "handle": "karpathy", "key": "karpathy", "url": "https://x.com/karpathy",
     }]
 
 
@@ -268,3 +276,22 @@ def test_profile_summary_unknown_creator_exits_1(data_dir, capsys):
                         "--text", "判断", "--updated-at", "2026-08-27")
     assert code == 1
     assert "nobody" in err
+
+
+def test_registry_list_on_unmigrated_data_reports_clear_error(data_dir, capsys):
+    reg = {"schema_version": 1, "creators": []}
+    (data_dir / "registry.json").parent.mkdir(parents=True, exist_ok=True)
+    import json
+    (data_dir / "registry.json").write_text(json.dumps(reg), encoding="utf-8")
+    code, _, err = _run(capsys, "registry", "list")
+    assert code == 1
+    assert "migrate-schema" in err
+
+
+def test_migrate_schema_itself_still_works_on_unmigrated_data(data_dir, capsys):
+    reg = {"schema_version": 1, "creators": []}
+    import json
+    (data_dir / "registry.json").parent.mkdir(parents=True, exist_ok=True)
+    (data_dir / "registry.json").write_text(json.dumps(reg), encoding="utf-8")
+    code, out, _ = _run(capsys, "migrate-schema")
+    assert code == 0

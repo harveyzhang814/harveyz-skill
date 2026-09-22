@@ -1,6 +1,6 @@
 ---
 name: manage-creators
-version: "0.2.1"
+version: "0.3.1"
 description: "Maintain the roster of watched creators and their channels — the shared watchlist behind sync-xtimeline and sync-ytchannel. Add a channel URL, merge two handles that turn out to be the same person, rename a placeholder, view the roster with cursor state. Trigger phrases: '/manage-creators add <url>', '/manage-creators list', '/manage-creators merge <a> <b>', '/manage-creators rename <id> <name>', '/manage-creators remove <id>', 'watch this X account', 'watch this YouTube channel', 'who am I following'. Does not fetch anything — running an incremental fetch is sync-xtimeline / sync-ytchannel; writing a creator's profile is the cognition layer."
 user_invocable: true
 ---
@@ -42,13 +42,21 @@ ls ~/.hskill/roster/config.json 2>/dev/null && echo "EXISTS" || echo "NOT_FOUND"
 
 任一旧配置不存在就省掉对应的参数。迁移是幂等的，重复跑安全。迁移后告诉用户：每个 handle 现在各自是一个人，同一个人的 X 和 YouTube 需要用 `merge` 合并，并主动列出名字相近的候选对给用户确认——**不要自己替用户合并**。
 
+**若已有名册是旧 schema（`registry.json` 里的渠道没有 `key` 字段）**，先跑一次：
+
+```bash
+<roster_path> migrate-schema
+```
+
+幂等，可重复跑。升级后名册按归一 `key` 去重，`state.json` 的游标键也同步改写成归一形态——不跑这一步，新版 roster 找旧游标会找不到，表现为该渠道被当成新渠道重刷一次基线。
+
 ## 用法
 
 `<roster>` 指 `roster_locate.py` 输出的路径。
 
 | 用户说 | 运行 | 报告 |
 |---|---|---|
-| `add <url>` | `<roster> registry add <url>` | `OK <id> <platform>:<handle>` → 告知已加入，并提示这是占位人、可用 `rename` 填正式名字。`add` 现在也吃网站文章列表页 URL（`platform` 会是 `website`） |
+| `add <url>` | `<roster> registry add <url>` | `OK <id> <platform>:<handle>` → 告知已加入，并提示这是占位人、可用 `rename` 填正式名字。`add` 现在也吃网站文章列表页 URL（`platform` 会是 `website`）。渠道按归一后的 key（去 `@`、trim、转小写）去重——同一个频道换个大小写的链接再 `add` 一次会报"已在名册中"，不会建出第二个人 |
 | `list` | `<roster> registry list` | 原样展示。`EMPTY` 表示还没关注任何人 |
 | `merge <a> <b>` | `<roster> registry merge <a> <b>` | `OK merged b into a` → 告知 b 的 id 已进 aliases，旧引用仍可查到 |
 | `rename <id> <name>` | `<roster> registry rename <id> <name>` | `OK` |

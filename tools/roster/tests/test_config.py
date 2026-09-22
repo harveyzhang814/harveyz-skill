@@ -5,8 +5,8 @@ import pytest
 from roster import SCHEMA_VERSION, config
 
 
-def test_schema_version_is_one():
-    assert SCHEMA_VERSION == 1
+def test_schema_version_is_two():
+    assert SCHEMA_VERSION == 2
 
 
 def test_get_data_dir_reads_configured_path(data_dir):

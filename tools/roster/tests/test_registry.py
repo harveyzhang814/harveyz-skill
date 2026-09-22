@@ -3,6 +3,7 @@ import json
 import pytest
 
 from roster import SCHEMA_VERSION, registry
+from roster.urls import normalize
 
 TODAY = "2026-08-26"
 
@@ -34,7 +35,8 @@ def test_add_channel_creates_placeholder_creator(data_dir):
     assert creator["added_at"] == TODAY
     assert creator["aliases"] == []
     assert creator["channels"] == [
-        {"platform": "x", "handle": "karpathy", "url": "https://x.com/karpathy"}
+        {"platform": "x", "handle": "karpathy", "key": "karpathy",
+         "url": "https://x.com/karpathy"}
     ]
 
 
@@ -86,7 +88,7 @@ def test_channels_for_platform_filters_and_carries_creator_id(data_dir):
     registry.add_channel(reg, "https://youtube.com/@TwoMinutePapers", TODAY)
     assert registry.channels_for_platform(reg, "x") == [
         {"creator_id": "karpathy", "platform": "x",
-         "handle": "karpathy", "url": "https://x.com/karpathy"}
+         "handle": "karpathy", "key": "karpathy", "url": "https://x.com/karpathy"}
     ]
     assert len(registry.channels_for_platform(reg, "youtube")) == 1
 
@@ -129,3 +131,32 @@ def test_saved_json_is_readable_utf8(data_dir):
     raw = (data_dir / "registry.json").read_text(encoding="utf-8")
     assert "安德烈" in raw          # 不是 \uXXXX 转义
     assert json.loads(raw)["schema_version"] == SCHEMA_VERSION
+
+
+def test_find_channel_is_case_insensitive(data_dir):
+    reg = registry.load(data_dir)
+    registry.add_channel(reg, "https://www.youtube.com/@TingHu888", TODAY)
+    creator, channel = registry.find_channel(reg, "youtube", "tinghu888")
+    assert creator["id"] == "tinghu888"
+    assert channel["handle"] == "TingHu888"
+
+
+def test_add_duplicate_channel_different_case_raises(data_dir):
+    """criterion 1：这是本次要修的现行缺陷。"""
+    reg = registry.load(data_dir)
+    registry.add_channel(reg, "https://www.youtube.com/@TingHu888", TODAY)
+    with pytest.raises(ValueError, match="已在名册"):
+        registry.add_channel(reg, "https://www.youtube.com/@tinghu888", TODAY)
+    assert len(reg["creators"]) == 1
+
+
+def test_add_channel_sets_normalized_key(data_dir):
+    reg = registry.load(data_dir)
+    registry.add_channel(reg, "https://www.youtube.com/@TingHu888", TODAY)
+    _, channel = registry.find_channel(reg, "youtube", "TingHu888")
+    assert channel["key"] == "tinghu888"
+
+
+def test_fresh_registry_schema_version_is_2(data_dir):
+    """criterion 2 的一半：新建的 registry 直接就是 v2。"""
+    assert registry.load(data_dir)["schema_version"] == 2

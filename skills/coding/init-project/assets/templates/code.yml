@@ -1,0 +1,37 @@
+name: code
+
+scaffold:
+  git_init: true
+  dirs: [docs]
+  files:                       # on_exists 默认 skip
+    - {path: README.md,  from: skeleton/README.md}
+    - {path: .gitignore, from: skeleton/gitignore-code, on_exists: append-missing-lines}
+    - {path: CLAUDE.md,  from: skeleton/CLAUDE.md}
+    - {path: TODO.md,    from: skeleton/TODO.md}
+
+skills:
+  - init-workflow
+  - clean-git
+  - release-project
+  - capture-todo
+  - capture-insight
+  - capture-vocab
+  - handoff
+  - question-me
+  - rephrase
+
+init_phases:
+  - skill: init-workflow          # 无 probe：重复调用安全，它自己有差量检测
+    invoke: "/init-workflow"
+  - skill: release-project
+    probe: .hskill/release-project/release-profile.md
+    invoke: "/release-project 重新初始化"
+    ask_first: "这个项目要发版吗？"
+
+language_hints:
+  node: "npm init -y"
+  python: "uv init"
+  rust: "cargo init"
+
+register:
+  hub: true

@@ -13,7 +13,7 @@ methodology: diataxis
 
 | 文件 | 用途 |
 |------|------|
-| [how-to/install-skills.md](how-to/install-skills.md) | 如何安装 hskill 并将 skill 安装到 Claude Code / Cursor / Codex |
+| [how-to/install-skills.md](how-to/install-skills.md) | 如何安装 hskill 并将 skill 安装到 Claude Code / Cursor / Codex；hskill 自身的两种安装来源（npm / 本地仓库）与粘性更新 |
 | [how-to/git-daily-workflow.md](how-to/git-daily-workflow.md) | 如何安装 hook、日常开发切分支、合并到 staging 和 main |
 | [how-to/npm-publish.md](how-to/npm-publish.md) | 如何将新 skill 发布到 npm |
 | [how-to/contribute-skill.md](how-to/contribute-skill.md) | 如何将其他项目的 skill 通过 contribute-skill 元技能贡献进 harveyz-skill |
