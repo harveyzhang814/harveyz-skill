@@ -350,3 +350,66 @@ acceptance: hard' "$(printf '# 交接：示例\n\n**交接目的**：把实现�
   [ "$status" -eq 0 ]
   [[ "$output" != *ERROR* ]]
 }
+
+# ── workspace_mode + base_commit 分叉锚点 ──────────────────────────────────
+
+@test "35 unknown workspace_mode -> exit 1 and lists legal values" {
+  write_doc "$VALID_FM
+workspace_mode: teleport"
+  run bash "$VALIDATOR" "$DOC"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *workspace_mode* ]]
+  [[ "$output" == *shared-worktree* ]]
+}
+
+@test "36 shared-worktree requires both branch and worktree" {
+  write_doc "$VALID_FM
+workspace_mode: shared-worktree
+branch: $BRANCH"
+  run bash "$VALIDATOR" "$DOC"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *shared-worktree* ]]
+  [[ "$output" == *worktree* ]]
+}
+
+@test "37 shared-worktree with matching branch and root -> exit 0" {
+  wt="$(make_worktree feat/shared)"
+  write_doc "$VALID_FM
+workspace_mode: shared-worktree
+branch: feat/shared
+worktree: $wt"
+  run bash "$VALIDATOR" "$DOC"
+  [ "$status" -eq 0 ]
+  [[ "$output" != *ERROR* ]]
+  [[ "$output" != *WARN* ]]
+}
+
+@test "38 supplied base_commit must resolve in repository" {
+  write_doc "$VALID_FM
+workspace_mode: same-workspace
+base_commit: 0000000000000000000000000000000000000000"
+  run bash "$VALIDATOR" "$DOC"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *base_commit* ]]
+}
+
+@test "39 shared-worktree rejects a detached worktree without a named branch" {
+  wt="$TMP/managed"
+  git worktree add -q --detach "$wt" HEAD
+  write_doc "$VALID_FM
+workspace_mode: shared-worktree
+worktree: $wt"
+  run bash "$VALIDATOR" "$DOC"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *branch* ]]
+}
+
+@test "40 same-workspace accepts a resolvable base_commit" {
+  commit="$(git rev-parse HEAD)"
+  write_doc "$VALID_FM
+workspace_mode: same-workspace
+base_commit: $commit"
+  run bash "$VALIDATOR" "$DOC"
+  [ "$status" -eq 0 ]
+  [[ "$output" != *ERROR* ]]
+}
