@@ -65,7 +65,7 @@ Read [docs/reference/git-workflow.md](docs/reference/git-workflow.md) for the co
 - Create a branch and worktree from an explicit `staging` baseline. Do not let the current checkout choose the base implicitly.
 - Configure each worktree with `core.hooksPath=.githooks` and `merge.ff=false`.
 - Before merging, confirm the current branch with `git rev-parse --abbrev-ref HEAD`.
-- Merge to `staging` with `git merge --no-ff <branch>` only when the user explicitly asks to merge or finish. Do not directly commit to `main` or `staging`.
+- Merge to `staging` only when the user explicitly asks to merge or finish. From an eligible feature worktree, run `scripts/merge-to-staging.sh`; it uses an atomic local update with retry and does not push to `origin`. Do not manually merge into or directly commit to `main` or `staging`.
 
 For example:
 
@@ -73,6 +73,10 @@ For example:
 git worktree add <worktree-path> -b <type>/<slug> staging
 git -C <worktree-path> config core.hooksPath .githooks
 git -C <worktree-path> config merge.ff false
+(
+  cd <worktree-path>
+  scripts/merge-to-staging.sh
+)
 ```
 
 An agent host may provide its own way to bind subsequent operations to a worktree. Use it when available. Otherwise, every Git command must be scoped with `git -C <worktree-path>`, and file reads and writes must use absolute paths. A bare `cd` does not carry across independent command invocations.
