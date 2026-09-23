@@ -21,14 +21,14 @@ def isolated_data_dir(tmp_path, monkeypatch):
     monkeypatch.setenv("BROWSER_FETCH_DATA_DIR", str(tmp_path / "data"))
 
 
-def test_call_fetch_page_returns_html():
-    payload = call_fetch_page("https://example.com")
+def test_call_fetch_page_returns_html(local_article_url):
+    payload = call_fetch_page(local_article_url)
     assert payload["status"] == 200
     assert "Example Domain" in payload["html"]
 
 
-def test_call_evaluate_js_returns_js_result():
-    payload = call_evaluate_js("https://example.com", "() => document.title")
+def test_call_evaluate_js_returns_js_result(local_article_url):
+    payload = call_evaluate_js(local_article_url, "() => document.title")
     assert payload["result"] == "Example Domain"
 
 

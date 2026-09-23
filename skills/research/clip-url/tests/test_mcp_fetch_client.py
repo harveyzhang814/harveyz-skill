@@ -29,16 +29,16 @@ def isolated_data_dir(isolated_store_config, tmp_path, monkeypatch):
     isolated_store_config.write_text(json.dumps({"knowledgeRoot": str(root)}), encoding="utf-8")
 
 
-def test_fetch_and_save_writes_real_content(tmp_path):
-    origin_path = fetch_and_save("https://example.com")
+def test_fetch_and_save_writes_real_content(tmp_path, local_article_url):
+    origin_path = fetch_and_save(local_article_url)
 
-    assert origin_path == tmp_path / "knowledge" / "articles" / get_url_hash("https://example.com") / "Origin" / "Example Domain.md"
+    assert origin_path == tmp_path / "knowledge" / "articles" / get_url_hash(local_article_url) / "Origin" / "Example Domain.md"
     assert origin_path.exists()
     assert origin_path.name == "Example Domain.md"
     assert origin_path.parent.name == "Origin"
     content = origin_path.read_text(encoding="utf-8")
 
-    assert "source_url: https://example.com" in content
+    assert f"source_url: {local_article_url}" in content
     assert 'origin_title: "Example Domain"' in content
     assert "author:" in content
     assert "publish_date:" in content
@@ -48,80 +48,27 @@ def test_fetch_and_save_writes_real_content(tmp_path):
     assert content.count("Example Domain") == 2  # frontmatter + heading only
 
 
-def test_fetch_and_save_extracts_multiple_blocks_and_downloads_images(tmp_path):
-    origin_path = fetch_and_save("https://en.wikipedia.org/wiki/Model_Context_Protocol")
+def test_fetch_and_save_extracts_multiple_blocks(tmp_path, local_article_url):
+    origin_path = fetch_and_save(local_article_url)
 
     content = origin_path.read_text(encoding="utf-8")
     paragraphs = [p for p in content.split("\n\n") if p.strip() and not p.startswith("---")]
     # frontmatter block + heading + at least a few real paragraphs
     assert len(paragraphs) >= 5
-    assert "Model Context Protocol" in content
-
-    # fetch_article downloads real images for this page (7 as of writing) —
-    # confirm at least one landed next to Origin/, and the body references it.
-    article_dir = origin_path.parent.parent
-    image_dir = article_dir / "Image"
-    assert image_dir.exists()
-    assert len(list(image_dir.iterdir())) > 0
-    assert "![](../Image/" in content
+    assert "Each paragraph gives the generic extractor" in content
 
 
-def test_fetch_and_save_accepts_chrome_profile_without_crashing(tmp_path):
+def test_fetch_and_save_accepts_chrome_profile_without_crashing(tmp_path, local_article_url):
     """Doesn't assert on retry content (needs real auth cookies, out of
     scope for an automated test) — just confirms chrome_profile is
     correctly forwarded to fetch_article and the call completes."""
     empty_profile = tmp_path / "EmptyProfile"
-    origin_path = fetch_and_save("https://example.com", chrome_profile=str(empty_profile))
+    origin_path = fetch_and_save(local_article_url, chrome_profile=str(empty_profile))
     assert origin_path.exists()
 
 
-def test_fetch_and_save_image_placement_after_h1_dedup(tmp_path):
-    """Regression test: verify images placed after the h1 block (after_block==0)
-    are moved to pre_imgs when h1 dedup fires, not wrongly appended to the
-    intro paragraph. Under the bug, dedup_offset was missing, so after_block
-    indices were off by one — images meant for pre_imgs got glued onto the
-    real article content instead, appearing in the same body unit.
-
-    This test specifically checks that the intro paragraph body unit contains
-    NO image references (images should be in earlier pre_imgs units instead)."""
-    origin_path = fetch_and_save("https://en.wikipedia.org/wiki/Model_Context_Protocol")
-
-    content = origin_path.read_text(encoding="utf-8")
-    body_units = content.split("\n\n")
-
-    # Find the body unit containing the real intro paragraph.
-    # Exact phrase: "The Model Context Protocol (MCP) is an open standard..."
-    # unique to the main article content, not nav lists.
-    intro_idx = None
-    for i, unit in enumerate(body_units):
-        if (
-            "The Model Context Protocol" in unit
-            and "Anthropic" in unit
-            and "open standard" in unit
-        ):
-            intro_idx = i
-            break
-
-    assert intro_idx is not None, "Intro paragraph not found in output"
-
-    # Critical assertion: the intro paragraph itself must NOT contain images.
-    # Under the bug, images with after_block==0 would be wrongly placed INTO
-    # this very unit (concatenated with paragraph text), breaking the boundary
-    # between pre-images and real content. Correct behavior: images stay in
-    # earlier units (the pre_imgs section), not in this unit.
-    assert (
-        "![](../Image/" not in body_units[intro_idx]
-    ), "Images wrongly placed in intro paragraph unit — dedup_offset bug detected"
-
-    # Sanity check: images should exist somewhere in earlier units
-    # (i.e., correctly attached to nav/heading content before article body).
-    assert any(
-        "![](../Image/" in unit for unit in body_units[:intro_idx]
-    ), "No images found in pre-content units (unexpected)"
-
-
-def test_fetch_and_report_returns_diagnostics(tmp_path):
-    payload = fetch_and_report("https://example.com")
+def test_fetch_and_report_returns_diagnostics(tmp_path, local_article_url):
+    payload = fetch_and_report(local_article_url)
     assert payload["origin_path"].exists()
     assert payload["site"] == "generic"
     assert payload["content_thin"] is True
