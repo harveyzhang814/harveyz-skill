@@ -14,8 +14,10 @@ set -uo pipefail
 
 LEGAL_STATUSES=(待执行 执行中 待验收 已验收 打回)
 LEGAL_ACCEPTANCE=(hard soft)
+LEGAL_WORKSPACE_MODES=(same-workspace shared-worktree)
 REQUIRED_FIELDS=(status date acceptance)
 UUID_RE='^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$'
+COMMIT_RE='^[0-9a-fA-F]{40}$'
 
 errors=()
 warns=()
@@ -69,6 +71,39 @@ else
       || err "acceptance 非法值「${v}」，合法值：$(join_by "${LEGAL_ACCEPTANCE[@]}")"
   fi
 
+  # workspace_mode 是可选的新字段。缺省时按旧文档的字段形状推断，保证历史文档
+  # 不迁移也维持原校验结果。
+  workspace_mode=""
+  if has_field workspace_mode; then
+    workspace_mode="$(field workspace_mode)"
+    printf '%s\n' "${LEGAL_WORKSPACE_MODES[@]}" | grep -qx -- "$workspace_mode" \
+      || err "workspace_mode 非法值「${workspace_mode}」，合法值：$(join_by "${LEGAL_WORKSPACE_MODES[@]}")"
+  elif has_field branch || has_field worktree; then
+    workspace_mode="shared-worktree"
+  else
+    workspace_mode="same-workspace"
+  fi
+
+  if has_field base_commit; then
+    v="$(field base_commit)"
+    if [[ ! "$v" =~ $COMMIT_RE ]]; then
+      err "base_commit 须是完整的 40 位十六进制提交 id，实为「${v}」"
+    elif [[ -n "$toplevel" ]] && ! git -C "$dir" cat-file -e "${v}^{commit}" 2>/dev/null; then
+      err "base_commit 在本仓库不可解析：${v}"
+    elif [[ -z "$toplevel" ]]; then
+      warn "文档不在 git 仓库里，跳过 base_commit 存在性校验：$v"
+    fi
+  fi
+
+  if [[ "$workspace_mode" == "shared-worktree" ]] && has_field workspace_mode; then
+    if ! has_field branch || [[ -z "$(field branch)" ]]; then
+      err "workspace_mode=shared-worktree 时必须填写 branch"
+    fi
+    if ! has_field worktree || [[ -z "$(field worktree)" ]]; then
+      err "workspace_mode=shared-worktree 时必须填写 worktree"
+    fi
+  fi
+
   if has_field date; then
     v="$(field date)"
     if [[ ! "$v" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]]; then
@@ -117,7 +152,7 @@ else
           if has_field branch && [[ -n "$(field branch)" ]]; then
             [[ "$wt_branch" != "$(field branch)" ]] \
               && warn "worktree 当前分支（${wt_branch}）与 branch 字段（$(field branch)）不一致：${wt}"
-          else
+          elif [[ "$workspace_mode" == "shared-worktree" ]]; then
             warn "填了 worktree 却没填 branch——两者成对；工作区一旦被误删，就没有兜底线索能重建了"
           fi
         fi
@@ -128,7 +163,7 @@ else
   # branch 填了、worktree 没填：说明接手方要去另一条分支上开工，而 author 没把工作区建好。
   # 判 WARN 不判 ERROR——「就地同分支续做」时两个字段都不该填，脚本分不出 author 是漏填了
   # 还是这次交接本就不需要独立工作区；只有「填了一半」才是确定可疑的。
-  if has_field branch && [[ -n "$(field branch)" ]]; then
+  if [[ "$workspace_mode" == "shared-worktree" ]] && has_field branch && [[ -n "$(field branch)" ]]; then
     if ! has_field worktree || [[ -z "$(field worktree)" ]]; then
       warn "填了 branch 却没填 worktree——author 应当建好交接工作区并填上，否则接手方不知道去哪开工"
     fi

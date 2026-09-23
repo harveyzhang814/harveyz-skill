@@ -94,7 +94,7 @@ hskill CLI 行为（安装、交互、JSON 输出）+ 所有 skill 的 SKILL.md 
 
 **分支使用规范：** 一个功能或迭代使用一个分支，积累所有相关改动，只在用户明确说"合并"或"完成"时才 merge 到 staging。不要为每次 commit 单独创建新分支。
 
-**合并方式：** 本仓库没有合并脚本，手动 `git checkout staging && git merge --no-ff <分支>` 即可（`.githooks/commit-msg` 不要求 `Merge-Via` 标记）。别照搬别的仓库的 `scripts/merge-to-staging.sh`，这里没有那个文件。
+**合并方式：** 仅在用户明确说"合并"或"完成"后，从 feature/fix/chore/doc 分支的 worktree 运行 `scripts/merge-to-staging.sh`。脚本用本地 `update-ref` 的 CAS 重试合并进 `staging`，会同步 checkout 该分支的工作树，但不会推送 `origin`。当前为 `staging`、`main` 或 detached HEAD 时脚本会拒绝执行；不要手动 `git checkout staging && git merge ...`，也不要直接提交到 `main` 或 `staging`。
 
 **worktree 路径习惯：** 仓库内 `.claude/worktrees/<分支名把 / 换成 +>`，与 Claude Code 原生 worktree 功能一致（例如 `feature/foo` → `.claude/worktrees/feature+foo`）。仓库里另有两类历史遗留：早期手工建的 `.claude/worktrees/<slug>`（去掉了分支前缀）和 `.worktrees/`。新建一律用前者，遗留的不动。
 

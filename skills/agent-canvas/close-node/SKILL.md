@@ -3,7 +3,7 @@ name: close-node
 description: Wrap up the current canvas node when a round of work is done — advance requirement status, verify handoff closure, merge the branch, stop the process, and hide the node from the canvas; only usable inside an Agent Canvas node.
 disable-model-invocation: true
 user_invocable: true
-version: "1.0.1"
+version: "1.0.3"
 ---
 
 # 节点收尾（close-node）
@@ -11,7 +11,7 @@ version: "1.0.1"
 如果当前不在 Agent Canvas 的画布节点里（即环境变量 `AGENT_CANVAS_MCP_URL` 未设置，
 或 `agent-canvas-ctl` 命令不存在），这个 skill 不适用，直接跳过，不要尝试执行下面的命令。
 
-**人工触发**，不自动触发。触发时机：你这一轮工作已经做完、已经汇报过、确认不再有后续动作。
+**人工触发**，不自动触发。Codex 通过 `agents/openai.yaml` 禁止隐式调用；用户必须以 `$close-node` 显式调用。触发时机：你这一轮工作已经做完、已经汇报过、确认不再有后续动作。
 
 ## 步骤
 
@@ -70,23 +70,50 @@ agent-canvas-ctl update-node-requirement <需求节点id> --status <verifying|do
 
 > **只有交出方能合并、能 `git worktree remove`。** 这是硬约束，不是建议。
 
-### 5. 合并（仅独立节点）
+### 5. 合并或确认已合并（仅独立节点）
 
-先确认 `scripts/merge-to-staging.sh` 存在、且当前仓库确实采用本 skill 描述的这套流程。
-不存在就说明本仓库不适用这一步，**停下报告，不要自行换用别的合并手法**。
+合并是待确认的状态转换，不是必经动作。先进入仓库根目录，确认当前分支与本地 `staging`
+都可识别：
 
 ```
-git rev-parse --abbrev-ref HEAD          # 先核对自己站在哪条分支上
-cd "$(git rev-parse --show-toplevel)"    # cwd 未必在仓库根，先切过去
-scripts/merge-to-staging.sh
-git worktree remove <本工作区>
+repo_root="$(git rev-parse --show-toplevel)"
+cd "$repo_root"
+current_branch="$(git branch --show-current)"
+git show-ref --verify --quiet refs/heads/staging
 ```
 
-脚本会拒绝在 staging/main 上执行，但它拦不住"你以为在工作区里、其实在主工作树上"。
+- 本地没有 `staging`、`current_branch` 为空（detached HEAD），或当前是 `main`：**停下报告，
+  不执行 merge、不清理 worktree、不要进第 7 步。** 这些状态都不能推断为"已经合并"。
+- 当前是 `staging`：已经在目标分支。**跳过 merge，也跳过 worktree 清理**，直接进第 6 步。
+  不要运行 `scripts/merge-to-staging.sh`，它会拒绝这个分支。
+- 其他分支先检查是否已进入 `staging`：
 
-若 `git worktree remove` 提示有未提交改动，**停下报告，不要加 `--force`**。
+  ```
+  git merge-base --is-ancestor HEAD staging
+  ```
 
-**合并失败就停在这里报告，不要进第 7 步。** 把没合并的分支连同节点一起关掉，等于把工作弄丢了。
+  成功表示该分支提交已合并，跳过 merge；失败才进入下一条的合并路径。
+- 尚未合并时，先确认 `scripts/merge-to-staging.sh` 存在、且当前仓库确实采用本 skill 描述的
+  流程。不存在就**停下报告，不要自行换用别的合并手法**；存在才运行：
+
+  ```
+  scripts/merge-to-staging.sh
+  ```
+
+  **合并失败就停在这里报告，不要进第 7 步。** 把没合并的分支连同节点一起关掉，等于把工作
+  弄丢了。
+
+已确认合并，或脚本合并成功后，才可以考虑清理当前工作区。先确认它真的是 linked
+worktree：
+
+```
+git_dir="$(cd "$(git rev-parse --git-dir)" && pwd -P)"
+git_common_dir="$(cd "$(git rev-parse --git-common-dir)" && pwd -P)"
+```
+
+- 只有 `git_dir` 与 `git_common_dir` 不同，才运行 `git worktree remove "$repo_root"`。
+- 两者相同代表主工作树：跳过清理并在第 6 步说明原因，**不要删除它**。
+- 若 `git worktree remove` 提示有未提交改动，**停下报告，不要加 `--force`**。
 
 ### 6. 汇报
 
