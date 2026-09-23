@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.36.0] - 2026-09-23
+
+### Added
+- `handoff`：新增 Codex host adapter，将 worktree 模式、调用方式与宿主专属配置隔离；同一套 author → verify → self-test → accept 流程可在 Codex 中执行
+- `scripts/merge-to-staging.sh`：新增并发安全的本地合并脚本，通过可重试的原子 ref 更新将合格功能分支集成到 `staging`
+
+### Changed
+- `close-node`：Codex 中改为必须由用户显式调用；已合入 `staging` 的节点可安全完成关闭流程
+- `clip-url`：测试改用本地 fixtures，避免依赖易变的线上页面
+
 ## [0.35.0] - 2026-09-21
 
 ### Added
