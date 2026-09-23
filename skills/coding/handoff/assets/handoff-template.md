@@ -12,8 +12,10 @@ status: 待执行            # 待执行|执行中|待验收|已验收|打回
 date: <YYYY-MM-DD>        # 须与文件名的日期段一致
 author_model: <model>
 acceptance: hard          # hard|soft，决定 accept 阶段逐条实跑还是定性判断
+workspace_mode: shared-worktree # same-workspace|shared-worktree；旧文档可省略并由 branch/worktree 推断
 branch: <分支名>          # 可选：接手方要在另一条分支上开工时，由 author 建好后填
 worktree: <绝对路径>      # 与 branch 成对：author 建好的交接工作区，接手方与 accept 方都进这里
+base_commit: <40位提交>   # 可选：分叉基线，不是文档/最终改动的“当前提交”
 source_node: <uuid>       # 可选：author 在 Agent Canvas 画布节点里时才写
 target_node:              # 留空，接手方在 verify 建完 hands-off-to 后回填
 ---
@@ -32,7 +34,7 @@ target_node:              # 留空，接手方在 verify 建完 hands-off-to 后
 >
 > **开工前**：若 frontmatter 有 `source_node`、且你也在 Agent Canvas 画布节点里，先建一条 `hands-off-to` 关系（`agent-canvas-ctl whoami` 取自己的 id，核对 `node-relations` 里没有后 `link-nodes --from <source_node> --to <自己> --type hands-off-to`），建完把自己的 id 填进 `target_node`。**只建这一条**——别建 `implements`、别另立需求节点。
 >
-> **在哪开工**：frontmatter 有 `worktree` 时，进那个工作区干活，核对当前分支与 `branch` 一致。**怎么进按你所在平台来**（Claude Code 用 `EnterWorktree(path: <worktree>)` 的 `path` 模式；没有这类能力就每条命令自带限定 `git -C <worktree>`，读写文件用绝对路径，别靠裸 `cd`——它只在单条命令内有效）。判据只有一条：后续命令的工作目录确实是那个工作区。**不要自己 `git worktree add`**（那条分支已被这个工作区占用，再建会失败，而且原 session 验收时回的是它自己建的那个，看不到你的改动），**也绝不要销毁它**（`git worktree remove`，或平台的"退出并删除"）——验收还要用。路径不存在就打回原 session 重建，别自己挑地方。
+> **在哪开工**：frontmatter 有 `worktree` 时，进那个工作区干活，核对当前分支与 `branch` 一致。**怎么进按你所在平台来**（Claude Code 用 `EnterWorktree(path: <worktree>)` 的 `path` 模式；Codex 从该路径启动/绑定 workspace，或用 `codex -C <worktree>`；没有这类能力就每条命令自带限定 `git -C <worktree>`，读写文件用绝对路径，别靠裸 `cd`——它只在单条命令内有效）。判据只有一条：后续命令的工作目录确实是那个工作区。**不要自己 `git worktree add` 或用 Codex `--worktree`**（那会另建工作区；原 session 验收时回的是 author 建的那一个，看不到替代工作区里的改动），**也绝不要销毁它**（`git worktree remove`，或平台的"退出并删除"）——验收还要用。路径不存在就打回原 session 重建，别自己挑地方。
 
 ---
 
