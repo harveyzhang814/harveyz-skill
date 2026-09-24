@@ -17,18 +17,18 @@ version: "1.0.1"
 
 按优先级识别要贡献的 skill：
 
-1. **上下文推断**：从对话中当前提到的 skill 名、文件路径、`SKILL.md` 内容直接推断
-2. **用户显式指定**：用户明确说明路径或名称
-3. **可选候选扫描**：若上下文不明确，可检查当前 host 已知的用户级或项目级 skill 目录，并列出其中包含 `SKILL.md` 的目录供用户选择；不得假定特定 host 的目录布局。也可在源项目中执行：
+1. **用户显式指定**：用户明确说明 `source_skill_dir` 或其他路径时，先验证该路径存在且包含 `SKILL.md`；验证成功后直接使用，绝不由上下文推断覆盖。
+2. **上下文推断**：仅当用户未显式指定路径时，从对话中当前提到的 skill 名、文件路径、`SKILL.md` 内容推断候选。
+3. **可选候选扫描**：仅当前两项均未确定目录时，可检查当前 host 已知的用户级或项目级 skill 目录，并列出其中包含 `SKILL.md` 的目录供用户选择；不得假定特定 host 的目录布局。也可在源项目中执行（支持 `skills/<category>/<name>/SKILL.md` 等嵌套布局）：
    ```bash
    SOURCE_ROOT=$(git rev-parse --show-toplevel 2>/dev/null || pwd)
-   find "${SOURCE_ROOT}" -type f -path '*/skills/*/SKILL.md' 2>/dev/null
+   find "${SOURCE_ROOT}" -type f -name SKILL.md -path '*/skills/*' 2>/dev/null
    ```
    若没有候选，提示用户手动输入要贡献的 skill 路径。
 
 验证：确认选定目录存在且包含 `SKILL.md`，否则停止并报错。将这个已验证目录的绝对路径保存为 `source_skill_dir`；后续所有源文件读取、状态检查、差异检查、复制和提交路径均使用它。
 
-将 `source_skill_dir` 的 Git 顶层目录（若存在）记为 `<源项目根目录>`。
+在 Step 7 前确定源目录类型：若 `git -C "${source_skill_dir}" rev-parse --show-toplevel` 成功，将结果记为 `<源项目根目录>` 并按 Git 源流程执行；否则标记为非 Git 源，跳过 Git 状态检查和提交，仅执行文件同步并报告需手动提交。
 
 ---
 
@@ -205,11 +205,14 @@ cd <harveyzSkillPath> && node scripts/generate-npmignore.js
 
 将 harveyz-skill 中目标 skill 目录的**完整内容**同步回源项目：
 
-**前置检查：若源目录有未提交变更，先提示用户确认**
-```bash
-git -C <源项目根目录> status --short "${source_skill_dir}/"
-```
-若有未提交修改，提示：「源目录有未提交的修改，同步将覆盖这些改动，是否继续？(y/n)」。用户拒绝则跳过 Step 7。
+**先按 Step 1 确定的源目录类型分支：**
+
+- **Git 源**：若源目录有未提交变更，先提示用户确认：
+  ```bash
+  git -C <源项目根目录> status --short "${source_skill_dir}/"
+  ```
+  若有未提交修改，提示：「源目录有未提交的修改，同步将覆盖这些改动，是否继续？(y/n)」。用户拒绝则跳过 Step 7。
+- **非 Git 源**：不运行 Git status 或 Git commit；继续下方的差异检查和文件同步，完成后报告「文件已同步，但源目录不是 Git 仓库，请手动提交或提交到相应的版本控制系统」。
 
 ```bash
 # 检测差异
@@ -222,14 +225,12 @@ diff -rq <harveyzSkillPath>/skills/<bundle-category>/<name>/ "${source_skill_dir
   # 复制目录内容（不含目录本身）到源目录，覆盖同名文件
   cp -r <harveyzSkillPath>/skills/<bundle-category>/<name>/. "${source_skill_dir}/"
   ```
-  然后在**源项目**当前分支执行：
+  若为 Git 源，再在**源项目**当前分支执行：
   ```bash
   git -C <源项目根目录> add "${source_skill_dir}/"
   git -C <源项目根目录> commit -m "chore: sync skill format from harveyz-skill"
   ```
-
-**边界情况：源项目无 git 仓库**
-跳过 commit 步骤，仅提示用户"文件已同步，但源项目不是 git 仓库，请手动提交"。
+  非 Git 源不执行这两个命令，按上面的手动提交提示报告。
 
 ---
 
