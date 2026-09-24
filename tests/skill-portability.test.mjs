@@ -9,7 +9,7 @@ const cases = [
   ['skills/writing/forge-doc/SKILL.md', ['~/.claude/skills', 'AskUserQuestion'], ['SKILL_DIR']],
   ['skills/mint/contribute-skill/SKILL.md', ['~/.claude/skills', '.claude/skills'], ['source_skill_dir', '~/.hskill/contribute-skill']],
   ['skills/coding/init-project/SKILL.md', ['user.claude.status', '--target claude', '~/.claude/skills'], ['TARGET', 'AGENTS.md']],
-  ['skills/research/fetch-paper/SKILL.md', ['WebFetch', 'WebSearch'], ['下载能力', '临时文件']],
+  ['skills/research/fetch-paper/SKILL.md', ['WebFetch', 'WebSearch', 'Read 工具', 'Write 工具', 'Bash 工具'], ['下载能力', '临时文件']],
   ['skills/coding/init-goal/SKILL.md', ['/loop'], ['持续执行']],
 ]
 

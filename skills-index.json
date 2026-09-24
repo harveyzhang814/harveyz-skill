@@ -78,8 +78,8 @@
       "path": "research/fetch-paper",
       "bundle": "research",
       "installScope": "project",
-      "contentHash": "e800f39eec3a0a8f",
-      "contentVersion": "0.2.1"
+      "contentHash": "3dc8352a00c59f22",
+      "contentVersion": "0.2.2"
     },
     {
       "path": "research/extract-cognition",
@@ -204,8 +204,8 @@
       "path": "writing/forge-doc",
       "bundle": "writing",
       "installScope": "global",
-      "contentHash": "29b34bf5b7637cfe",
-      "contentVersion": "2.5.1"
+      "contentHash": "ef8993f13f1284c8",
+      "contentVersion": "2.5.2"
     },
     {
       "path": "writing/draw-diagram",

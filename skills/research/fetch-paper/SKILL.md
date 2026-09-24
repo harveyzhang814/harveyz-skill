@@ -2,7 +2,7 @@
 name: fetch-paper
 description: "Locate and download a single academic paper's full text via legitimate open-access channels (arXiv, Unpaywall, Semantic Scholar, PMC, publisher OA pages). Verifies the paper's bibliographic record (DOI/arXiv ID) before searching, disambiguates when multiple candidates match, and reports one of four outcomes: auto-downloaded, free-but-manual, paid/registration-required, or not found. Maintains a growing list of free sources ranked by success rate. Triggers: 'find and download this paper', 'get me the PDF of <title>', 'download this paper', 'fetch paper <title/DOI>'."
 user_invocable: true
-version: "0.2.1"
+version: "0.2.2"
 ---
 
 # fetch-paper
@@ -26,7 +26,7 @@ SourcesPath: ~/.hskill/fetch-paper/sources.json
 
 ### Step 0：初始化配置与清单
 
-用 Read 工具读取 `~/.hskill/fetch-paper/config.json`。
+用宿主的文件读取能力读取 `~/.hskill/fetch-paper/config.json`。
 
 若文件不存在，询问用户：
 
@@ -34,7 +34,7 @@ SourcesPath: ~/.hskill/fetch-paper/sources.json
 论文下载到哪个目录？（直接回车使用默认：~/Documents/paper-downloads）
 ```
 
-用户回复后，用 Bash 工具写入配置（路径必须用 `$HOME` 展开，不可写字面量 `~`）：
+用户回复后，用宿主的文本写入能力创建配置（路径必须用 `$HOME` 展开，不可写字面量 `~`）。若使用 shell，这是一种示例写法：
 
 ```bash
 mkdir -p "$HOME/.hskill/fetch-paper"
@@ -42,13 +42,13 @@ download_dir="${用户指定路径/#\~/$HOME}"
 echo "{\"download_dir\": \"$download_dir\"}" > "$HOME/.hskill/fetch-paper/config.json"
 ```
 
-若文件已存在，解析 JSON 取出 `download_dir` 字段，展开残留的 `~`：
+若文件已存在，解析 JSON 取出 `download_dir` 字段，展开残留的 `~`。若使用 shell，这是一种示例写法：
 
 ```bash
 download_dir=$(python3 -c "import json,os; d=json.load(open('$HOME/.hskill/fetch-paper/config.json')); print(d['download_dir'].replace('~', os.environ['HOME'], 1))")
 ```
 
-用 Read 工具读取 `~/.hskill/fetch-paper/sources.json`。若不存在，用 Bash 工具写入种子清单：
+用宿主的文件读取能力读取 `~/.hskill/fetch-paper/sources.json`。若不存在，用宿主的文本写入能力创建种子清单；若使用 shell，这是一种示例写法：
 
 ```bash
 cat > "$HOME/.hskill/fetch-paper/sources.json" <<'EOF'
@@ -150,7 +150,7 @@ https://api.crossref.org/works?query.bibliographic=<urlencode(标题)>&rows=5
 
 ### Step 5：产出结果
 
-先用 Bash 生成 paper slug（标题转小写、空格与特殊字符替换为 `-`、汉字保留）：
+使用宿主的 shell 命令能力生成 paper slug（标题转小写、空格与特殊字符替换为 `-`、汉字保留）；例如：
 
 ```bash
 slug=$(echo "<论文标题>" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9一-鿿]/-/g' | sed -E 's/-+/-/g' | sed 's/^-//;s/-$//')
@@ -158,17 +158,19 @@ slug=$(echo "<论文标题>" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9一-�
 
 **A. 自动下载成功**（Step 4 拿到了合法 PDF）：
 
+使用宿主的文件操作或 shell 命令能力创建目标目录；若使用 shell，例如：
+
 ```bash
 mkdir -p "<download_dir>/$slug"
 ```
 
-用 Bash 把 Step 4 中下载能力返回的临时文件路径复制到目标位置（PDF 是二进制内容，不能用 Write 工具写入——Write 只接受文本，二进制字节会被破坏）：
+用宿主的文件操作或 shell 命令能力把 Step 4 中下载能力返回的临时文件路径复制到目标位置（PDF 是二进制内容，不能用仅支持文本的写入能力写入，二进制字节会被破坏）。若使用 shell，例如：
 
 ```bash
 cp "<下载能力返回的临时文件路径>" "<download_dir>/$slug/paper.pdf"
 ```
 
-用 Write 工具写入 `<download_dir>/$slug/metadata.md`：
+用宿主的文本写入能力写入 `<download_dir>/$slug/metadata.md`：
 
 ```markdown
 # {论文标题}
@@ -186,11 +188,11 @@ cp "<下载能力返回的临时文件路径>" "<download_dir>/$slug/paper.pdf"
 - [自动] {站点名}：{URL}
 ```
 
-用 Bash 更新 `~/.hskill/fetch-paper/sources.json`，命中站点的 `success_count` 加 1（用 python3 读写 JSON，保留其余字段不变）。
+用宿主的文件读取与文本写入能力更新 `~/.hskill/fetch-paper/sources.json`，命中站点的 `success_count` 加 1（使用 JSON 解析与写入，保留其余字段不变）；若使用 shell，可用 `python3` 读写 JSON。
 
 **B. 免费全文存在，但需手动下载**（有手动候选，但没有 auto 渠道成功）：
 
-不写 PDF。用 Write 工具写入 `<download_dir>/$slug/metadata.md`（同上结构），获取渠道行改为：
+不写 PDF。用宿主的文本写入能力写入 `<download_dir>/$slug/metadata.md`（同上结构），获取渠道行改为：
 
 ```markdown
 - [手动下载] {站点名}：{URL} —— {具体操作，如"打开链接，点击 Download PDF 按钮"}
@@ -198,7 +200,7 @@ cp "<下载能力返回的临时文件路径>" "<download_dir>/$slug/paper.pdf"
 
 **C. 无免费全文，但有收费/需注册渠道**：
 
-用 Write 工具写入 `<download_dir>/$slug/metadata.md`，获取渠道行改为：
+用宿主的文本写入能力写入 `<download_dir>/$slug/metadata.md`，获取渠道行改为：
 
 ```markdown
 - [付费/需注册] {站点名}：{URL} —— {购买 / 向作者请求全文 / 机构登录}

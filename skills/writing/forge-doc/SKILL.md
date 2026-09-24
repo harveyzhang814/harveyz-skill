@@ -2,7 +2,7 @@
 name: forge-doc
 description: "Convert documents between formats. Trigger when the user wants to convert or export a Markdown file to Word (.docx) or PDF — e.g. 'export as docx', 'convert to Word', 'export as pdf', 'generate PDF' — or when the user writes a document in the conversation and wants it as .docx or .pdf."
 user_invocable: true
-version: "2.5.1"
+version: "2.5.2"
 ---
 
 `SKILL_DIR` 为当前 host 安装本 skill 的目录（包含 `scripts/`、`assets/` 和 `preview/`）。
@@ -11,7 +11,7 @@ version: "2.5.1"
 
 ### Step 0 — 询问是否查看样式预览
 
-**在运行任何转换命令之前**，若用户未显式指定样式，使用当前 host 的提问机制；否则在对话中询问：
+**在运行任何转换命令之前**，若用户未显式指定样式，且当前 host 提供提问机制，则使用该机制；若该机制不可用，则在对话中询问：
 
 ```
 问题：是否先查看所有样式的预览效果？
@@ -32,7 +32,7 @@ python3 SKILL_DIR/scripts/generate_style_preview.py
 
 ### Step 1 — 询问样式
 
-再使用当前 host 的提问机制；否则在对话中询问：
+再次询问时，若当前 host 提供提问机制，则使用该机制；若该机制不可用，则在对话中询问：
 
 ```
 问题：请选择输出样式
