@@ -2,7 +2,7 @@
 name: fetch-paper
 description: "Locate and download a single academic paper's full text via legitimate open-access channels (arXiv, Unpaywall, Semantic Scholar, PMC, publisher OA pages). Verifies the paper's bibliographic record (DOI/arXiv ID) before searching, disambiguates when multiple candidates match, and reports one of four outcomes: auto-downloaded, free-but-manual, paid/registration-required, or not found. Maintains a growing list of free sources ranked by success rate. Triggers: 'find and download this paper', 'get me the PDF of <title>', 'download this paper', 'fetch paper <title/DOI>'."
 user_invocable: true
-version: "0.2.0"
+version: "0.2.1"
 ---
 
 # fetch-paper
@@ -81,23 +81,26 @@ EOF
 
 **若输入已含 DOI：**
 
+用宿主的**结构化请求能力**请求：
+
 ```
-WebFetch(url="https://api.crossref.org/works/<DOI>")
+https://api.crossref.org/works/<DOI>
 ```
 
 **若输入已含 arXiv ID：**
 
+用宿主的**结构化请求能力**请求：
+
 ```
-WebFetch(url="http://export.arxiv.org/api/query?id_list=<arXiv ID>")
+http://export.arxiv.org/api/query?id_list=<arXiv ID>
 ```
 
 **否则（只有标题/引用字符串）：**
 
-同时执行：
+同时使用宿主的**检索能力**检索 `<标题>`，以及**结构化请求能力**请求：
 
 ```
-WebSearch("<标题>")
-WebFetch(url="https://api.crossref.org/works?query.bibliographic=<urlencode(标题)>&rows=5")
+https://api.crossref.org/works?query.bibliographic=<urlencode(标题)>&rows=5
 ```
 
 从返回结果中，对每个候选提取：标题、作者、年份、期刊/会议、DOI、arXiv ID（若有）。
@@ -127,14 +130,14 @@ WebFetch(url="https://api.crossref.org/works?query.bibliographic=<urlencode(标�
 读取 `~/.hskill/fetch-paper/sources.json`，把 `auto: true` 的站点按 `success_count` 降序排序，依次尝试（命中一个立即停止，不再尝试后面的）：
 
 1. **arXiv** — 若已确认 arXiv ID，PDF 直链为 `https://arxiv.org/pdf/<arXiv ID>`
-2. **Unpaywall** — 若已确认 DOI，`WebFetch(url="https://api.unpaywall.org/v2/<DOI>?email=fetch-paper@localhost")`，取响应中 `best_oa_location.url_for_pdf`
-3. **Semantic Scholar** — `WebFetch(url="https://api.semanticscholar.org/graph/v1/paper/DOI:<DOI>?fields=openAccessPdf")`，取 `openAccessPdf.url`
-4. **PMC** — 若论文属生物医学领域，`WebFetch(url="https://www.ncbi.nlm.nih.gov/pmc/utils/idconv/v1.0/?ids=<DOI>&format=json")` 换取 PMC ID（该 URL 会 301 到 `pmc.ncbi.nlm.nih.gov` 新域名，WebFetch 会提示重新请求一次；返回 JSON 里 PMC ID 在 `records[0].pmcid`）。**注意**：PDF 直链 `https://www.ncbi.nlm.nih.gov/pmc/articles/<PMC ID>/pdf/` 实测已失效——该链接最终落地到一个 200 状态的"Preparing to download..."HTML 中间页，需要浏览器执行 JS 解一个 Proof-of-Work 挑战（cloudpmc-viewer）并写入 cookie 才能拿到真正的 PDF，WebFetch/纯 HTTP 请求无法完成，判定为必然失败，直接记入「B 手动候选」，不必重试。另外 Unpaywall/Semantic Scholar 对 PMC 收录的论文通常也会把同一个 PMC 落地页当作 `best_oa_location`/`openAccessPdf`（但 `url_for_pdf` 常为 null），所以此渠道确实会被触达，只是触达后大概率下载失败
-5. **期刊官网 OA 页面** — 若 Crossref 元数据里 `license` 字段显示开放许可（如 CC-BY），尝试该页面上的 PDF 链接。**注意**：实测 Unpaywall/Semantic Scholar 判定为 OA 但 `url_for_pdf` 为 null 的情况很常见（渠道 2/3 未必能给出可下载直链），此时确实会落到这一步；但 ScienceDirect、MDPI 等主流出版商的文章落地页对自动化请求（含 WebFetch、curl 加常规浏览器 UA）普遍返回 403，即便该文确为 CC-BY 开放许可也一样——这是发布方的反爬拦截，不是个别失败。遇到 403 或非 PDF 响应直接判定该渠道失败，记入「B 手动候选」，不要反复重试同一出版商
-6. **作者/机构仓库自存版** — `WebSearch("\"<标题>\" filetype:pdf")`，人工判断结果是否为作者自存版（个人主页、机构仓库域名，而非镜像站）
+2. **Unpaywall** — 若已确认 DOI，用结构化请求能力请求 `https://api.unpaywall.org/v2/<DOI>?email=fetch-paper@localhost`，取响应中 `best_oa_location.url_for_pdf`
+3. **Semantic Scholar** — 用结构化请求能力请求 `https://api.semanticscholar.org/graph/v1/paper/DOI:<DOI>?fields=openAccessPdf`，取 `openAccessPdf.url`
+4. **PMC** — 若论文属生物医学领域，用结构化请求能力请求 `https://www.ncbi.nlm.nih.gov/pmc/utils/idconv/v1.0/?ids=<DOI>&format=json` 换取 PMC ID（该 URL 会 301 到 `pmc.ncbi.nlm.nih.gov` 新域名；重新请求一次；返回 JSON 里 PMC ID 在 `records[0].pmcid`）。**注意**：PDF 直链 `https://www.ncbi.nlm.nih.gov/pmc/articles/<PMC ID>/pdf/` 实测已失效——该链接最终落地到一个 200 状态的"Preparing to download..."HTML 中间页，需要浏览器执行 JS 解一个 Proof-of-Work 挑战（cloudpmc-viewer）并写入 cookie 才能拿到真正的 PDF，普通 HTTP 请求无法完成，判定为必然失败，直接记入「B 手动候选」，不必重试。另外 Unpaywall/Semantic Scholar 对 PMC 收录的论文通常也会把同一个 PMC 落地页当作 `best_oa_location`/`openAccessPdf`（但 `url_for_pdf` 常为 null），所以此渠道确实会被触达，只是触达后大概率下载失败
+5. **期刊官网 OA 页面** — 若 Crossref 元数据里 `license` 字段显示开放许可（如 CC-BY），尝试该页面上的 PDF 链接。**注意**：实测 Unpaywall/Semantic Scholar 判定为 OA 但 `url_for_pdf` 为 null 的情况很常见（渠道 2/3 未必能给出可下载直链），此时确实会落到这一步；但 ScienceDirect、MDPI 等主流出版商的文章落地页对自动化请求（含 curl 加常规浏览器 UA）普遍返回 403，即便该文确为 CC-BY 开放许可也一样——这是发布方的反爬拦截，不是个别失败。遇到 403 或非 PDF 响应直接判定该渠道失败，记入「B 手动候选」，不要反复重试同一出版商
+6. **作者/机构仓库自存版** — 用检索能力检索 `"<标题>" filetype:pdf`，人工判断结果是否为作者自存版（个人主页、机构仓库域名，而非镜像站）
 
 对每个候选 URL：
-- 用 WebFetch 请求。注意：WebFetch 遇到二进制/PDF 响应时不会把原始字节当文本返回，而是自动把内容存到一个临时文件，并在返回文本里报告该临时文件路径（形如"Binary content ... also saved to /path/to/file.pdf"）——**记下这个临时文件路径**，Step 5 A 写盘时要用它
+- 使用宿主的**下载能力**请求二进制内容。下载能力必须返回或创建一个**临时文件**，并报告其路径；**记下这个临时文件路径**，Step 5 A 写盘时要用它。若宿主的下载能力不能保存二进制内容，才可用 `curl -L --fail --output <临时文件路径> <URL>` 创建临时文件，再继续校验；不得把 PDF 二进制字节交给仅接受文本的写入能力。
 - **校验返回内容确为 PDF**：检查响应 `Content-Type` 是否为 `application/pdf`，或内容开头是否为 `%PDF-`。若是登录页/验证码页/HTML 错误页伪装的 200 响应，判定该渠道失败——记入「B 手动候选」列表，继续尝试下一个渠道，不重试同一渠道
 - 若该渠道明确需要人工点击/验证码/交互式操作才能拿到文件本身（例如落地页只有"Request full text"按钮）→ 直接记入「B 手动候选」列表，不算失败也不算成功，继续尝试下一个渠道
 
@@ -159,10 +162,10 @@ slug=$(echo "<论文标题>" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9一-�
 mkdir -p "<download_dir>/$slug"
 ```
 
-用 Bash 把 Step 4 中 WebFetch 报告的临时文件路径复制到目标位置（PDF 是二进制内容，不能用 Write 工具写入——Write 只接受文本，二进制字节会被破坏）：
+用 Bash 把 Step 4 中下载能力返回的临时文件路径复制到目标位置（PDF 是二进制内容，不能用 Write 工具写入——Write 只接受文本，二进制字节会被破坏）：
 
 ```bash
-cp "<WebFetch 报告的临时文件路径>" "<download_dir>/$slug/paper.pdf"
+cp "<下载能力返回的临时文件路径>" "<download_dir>/$slug/paper.pdf"
 ```
 
 用 Write 工具写入 `<download_dir>/$slug/metadata.md`：
@@ -235,5 +238,6 @@ cp "<WebFetch 报告的临时文件路径>" "<download_dir>/$slug/paper.pdf"
 
 ## 依赖
 
-- WebSearch（检索候选）
-- WebFetch（调用 Crossref / Unpaywall / Semantic Scholar / arXiv / PMC 等公开 API，下载 PDF）
+- 检索能力（检索候选）
+- 结构化请求能力（调用 Crossref / Unpaywall / Semantic Scholar / arXiv / PMC 等公开 API）
+- 下载能力（下载 PDF 并返回或创建临时文件）
