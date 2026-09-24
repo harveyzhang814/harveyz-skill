@@ -42,6 +42,29 @@ _ARTICLES_FIXTURE_HTML = """<!doctype html>
 <div class="nav"><a href="/about">About</a></div>
 </body></html>"""
 
+_PAGE_FIXTURE_HTML = """<!doctype html>
+<html><head><title>Local Browser Fetch Fixture</title></head><body>
+<main><h1>Local Browser Fetch Fixture</h1><p>Deterministic local page content.</p></main>
+</body></html>"""
+
+
+@pytest.fixture
+def local_page_url(tmp_path):
+    site_dir = tmp_path / "page-fixture-site"
+    site_dir.mkdir()
+    (site_dir / "index.html").write_text(_PAGE_FIXTURE_HTML, encoding="utf-8")
+
+    handler = functools.partial(http.server.SimpleHTTPRequestHandler, directory=str(site_dir))
+    server = http.server.ThreadingHTTPServer(("127.0.0.1", 0), handler)
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    try:
+        yield f"http://127.0.0.1:{server.server_port}/index.html"
+    finally:
+        server.shutdown()
+        thread.join()
+        server.server_close()
+
 
 @pytest.fixture
 def articles_fixture_server(tmp_path):

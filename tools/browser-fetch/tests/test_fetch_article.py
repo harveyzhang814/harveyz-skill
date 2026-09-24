@@ -2,7 +2,7 @@ from pathlib import Path
 
 from playwright.async_api import async_playwright
 
-from browser_fetch.extractors import EXTRACT_JS, wechat_publish_date_from_ct
+from browser_fetch.extractors import EXTRACT_JS, dispatch_site, wechat_publish_date_from_ct
 
 
 def _set_default_chrome_profile(run_cli, profile_dir: Path):
@@ -29,18 +29,12 @@ def test_fetch_article_generic_real_network(run_cli, tmp_path):
     assert payload["image_count"] > 0
 
 
-def test_fetch_article_arxiv_real_network(run_cli, tmp_path):
-    """Real arXiv HTML paper page. If this specific ID has been withdrawn
-    or lacks an HTML render by the time this runs, swap in any current
-    arxiv.org/html/<id> URL — check https://arxiv.org/list/cs.AI/recent."""
-    output_dir = tmp_path / "out"
-    proc, payload = run_cli(
-        "article", "https://arxiv.org/html/2608.06020",
-        "--out", str(output_dir), "--format", "json",
-    )
-    assert proc.returncode == 0, proc.stderr
-    assert payload["site"] == "arxiv"
-    assert len(payload["blocks"]) > 5
+async def test_fetch_article_arxiv_uses_arxiv_route_and_fixture(tmp_path):
+    assert dispatch_site("https://arxiv.org/html/2608.06020") == "arxiv"
+
+    result = await _evaluate_extraction("arxiv", _ARXIV_FIXTURE_HTML, tmp_path)
+    assert result["title"] == "Test Paper Title"
+    assert len(result["blocks"]) >= 3
 
 
 def test_fetch_article_x_dot_com_without_chrome_profile_is_rejected(run_cli, tmp_path):
