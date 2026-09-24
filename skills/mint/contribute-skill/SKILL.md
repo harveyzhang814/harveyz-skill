@@ -2,7 +2,7 @@
 name: contribute-skill
 description: "Contribute, import, sync, or register a skill directory from another project into the harveyz-skill repo — auto-normalizes SKILL.md format, registers in skills-index.json, and performs bidirectional directory sync. Triggers whenever the user wants to add, contribute, push, migrate, import, or sync an existing skill into harvey-skill or harveyz-skill. Note: flow is from other projects into harveyz-skill; installing or copying an existing skill out to a local project does NOT trigger this skill."
 user_invocable: true
-version: "1.0.0"
+version: "1.0.1"
 ---
 
 # contribute-skill
@@ -19,23 +19,22 @@ version: "1.0.0"
 
 1. **上下文推断**：从对话中当前提到的 skill 名、文件路径、`SKILL.md` 内容直接推断
 2. **用户显式指定**：用户明确说明路径或名称
-3. **扫描列出**：若上下文不明确，执行以下命令并列出候选供用户选择：
+3. **可选候选扫描**：若上下文不明确，可检查当前 host 已知的用户级或项目级 skill 目录，并列出其中包含 `SKILL.md` 的目录供用户选择；不得假定特定 host 的目录布局。也可在源项目中执行：
    ```bash
-   # 先确定源项目根目录
    SOURCE_ROOT=$(git rev-parse --show-toplevel 2>/dev/null || pwd)
-   ls "${SOURCE_ROOT}/.claude/skills/"
+   find "${SOURCE_ROOT}" -type f -path '*/skills/*/SKILL.md' 2>/dev/null
    ```
-   若 `.claude/skills/` 目录不存在，提示用户：「当前项目下未找到 .claude/skills/ 目录，请手动输入要贡献的 skill 路径。」
+   若没有候选，提示用户手动输入要贡献的 skill 路径。
 
-验证：确认该目录存在且包含 `SKILL.md`，否则停止并报错。
+验证：确认选定目录存在且包含 `SKILL.md`，否则停止并报错。将这个已验证目录的绝对路径保存为 `source_skill_dir`；后续所有源文件读取、状态检查、差异检查、复制和提交路径均使用它。
 
-将 `$SOURCE_ROOT` 记为 `<源项目根目录>`，后续所有步骤中的 `<当前项目路径>` 均指此路径。
+将 `source_skill_dir` 的 Git 顶层目录（若存在）记为 `<源项目根目录>`。
 
 ---
 
 ### Step 2 — 定位 harveyz-skill 仓库
 
-**配置缓存路径：** `~/.claude/skills/contribute-skill/.config`
+**配置缓存路径：** `~/.hskill/contribute-skill/.config`
 
 格式：
 ```json
@@ -47,7 +46,7 @@ version: "1.0.0"
 **查找逻辑（按优先级）：**
 
 ```
-1. 读取 ~/.claude/skills/contribute-skill/.config
+1. 读取 ~/.hskill/contribute-skill/.config
    └── 若存在：
        ├── 且 <path>/skills-index.json 存在 → 直接使用，跳过后续步骤
        └── 且路径无效（skills-index.json 不存在）→ 删除 .config，继续步骤 2
@@ -61,7 +60,7 @@ version: "1.0.0"
 
 4. 以上均失败 → 询问用户手动输入路径
 
-找到后：写入 ~/.claude/skills/contribute-skill/.config，后续调用直接读取
+找到后：写入 ~/.hskill/contribute-skill/.config，后续调用直接读取
 ```
 
 ---
@@ -117,7 +116,7 @@ version: "1.0.0"
 即将执行以下操作：
 
 [复制]
-  源：<当前项目路径>/.claude/skills/<name>/
+  源：`${source_skill_dir}/`
       （列出目录中所有文件）
   目标：<harveyzSkillPath>/skills/<bundle-category>/<name>/
 
@@ -126,7 +125,7 @@ version: "1.0.0"
   （若新建 bundle）bundleMeta 新增：{"<bundle>": "<description>"}
 
 [同步回源]
-  格式化后完整目录 → <当前项目路径>/.claude/skills/<name>/
+  格式化后完整目录 → `${source_skill_dir}/`
 
 确认继续？(y/n)
 ```
@@ -164,7 +163,7 @@ version: "1.0.0"
 **1. 复制 skill 目录**
 ```bash
 # 将源目录完整复制为目标路径
-cp -r <源目录>/ <harveyzSkillPath>/skills/<bundle-category>/<name>/
+cp -r "${source_skill_dir}/" <harveyzSkillPath>/skills/<bundle-category>/<name>/
 ```
 
 **2. 用格式化后的 SKILL.md 覆盖目标目录中的 SKILL.md**
@@ -208,27 +207,25 @@ cd <harveyzSkillPath> && node scripts/generate-npmignore.js
 
 **前置检查：若源目录有未提交变更，先提示用户确认**
 ```bash
-cd <源项目根目录>
-git status --short .claude/skills/<name>/
+git -C <源项目根目录> status --short "${source_skill_dir}/"
 ```
 若有未提交修改，提示：「源目录有未提交的修改，同步将覆盖这些改动，是否继续？(y/n)」。用户拒绝则跳过 Step 7。
 
 ```bash
 # 检测差异
-diff -rq <harveyzSkillPath>/skills/<bundle-category>/<name>/ <源项目根目录>/.claude/skills/<name>/
+diff -rq <harveyzSkillPath>/skills/<bundle-category>/<name>/ "${source_skill_dir}/"
 ```
 
 - **若无差异**：跳过，不产生 commit，提示用户"源目录内容已是最新，无需同步"
 - **若有差异**：
   ```bash
   # 复制目录内容（不含目录本身）到源目录，覆盖同名文件
-  cp -r <harveyzSkillPath>/skills/<bundle-category>/<name>/. <源项目根目录>/.claude/skills/<name>/
+  cp -r <harveyzSkillPath>/skills/<bundle-category>/<name>/. "${source_skill_dir}/"
   ```
   然后在**源项目**当前分支执行：
   ```bash
-  cd <源项目根目录>
-  git add .claude/skills/<name>/
-  git commit -m "chore: sync skill format from harveyz-skill"
+  git -C <源项目根目录> add "${source_skill_dir}/"
+  git -C <源项目根目录> commit -m "chore: sync skill format from harveyz-skill"
   ```
 
 **边界情况：源项目无 git 仓库**
@@ -274,7 +271,7 @@ git commit -m "feat: contribute <name> from <source-project-name>"
   - 下一步：git push origin feature/contribute-<name>，然后创建 PR → staging
 
 ✓ 源项目（<project-name>）
-  - 已同步格式化内容：.claude/skills/<name>/
+  - 已同步格式化内容：`${source_skill_dir}/`
   - commit：chore: sync skill format from harveyz-skill
   （或：无变化，跳过 commit）
 ```

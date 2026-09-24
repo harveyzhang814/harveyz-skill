@@ -1,6 +1,6 @@
 ---
 name: capture-vocab
-version: "1.2.1"
+version: "1.2.2"
 description: Use when you need to look up, add, update, or remove project-specific domain terms — invoke with /capture-vocab query|add|update|remove <term>, or whenever an unfamiliar project-coined noun appears and you need its definition, against a shared vocabulary file at .hskill/capture-vocab/vocab.md
 user_invocable: true
 ---
@@ -8,6 +8,8 @@ user_invocable: true
 # Domain Vocabulary
 
 管理项目级领域术语字典，词汇表存于 `<project-root>/.hskill/capture-vocab/vocab.md`。只存业务领域概念（跨前后端、跨 AI/人类对话都会出现的词）；函数名、变量名等技术命名不进词汇表。
+
+`SKILL_DIR` 为当前 host 安装本 skill 的目录（包含 `scripts/`）。
 
 ```
 /capture-vocab query <term>     # 高频，流程见下
@@ -20,7 +22,7 @@ user_invocable: true
 
 也用于「agent 拿不准某个词指什么」这个高频场景，参数可以是一个词，也可以是用户的一整句话。
 
-1. 跑 `python3 ~/.claude/skills/capture-vocab/scripts/vocab.py lookup "<词或整句>"`
+1. 跑 `python3 SKILL_DIR/scripts/vocab.py lookup "<词或整句>"`
 2. **exit 0** → 按输出的 section 定义理解/回答
 3. **输出 `N matches: a, b, c, d`**（命中超过 3 条时的降级档）→ 挑最相关的那个再 `lookup` 一次
 4. **exit 1**（`no match`）→ 该词没有定义，按字面理解，不必追问；用户显式跑 `query` 时再跑一次 `list` 列出全部术语名供其挑选
