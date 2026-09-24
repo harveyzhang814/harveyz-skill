@@ -1,17 +1,17 @@
 ---
 name: init-goal
-version: "1.3.0"
-description: "Generate a structured /loop Goal Prompt through guided dialogue. Parses user's initial message to auto-fill known fields and match the best template, then clarifies only what's missing (depth-first, one question at a time). Outputs the Goal Prompt as text — the skill writes no files; the loop agent persists prompt.md/log.md/summary.md during execution per the embedded rules. Triggers: user says /init-goal, 'initialize a loop goal', 'set up a GOal', 'help me use /loop to accomplish X', or describes a repetitive autonomous task they want Claude to run in a loop."
+version: "1.3.1"
+description: "Generate a structured continuous-execution Goal Prompt through guided dialogue. Parses the user's initial message to auto-fill known fields and match the best template, then clarifies only what is missing (depth-first, one question at a time). Outputs the Goal Prompt as text — the skill writes no files; the executing agent persists prompt.md/log.md/summary.md during execution per the embedded rules. Triggers: user says /init-goal, 'initialize a continuous goal', 'set up a GOal', or describes a repetitive autonomous task they want an agent to continue."
 user_invocable: true
 ---
 
 # init-goal
 
-对话式向导，帮助用户为 `/loop` 命令生成一段结构化的 **Goal Prompt 文本**。
+对话式向导，帮助用户为**持续执行**生成一段结构化的 **Goal Prompt 文本**。
 
-**这个 skill 的唯一产物就是这段 Goal Prompt 文本。** 它内含「执行期间维护文档」的规则——这些规则是写给跑 loop 的 agent 的指令，由那个 agent 在执行 loop 时落盘三个文件。**init-goal 自己不创建任何目录、不写任何文件。**
+**这个 skill 的唯一产物就是这段 Goal Prompt 文本。** 它内含「执行期间维护文档」的规则——这些规则是写给持续执行的 agent 的指令，由那个 agent 在持续执行时落盘三个文件。**init-goal 自己不创建任何目录、不写任何文件。**
 
-执行期间由 loop agent 生成的文件（slug 取自 GOAL）：
+执行期间由持续执行 agent 生成的文件（slug 取自 GOAL）：
 - `~/.hskill/init-goal/<goal-slug>/prompt.md`（agent 首轮存档，静态不变）
 - `~/.hskill/init-goal/<goal-slug>/log.md`（agent 每轮追加）
 - `~/.hskill/init-goal/<goal-slug>/summary.md`（agent 退出时生成）
@@ -59,7 +59,7 @@ user_invocable: true
 **优先级（从高到低）：**
 
 1. **GOAL** — 如果目标不够具体（缺少成功标准、范围不清楚），先把这个搞清楚。其他一切从 GOAL 派生。
-2. **EXIT_EXPLICIT** — 如果用户没有明确说"达到什么状态停止"，问这个。这是 loop 的终点，必须清晰。
+2. **EXIT_EXPLICIT** — 如果用户没有明确说"达到什么状态停止"，问这个。这是持续执行的终点，必须清晰。
 3. **CONSTRAINTS** — 如果用户提到了限制但不完整（比如"不能改某些文件"但没说具体哪些），确认一下。
 4. **EXECUTION** — 如果模版默认步骤明显不适用当前场景，才问。通常不需要问。
 5. **EVAL / EXIT_FALLBACK** — 几乎不需要问；模版默认值在绝大多数情况下够用。
@@ -78,7 +78,7 @@ user_invocable: true
 展示所有字段的当前值（用户已提供的 + 模版默认值），一次性呈现：
 
 ---
-**这是根据你的描述整理的 loop 配置，请确认：**
+**这是根据你的描述整理的持续执行配置，请确认：**
 
 **目标：** [GOAL]
 
@@ -103,7 +103,7 @@ user_invocable: true
 
 ## Step 2 — 生成并输出 Goal Prompt 文本
 
-这一步**不写任何文件**。init-goal 的产物就是下面这段文本——把它生成出来，直接展示给用户，由用户拿去喂给 `/loop`。文本里的 `## 文档维护` 段是写给执行 loop 的 agent 的指令，三个文档由那个 agent 在跑 loop 时落盘。
+这一步**不写任何文件**。init-goal 的产物就是下面这段文本——把它生成出来，直接展示给用户，交给宿主的持续执行设施或执行 agent。文本里的 `## 文档维护` 段是写给持续执行 agent 的指令，三个文档由那个 agent 在执行时落盘。
 
 **先生成 goal-slug：**
 若 GOAL 是英文，转为 kebab-case（小写 + 连字符），截取前 40 字符。
@@ -134,7 +134,7 @@ user_invocable: true
 - 明确条件：[EXIT_EXPLICIT]
 - 兜底逻辑：[EXIT_FALLBACK]
 
-## 文档维护（由运行本 loop 的 agent 负责，工作目录 ~/.hskill/init-goal/[goal-slug]/）
+## 文档维护（由运行本持续执行的 agent 负责，工作目录 ~/.hskill/init-goal/[goal-slug]/）
 
 - **首轮：** 若 prompt.md 不存在，`mkdir -p` 工作目录并把本 prompt 完整存为 prompt.md（静态存档，之后不改）。
 - **每轮：** 开始前读 log.md 末条 Round 获取上下文（首轮无则跳过）；结束时向 log.md 追加一条 `### Round N — YYYY-MM-DD HH:MM`，含三行——执行内容 / 评估结果 / 下一轮建议。
@@ -144,12 +144,8 @@ user_invocable: true
 **展示完文本后，附上启动说明：**
 
 ---
-✅ Goal Prompt 已生成（如上）。复制整段，启动 loop（interval 自选）：
+Goal Prompt 已生成（如上）。复制整段，按当前宿主的持续执行适配器启动；宿主没有此设施时，交给同一执行 agent **顺序执行**：每次完成一轮后读取评估和 `log.md`，由用户或控制器明确继续下一轮，直到退出条件满足。
 
-```
-/loop <interval> <粘贴上面整段 Goal Prompt>
-```
-
-首轮运行时，loop agent 会按 `## 文档维护` 的指令把它存为 `~/.hskill/init-goal/[goal-slug]/prompt.md`，每轮追加 `log.md`，结束时写 `summary.md`。
+首轮运行时，持续执行 agent 会按 `## 文档维护` 的指令把它存为 `~/.hskill/init-goal/[goal-slug]/prompt.md`，每轮追加 `log.md`，结束时写 `summary.md`。平台专用启动方式只在 `platforms/` 适配器中说明。
 
 ---

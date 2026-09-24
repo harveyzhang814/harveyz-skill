@@ -1,6 +1,6 @@
-# CLAUDE.md
+# AGENTS.md
 
-本文件给 Claude Code 提供 {{PROJECT_NAME}} 的项目约定。
+本文件为在 {{PROJECT_NAME}} 中工作的各类 agent 提供项目约定。
 
 ## 项目概述
 

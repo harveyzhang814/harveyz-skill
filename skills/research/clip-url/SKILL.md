@@ -1,6 +1,6 @@
 ---
 name: clip-url
-version: "0.9.2"
+version: "0.9.3"
 description: "Use this the instant a URL is shared with any intent to save, archive, clip, or translate-and-keep it in Obsidian — a bare link with no comment, \"save this\", \"archive this\", \"clip this\", \"add to obsidian\", \"save it\", \"save to vault/obsidian\", \"keep a record of this\", \"translate and save\", \"help me save/grab this link\", or a request to fetch a page via browser-fetch — including these requests phrased in Chinese. Covers arXiv papers, WeChat official account posts, X/Twitter threads, Hacker News links, blog posts, news articles, and general webpages — including sites needing special handling (login walls, images, JS-rendered content). Do not use for translate-or-summarize-only requests with no save intent, in-page actions like clicking buttons or filling forms, retagging or fixing metadata on an article already saved, links shared purely for reaction or jokes, or topic searches with no specific URL given."
 user_invocable: true
 ---
@@ -13,7 +13,7 @@ user_invocable: true
 
 **① 加载平台补丁**
 
-根据当前执行平台，读取对应补丁文件，了解**补丁①**（Subagent 派发）与**补丁②**（变量来源）的具体语法：
+根据当前执行平台，读取对应补丁文件，了解**补丁①**（Subagent 派发及完成等待）与**补丁②**（变量来源）的具体语法。平台补丁必须提供可用的派发/等待方式；若当前宿主没有可用的派发能力，必须按补丁中的**顺序执行**回退：由当前 agent 完成 Subagent 1、3、2 各自的任务内容，每一步完成并读取报告后才进入下一步。
 
 | 平台 | 补丁文件 |
 |------|----------|
@@ -22,9 +22,7 @@ user_invocable: true
 | Hermes | `platforms/SKILL.hermes.md` |
 | Pi | `platforms/SKILL.pi.md` |
 
-若补丁文件顶部带「⚠️ 未验证」标注，必须先按该标注要求告知用户，再决定是否继续。
-
-以下流程中凡标注「**补丁①**」处，均使用对应平台补丁中定义的调用语法替换。
+以下流程中凡标注「**补丁①**」处，均使用对应平台补丁中定义的派发与完成等待方式；使用顺序执行回退时，由当前 agent 执行同一任务内容并读取其报告。
 
 **② 检查共享配置**
 

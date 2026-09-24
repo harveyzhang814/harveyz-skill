@@ -2,14 +2,16 @@
 name: forge-doc
 description: "Convert documents between formats. Trigger when the user wants to convert or export a Markdown file to Word (.docx) or PDF — e.g. 'export as docx', 'convert to Word', 'export as pdf', 'generate PDF' — or when the user writes a document in the conversation and wants it as .docx or .pdf."
 user_invocable: true
-version: "2.5.0"
+version: "2.5.2"
 ---
+
+`SKILL_DIR` 为当前 host 安装本 skill 的目录（包含 `scripts/`、`assets/` 和 `preview/`）。
 
 ## 执行前必做：样式预览 → 选择样式
 
 ### Step 0 — 询问是否查看样式预览
 
-**在运行任何转换命令之前**，若用户未显式指定样式，先用 `AskUserQuestion` 询问：
+**在运行任何转换命令之前**，若用户未显式指定样式，且当前 host 提供提问机制，则使用该机制；若该机制不可用，则在对话中询问：
 
 ```
 问题：是否先查看所有样式的预览效果？
@@ -21,17 +23,16 @@ version: "2.5.0"
 **如果用户选择"查看样式预览"，或未明确选择跳过**，执行：
 
 ```bash
-python3 ~/.claude/skills/forge-doc/scripts/generate_style_preview.py
-open ~/.claude/skills/forge-doc/preview/style-preview.html
+python3 SKILL_DIR/scripts/generate_style_preview.py
 ```
 
-浏览器打开后告知用户："预览已打开，对比各样式后请回来选择。"
+可选地用当前 host 打开 `SKILL_DIR/preview/style-preview.html`；若未打开，告知用户该预览位置并请其对比后回来选择。
 
 ---
 
 ### Step 1 — 询问样式
 
-再用 `AskUserQuestion` 询问：
+再次询问时，若当前 host 提供提问机制，则使用该机制；若该机制不可用，则在对话中询问：
 
 ```
 问题：请选择输出样式
@@ -54,11 +55,11 @@ open ~/.claude/skills/forge-doc/preview/style-preview.html
 
 ```bash
 # DOCX
-python3 ~/.claude/skills/forge-doc/scripts/md_to_docx.py /tmp/draft.md \
+python3 SKILL_DIR/scripts/md_to_docx.py /tmp/draft.md \
   --base-dir /Users/harvey/Documents/my-paper
 
 # PDF
-python3 ~/.claude/skills/forge-doc/scripts/md_to_pdf.py /tmp/draft.md \
+python3 SKILL_DIR/scripts/md_to_pdf.py /tmp/draft.md \
   --base-dir /Users/harvey/Documents/my-paper
 ```
 
@@ -70,9 +71,9 @@ python3 ~/.claude/skills/forge-doc/scripts/md_to_pdf.py /tmp/draft.md \
 
 将 Markdown 文件转换为 Word（.docx）或 PDF。两种格式均支持标题、表格、代码块、列表、行内格式、引用块、嵌入图片和 Mermaid 图表（DOCX 渲染为 PNG，PDF 渲染为矢量 SVG）。
 
-**脚本位置（`hskill` 安装后）：**
-- DOCX：`~/.claude/skills/forge-doc/scripts/md_to_docx.py`
-- PDF：`~/.claude/skills/forge-doc/scripts/md_to_pdf.py`
+**脚本位置：**
+- DOCX：`SKILL_DIR/scripts/md_to_docx.py`
+- PDF：`SKILL_DIR/scripts/md_to_pdf.py`
 
 **内置样式（`assets/` 目录）：**
 
@@ -88,23 +89,23 @@ python3 ~/.claude/skills/forge-doc/scripts/md_to_pdf.py /tmp/draft.md \
 
 **基础用法：**
 ```bash
-python3 ~/.claude/skills/forge-doc/scripts/md_to_docx.py input.md
+python3 SKILL_DIR/scripts/md_to_docx.py input.md
 # → 在同目录生成 input.docx
 ```
 
 **指定输出路径：**
 ```bash
-python3 ~/.claude/skills/forge-doc/scripts/md_to_docx.py input.md output.docx
+python3 SKILL_DIR/scripts/md_to_docx.py input.md output.docx
 ```
 
 **自定义样式：**
 ```bash
-python3 ~/.claude/skills/forge-doc/scripts/md_to_docx.py input.md --style custom.json
+python3 SKILL_DIR/scripts/md_to_docx.py input.md --style custom.json
 ```
 
 **导出默认样式以便修改：**
 ```bash
-python3 ~/.claude/skills/forge-doc/scripts/md_to_docx.py --dump-style > style.json
+python3 SKILL_DIR/scripts/md_to_docx.py --dump-style > style.json
 ```
 
 **依赖：** `pip install python-docx`（Mermaid 图表需额外安装 playwright，同 PDF 转换）
@@ -115,23 +116,23 @@ python3 ~/.claude/skills/forge-doc/scripts/md_to_docx.py --dump-style > style.js
 
 **基础用法：**
 ```bash
-python3 ~/.claude/skills/forge-doc/scripts/md_to_pdf.py input.md
+python3 SKILL_DIR/scripts/md_to_pdf.py input.md
 # → 在同目录生成 input.pdf
 ```
 
 **指定输出路径：**
 ```bash
-python3 ~/.claude/skills/forge-doc/scripts/md_to_pdf.py input.md output.pdf
+python3 SKILL_DIR/scripts/md_to_pdf.py input.md output.pdf
 ```
 
 **自定义样式：**
 ```bash
-python3 ~/.claude/skills/forge-doc/scripts/md_to_pdf.py input.md --style custom.css
+python3 SKILL_DIR/scripts/md_to_pdf.py input.md --style custom.css
 ```
 
 **导出默认 CSS 以便修改：**
 ```bash
-python3 ~/.claude/skills/forge-doc/scripts/md_to_pdf.py --dump-style > style.css
+python3 SKILL_DIR/scripts/md_to_pdf.py --dump-style > style.css
 ```
 
 **依赖：** `pip install markdown`（playwright 已为必需项）
@@ -166,43 +167,36 @@ python3 ~/.claude/skills/forge-doc/scripts/md_to_pdf.py --dump-style > style.css
 **切换内置风格（Bain）：**
 ```bash
 # DOCX
-python3 ~/.claude/skills/forge-doc/scripts/md_to_docx.py input.md \
-  --style ~/.claude/skills/forge-doc/assets/bain-style.json
+python3 SKILL_DIR/scripts/md_to_docx.py input.md \
+  --style SKILL_DIR/assets/bain-style.json
 
 # PDF
-python3 ~/.claude/skills/forge-doc/scripts/md_to_pdf.py input.md \
-  --style ~/.claude/skills/forge-doc/assets/bain.css
+python3 SKILL_DIR/scripts/md_to_pdf.py input.md \
+  --style SKILL_DIR/assets/bain.css
 ```
 
 **切换内置风格（BCG）：**
 ```bash
 # DOCX
-python3 ~/.claude/skills/forge-doc/scripts/md_to_docx.py input.md \
-  --style ~/.claude/skills/forge-doc/assets/bcg-style.json
+python3 SKILL_DIR/scripts/md_to_docx.py input.md \
+  --style SKILL_DIR/assets/bcg-style.json
 
 # PDF
-python3 ~/.claude/skills/forge-doc/scripts/md_to_pdf.py input.md \
-  --style ~/.claude/skills/forge-doc/assets/bcg.css
+python3 SKILL_DIR/scripts/md_to_pdf.py input.md \
+  --style SKILL_DIR/assets/bcg.css
 ```
 
 **切换内置风格（中文学术论文）：**
 ```bash
 # DOCX — 宋体/黑体正文，25磅行距，A4
-python3 ~/.claude/skills/forge-doc/scripts/md_to_docx.py input.md \
-  --style ~/.claude/skills/forge-doc/assets/thesis-style.json
+python3 SKILL_DIR/scripts/md_to_docx.py input.md \
+  --style SKILL_DIR/assets/thesis-style.json
 
 # PDF
-python3 ~/.claude/skills/forge-doc/scripts/md_to_pdf.py input.md \
-  --style ~/.claude/skills/forge-doc/assets/thesis.css
+python3 SKILL_DIR/scripts/md_to_pdf.py input.md \
+  --style SKILL_DIR/assets/thesis.css
 ```
 
 ---
 
-## 未安装 skill 目录时
-
-```bash
-# DOCX
-python3 skills/writing/forge-doc/scripts/md_to_docx.py input.md
-# PDF
-python3 skills/writing/forge-doc/scripts/md_to_pdf.py input.md
-```
+`SKILL_DIR` 也可设为仓库中的 `skills/writing/forge-doc` 目录，以直接使用未安装的 skill。
