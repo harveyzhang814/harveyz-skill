@@ -2,6 +2,8 @@
 
 本文档是 `skills/` 下所有 skill 的格式、命名、注册规则的单一来源。`publish-skill` 的检查项（F1–F9、R1–R3）均以此为依据。
 
+跨宿主执行与平台适配的判据见 [Skill 平台适配标准](skill-platform-adaptation.md)。
+
 ---
 
 ## 目录结构
