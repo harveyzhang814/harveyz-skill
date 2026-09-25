@@ -1,5 +1,5 @@
 ---
-status: 待验收
+status: 打回
 date: 2026-09-25
 author_model: Codex
 acceptance: hard
@@ -54,6 +54,19 @@ target_node: 0a795486-60f7-4c9d-a61b-26563ab01fbb
 4. 三个 `SKILL.md` 的 patch 版本与 `skills-index.json` 的 `contentVersion`/`contentHash` 一致，发布包包含所用脚本/适配文件；定向测试 `node --test tests/skill-portability.test.mjs` 通过，`git diff --check` 与暂存后的 `git diff --cached --check` 无错误。
 5. 运行 `npm test` 并记录完整结果。若存在与本修复无关的红项，提供相同基线上的复现/归因证据并显式写「带着这条红送验」；不能引用过去豁免作为本轮通过。验证报告逐格区分静态、隔离路径、真实宿主与未验证，不声称七平台均已实测。
 6. 交接文档由接手方写入逐项自测记录并置为「待验收」，代码和记录提交在本分支；本 worktree 仍存在，且没有合并到 `staging`、推送或部署。
+
+### 交出方独立验收记录（2026-09-25，第一轮）
+
+结论：**打回**。在本文件指定的 `fix/a1-skill-portability` worktree 上，以 `6812670b12f3f262799119d1fbc2c66d6dae14df..bc3c2aa` 为改动范围独立核验；未合并、推送或部署。
+
+1. **FAIL（锚点 1）**：`learn-video` 的模式选择、`SKILL_DIR` 路径和 `DRIFT:` 门禁已符合要求；但 A1 规格要求“若宿主不能可靠启动并追踪长期任务，启动前说明限制并停止”，现有正文仅要求后台启动及轮询，未给出能力缺失时的启动前停止分支。规格还要求 `npm run agent:serve` 前验证源码根目录及目标脚本存在；现有 `ECONNREFUSED` 分支直接使用 `<VIDEO_LEARNER_ROOT>`，未写该前置核验。两处均可能在能力/路径缺失时落入不可收尾或猜路径的执行断点。复修时请写明停止条件与服务脚本核验，且不放宽已存在的安全门禁。
+2. **PASS（锚点 2）**：`extract-vision` 明确 OCR 文本由当前 agent 顺序回退；OCR 空或模糊而无原图视觉能力时停止，不断言图像无内容。仅静态/受控文本核验，未对真实图像实测。
+3. **PASS（锚点 3）**：`close-node` 明确无可靠解除绑定能力时保留 worktree、停在第 4 步，禁止继续 `hide`/`stop-node`；未操作活跃 Canvas 节点。
+4. **PASS（锚点 4）**：三个版本与索引 hash 用 SHA-256 占位符规则独立计算后均一致；`npm pack --dry-run --json --ignore-scripts` 清单含三个 `SKILL.md` 和四个引用脚本；`node --test tests/skill-portability.test.mjs` 为 5/5；`git diff --check`、`git diff --cached --check` 均退出 0。旧基线三项新增契约断言均不匹配，新正文均匹配。
+5. **带着基线红项、未计作全绿（锚点 5）**：`npm test` 在 Bats 第 37、38 项失败并退出 1；修复 worktree 与本地 staging 基线分别执行 `bats -f 'hook e2e: real LLM' tests/hook-script.bats` 均在同两项失败。`bash scripts/run-skill-tests.sh` 单独退出 0（14 组、0 失败），被 `&&` 跳过的 Node 测试单独退出 0（340 项、333 pass、7 skip）。验证矩阵未声称真实视频、图像或 Canvas 宿主通过。
+6. **PASS（送验时的锚点 6）**：接手方代码、自测记录均已提交，送验时 `status` 为「待验收」，worktree 保留；本轮验收后按流程改为「打回」。`git merge-base --is-ancestor HEAD staging` 退出 1，尚未合并。
+
+复修后默认**重跑锚点 1–6 全集**，包括定向测试、版本/hash、打包清单、完整 `npm test` 及红项的基线归因；在新标题含「自测」的复修记录中逐项写实际命令、结果和未验证格子，再将状态置回「待验收」。不得覆盖本轮自测或验收记录。
 
 ## 接手方自测记录（2026-09-25）
 
