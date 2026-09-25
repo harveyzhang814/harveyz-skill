@@ -1,6 +1,6 @@
 ---
 name: learn-video
-version: "1.9.1"
+version: "1.9.2"
 description: "Process a YouTube or Bilibili video using the vdl CLI: transcribe, generate article and summary. Triggers when the user provides a YouTube or Bilibili URL and wants to learn from, summarize, transcribe, or extract key points from the video — e.g. 'help me understand this talk', 'summarize this YouTube video', 'summarize this Bilibili video', 'get the transcript', 'process this video', 'summarize it'."
 user_invocable: true
 ---
@@ -95,6 +95,8 @@ Claude Code 适配示例：可用 `AskUserQuestion` 展示四项；其他宿主�
 
 **必须后台启动，禁止前台阻塞调用。** 视频处理可能长达数小时（见「超长视频检测」），前台 Bash 调用会被运行环境的超时机制打断——任务本身在后端仍会继续跑，但 agent 拿到的是超时错误而不是真实结果，也就无法感知进度或在完成后向用户报告。
 
+启动前先确认当前宿主能可靠启动并追踪长期任务，且可持续读取 `<LOGFILE>` 至终态。若不能可靠启动并追踪长期任务，启动前向用户说明此限制并停止；不得启动一个无法收尾的孤儿任务。
+
 ```bash
 nohup vdl "<URL>" --focus "<FOCUS>" --mode <MODE> --lang <LANG> --json > <LOGFILE> 2>&1 &
 ```
@@ -175,7 +177,7 @@ nohup vdl rerun <task_id> <dag_step_name> --reset downstream > <LOGFILE> 2>&1 &
 
 **`ECONNREFUSED 127.0.0.1:3000`**：后端服务已退出。
 `vdl` 主命令会自动启动服务；但 `vdl rerun`/`vdl status` 等子命令在服务不存在时**无法自启**。
-→ 解决：先手动启动服务，再执行子命令：
+→ 解决：仅当用户已明确提供 `<VIDEO_LEARNER_ROOT>`、该目录的 `package.json` 存在且其中的 `npm run agent:serve` 脚本存在时，才手动启动服务，再执行子命令；否则询问用户或停止，不猜测源码根目录：
 ```bash
 cd "<VIDEO_LEARNER_ROOT>" && npm run agent:serve &
 # 等服务就绪后再执行 rerun

@@ -1,5 +1,5 @@
 ---
-status: 打回
+status: 待验收
 date: 2026-09-25
 author_model: Codex
 acceptance: hard
@@ -76,3 +76,12 @@ target_node: 0a795486-60f7-4c9d-a61b-26563ab01fbb
 4. PASS — 三个 patch 版本与 `skills-index.json` 的 `contentVersion`/`contentHash` 已同步；`git diff --check` 与暂存后的 `git diff --cached --check` 均无错误。
 5. 带着这条红送验 — `npm test` 的 hook E2E 第 37、38 项失败。相同命令在本地 `staging` 基线也失败，失败点为外部 `claude -p` 调用；完整归因见 `docs/reports/2026-09-25-a1-skill-portability-verification.md`。其他可见的定向回归为绿。
 6. PASS — worktree 保留，未合并到 `staging`、未推送、未部署。待提交后停止操作，交出方应按 accept 阶段独立复核。
+
+## 接手方复修自测记录（第 1 轮，2026-09-25）
+
+1. PASS — `node --test tests/skill-portability.test.mjs`：5/5 通过；新增断言覆盖无可靠长期任务追踪时启动前停止，以及 `agent:serve` 的显式根目录、`package.json` 与脚本核验。
+2. PASS — `npm pack --dry-run --json --ignore-scripts` 清单含三个目标 `SKILL.md` 及 learn-video 的三个引用脚本；未执行真实视频、用户图像或活跃 Canvas 节点，均保持未验证。
+3. PASS — SHA-256 version-placeholder hash 与 index 一致：learn-video `88b278c447599308` (1.9.2)、extract-vision `c9f68c043bc09309` (1.2.1)、close-node `6d1a64ac69a377be` (1.0.4)。
+4. PASS — `git diff --check` 与暂存后的 `git diff --cached --check` 均无错误。
+5. 带着这条红送验 — `npm test` 完整运行至 Bats 结束，168 项中仅 hook E2E 第 37、38 项失败；与 `staging` 基线的相同失败归因不变，见验证报告。由于 npm 的 `&&`，后续 Node 聚合命令未在此轮 npm 调用中触发；首轮独立验收已记录其 340 项、333 pass、7 skip、退出 0 的结果。
+6. PASS — 本轮改动和该复修记录将提交在 `fix/a1-skill-portability`；worktree 保留，未合并、推送或部署。

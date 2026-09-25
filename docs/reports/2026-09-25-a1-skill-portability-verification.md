@@ -2,6 +2,8 @@
 
 Date: 2026-09-25
 
+复修：learn-video v1.9.2 在启动前要求可追踪长期任务，否则说明限制并停止；`agent:serve` 仅在显式根目录、`package.json` 与目标 npm script 都存在时启动。
+
 | Scope | Evidence | Result |
 |---|---|---|
 | Static contracts | `node --test tests/skill-portability.test.mjs` | PASS: 5/5 |
