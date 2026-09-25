@@ -3,7 +3,7 @@ name: close-node
 description: Wrap up the current canvas node when a round of work is done — advance requirement status, verify handoff closure, merge the branch, stop the process, and hide the node from the canvas; only usable inside an Agent Canvas node.
 disable-model-invocation: true
 user_invocable: true
-version: "1.0.3"
+version: "1.0.4"
 ---
 
 # 节点收尾（close-node）
@@ -57,7 +57,9 @@ agent-canvas-ctl update-node-requirement <需求节点id> --status <verifying|do
 **接手方**：
 - 核对交接文档 frontmatter 的 `status` 是否已置 `待验收`，没置就置上。
 - 核对 `hands-off-to` 边两端是否都齐、`target_node` 是否已回填自己的 nodeId。
-- **不合并、不 `git worktree remove`。** 要离开用 `ExitWorktree(action: "keep")`。
+- **不合并、不 `git worktree remove`。** 先检查当前宿主是否提供且可核对为“保留 worktree 并离开/解除当前会话绑定”的可靠能力。
+- Claude Code 适配示例：使用 `ExitWorktree(action: "keep")`；它必须保留 worktree，不是合并或清理动作。其他宿主只使用实际提供且已核对语义的能力，不杜撰 API。
+- 若无安全解除绑定能力，报告 `nodeId`、分支、worktree 绝对路径与需人工解除绑定的事实，停在第 4 步。单次 shell `cd` 不能解除会话绑定；不得继续执行 `hide` 或 `stop-node`，也不得进入第 6/7 步。
 
 **交出方**：
 - 核对交接文档 `status` 是否已到 `已验收`。
