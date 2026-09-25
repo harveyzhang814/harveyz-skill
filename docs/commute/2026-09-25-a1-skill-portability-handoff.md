@@ -1,5 +1,5 @@
 ---
-status: 待验收
+status: 已验收
 date: 2026-09-25
 author_model: Codex
 acceptance: hard
@@ -67,6 +67,17 @@ target_node: 0a795486-60f7-4c9d-a61b-26563ab01fbb
 6. **PASS（送验时的锚点 6）**：接手方代码、自测记录均已提交，送验时 `status` 为「待验收」，worktree 保留；本轮验收后按流程改为「打回」。`git merge-base --is-ancestor HEAD staging` 退出 1，尚未合并。
 
 复修后默认**重跑锚点 1–6 全集**，包括定向测试、版本/hash、打包清单、完整 `npm test` 及红项的基线归因；在新标题含「自测」的复修记录中逐项写实际命令、结果和未验证格子，再将状态置回「待验收」。不得覆盖本轮自测或验收记录。
+
+### 交出方独立验收记录（2026-09-25，第二轮）
+
+结论：**已验收**。在同一 `fix/a1-skill-portability` worktree 独立复核接手方提交 `180e88ca87c5598fc5fca752c160a1a393450407`；第一轮打回记录保留，不覆盖。
+
+1. **PASS（锚点 1）**：旧基线不满足新增静态断言，当前正文满足；`learn-video` 在无可靠长期任务追踪时明确启动前停止，`agent:serve` 前要求用户提供根目录并核验 `package.json` 与目标脚本。模式选择、真实 `SKILL_DIR`、`DRIFT:` 用户确认门禁均保留；隔离的非默认 skill 路径下三个引用脚本均可定位。未启动真实视频任务。
+2. **PASS（锚点 2）**：旧基线不满足当前 agent 的 OCR 文本顺序回退与无原图视觉能力停止断言，当前正文满足；未对用户图像执行实测。
+3. **PASS（锚点 3）**：旧基线不满足安全解除绑定缺失时的停止断言，当前正文满足；接手方保留 worktree、停在隐藏/`stop-node` 前的契约未放宽。未操作活跃 Canvas 节点。
+4. **PASS（锚点 4）**：SHA-256 version-placeholder 规则复算的三个 hash、版本与 index 一致；`npm pack --dry-run --json --ignore-scripts` 清单含三个 `SKILL.md` 和所用四个脚本；`node --test tests/skill-portability.test.mjs` 5/5 通过；基线到 HEAD、工作区及暂存区的 `git diff --check` 均退出 0。
+5. **带着基线红项验收（锚点 5）**：完整 `npm test` 执行到 Bats 168 项，在第 37、38 项 hook real-LLM E2E 失败并退出 1；本地 `staging` 恰为交接基线 `6812670b12f3f262799119d1fbc2c66d6dae14df`，同两项用 `bats -f 'hook e2e: real LLM' tests/hook-script.bats` 复现失败，A1 diff 不涉及该 hook 或测试。因 `&&` 未执行的后半段分别独立运行：`bash scripts/run-skill-tests.sh` 14 组、0 失败；Node 聚合命令 340 项、333 pass、7 skip、0 fail。**不把 `npm test` 记为通过**；真实视频、用户图像、活跃 Canvas 与七平台端到端仍为未验证。
+6. **PASS（锚点 6）**：复修代码和含“自测”的独立记录已提交，送验时状态为「待验收」，工作区干净且保留；`git merge-base --is-ancestor HEAD staging` 退出 1，未合并。验收只更新本交接文档，不推送、不部署、不移除 worktree。
 
 ## 接手方自测记录（2026-09-25）
 
