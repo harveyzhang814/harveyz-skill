@@ -27,3 +27,25 @@ test('Codex clip-url adapter states the sequential fallback', async () => {
   for (const token of ['未验证', '待补']) assert.ok(!body.includes(token), `${file}: forbids ${token}`)
   assert.ok(body.includes('顺序执行'), `${file}: requires 顺序执行`)
 })
+
+test('learn-video: mode and script paths are host-neutral', async () => {
+  const body = await readFile(resolve(root, 'skills/research/learn-video/SKILL.md'), 'utf8')
+  assert.match(body, /当前宿主可用的提问方式/)
+  assert.match(body, /\$SKILL_DIR\/scripts\/store_config\.py/)
+  assert.match(body, /\$SKILL_DIR\/scripts\/archive\.py/)
+  assert.match(body, /\$SKILL_DIR\/scripts\/build_creator_index\.py/)
+  assert.doesNotMatch(body, /\$HOME\/Projects\/(harveyz-skill|Video-Learner)/)
+})
+
+test('extract-vision: delegation and vision have safe fallbacks', async () => {
+  const body = await readFile(resolve(root, 'skills/research/extract-vision/SKILL.md'), 'utf8')
+  assert.match(body, /当前 agent 顺序处理 OCR 文本/)
+  assert.match(body, /无原图视觉能力则停止/)
+})
+
+test('close-node: receiver has a safe no-detach stop', async () => {
+  const body = await readFile(resolve(root, 'skills/agent-canvas/close-node/SKILL.md'), 'utf8')
+  assert.match(body, /Claude.*ExitWorktree\(action: "keep"\)/)
+  assert.match(body, /无安全解除绑定能力.*停在第 4 步/)
+  assert.match(body, /不得继续.*(?:hide|stop-node)/)
+})

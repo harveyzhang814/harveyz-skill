@@ -50,15 +50,15 @@
       "path": "research/extract-vision",
       "bundle": "research",
       "installScope": "global",
-      "contentHash": "0fdc3d37371ef0bc",
-      "contentVersion": "1.2.0"
+      "contentHash": "c9f68c043bc09309",
+      "contentVersion": "1.2.1"
     },
     {
       "path": "research/learn-video",
       "bundle": "research",
       "installScope": "global",
-      "contentHash": "b29cad00bd925bef",
-      "contentVersion": "1.9.0"
+      "contentHash": "18cfd333d9d0e55b",
+      "contentVersion": "1.9.1"
     },
     {
       "path": "research/survey-skillrepo",
@@ -386,8 +386,8 @@
     {
       "path": "agent-canvas/close-node",
       "bundle": "agent-canvas",
-      "contentHash": "726d72d355c1d875",
-      "contentVersion": "1.0.3"
+      "contentHash": "6d1a64ac69a377be",
+      "contentVersion": "1.0.4"
     },
     {
       "path": "coding/analyze-claudemd",

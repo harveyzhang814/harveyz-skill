@@ -1,5 +1,5 @@
 ---
-status: 待执行
+status: 待验收
 date: 2026-09-25
 author_model: Codex
 acceptance: hard
@@ -8,7 +8,7 @@ branch: fix/a1-skill-portability
 worktree: /Users/harveyzhang96/Projects/harveyz-skill/.claude/worktrees/fix+a1-skill-portability
 base_commit: 6812670b12f3f262799119d1fbc2c66d6dae14df
 source_node: 6401cd48-224a-4c03-8b99-d8571f8695d3
-target_node:
+target_node: 0a795486-60f7-4c9d-a61b-26563ab01fbb
 ---
 
 # 交接：修复 A1 三个 Skill 的跨宿主执行断点
@@ -54,3 +54,12 @@ target_node:
 4. 三个 `SKILL.md` 的 patch 版本与 `skills-index.json` 的 `contentVersion`/`contentHash` 一致，发布包包含所用脚本/适配文件；定向测试 `node --test tests/skill-portability.test.mjs` 通过，`git diff --check` 与暂存后的 `git diff --cached --check` 无错误。
 5. 运行 `npm test` 并记录完整结果。若存在与本修复无关的红项，提供相同基线上的复现/归因证据并显式写「带着这条红送验」；不能引用过去豁免作为本轮通过。验证报告逐格区分静态、隔离路径、真实宿主与未验证，不声称七平台均已实测。
 6. 交接文档由接手方写入逐项自测记录并置为「待验收」，代码和记录提交在本分支；本 worktree 仍存在，且没有合并到 `staging`、推送或部署。
+
+## 接手方自测记录（2026-09-25）
+
+1. PASS — `node --test tests/skill-portability.test.mjs`：5/5 通过，覆盖三个 A1 skill 的新增跨宿主安全契约。
+2. PASS — 临时非默认 skill 路径下检查 learn-video 的 `store_config.py`、`archive.py`、`build_creator_index.py` 均可定位；未启动真实视频任务。
+3. PASS（静态/隔离）— OCR 文本的金额、日期受控样例以及无原图视觉能力的停止契约均已核对；未对用户图像执行实测。
+4. PASS — 三个 patch 版本与 `skills-index.json` 的 `contentVersion`/`contentHash` 已同步；`git diff --check` 与暂存后的 `git diff --cached --check` 均无错误。
+5. 带着这条红送验 — `npm test` 的 hook E2E 第 37、38 项失败。相同命令在本地 `staging` 基线也失败，失败点为外部 `claude -p` 调用；完整归因见 `docs/reports/2026-09-25-a1-skill-portability-verification.md`。其他可见的定向回归为绿。
+6. PASS — worktree 保留，未合并到 `staging`、未推送、未部署。待提交后停止操作，交出方应按 accept 阶段独立复核。

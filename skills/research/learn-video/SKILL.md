@@ -1,6 +1,6 @@
 ---
 name: learn-video
-version: "1.9.0"
+version: "1.9.1"
 description: "Process a YouTube or Bilibili video using the vdl CLI: transcribe, generate article and summary. Triggers when the user provides a YouTube or Bilibili URL and wants to learn from, summarize, transcribe, or extract key points from the video — e.g. 'help me understand this talk', 'summarize this YouTube video', 'summarize this Bilibili video', 'get the transcript', 'process this video', 'summarize it'."
 user_invocable: true
 ---
@@ -17,23 +17,24 @@ user_invocable: true
 which vdl
 ```
 
-若未找到，提示用户先安装：
+若未找到，只有在用户已经明确给出 Video-Learner 源码根目录、且其中的 `package.json` 存在时，才可在该目录执行：
 
 ```bash
-cd "$HOME/Projects/Video-Learner"
-npm link
+cd "<VIDEO_LEARNER_ROOT>" && npm link
 ```
+
+未提供可验证的根目录时，询问用户或停止；不得猜测个人项目目录。`vdl` 主命令、`rerun` 与 `result` 使用已发现的 CLI，不要求源码根目录。
 
 ---
 
 ## 前置：检查统一存储根
 
-运行 `cd "$HOME/Projects/harveyz-skill/skills/research/learn-video" && python3 scripts/store_config.py check`（或本 skill 安装后的实际目录）。若输出 `MISSING:`，询问用户"抓取产物统一存到哪个目录？（直接回车使用默认：`~/knowledge`）"，将回答展开为绝对路径，写入 `~/.hskill/config.json` 的 `knowledgeRoot` 字段（文件不存在则新建；若已存在 `skillDir` 等其他字段，只增改 `knowledgeRoot`，不覆盖）。**默认值刻意不选 `~/Documents/...`、`~/Desktop/...`、`~/Downloads/...`**——这几个目录受 macOS TCC 隐私保护，无 Full Disk Access 的 agent 执行环境写入会被拒绝；`$HOME` 下的普通目录（如 `~/knowledge`）不受此限制。
+先定位当前安装或源码 skill 目录的实际绝对路径并绑定为 `SKILL_DIR`；不得假定维护者仓库位置。运行 `python3 "$SKILL_DIR/scripts/store_config.py" check`。若输出 `MISSING:`，询问用户"抓取产物统一存到哪个目录？（直接回车使用默认：`~/knowledge`）"，将回答展开为绝对路径，写入 `~/.hskill/config.json` 的 `knowledgeRoot` 字段（文件不存在则新建；若已存在 `skillDir` 等其他字段，只增改 `knowledgeRoot`，不覆盖）。**默认值刻意不选 `~/Documents/...`、`~/Desktop/...`、`~/Downloads/...`**——这几个目录受 macOS TCC 隐私保护，无 Full Disk Access 的 agent 执行环境写入会被拒绝；`$HOME` 下的普通目录（如 `~/knowledge`）不受此限制。
 
-**再核对下游是否同步。** vdl、scholia 都直接读写统一存储根，运行 `python3 scripts/store_config.py check-downstream` 核对两者当前配置是否等于 `knowledgeRoot` 推出的期望值：
+**再核对下游是否同步。** vdl、scholia 都直接读写统一存储根，运行 `python3 "$SKILL_DIR/scripts/store_config.py" check-downstream` 核对两者当前配置是否等于 `knowledgeRoot` 推出的期望值：
 
 ```bash
-python3 scripts/store_config.py check-downstream
+python3 "$SKILL_DIR/scripts/store_config.py" check-downstream
 ```
 
 输出 `DRIFT:` 时，把对应的 `fix:` 命令原样报告给用户，由用户自己决定要不要执行——**不要代替用户改 vdl/scholia 的配置文件**，那是另一个程序的配置。输出 `SKIP:` 表示该下游工具未安装，忽略即可。
@@ -57,7 +58,7 @@ python3 scripts/store_config.py check-downstream
 
 ### 模式选择
 
-**每次都必须询问用户选择模式**，用 `AskUserQuestion` 工具展示以下选项：
+运行前必须得到用户的模式选择。若消息已明确要文字、音频、视频或全部，直接映射到 `transcript`、`audio`、`media` 或 `full`；否则用当前宿主可用的提问方式列出以下四项并等待回答。不得因结构化提问工具不可用而默选。
 
 | 选项 | `--mode` | 说明 |
 |------|----------|------|
@@ -66,7 +67,7 @@ python3 scripts/store_config.py check-downstream
 | 含视频文件 | `media` | 在 transcript 基础上保留 `.mp4` 视频 |
 | 音频 + 视频都要 | `full` | 保留音频和视频文件 |
 
-若用户消息中已明确提到"要视频"、"要音频"、"只要文字"等信号，可直接推断模式，无需再问。
+Claude Code 适配示例：可用 `AskUserQuestion` 展示四项；其他宿主使用其可用的结构化提问能力或普通对话等待用户回答。
 
 ### 超长视频检测
 
@@ -95,7 +96,6 @@ python3 scripts/store_config.py check-downstream
 **必须后台启动，禁止前台阻塞调用。** 视频处理可能长达数小时（见「超长视频检测」），前台 Bash 调用会被运行环境的超时机制打断——任务本身在后端仍会继续跑，但 agent 拿到的是超时错误而不是真实结果，也就无法感知进度或在完成后向用户报告。
 
 ```bash
-cd "$HOME/Projects/Video-Learner" && \
 nohup vdl "<URL>" --focus "<FOCUS>" --mode <MODE> --lang <LANG> --json > <LOGFILE> 2>&1 &
 ```
 
@@ -177,8 +177,7 @@ nohup vdl rerun <task_id> <dag_step_name> --reset downstream > <LOGFILE> 2>&1 &
 `vdl` 主命令会自动启动服务；但 `vdl rerun`/`vdl status` 等子命令在服务不存在时**无法自启**。
 → 解决：先手动启动服务，再执行子命令：
 ```bash
-cd "$HOME/Projects/Video-Learner"
-npm run agent:serve &
+cd "<VIDEO_LEARNER_ROOT>" && npm run agent:serve &
 # 等服务就绪后再执行 rerun
 nohup vdl rerun <task_id> <step> --reset step > <LOGFILE> 2>&1 &
 ```
@@ -190,7 +189,6 @@ nohup vdl rerun <task_id> <step> --reset step > <LOGFILE> 2>&1 &
 任务模式创建后不能直接修改。若需要在已完成任务上补跑不同模式的步骤（如为 `transcript` 任务补下载音频），用 `--force` 以新模式重建，同样后台启动：
 
 ```bash
-cd "$HOME/Projects/Video-Learner" && \
 nohup vdl "<URL>" --focus "<FOCUS>" --mode audio --force --json > <LOGFILE> 2>&1 &
 ```
 
@@ -221,8 +219,6 @@ curl -s -X POST http://127.0.0.1:3000/api/tasks/<task_id>/steps/summary/run \
 首次运行成功时，产物路径已经在「进度汇报与完成判定」里从终态 JSON 拿到了，不需要再跑下面的命令。以下命令用于事后重新查询，或 `rerun`（不产出 JSON）成功后刷新结果：
 
 ```bash
-cd "$HOME/Projects/Video-Learner"
-
 # 摘要（TL;DR + Outline + Key Points + Action Items）
 vdl result <task_id> --type summary
 
@@ -253,8 +249,7 @@ vdl result <task_id> --type article
 vdl 的产物已经落在统一存储根里了（`WORK_ROOT` 指向 `<knowledgeRoot>/videos`），meta.json 也已经由 vdl 自己写好——本 skill 不再写它，只校验：
 
 ```bash
-cd "$HOME/Projects/harveyz-skill/skills/research/learn-video"  # 或本 skill 安装后的实际目录
-TASK_ID="<task_id>" python3 scripts/archive.py
+TASK_ID="<task_id>" python3 "$SKILL_DIR/scripts/archive.py"
 ```
 
 成功输出两行 `VIDEO_DIR: <path>` 和 `META_PATH: <path>`。**若报错说缺统一存储契约必填字段**（`source_url`/`title`/`fetched_at`），说明 vdl 那次没有把任务跑到 `completed`，不要试图在这里补字段——回去确认 vdl 那边的任务状态，或联系维护者核对 vdl 版本。
@@ -262,7 +257,7 @@ TASK_ID="<task_id>" python3 scripts/archive.py
 校验通过后，顺手重建一次 creator 索引（零额外成本——流程本来就在跑脚本）：
 
 ```bash
-python3 scripts/build_creator_index.py build
+python3 "$SKILL_DIR/scripts/build_creator_index.py" build
 ```
 
 `meta.json` 是索引的唯一凭据（`find <knowledgeRoot> -name meta.json` 就是全量实体清单）；`creators.json` 是这份清单按 uploader 归好的第二层索引，不含 `registry.json` 的任何信息。
