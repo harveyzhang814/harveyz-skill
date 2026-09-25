@@ -1,7 +1,7 @@
 ---
 name: sync-ytchannel
-version: "0.7.3"
-description: "Run one incremental fetch over every YouTube channel on the roster, produce a translated Markdown digest of what is new since last run, and archive each new video's title, translated title, publish date and URL to a per-channel JSON store. Trigger phrases: '/sync-ytchannel run', '/sync-ytchannel', 'check my YouTube channels for new videos', or a request to run sync-ytchannel on a schedule via /loop or schedule. Adding or removing a watched channel is manage-creators, not this skill. Listing only — never downloads a video, transcript or description, and never ingests into Obsidian (use clip-url or learn-video for a single video). Display of archived videos is left to external tooling reading the JSON archive directly, not this skill."
+version: "0.7.4"
+description: "Run one incremental fetch over every YouTube channel on the roster, produce a translated Markdown digest of what is new since last run, and archive each new video's title, translated title, publish date and URL to a per-channel JSON store. Trigger phrases: '/sync-ytchannel run', '/sync-ytchannel', 'check my YouTube channels for new videos', or a request for recurring runs when the current host supports scheduling and the user authorizes it. Adding or removing a watched channel is manage-creators, not this skill. Listing only — never downloads a video, transcript or description, and never ingests into Obsidian (use clip-url or learn-video for a single video). Display of archived videos is left to external tooling reading the JSON archive directly, not this skill."
 user_invocable: true
 ---
 
@@ -45,7 +45,9 @@ python3 scripts/roster_locate.py
 
 `add` / `remove` / `list` 已迁到 [manage-creators](../manage-creators/)。查看归档过的历史视频，直接读 `<knowledgeRoot>/feeds/youtube/creators/<handle>.json`（外部应用读，不是本 skill 的职责）。
 
-### run（支持 /loop、schedule 无人值守调用，过程中不能有需要用户回答的交互）
+### run（单次增量抓取，无人值守时不能有需要用户回答的交互）
+
+本流程每次只运行一轮。仅当当前宿主具备调度能力且用户已授权，才可由宿主调度入口重复触发；否则由用户手动运行，不宣称已启用自动追更。
 
 1. 运行 `python3 scripts/browser_fetch_locate.py`。若输出 `FOUND: <path>`，继续步骤 2；若输出 `NOT_FOUND: <error>`（exit code 1），向用户报告"browser-fetch 未安装或未找到：{error}。在本仓库 checkout 内运行会自动定位；若通过 `hskill install` 安装到别处运行，需要先运行 `hskill install --tool browser-fetch`"，流程终止，不再执行后续步骤。
 2. 运行 `python3 scripts/store_config.py check`。若输出 `MISSING: <error>`（exit code 1），向用户报告"统一存储根未配置：{error}。请先完成本文档「初始化」小节的 knowledgeRoot 引导，再回来跑本 skill"，流程终止，不再执行后续步骤——避免抓完一整轮才在归档阶段崩掉。若输出 `OK: <root>`，继续下一步。

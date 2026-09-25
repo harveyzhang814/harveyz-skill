@@ -1,7 +1,7 @@
 ---
 name: sync-website
-version: "0.2.2"
-description: "Run one incremental fetch over every website channel on the roster, produce a translated Markdown digest of what is new since last run, and archive each new article's title, translated title, publish date and URL to a per-channel JSON store. Trigger phrases: '/sync-website run', '/sync-website calibrate <handle>', '/sync-website', 'check my watched websites for new articles', or a request to run sync-website on a schedule via /loop or schedule. Adding or removing a watched website is manage-creators, not this skill. Listing only — never downloads article bodies or images, and never ingests into Obsidian (use clip-url for a single article). Display of archived articles is left to external tooling reading the JSON archive directly, not this skill."
+version: "0.2.3"
+description: "Run one incremental fetch over every website channel on the roster, produce a translated Markdown digest of what is new since last run, and archive each new article's title, translated title, publish date and URL to a per-channel JSON store. Trigger phrases: '/sync-website run', '/sync-website calibrate <handle>', '/sync-website', 'check my watched websites for new articles', or a request for recurring runs when the current host supports scheduling and the user authorizes it. Adding or removing a watched website is manage-creators, not this skill. Listing only — never downloads article bodies or images, and never ingests into Obsidian (use clip-url for a single article). Display of archived articles is left to external tooling reading the JSON archive directly, not this skill."
 user_invocable: true
 ---
 
@@ -109,8 +109,10 @@ TCC 隐私保护，无 Full Disk Access 的 agent 执行环境写入会被拒绝
 **本流程的上限是二档。** 需要在目标页面里跑任意 JS 才能抽的站，走的是另一条
 需要人工发起的路径，不在这里，也不会被 `run` 的自愈自动触发。
 
-### run（支持 /loop、schedule 无人值守调用，过程中不需要用户回答任何问题——
+### run（单次增量抓取，无人值守时不需要用户回答任何问题——
 但需要模型自己做判断，见下方自愈小节）
+
+本流程每次只运行一轮。仅当当前宿主具备调度能力且用户已授权，才可由宿主调度入口重复触发；否则由用户手动运行，不宣称已启用自动追更。
 
 1. 运行 `python3 scripts/browser_fetch_locate.py`。若输出
    `NOT_FOUND: <error>`（exit 1），向用户报告"browser-fetch 未安装或未

@@ -113,22 +113,22 @@
       "path": "feed/sync-xtimeline",
       "bundle": "feed",
       "installScope": "project",
-      "contentHash": "0964a94da21c8e3c",
-      "contentVersion": "0.8.3"
+      "contentHash": "617a4ff1952ab433",
+      "contentVersion": "0.8.4"
     },
     {
       "path": "feed/sync-ytchannel",
       "bundle": "feed",
       "installScope": "project",
-      "contentHash": "04bcc5b8d2545249",
-      "contentVersion": "0.7.3"
+      "contentHash": "67695c61331144ac",
+      "contentVersion": "0.7.4"
     },
     {
       "path": "feed/sync-website",
       "bundle": "feed",
       "installScope": "project",
-      "contentHash": "6406f3fee5577ab7",
-      "contentVersion": "0.2.2"
+      "contentHash": "027dcfaa8f0ee278",
+      "contentVersion": "0.2.3"
     },
     {
       "path": "creative/capture-todo",
@@ -169,8 +169,8 @@
       "path": "coding/question-me",
       "bundle": "coding",
       "installScope": "global",
-      "contentHash": "5c6c510e1fa77723",
-      "contentVersion": "3.0.1"
+      "contentHash": "0cf0c3f4a44139ff",
+      "contentVersion": "3.0.2"
     },
     {
       "path": "coding/capture-vocab",
@@ -183,8 +183,8 @@
       "path": "coding/rephrase",
       "bundle": "coding",
       "installScope": "global",
-      "contentHash": "cc5a948ce0e80a53",
-      "contentVersion": "1.0.1"
+      "contentHash": "cf31a86f462f4b37",
+      "contentVersion": "1.0.2"
     },
     {
       "path": "coding/explain-pm",
@@ -198,7 +198,7 @@
       "bundle": "coding",
       "installScope": "global",
       "contentHash": "f28747d309b642a8",
-      "contentVersion": "0.1.1"
+      "contentVersion": "0.1.2"
     },
     {
       "path": "writing/forge-doc",
@@ -295,8 +295,8 @@
       "path": "mint/runby-opencode",
       "bundle": "mint",
       "installScope": "global",
-      "contentHash": "49887e63af5eb692",
-      "contentVersion": "1.1.0"
+      "contentHash": "d87b7485449057b6",
+      "contentVersion": "1.1.1"
     },
     {
       "path": "mint/scout-philosophy",
