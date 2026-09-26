@@ -29,6 +29,7 @@ methodology: diataxis
 | 文件 | 用途 |
 |------|------|
 | [reference/skill-spec.md](reference/skill-spec.md) | skill 格式规范（F1–F7）、命名规范与动词词表、skills-index.json 注册规则（R1–R3） |
+| [reference/skill-platform-adaptation.md](reference/skill-platform-adaptation.md) | 已发布 skill 的跨宿主适配标准：共享语义、适配形式、回退与验证等级 |
 | [reference/git-branch-rules.md](reference/git-branch-rules.md) | 分支模型、分支定义、命名规则、违规行为表（v1.0.0） |
 | [reference/agent-cli-guide.md](reference/agent-cli-guide.md) | AI agent / CI 脚本调用 hskill 的完整参考（JSON 输出格式、info 子命令、hooks 子命令、bundle 子命令、uninstall、upgrade、非 TTY 行为） |
 | [reference/testing-guide.md](reference/testing-guide.md) | hskill 测试文件结构、bats 写法规范、hooks.bats 场景、hook 脚本验收测试模式 |
@@ -39,6 +40,12 @@ methodology: diataxis
 | [reference/todo-format-spec.md](reference/todo-format-spec.md) | TODO.md 文件结构、字段规范、todo_format.yaml 完整定义 |
 | [reference/todo-tool-reference.md](reference/todo-tool-reference.md) | todo-tool 数据模型（SQL）、CLI 接口、API 端点完整参考 |
 | [reference/reader-profile.md](reference/reader-profile.md) | 跟 Harvey 讲技术的校准基准（文档与对话通用）：读者认知边界、必须有/必须没有两张判据表、三层词汇与锚定规则、对话与长文档的场合差异 |
+
+## reports/ — 调查与评估
+
+| 文件 | 用途 |
+|------|------|
+| [reports/2026-09-24-published-skill-platform-audit.md](reports/2026-09-24-published-skill-platform-audit.md) | 按平台适配标准逐项评估 52 个已发布 skill，并给出分批处理建议 |
 
 ## adr/ — 架构决策记录
 
