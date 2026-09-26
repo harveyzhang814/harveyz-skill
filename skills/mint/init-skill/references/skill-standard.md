@@ -37,7 +37,7 @@ dedup    runby
 
 节顺序：**触发条件 → 执行步骤 → 不在范围内**。Step 命名"动词 + 名词"（`Step 1 — 定位设计文档`）。
 
-参考材料 > 20 行时提取到 `references/` 子目录；平台 / 技术栈特定内容放 `references/<dim>/`。
+领域或技术栈参考材料 > 20 行时提取到 `references/<dim>/`。短宿主调用差异可写共享正文的适配章节；较长宿主接口放 `platforms/SKILL.<host>.md`，共享正文仍定义语义和回退。平台适配判据读取随包装入的 `references/platform-adaptation.md`，不在本文件复制全文。
 
 ---
 
