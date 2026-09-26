@@ -2,7 +2,7 @@
 name: contribute-skill
 description: "Contribute, import, sync, or register a skill directory from another project into the harveyz-skill repo — auto-normalizes SKILL.md format, registers in skills-index.json, and performs bidirectional directory sync. Triggers whenever the user wants to add, contribute, push, migrate, import, or sync an existing skill into harvey-skill or harveyz-skill. Note: flow is from other projects into harveyz-skill; installing or copying an existing skill out to a local project does NOT trigger this skill."
 user_invocable: true
-version: "1.0.1"
+version: "1.1.0"
 ---
 <!-- platform-standard-sha256: ad3d2f32f40cc282ef20bd3a19631a16f079839cc3e086a09b99011cc201fa2a -->
 

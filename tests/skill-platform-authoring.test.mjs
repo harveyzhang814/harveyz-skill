@@ -1,4 +1,6 @@
 import assert from 'node:assert/strict'
+import { createHash } from 'node:crypto'
+import { spawnSync } from 'node:child_process'
 import { readFile } from 'node:fs/promises'
 import { resolve } from 'node:path'
 import test from 'node:test'
@@ -60,4 +62,34 @@ test('publish-skill checks bundled standard copies without certifying runtime co
   assert.match(body, /contentVersion.*contentHash|contentHash.*contentVersion/)
   assert.match(body, /未实测.*未验证/)
   assert.match(body, /不.*(?:宣称|判定).*语义兼容/)
+})
+
+test('authoring skill versions and F8 hashes match the published index', async () => {
+  const index = JSON.parse(await readFile(resolve(root, 'skills-index.json'), 'utf8'))
+  for (const [name, version] of [['init-skill', '1.3.0'], ['contribute-skill', '1.1.0'], ['publish-skill', '1.6.0']]) {
+    const body = await skill(name)
+    const entry = index.skills.find(item => item.path === `mint/${name}`)
+    const digest = createHash('sha256').update(body.replace(/^version:.*$/m, 'version: __HASH_PLACEHOLDER__')).digest('hex').slice(0, 16)
+    assert.match(body, new RegExp(`^version: ["']?${version}["']?$`, 'm'))
+    assert.equal(entry.contentVersion, version, name)
+    assert.equal(entry.contentHash, digest, name)
+  }
+})
+
+test('npm package contains the installed standard copies and all three skill entrypoints', () => {
+  const packed = spawnSync('npm', ['pack', '--dry-run', '--ignore-scripts', '--json'], { cwd: root, encoding: 'utf8' })
+  assert.equal(packed.status, 0, packed.stderr)
+  const files = new Set(JSON.parse(packed.stdout)[0].files.map(file => file.path))
+  for (const name of ['init-skill', 'contribute-skill']) {
+    assert.ok(files.has(`skills/mint/${name}/references/platform-adaptation.md`), `${name} standard missing from package`)
+  }
+  for (const name of ['init-skill', 'contribute-skill', 'publish-skill']) {
+    assert.ok(files.has(`skills/mint/${name}/SKILL.md`), `${name} entrypoint missing from package`)
+  }
+})
+
+test('default npm test command includes the authoring regression tests', async () => {
+  const pkg = JSON.parse(await readFile(resolve(root, 'package.json'), 'utf8'))
+  assert.match(pkg.scripts.test, /tests\/\*\.test\.mjs|tests\/platform-standard-sync\.test\.mjs/)
+  assert.match(pkg.scripts.test, /tests\/\*\.test\.mjs|tests\/skill-platform-authoring\.test\.mjs/)
 })
