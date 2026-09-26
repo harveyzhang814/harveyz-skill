@@ -39,3 +39,25 @@ test('skill-standard distinguishes domain references from host adapters', async 
   assert.match(body, /platforms\/SKILL\.<host>\.md/)
   assert.match(body, /references\/platform-adaptation\.md/)
 })
+
+test('contribute-skill evaluates source scope before copy confirmation and preserves sync-back consent', async () => {
+  const body = await skill('contribute-skill')
+  const check = body.indexOf('references/platform-adaptation.md')
+  const preview = body.indexOf('### Step 5 — 确认摘要')
+  assert.ok(check > 0 && check < preview, 'portability check must precede copy confirmation')
+  for (const field of ['确认断点', '有意限定', '待验证风险', '源目录', '回退']) {
+    assert.ok(body.includes(field), `missing ${field}`)
+  }
+  assert.match(body, /diff.*用户.*确认/)
+  assert.match(body, /同步回源.*用户确认/)
+})
+
+test('publish-skill checks bundled standard copies without certifying runtime compatibility', async () => {
+  const body = await skill('publish-skill')
+  assert.match(body, /npm pack --dry-run --ignore-scripts --json/)
+  assert.match(body, /mint\/init-skill\/references\/platform-adaptation\.md/)
+  assert.match(body, /mint\/contribute-skill\/references\/platform-adaptation\.md/)
+  assert.match(body, /contentVersion.*contentHash|contentHash.*contentVersion/)
+  assert.match(body, /未实测.*未验证/)
+  assert.match(body, /不.*(?:宣称|判定).*语义兼容/)
+})
