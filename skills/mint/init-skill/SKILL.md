@@ -4,6 +4,7 @@ description: "Initialize a new skill from scratch in the harveyz-skill repo — 
 user_invocable: true
 version: "1.2.1"
 ---
+<!-- platform-standard-sha256: ad3d2f32f40cc282ef20bd3a19631a16f079839cc3e086a09b99011cc201fa2a -->
 
 # 从设计文档初始化新 Skill
 

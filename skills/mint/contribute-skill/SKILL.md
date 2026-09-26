@@ -4,6 +4,7 @@ description: "Contribute, import, sync, or register a skill directory from anoth
 user_invocable: true
 version: "1.0.1"
 ---
+<!-- platform-standard-sha256: ad3d2f32f40cc282ef20bd3a19631a16f079839cc3e086a09b99011cc201fa2a -->
 
 # contribute-skill
 
