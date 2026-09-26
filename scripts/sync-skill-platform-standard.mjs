@@ -46,9 +46,9 @@ export async function syncPlatformStandard({ root, mode, fsApi = fs }) {
       await fsApi.mkdir(dirname(target.path), { recursive: true })
       const temp = `${target.path}.platform-standard-tmp-${randomUUID()}`
       const backup = target.original === null ? null : `${target.path}.platform-standard-backup-${randomUUID()}`
+      prepared.push({ ...target, temp, backup })
       await fsApi.writeFile(temp, target.expected)
       if (backup) await fsApi.writeFile(backup, target.original)
-      prepared.push({ ...target, temp, backup })
     }
     for (const target of prepared) {
       await fsApi.rename(target.temp, target.path)

@@ -10,7 +10,7 @@
 
 | Skill | 版本 | `contentHash`（F8） |
 |---|---:|---|
-| `mint/init-skill` | 1.3.0 | `8472e603f87b92e3` |
+| `mint/init-skill` | 1.3.0 | `260c22e1e1a6b0a5` |
 | `mint/contribute-skill` | 1.1.0 | `f48338e6d5267a28` |
 | `mint/publish-skill` | 1.6.0 | `6ce6b83f99b11d82` |
 
@@ -25,13 +25,17 @@
 | 导入：明确 Claude-only | 无平台分类 | 有意限定，不机械泛化七宿主 |
 | 导入：共享提问能力含顺序对话回退，但无实跑 | 无平台分类 | 待验证风险，不冒称端到端兼容 |
 
+另在一次性 Git 仓库中执行 `init-skill` 的显式路径 fallback：正常路径从 `staging` 提交 `64d9ade…` 创建 `feature/init-sync-calendar`，新 skill 仅出现在该分支的提交 `32ae5eb…`，原 `staging` 工作区保持干净且无新文件；目标已存在时在创建分支/worktree 前停止；没有可靠原生入口且 Git fallback 不可用时停止、不写当前 checkout。演练发现对常见 `.gitignore` 规则 `.worktrees/`，`git check-ignore -q .worktrees` 会误判未忽略；已改为检查 `.worktrees/` 并加回归断言。以上是隔离夹具验证，不是实际用户仓库的创建任务。
+
 未覆盖真实 Claude、Hermes、Pi、OpenCode、Cursor、OpenClaw 任务执行，也未实跑这三个 skill 的完整创建／导入／发布操作。文本规则、同步脚本和包内容有定向验证；宿主 API 与权限仍需目标宿主受限实测。
 
 ## 测试结果与红项
 
-- `node --test tests/platform-standard-sync.test.mjs tests/skill-platform-authoring.test.mjs tests/skill-portability.test.mjs`：26/26 通过。
-- 默认 Node 命令 `node --test tests/*.test.mjs tests/harness/*.test.mjs`：362 个用例，355 通过、7 跳过、0 失败；新增测试已接入 `npm test`。
+- `node --test tests/platform-standard-sync.test.mjs tests/skill-platform-authoring.test.mjs`：12/12 通过；包括故障注入验证备份准备失败时无临时文件残留。
+- 默认 Node 命令 `node --test tests/*.test.mjs tests/harness/*.test.mjs`：363 个用例，356 通过、7 跳过、0 失败；新增测试已接入 `npm test`。
 - 首次完整 `npm test`（接入新测试前）退出 0：顶层 Bats 168/168、14 组自带测试通过，Node 351 个用例中 344 通过、7 跳过。该次不覆盖新增两个 Node 文件。
 - 接入新测试后的完整 `npm test` 第二次运行停在外部 LLM hook 的第 38 个 Bats 用例，约两分钟无新输出后主动中断；该用例显示状态 130，最终命令退出 1，实际只执行 38/168 个顶层 Bats 用例。**第二次完整测试未通过，不能视为绿色或豁免通过。** 随后单独运行默认 Node 命令，结果如上。此次中断不构成本次 skill 改动失败的证据，但完整默认门禁仍需一次不受外部 hook 阻塞的成功运行。
+- 第三次完整 `npm test` 通过了外部 hook，但 `tools/browser-fetch` 的 220 个用例有 5 个失败、215 个通过，命令退出 1；失败均为访问 `https://example.com/` 时 `Page.goto` 超过 30 秒，分别发生在 `test_cli_fetch.py::test_article_json_format_returns_blocks_and_writes_nothing`、`test_evaluate_js.py::test_evaluate_js_returns_page_evaluate_result`，以及 `test_fetch_article.py` 的三个 thin-content/default-cookie 场景。首次完整运行同组 220/220 通过；故障与本次改动文件无重叠，但第三次完整门禁仍是红色。未提高生产超时或放宽浏览边界以掩盖环境波动。
+- 复审修复后第四次完整 `npm test` 在外部 LLM hook 第 37 个用例约两分钟无输出，主动中断；该用例状态 130，顶层 Bats 仅执行 37/168，最终退出 1。最终版本随后单独运行默认 Node 命令，363 个用例 356 通过、7 跳过、0 失败；标准同步 `--check` 通过。**最终完整默认门禁仍未得到绿色结果。**
 
 本次未合并、推送或部署。是否接受外部 hook 阻塞下的分项证据，以及是否合并到本地 `staging`，由用户另行决定。

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { createHash } from 'node:crypto'
-import { mkdtemp, mkdir, readFile, rm, writeFile } from 'node:fs/promises'
+import { mkdtemp, mkdir, readFile, readdir, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
 import test from 'node:test'
@@ -79,4 +79,25 @@ test('failed replacement restores every original target', async t => {
   }
   await assert.rejects(syncPlatformStandard({ root, mode: 'write', fsApi: injected }), /injected rename failure/)
   assert.deepEqual(await snapshot(root, files), before)
+})
+
+test('failed backup preparation removes temporary files without changing targets', async t => {
+  const { syncPlatformStandard } = await import(script)
+  const { root, files } = await fixture()
+  t.after(() => rm(root, { recursive: true, force: true }))
+  const before = await snapshot(root, files)
+  const fsApi = await import('node:fs/promises')
+  const injected = {
+    ...fsApi,
+    async writeFile(path, data) {
+      if (String(path).includes('.platform-standard-backup-')) throw new Error('injected backup failure')
+      return fsApi.writeFile(path, data)
+    },
+  }
+  await assert.rejects(syncPlatformStandard({ root, mode: 'write', fsApi: injected }), /injected backup failure/)
+  assert.deepEqual(await snapshot(root, files), before)
+  for (const name of consumers) {
+    const folder = join(root, `skills/mint/${name}`)
+    assert.deepEqual((await readdir(folder)).filter(entry => entry.includes('.platform-standard-')), [])
+  }
 })

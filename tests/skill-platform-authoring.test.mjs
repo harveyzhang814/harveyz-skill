@@ -29,6 +29,7 @@ test('init-skill creates an isolated staging-based worktree before any write', a
   assert.match(body, /git -C "\$REPO_ROOT" worktree add[^\n]*staging/)
   assert.match(body, /core\.hooksPath/)
   assert.match(body, /merge\.ff/)
+  assert.match(body, /check-ignore -q \.worktrees\//)
   assert.match(body, /脏工作区.*停止/)
   assert.match(body, /目标路径.*已存在.*停止/)
   assert.match(body, /不能.*(?:绑定|指定).*基线.*(?:停止|回退)/)

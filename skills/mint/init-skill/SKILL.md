@@ -146,7 +146,7 @@ WT="${REPO_ROOT}/.worktrees/feature-init-<name>"
 git -C "$REPO_ROOT" status --porcelain
 git -C "$REPO_ROOT" rev-parse --verify 'staging^{commit}'
 git -C "$REPO_ROOT" branch --list "$BRANCH"
-git -C "$REPO_ROOT" check-ignore -q .worktrees
+git -C "$REPO_ROOT" check-ignore -q .worktrees/
 git -C "$REPO_ROOT" worktree add "$WT" -b "$BRANCH" staging
 git -C "$WT" config core.hooksPath .githooks
 git -C "$WT" config merge.ff false
