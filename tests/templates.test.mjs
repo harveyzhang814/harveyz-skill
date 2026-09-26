@@ -18,6 +18,17 @@ test('模板目录至少有一套模板', () => {
   assert.ok(templates.length > 0, `没有 .yml 模板：${templateDir}`)
 })
 
+test('模板文档按当前 skill 目录定位，骨架 README 的本地链接都有目标', () => {
+  const skillDir = path.join(root, 'skills/coding/init-project')
+  const schema = readFileSync(path.join(skillDir, 'references/template-schema.md'), 'utf8')
+  const readme = readFileSync(path.join(skillDir, 'assets/skeleton/README.md'), 'utf8')
+  assert.match(schema, /SKILL_DIR\/assets\/templates/)
+  assert.doesNotMatch(schema, /~\/\.claude\/skills|CLAUDE\.md/)
+  for (const [, target] of readme.matchAll(/\]\(([^)]+\.md)\)/g)) {
+    assert.ok(existsSync(path.join(skillDir, 'assets/skeleton', target)), `骨架 README 链接失效: ${target}`)
+  }
+})
+
 for (const { file, doc } of templates) {
   test(`${file}: name + 五段齐全`, () => {
     for (const key of ['name', 'scaffold', 'skills', 'init_phases', 'language_hints', 'register']) {

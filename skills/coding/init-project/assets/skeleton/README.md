@@ -9,4 +9,4 @@
 ## 文档
 
 - [TODO.md](TODO.md) — 需求与任务
-- [CLAUDE.md](CLAUDE.md) — 给 agent 的项目约定
+- [AGENTS.md](AGENTS.md) — 给 agent 的项目约定
