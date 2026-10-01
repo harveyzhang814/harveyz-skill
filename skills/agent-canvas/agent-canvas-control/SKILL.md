@@ -2,7 +2,7 @@
 name: agent-canvas-control
 description: Control Agent Canvas node entities and layout from claude-code/codex/pi nodes — create, query, update, delete nodes, and put or hide them on the canvas; also usable from shell/hermes-tui nodes or terminals outside the canvas via `--canvas`/`resolve-canvas`/`resolve`.
 user_invocable: true
-version: "1.0.1"
+version: "1.0.2"
 ---
 
 # 操控节点与画布（agent-canvas-control）
@@ -17,6 +17,11 @@ version: "1.0.1"
 放上画布**，节点存在但游离于画布之外，是正常状态，不是遗漏；想让它出现在画布上，建完之后
 再调一次 `agent-canvas-arrange put`。两者所有子命令成功时把结果 JSON 打印到 stdout、退出码
 0；失败时把错误信息打印到 stderr、退出码非 0。
+
+**退出码不是成功/失败二分**：批量子命令（`put`/`hide`，即节点动作 `show_nodes`/`hide_nodes`）
+在「一部分 id 生效、另一部分不存在或被挡住」时返回**退出码 2**，有效项已经照常生效，结果对象
+仍在 stdout、摘要在 stderr。见到 2 不要当成整条命令没做、也不要无脑重试整个列表——读 stdout 的
+`changed` / `unknown` 看清哪些成了。退出码 1 才是零生效的拒绝。
 
 ## agent-canvas-ctl：节点实体与关系
 
@@ -76,9 +81,12 @@ version: "1.0.1"
   归档节点（从检索空间移出+停进程，可恢复，不影响 relation）。
 
 - `agent-canvas-ctl stop-node <nodeId>`
-  停止指定 pty 节点的底层进程。不归档、不删除、不改变它在画布上的摆放。对非 pty 节点
-  或进程已停止的节点是 no-op，如实回报 `stopped:false`，不报错。
-  成功返回 `{success: true, stopped: boolean, reason?: string}`。
+  停止指定 pty 节点的底层进程。不归档、不删除、不改变它在画布上的摆放。
+  成功返回 `{success: true, nodeId, stopRequested: true, _action: {...}}`，退出码 0。
+  **`stopRequested` 只表示停止请求已发出，不证明进程已经退出**——要确认真退出，查节点
+  `state` 是否已变成 `stopped`，不要拿这个返回值当退出凭据，也不要因为"还没停"就重复调。
+  对非 pty 节点、或进程已经停止的节点**是拒绝（退出码 1）而不是 no-op**，stderr 给出
+  `节点不是会话节点（kind=…）` 或 `节点进程已经停止`。
 
 - `agent-canvas-ctl purge-node <nodeId> --yes`
   彻底删除节点（不可恢复，相关 relation 转 stale）；`--yes` 必填，否则直接拒绝执行、
@@ -192,11 +200,14 @@ version: "1.0.1"
 
 - `agent-canvas-arrange put <nodeId1,nodeId2,...> [--position <x,y>]`
   把节点放上画布。不带 `--position` 时用自动布局位（可以是逗号分隔的多个 id 一次放上）；
-  带 `--position` 时精确定位到该坐标（只能对单个 id 生效）。已经在画布上的节点是 no-op。
+  带 `--position` 时精确定位到该坐标（只能对单个 id 生效）。已经在画布上的节点是 no-op
+  （计入成功，退出码 0）。列表里夹了不存在的 id 时整条命令是部分成功（退出码 2），有效项
+  照常生效；一个有效项都没有（全不存在 / 全被挡住）才是拒绝（退出码 1）。
 
 - `agent-canvas-arrange hide <nodeId1,nodeId2,...>`
   将指定节点从画布隐藏：仅影响呈现层，不影响该节点参与检索、图搜索的能力，可随时通过
-  `put` 恢复显示。对没有放上画布过的节点是 no-op。
+  `put` 恢复显示。对没有放上画布过的节点是 no-op（计入成功，退出码 0）。部分成功与全部
+  失败的退出码同 `put`。
 
 - `agent-canvas-arrange move <nodeId> <x> <y>`
   把已在画布上的节点移动到指定坐标（等价于 `put <nodeId> --position <x,y>`，位置参数写法
