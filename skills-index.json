@@ -356,8 +356,8 @@
     {
       "path": "agent-canvas/agent-canvas-control",
       "bundle": "agent-canvas",
-      "contentHash": "e6ab728e4108a137",
-      "contentVersion": "1.0.1"
+      "contentHash": "d7b2f2527756529c",
+      "contentVersion": "1.1.0"
     },
     {
       "path": "agent-canvas/describe-node",
