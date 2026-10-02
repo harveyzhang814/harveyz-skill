@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.37.0] - 2026-10-02
+
+### Added
+- 平台适配标准：新增 skill 平台适配规范文档，并对已发布 skill 做了一轮适配审计；新增可移植性回归测试（`tests/skill-portability.test.mjs`）守住版本与 `contentHash`
+
+### Changed
+- `agent-canvas-control`：升至 1.1.0，由逐条命令清单精简为发现路径指引（`list-actions` / `describe-action`）、寻址、审批、安全、退出码与完整示例，避免与 Agent Canvas 能力目录漂移
+- 多个已发布 skill 去除对特定宿主的假设：补充可移植性降级路径，本地资源路径可移植化，共享指令与 research / goal 流程不再绑定单一宿主；`init-project` 改为感知安装目标；`contribute-skill` 保留用户显式指定的来源
+- `init-project`：升至 0.1.3，description 去掉中文触发词
+
+### Fixed
+- `agent-canvas-control`：修正 `stop-node` 返回字段（`stopRequested`，仅表示请求已发出）与对非 pty / 已停止节点的拒绝行为（退出码 1）；`put` / `hide` 部分成功时返回退出码 2；跨画布寻址改为先用 `--canvas <项目路径> resolve-canvas` 探测，避免在节点内误报成功
+- `learn-video`：不再不安全地后台执行
+- `browser-fetch`：导航测试改用本地 fixtures，不再依赖易变的线上页面
+- `skills-index.json`：`init-skill`、`learn-skill`、`survey-skillrepo` 的 `contentHash` 与内容不符，已校正
+
+### Known issues
+- `tests/version-check.bats` 的 "unreachable registry" 一条在已安装本地源的机器上会失败（`version --check` 走本地源分支而不是报 registry 不可达），其余测试套件全部通过
+
 ## [0.36.0] - 2026-09-23
 
 ### Added
