@@ -43,7 +43,7 @@
       "path": "mint/learn-skill",
       "bundle": "mint",
       "installScope": "global",
-      "contentHash": "5255c96c742fbab8",
+      "contentHash": "542f333a8a72024c",
       "contentVersion": "2.0.1"
     },
     {
@@ -64,7 +64,7 @@
       "path": "research/survey-skillrepo",
       "bundle": "research",
       "installScope": "global",
-      "contentHash": "e9d46ca1e90ee289",
+      "contentHash": "ea823301b039a8aa",
       "contentVersion": "2.0.2"
     },
     {
@@ -197,8 +197,8 @@
       "path": "coding/init-project",
       "bundle": "coding",
       "installScope": "global",
-      "contentHash": "f28747d309b642a8",
-      "contentVersion": "0.1.2"
+      "contentHash": "3ca1c37debf03414",
+      "contentVersion": "0.1.3"
     },
     {
       "path": "writing/forge-doc",
@@ -253,7 +253,7 @@
       "path": "mint/init-skill",
       "bundle": "mint",
       "installScope": "project",
-      "contentHash": "ff8aeceb83b17a1e",
+      "contentHash": "4053e6476d1c3f09",
       "contentVersion": "1.2.1"
     },
     {
