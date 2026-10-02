@@ -49,10 +49,16 @@ version: "1.1.0"
 2. 环境变量 `AGENT_CANVAS_MCP_URL`——画布节点里自带，所以**在画布节点内什么都不用写**。
 3. 当前工作目录向上匹配某个正在运行的画布的绑定路径。
 
-画布外的终端，或要操作别的项目的画布时，先用 `agent-canvas-ctl resolve-canvas`（arrange 上叫
-`agent-canvas-arrange resolve`）探测：它只做本地解析、不连接画布；解析到时把
+探测用 `resolve-canvas`（arrange 上叫 `resolve`）：只做本地解析、不连接画布；解析到时把
 `{url, source, boundPath?, pid?}` 打印到 stdout、退出码 0，解析不到时把可用画布清单打印到
-stderr、退出码 1。解析不到说明当前不适用，跳过即可，不要反复重试。
+stderr、退出码 1。它和其他命令走同一套优先级，所以**探测哪块画布，就带上同样的 `--canvas`**：
+
+- 要操作某个项目的画布：`agent-canvas-ctl --canvas <项目路径> resolve-canvas`。不带 `--canvas`
+  探到的是环境变量或当前目录对应的画布——在画布节点里会是你自己所在的画布，那个「成功」是假的。
+  解析不到时看 stderr 的可用画布清单：路径写错了就换成清单里的路径再试；清单里没有这个项目，
+  说明它的画布没开，如实告诉用户，不要改去操作别的画布。
+- 没有指定项目、只想知道「当前有没有画布可连」：`agent-canvas-ctl resolve-canvas`。解析不到
+  说明当前不适用，跳过即可，不要反复重试。
 
 ## 审批：哪些调用会弹确认卡片
 
@@ -121,12 +127,13 @@ agent-canvas-arrange group-color <groupId> blue
 **4. 在画布外操作某个项目的画布**
 
 ```
-agent-canvas-ctl resolve-canvas
+agent-canvas-ctl --canvas <项目路径> resolve-canvas
 agent-canvas-ctl --canvas <项目路径> list-nodes
 agent-canvas-arrange --canvas <项目路径> list --off-canvas
 ```
 
-`--canvas` 每条都要写、都写在子命令之前。画布外的进程不是任何画布节点，「按调用者反查自己所在
+`--canvas` 每条都要写（包括第一条探测）、都写在子命令之前；第一条退出码 1 时按上面「寻址」一节
+看 stderr 的可用画布清单。画布外的进程不是任何画布节点，「按调用者反查自己所在
 节点」的命令（如 `whoami`）在这里没有节点可反查。
 
 ## 相关 skill
