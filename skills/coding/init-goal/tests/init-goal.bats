@@ -1,6 +1,7 @@
 #!/usr/bin/env bats
 
 SKILL_MD="$(cd "${BATS_TEST_DIRNAME}/.." && pwd)/SKILL.md"
+CLAUDE_ADAPTER="$(cd "${BATS_TEST_DIRNAME}/.." && pwd)/platforms/SKILL.claude.md"
 
 _fm() {
   local field="$1"
@@ -51,9 +52,14 @@ _fm() {
   grep -q "不写任何文件" "${SKILL_MD}"
 }
 
-@test "body: doc-lifecycle rules are addressed to the loop agent" {
+@test "body: doc-lifecycle rules are addressed to the sustained-execution agent" {
   grep -q "## 文档维护" "${SKILL_MD}"
-  grep -q "运行本 loop 的 agent" "${SKILL_MD}"
+  grep -q "运行本持续执行的 agent" "${SKILL_MD}"
+}
+
+@test "Claude adapter exists and contains the Claude-only loop invocation" {
+  [ -f "${CLAUDE_ADAPTER}" ]
+  grep -q "/loop" "${CLAUDE_ADAPTER}"
 }
 
 @test "body: contains all 5 template names" {

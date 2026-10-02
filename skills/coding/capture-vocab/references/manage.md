@@ -5,7 +5,7 @@
 脚本路径下面一律简写为 `vocab.py`，完整命令是：
 
 ```
-python3 ~/.claude/skills/capture-vocab/scripts/vocab.py <子命令> [参数]
+python3 SKILL_DIR/scripts/vocab.py <子命令> [参数]
 ```
 
 ## exit 0 ≠ 该术语存在（三个命令都踩这个坑）

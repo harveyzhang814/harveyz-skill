@@ -1,7 +1,7 @@
 ---
 name: init-project
-version: "0.1.0"
-description: Bootstrap a new project repository around the harveyz-skill toolchain, or audit an existing repo for what it is missing. Builds the repo skeleton, resolves and installs the skills the project type needs, and runs the initialization phases that can be triggered standalone. Invoke with /init-project [path] to set up, or /init-project check [path] for a read-only report of what is missing. Triggers: 'initialize a new project', 'set up a new repo', 'bootstrap this project', 'what is this repo missing', '新项目初始化', '这个仓库还缺什么'.
+version: "0.1.3"
+description: Bootstrap a new project repository around the harveyz-skill toolchain, or audit an existing repo for what it is missing. Builds the repo skeleton, resolves and installs the skills the project type needs, and runs the initialization phases that can be triggered standalone. Invoke with /init-project [path] to set up, or /init-project check [path] for a read-only report of what is missing. Triggers: 'initialize a new project', 'set up a new repo', 'bootstrap this project', 'what is this repo missing'.
 user_invocable: true
 ---
 
@@ -30,12 +30,16 @@ user_invocable: true
 ## 探测
 
 三项只读检查，执行路径和 `check` 路径**都用这一节**，不各写一遍。
-先读模板 `~/.claude/skills/init-project/assets/templates/<模板名>.yml`，然后：
+先确定 `TARGET`：当前宿主明确时，设为该宿主对应的 hskill target；当前宿主不明确时，
+列出 hskill 支持的 target 并让用户选择。不要猜测或调用未声明的宿主 API。
+
+再读当前已安装 skill 目录下的
+`SKILL_DIR/assets/templates/<模板名>.yml`，然后：
 
 | 检查项 | 怎么查 |
 |---|---|
 | 骨架缺什么 | 对 `scaffold.dirs` 与 `scaffold.files[].path` 逐个查存在性。`on_exists: append-missing-lines` 的文件即使存在也要逐行比对，记下缺哪几行 |
-| skill 缺什么 | `cd <PROJECT> && hskill status --json`，对 `skills[]` 每个名字看 `user.claude.status`：非 `none` 则记「全局已有，跳过」；为 `none` 再看 `project.claude.status`，仍为 `none` 才记入待装清单 |
+| skill 缺什么 | `cd <PROJECT> && hskill status --json`，对 `skills[]` 每个名字看 `user.TARGET.status`：非 `none` 则记「全局已有，跳过」；为 `none` 再看 `project.TARGET.status`，仍为 `none` 才记入待装清单 |
 | 初始化相位缺什么 | 对有 `probe` 的条目查该路径是否存在，存在则记「已跑过」 |
 
 **`update` 状态（全局装了旧版）按「已有」处理，不升级。** 收尾时提示一句 `hskill outdated`，
@@ -52,8 +56,9 @@ cwd 错了它会静默去查/写别的目录，不报错。每条命令都写成
 ## Step 0 — 落点与模板
 
 1. 确定目标目录绝对路径。不存在则问用户是否创建。
-2. 选模板：列出 `assets/templates/` 下所有 `.yml`，让用户选。只有一套时仍然显式确认。
-3. **建 todo，Step 0–5 每步一条**。Step 3 会把控制权交给别的 skill，没有 todo 钉住就回不来。
+2. 确定 `TARGET`：若「探测」尚未确定，按该节规则确定；后续状态查询与安装都使用它。
+3. 选模板：列出 `assets/templates/` 下所有 `.yml`，让用户选。只有一套时仍然显式确认。
+4. **建 todo，Step 0–5 每步一条**。Step 3 会把控制权交给别的 skill，没有 todo 钉住就回不来。
 
 ## Step 1 — 骨架落盘
 
@@ -61,7 +66,7 @@ cwd 错了它会静默去查/写别的目录，不报错。每条命令都写成
 并记下「Step 3 的 init_phases 可能因此失败」。
 
 按 `scaffold.dirs` 建目录（已存在则跳过）。按 `scaffold.files[]` 拷文件，
-源路径是 `~/.claude/skills/init-project/assets/<from>`：
+源路径是 `SKILL_DIR/assets/<from>`（`SKILL_DIR` 为当前已安装本 skill 的目录）：
 
 | `on_exists` | 目标已存在时 |
 |---|---|
@@ -71,8 +76,9 @@ cwd 错了它会静默去查/写别的目录，不报错。每条命令都写成
 拷贝时把内容里的 `{{PROJECT_NAME}}` 替换为项目目录名。这是唯一的占位符。
 
 **能力上限，Step 5 要明说**：这一步只认同名文件。仓库里若已有一套自己的钩子目录，
-或 `CONTRIBUTING.md` 已经承担了 `CLAUDE.md` 的部分职责，本 skill 照样会新建一个
-`CLAUDE.md`——它看不出「同一件事换了个名字」。
+或 `CONTRIBUTING.md` 已经承担了 `AGENTS.md` 的部分职责，本 skill 照样会新建一个
+`AGENTS.md`——它看不出「同一件事换了个名字」。已有文件一律按 `on_exists` 处理，
+绝不把既有项目里的其他指导文件重命名为 `AGENTS.md`。
 
 → 回到 Step 2。
 
@@ -81,7 +87,7 @@ cwd 错了它会静默去查/写别的目录，不报错。每条命令都写成
 按「探测」第二项算出待装清单。清单非空则一次性装完：
 
 ```bash
-cd <PROJECT> && hskill install --skill <a> --skill <b> --scope project --target claude
+cd <PROJECT> && hskill install --skill <a> --skill <b> --scope project --target TARGET
 ```
 
 清单为空则跳过，记「全部已有」。

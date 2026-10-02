@@ -1,15 +1,15 @@
 ---
 name: runby-opencode
-description: "Use opencode as an independent AI agent to verify a Claude skill's instruction logic, or A/B compare Claude vs opencode following the same skill. Trigger when user says: verify this skill with opencode, validate skill logic, use opencode to check this skill, compare Claude vs opencode on this skill. Always use this skill when the user mentions opencode and skill validation together."
+description: "Use opencode as an independent AI agent to verify a skill's instruction logic, or A/B compare Claude vs opencode following the same skill. Trigger when user says: verify this skill with opencode, validate skill logic, use opencode to check this skill, compare Claude vs opencode on this skill. Always use this skill when the user mentions opencode and skill validation together."
 user_invocable: true
-version: "1.1.0"
+version: "1.1.1"
 ---
 
 # opencode-runner
 
-将 Claude skill 安装到 opencode 的 skill 目录，让 opencode 通过原生 skill 机制加载并执行——验证 skill 指令逻辑在不同 AI 下是否健壮。
+让 opencode 通过原生 skill 机制加载并执行待测 skill，验证其指令逻辑；仅在 `compare` 模式下与 Claude 的执行结果比较。
 
-> **定位**：不是把 SKILL.md 当上下文喂给 opencode，而是让 opencode 像 Claude Code 一样真正加载这个 skill，触发它自己的 skill 机制来完成任务。两者都能正确执行 = skill 指令健壮；结果有差异 = 找到了需要改进的歧义点。
+> **定位**：不是把 SKILL.md 当上下文喂给 opencode，而是让 opencode 真正加载这个 skill，触发它自己的 skill 机制来完成任务。`verify` 只评价 opencode 一端；`compare` 才评价 Claude 与 opencode 的差异。
 
 ---
 
@@ -26,35 +26,23 @@ which jq         # 用于解析 JSON 输出
 
 | 参数 | 说明 | 获取方式 |
 |------|------|---------|
-| **skill 路径** | 包含 SKILL.md 的目录绝对路径 | 用户提供，或在 `~/.claude/skills/` / 仓库 `skills/` 下查找 |
+| **skill 路径** | 包含 SKILL.md 的目录绝对路径 | 用户显式提供时优先；否则查仓库 `skills/` 或经用户确认的目标安装目录 |
 | **task prompt** | 要测试的 prompt | 用户提供 |
 | **模式** | `verify`（仅 opencode） 或 `compare`（Claude vs opencode） | 见下方说明 |
 
 ---
 
-## Step 1：确认 opencode 已挂载 Claude skill 目录
+## Step 1：确认 skill 来源与 opencode 可发现性
 
-opencode 支持通过 `~/.config/opencode/opencode.json` 的 `skills.paths` 字段指定额外 skill 搜索路径。格式与 Claude Code 完全兼容（相同的 YAML frontmatter）。
+先确认选定源目录包含 `SKILL.md`，记录其绝对路径和版本。用户显式提供的路径优先；未提供时，先查仓库 `skills/`，再查用户确认过的安装目录，不把 Claude 安装目录当默认值。
 
-确认配置存在：
-```bash
-cat ~/.config/opencode/opencode.json | grep -A4 '"skills"'
-```
-
-若没有，添加一次即可（之后所有 Claude skill 自动对 opencode 可用，无需逐个安装）：
-```json
-{
-  "skills": {
-    "paths": ["~/.claude/skills"]
-  }
-}
-```
+然后检查当前 opencode 实际使用的 skill 搜索位置或配置，确认所选 skill 能被 opencode 发现。若尚不可发现，报告源目录与缺口，向用户提出安装到 opencode target 或配置搜索路径的方案；未经用户确认不修改 opencode 配置，也不把「文件存在」当成「已加载」。挂载 Claude 安装目录只是在用户明确选择该来源时的可选方案，不是通用前置条件。
 
 ---
 
 ## 模式 1：Verify — 用 opencode 独立验证
 
-安装完成后，让 opencode 通过原生 skill 触发机制执行任务。
+确认可发现后，让 opencode 通过原生 skill 触发机制执行任务。
 
 ```bash
 opencode run --format json \
@@ -79,6 +67,8 @@ cat /tmp/opencode-verify-output.jsonl | \
 ## 模式 2：Compare — Claude vs opencode 独立性验证
 
 同一 prompt，Claude subagent 和 opencode 并行运行，对比输出一致性。
+
+先确认当前会话有可用的 Claude 执行端，且两端都能加载同一版本的 skill。缺少 Claude 或 opencode 任一端时，说明缺口并停止 `compare`；不得将单端 `verify` 冒称比较结果，也不擅自改用户配置补齐另一端。
 
 **在同一轮内并行启动：**
 

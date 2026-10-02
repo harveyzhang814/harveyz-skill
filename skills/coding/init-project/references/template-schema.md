@@ -1,7 +1,8 @@
 # 模板 schema
 
 模板放在本 skill 的 `assets/templates/<name>.yml`，跟 skill 版本号走——改模板 = 改 skill。
-装机后的运行时路径是 `~/.claude/skills/init-project/assets/templates/<name>.yml`。
+运行时先将 `SKILL_DIR` 绑定为当前安装的 `init-project` skill 目录，再读取
+`SKILL_DIR/assets/templates/<name>.yml`；不要假定某一宿主的安装路径。
 
 ## 顶层字段
 
@@ -30,7 +31,7 @@ scaffold:
 
 | 取值 | 行为 | 用在 |
 |---|---|---|
-| `skip`（默认） | 文件已存在则整体不动 | README、CLAUDE.md、TODO.md——内容是项目自己的 |
+| `skip`（默认） | 文件已存在则整体不动 | README、AGENTS.md、TODO.md——内容是项目自己的 |
 | `append-missing-lines` | 逐行比对，只追加缺失的行 | `.gitignore` |
 
 `append-missing-lines` 是纯文本行比对，不理解 ignore 文件的语义：已有整目录 ignore 规则时，

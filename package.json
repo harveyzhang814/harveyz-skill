@@ -1,6 +1,6 @@
 {
   "name": "harveyz-skill",
-  "version": "0.36.0",
+  "version": "0.37.0",
   "description": "Skill manager for Claude Code, Cursor, Codex, OpenClaw, Hermes, OpenCode, and Pi",
   "type": "module",
   "bin": {
@@ -9,7 +9,7 @@
   },
   "scripts": {
     "prepack": "node scripts/generate-npmignore.js",
-    "test": "bats tests/ && bash scripts/run-skill-tests.sh && node --test tests/mcp.test.mjs tests/templates.test.mjs tests/harness/*.test.mjs"
+    "test": "bats tests/ && bash scripts/run-skill-tests.sh && node --test tests/mcp.test.mjs tests/templates.test.mjs tests/skill-portability.test.mjs tests/harness/*.test.mjs"
   },
   "files": [
     "bin/",

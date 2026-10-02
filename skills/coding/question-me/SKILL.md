@@ -1,8 +1,8 @@
 ---
 name: question-me
-description: "Pre-task clarification skill — clarifies ambiguous or complex tasks before execution through structured Q&A with a live decision tree. One question at a time, each with at least 3 options + custom, in decision-dependency order. Triggers: '/question-me', 'help me clarify this', 'question me before starting', 'let's define this first'. Claude auto-triggers when detecting ambiguous or complex requests (multiple conflicting goals, vague keywords like 'optimize/refactor/clean up', missing success criteria, unstated context assumptions)."
+description: "Pre-task clarification skill — clarifies ambiguous or complex tasks before execution through structured Q&A with a live decision tree. One question at a time, each with at least 3 options + custom, in decision-dependency order. Triggers: '/question-me', 'help me clarify this', 'question me before starting', 'let's define this first'. The current agent may propose it for ambiguous or complex requests (multiple conflicting goals, vague keywords like 'optimize/refactor/clean up', missing success criteria, unstated context assumptions), then wait for user confirmation."
 user_invocable: true
-version: "3.0.1"
+version: "3.0.2"
 ---
 
 # question-me — 执行前指令澄清
@@ -27,7 +27,7 @@ version: "3.0.1"
 - 跨会话保存问答历史（每次会话独立）
 - 强制跑完全部 open 节点（用户可随时打断）
 - 问答结果写入文件（只在会话内输出摘要）
-- 自动交棒特定 skill（执行方式由 Claude 自行判断）
+- 自动交棒特定 skill（执行方式由当前 agent 自行判断）
 - 子节点超过 1 层的预生成（孙节点等父节点答完再评估）
 - 跨分支远端节点的自动扫描（只扫同级兄弟）
 
@@ -112,7 +112,7 @@ echo '<当前树文本>' | python3 SKILL_DIR/scripts/render_tree.py /tmp/questio
      这个答案下有需要追问的不确定性且影响执行方向？
        是 → 一次生成所有潜在子节点（dep 指向当前节点）
        否 → 不生成（当前节点为叶子）
-     子问题 Claude 可合理默认的 → 标 infer，填入假设，不追问
+     子问题当前 agent 可合理默认的 → 标 infer，填入假设，不追问
 5. [必须] 兄弟扫描：
      此答案是否让同级兄弟节点变无关或矛盾？
        是 → 标 skip
@@ -183,7 +183,7 @@ echo '<当前树文本>' | python3 SKILL_DIR/scripts/render_tree.py /tmp/questio
 |--------|------|--------|
 | `done` | 已答 | 可有可无；无子节点即为叶子 |
 | `open` | 待问（dep 已满足或无 dep） | 答完后评估 |
-| `infer` | Claude 填默认值，不追问 | 无；在摘要中透明列出 |
+| `infer` | 当前 agent 填默认值，不追问 | 无；在摘要中透明列出 |
 | `skip` | 兄弟答案使其无关，跳过 | 无 |
 
 **叶子节点不是状态**，是结构属性——`done` 且无子节点即为叶子，分支自然结束。

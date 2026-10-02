@@ -6,7 +6,7 @@ scaffold:
   files:                       # on_exists 默认 skip
     - {path: README.md,  from: skeleton/README.md}
     - {path: .gitignore, from: skeleton/gitignore-code, on_exists: append-missing-lines}
-    - {path: CLAUDE.md,  from: skeleton/CLAUDE.md}
+    - {path: AGENTS.md,  from: skeleton/AGENTS.md}
     - {path: TODO.md,    from: skeleton/TODO.md}
 
 skills:

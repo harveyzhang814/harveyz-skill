@@ -1,13 +1,13 @@
 ---
 name: rephrase
-description: "Single-pass rephrasing of a user statement into a more precise, less ambiguous, more actionable version, then either auto-proceeds or asks for confirmation based on Claude's own reliability judgment. Triggers: '/rephrase', '/rephrase <statement>', 'rephrase this', 'help me restate this more precisely'."
+description: "Single-pass rephrasing of a user statement into a more precise, less ambiguous, more actionable version, then either proceeds or asks for confirmation based on the current agent's reliability judgment. Triggers: '/rephrase', '/rephrase <statement>', 'rephrase this', 'help me restate this more precisely'."
 user_invocable: true
-version: "1.0.1"
+version: "1.0.2"
 ---
 
 # rephrase — 单轮改写澄清
 
-对用户的一句话表述做单轮改写，让它更精确、更少歧义、更可执行。不预设"合格表述"的标准或清单，由 Claude 依据当前语境自行判断。
+对用户的一句话表述做单轮改写，让它更精确、更少歧义、更可执行。不预设"合格表述"的标准或清单，由当前 agent 依据当前语境自行判断。
 
 ## 触发
 

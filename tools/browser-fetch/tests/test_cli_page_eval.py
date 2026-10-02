@@ -1,10 +1,10 @@
-"""真网络、真浏览器，不 mock——与仓库既有测试风格一致。"""
+"""真实 CLI/Chromium，不 mock；页面成功路径使用本地 HTTP fixture。"""
 
 
-def test_page_anonymous_fetch(run_cli):
-    proc, payload = run_cli("page", "https://example.com")
+def test_page_anonymous_fetch(run_cli, local_page_url):
+    proc, payload = run_cli("page", local_page_url)
     assert proc.returncode == 0, proc.stderr
-    assert payload["title"] == "Example Domain"
+    assert payload["title"] == "Local Browser Fetch Fixture"
     assert payload["status"] == 200
     assert payload["cookies_injected"] == 0
 
@@ -16,10 +16,10 @@ def test_page_auth_without_profile_exits_2(run_cli):
     assert "chrome_profile is required" in proc.stderr
 
 
-def test_page_auth_with_empty_profile_injects_nothing(run_cli, tmp_path):
+def test_page_auth_with_empty_profile_injects_nothing(run_cli, tmp_path, local_page_url):
     empty = tmp_path / "EmptyProfile"
     empty.mkdir()
-    proc, payload = run_cli("page", "https://example.com", "--auth", "--chrome-profile", str(empty))
+    proc, payload = run_cli("page", local_page_url, "--auth", "--chrome-profile", str(empty))
     assert proc.returncode == 0, proc.stderr
     assert payload["cookies_injected"] == 0
     assert payload["status"] == 200
