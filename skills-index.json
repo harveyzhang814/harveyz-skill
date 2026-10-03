@@ -380,8 +380,8 @@
     {
       "path": "agent-canvas/relation-review",
       "bundle": "agent-canvas",
-      "contentHash": "7b7e69fb78bcaa45",
-      "contentVersion": "1.0.1"
+      "contentHash": "614a78797797ca60",
+      "contentVersion": "1.1.0"
     },
     {
       "path": "agent-canvas/close-node",

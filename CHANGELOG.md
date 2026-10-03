@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.38.0] - 2026-10-03
+
+### Changed
+- `relation-review`：升至 1.1.0，治理动作由 `agent-canvas-ctl relation-*` 命令改为 Pilot 工具（`relation_review_queue` / `relation_promote` / `relation_deprecate` / `relation_merge` / `relation_rename` / `relation_revert`），参数改为结构化；升格前要先筛干净证据（整次拒绝、不用旧清单重试）；「命令不存在就跳过」改为「工具不可用就跳过」
+
 ## [0.37.0] - 2026-10-02
 
 ### Added

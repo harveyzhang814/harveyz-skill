@@ -2,19 +2,21 @@
 name: relation-review
 description: Global-Pilot-only relation-type governance loop — scans the pending queue and runs proposed types through four gates before promotion; invoked on a cron schedule, must not be manually called from a project canvas node.
 user_invocable: false
-version: "1.0.1"
+version: "1.1.0"
 ---
 
 # Relation 类型治理循环（relation-review）
 
-如果当前不是全局 Pilot 身份（`agent-canvas-ctl` 命令不存在，或明显运行在某个项目画布节点
-的上下文里），这个 skill 不适用，直接跳过。
+如果当前不是全局 Pilot 身份（`relation_review_queue` 等治理工具不可用，或明显运行在某个项目
+画布节点的上下文里），这个 skill 不适用，直接跳过。
 
 ## 第一步：数待议区，决定要不要唤起完整审议
 
-调 `agent-canvas-ctl relation-review-queue`，拿到全部画布里
+调 Pilot 工具 `relation_review_queue`（无参数），拿到全部画布里
 `type='unspecified' && provenance='agent' && reading != null` 的关系列表，每条带
-`{relationId, cwd, fromNodeId, toNodeId, fromKind, toKind, reading, why, createdAt}`。
+`{relationId, cwd, fromNodeId, toNodeId, fromKind, toKind, reading, why?, createdAt}`。
+部分项目读不出来时，返回值是 `{items, skipped}` 而不是裸数组：`items` 就是上面的列表，`skipped`
+列出没读到的项目——这一轮只对 `items` 审议，并在报告里说明有项目被跳过。
 
 **`WAKE_N = 5`**：本次列表长度**相比上次记录的基线**新增条目数 < 5 时，只记下这次的数量
 （可以简单回复"待议区当前 N 条，未达唤起阈值，不审议"），**不要往下做任何关卡判断**——
@@ -27,7 +29,7 @@ version: "1.0.1"
 
 ## 第三步：对每个候选簇过四道关卡
 
-**审议时不要看任何"这条提案本来该不该过"的暗示**——你只应该看到 `relation-review-queue`
+**审议时不要看任何"这条提案本来该不该过"的暗示**——你只应该看到 `relation_review_queue`
 返回的原始数据，不要预设结论。每道关卡的产出必须引用真实 `relationId`，不能虚构案例；
 写不满结构化字段就是没过这道关，不能用"综合考虑认为合理"糊过去。
 
@@ -59,7 +61,7 @@ version: "1.0.1"
 每条候选自带的 `why` 字段（agent 走 `link-nodes` 逃逸阀建这条关系时就已经写明"为什么
 现有 type 装不下"）是关卡三最直接的原料，优先核对这些——**不是 `despite`**：`despite`
 只在写入那一刻用于校验"逐个点名已排除的现有 type"，校验完就丢弃，不落在 Relation 记录上、
-`relation-review-queue` 也不会把它吐出来，审议阶段读不到。
+`relation_review_queue` 也不会把它吐出来，审议阶段读不到。
 
 ### 关卡四 · 消费关（软）
 
@@ -69,19 +71,30 @@ version: "1.0.1"
 
 ## 第四步：对通过全部四关的提案执行升格
 
+调 Pilot 工具 `relation_promote`，参数是结构化的（不是命令行标志）：
+
 ```
-agent-canvas-ctl relation-promote \
-  --name <新type名> \
-  --reading "<谓语读法>" \
-  --endpoints "<fromKind>:<toKind>,<fromKind>:<toKind>" \
-  --evidence "<cwd>::<relationId>,<cwd>::<relationId>,..." \
-  --gate-reasoning "<四道关卡论证全文，含每一关的判断依据>"
+relation_promote {
+  name: "<新type名>",
+  reading: "<谓语读法>",
+  endpoints: [{ from: "<fromKind>", to: "<toKind>" }, ...],
+  evidence: [{ cwd: "<cwd>", relationId: "<relationId>" }, ...],
+  gateReasoning: "<四道关卡论证全文，含每一关的判断依据>"
+}
 ```
 
-`--endpoints` 里的 `<fromKind>`/`<toKind>` 是节点 **kind**（比如 `pty`/
-`requirement`），不是节点 id——跟 `--evidence` 里的 `relationId` 是两种不同的标识符，
-不要混用。`--evidence` 列出的应该是这一簇里全部符合条件的 `relationId`（不止 3 条门槛
-数量，攒了多少条证据就列多少条——升格后这些关系的 `type` 会被原样改写成新 type 名）。
+返回 `{changelogId}`。
+
+`endpoints` 里的 `from`/`to` 是节点 **kind**（比如 `pty`/`requirement`），不是节点 id——
+跟 `evidence` 里的 `relationId` 是两种不同的标识符，不要混用。`evidence` 列出的应该是这一簇里
+全部符合条件的关系（不止 3 条门槛数量，攒了多少条证据就列多少条——升格后这些关系的 `type`
+会被原样改写成新 type 名）。
+
+**调用前先把 `evidence` 筛干净。** 升格会**整次拒绝、一条都不写**，只要 `evidence` 里有任何一条：
+关系不存在、已经不是 `unspecified`（已有类型）、端点不是存在的节点，或端点 kind 不在你声明的
+`endpoints` 里。被拒后**不要拿同一份旧清单原样重试**——重新调 `relation_review_queue` 取当前
+队列，按上述四条剔掉不合格的，再确认剩下的仍满足关卡二（≥ `PROMOTE_N` 条、≥2 个不同节点）
+才重新提交；筛完不满足就当作打回在关卡二。
 
 对没通过的提案，**不调用任何写操作**，只在报告里说明打回在哪一关、原因是什么。
 
@@ -92,17 +105,23 @@ agent-canvas-ctl relation-promote \
 relation 数据**，只改注册表条目的 `status`/`supersededBy`（spec §5.4）：
 
 - **发现两个现存 type 其实是同一件事**（例如关卡三的可辨别性检查显示不出真实差异）：
-  `agent-canvas-ctl relation-merge --from <旧type> --into <目标type> --gate-reasoning "<为什么判定等价>" [--evidence <relationId>,...]`
+  `relation_merge { from: "<旧type>", into: "<目标type>", gateReasoning: "<为什么判定等价>", evidence?: ["<relationId>", ...] }`
   `from` 会被标记为 `deprecated`、`supersededBy` 指向 `into`；`into` 必须是当前存在的 type，
   不存在会被拒绝。
 - **发现一个现存 type 已经没有意义**（比如从未被真实使用、或语义已被更好的 type 完全覆盖）：
-  `agent-canvas-ctl relation-deprecate --name <type> --gate-reasoning "<为什么判定过时>" [--evidence <relationId>,...]`
+  `relation_deprecate { name: "<type>", gateReasoning: "<为什么判定过时>", evidence?: ["<relationId>", ...] }`
   有代码消费点（`codePinned`，如 `spawns`/`implements`/`unspecified`）的 type 会被硬拒绝，
   不要尝试废弃它们。
 - **发现一个现存 type 的名字本身有误导性**：
-  `agent-canvas-ctl relation-rename --from <旧名字> --to <新名字> --gate-reasoning "<为什么需要改名>" [--evidence <relationId>,...]`
-  等价于"新建 `to` + 合并 `from`→`to`"，`to` 必须已经存在（先用 `relation-promote`
-  建出新名字，再用这个命令把旧名字标记废弃）。
+  `relation_rename { from: "<旧名字>", to: "<新名字>", gateReasoning: "<为什么需要改名>", evidence?: ["<relationId>", ...] }`
+  等价于"新建 `to` + 合并 `from`→`to`"，`to` 必须已经存在（先用 `relation_promote`
+  建出新名字，再用这个工具把旧名字标记废弃）。
+
+三个工具成功都返回 `{ok: true, changelogId}`。
+
+另有 `relation_revert { changelogId }`（成功返回 `{success: true}`）用来撤销刚做错的治理动作，
+只能撤销某类变更里**最新且尚未被撤销**的那一条，需要审批（定时任务里跟随该任务的自动批准开关）。
+它不是审议流程的一步，**不要主动调用**，只在人明确要求撤销时用。
 
 这三个动作不是每轮都会用到——待议区常年空转、四道关卡常年不通过是预期状态（spec §9.1），
 这三个动作同样可能常年不触发。**不要为了"这次总得做点什么"而勉强套用它们**。
@@ -117,4 +136,4 @@ relation 数据**，只改注册表条目的 `status`/`supersededBy`（spec §5.
 
 - 待议区新增 < `WAKE_N`：只报数量，不审议（见第一步）。
 - 候选簇 < `PROMOTE_N` 或 < 2 个不同节点：打回在关卡二，不进关卡三。
-- `agent-canvas-ctl` 命令不存在，或明显不是全局身份：整个 skill 不适用，跳过。
+- 治理工具不可用（`relation_review_queue` 等调不到），或明显不是全局身份：整个 skill 不适用，跳过。
