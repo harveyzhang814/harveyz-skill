@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- `agent-canvas-control`：升至 1.2.0，配合 Agent Canvas agent 通信一期：新增「给其他 agent 发消息」一节（收件箱排队与就绪写入、信封、回执 `queued → delivered → received`、不重发、`held` 不重试、拒绝上限、撤回、收到消息时怎么认）；审批一节补上按条件审批（`send` 发给非子节点 / 画布外调用，派生深度过深的 `create-pty-node`）与「本会话内始终允许」；新增示例「派活给新节点」（`create-pty-node --message`）与「给运行中的节点发消息或斜杠命令」
+
 ## [0.38.0] - 2026-10-03
 
 ### Changed
