@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- `describe-node`：升至 1.1.0，适配 `summarize-self` 受理即返回、后台执行的新语义——返回体由 `{nodeId, title, description, …}` 改为 `{nodeId, status: "submitted", specUsed}`，不再等待模型调用；新增「怎么确认写回结果」（用 `get-node` 查 `backgroundJob`：`running` / `succeeded` / `failed`，`running` 超过 120 秒按丢失处理，无状态不等于成功）；「正在进行中」的条件改为 `backgroundJob` 为 `running`；兼容旧版 App 的同步返回形态。需配合 agent-canvas 8.x 中 `feature/nonblocking-commands` 之后的版本
+
 ## [0.38.0] - 2026-10-03
 
 ### Changed
