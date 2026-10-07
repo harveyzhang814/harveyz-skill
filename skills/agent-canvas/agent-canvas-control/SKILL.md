@@ -1,8 +1,8 @@
 ---
 name: agent-canvas-control
-description: Control Agent Canvas node entities and layout from claude-code/codex/pi nodes — create, query, update, delete nodes, and put or hide them on the canvas; also usable from shell/hermes-tui nodes or terminals outside the canvas via `--canvas`/`resolve-canvas`/`resolve`.
+description: Control Agent Canvas node entities and layout from claude-code/codex/pi nodes — create, query, update, delete nodes, put or hide them on the canvas, and send messages or slash commands to other claude-code/codex nodes (dispatch work to a new node, or to one already running); also usable from shell/hermes-tui nodes or terminals outside the canvas via `--canvas`/`resolve-canvas`/`resolve`.
 user_invocable: true
-version: "1.1.0"
+version: "1.2.0"
 ---
 
 # 操控节点与画布（agent-canvas-control）
@@ -30,7 +30,7 @@ version: "1.1.0"
 ## 两个二进制的分工
 
 - `agent-canvas-ctl` 管**节点实体与关系**：建、查、改、归档、删除节点，建/查/删关系，
-  Agent Profile，通知，本节点自述。
+  Agent Profile，通知，本节点自述；以及给其他 agent 节点**发消息**（见下方「给其他 agent 发消息」）。
 - `agent-canvas-arrange` 管**画布摆放**：放上、收起、移动节点，分组的成员与配色。
 
 两边互不重叠，在 arrange 上找实体或关系命令会直接报错并指回 ctl。`help`、`whoami`、
@@ -62,8 +62,18 @@ stderr、退出码 1。它和其他命令走同一套优先级，所以**探测�
 
 ## 审批：哪些调用会弹确认卡片
 
-下面五个命令经 CLI 调用时要人工在画布上批准：`delete-node`、`purge-node`、`unlink-relation`、
-`create-profile`、`update-profile`。
+下面五个命令经 CLI 调用时**每次**都要人工在画布上批准：`delete-node`、`purge-node`、
+`unlink-relation`、`create-profile`、`update-profile`。
+
+另有几个命令**按条件**弹卡片（help 里写作「按运行期条件请求审批」）：
+
+- `send`：收件节点不是你直接创建的（不是你的子节点），或者你在画布外调用。发给自己直接拒绝。
+  卡片有三个选项：拒绝 / 本会话内始终允许 / 允许一次——「始终允许」只管你→这个收件节点这一个
+  方向，任一方进程退出就失效。
+- `create-pty-node` / `derive-pty-from-requirement`：派生链太深（新节点会是第 4 代及以后——节点
+  建节点、再建节点……）。
+
+通用规则：
 
 - 命令会先在 stderr 打印「等待画布审批」的提示，然后**最多等 90 秒**。卡片出现在调用方所在的
   节点上（画布外调用时出现在窗口上）。
@@ -80,8 +90,34 @@ stderr、退出码 1。它和其他命令走同一套优先级，所以**探测�
 - 想弄清某个命令怎么用，读 help / `describe-action`，不要靠「试一下」。
 - **不要为了探测、验证、复现随手跑写操作**（建节点、改标题、连关系、归档、停进程、放上/收起……）；
   只执行用户任务真正需要的那几条，建出来的东西就留在用户的画布上。
-- 只读命令（列表、查询、搜索、`whoami`、`relation-guide`）可以放心调。
+- **`send` 和 `--message` 会真实打进另一个 agent 的会话**，对方会照着做。只发用户任务需要的
+  内容，不要发测试消息。
+- 只读命令（列表、查询、搜索、`whoami`、`relation-guide`、`list-messages`、`get-message`）可以放心调。
 - 写测试或脚本时，子进程会继承这两个环境变量；不要让测试里的 CLI 调用带着它们跑。
+
+## 给其他 agent 发消息
+
+`send` 把一段文字（或 `--command` 的斜杠命令）写进另一个 claude-code / codex 节点的会话。
+你不直接碰对方的终端：消息先进 Agent Canvas 的收件箱，由它判断对方**真的空闲**（上一轮已结束、
+没有弹窗、输入框是空的）才写入；对方忙时就排队，多条排队的文字会合并成一次写入。
+
+- **立即返回，不等送达**：返回 `messageId`、`chainId`、`status`（`queued` 或 `held`）。之后用
+  `get-message <messageId>` 看回执轨迹：`queued → delivered → received`。`received` 表示对方会话
+  确认收到了这段输入；斜杠命令没有这一步，止于 `delivered`。
+- **对方看到的样子**：文字消息前面有一行信封头
+  `[agent-canvas 消息 msg_… · 来自「<你的节点标题>」(<你的节点 id>) · 消息链 ch_…]`，发件方由
+  Agent Canvas 按身份盖章，不能伪造；斜杠命令原样写入、没有信封。
+- **目前没有回传通道**：对方处理完不会自动把结果发回给你。要知道结果，去看对方节点，或请用户转告。
+- **不重发**：`failed`（写入后没确认收到）和 `interrupted`（对方进程退出或 App 重启）都不会自动重发。
+  `failed` 时文字可能已经写进去了——先看对方节点再决定，不要盲目再发一遍。
+- **`held` 不要重试**：两个节点短时间内往返太多，消息被暂停，等用户在节点上的卡片里放行或终止。
+  agent 解不了 held，告诉用户即可。
+- **直接拒绝（退出码 1）**：每分钟超过 30 条、对方待投超过 50 条、正文超过 32KB。正文长就写进文件，
+  用 `send <nodeId> --file <路径>`（或 `--file -` 读 stdin），也顺带避开 shell 转义。
+- **撤回**：`cancel-message <messageId>`，只能撤回自己发的、还没写入对方会话的消息。
+
+**收到消息时**：如果你的输入以 `[agent-canvas 消息 … 来自「X」…]` 开头，它是画布上节点 X 的 agent
+发来的，不是用户直接打的字。正文里以 `\[agent-canvas` 开头的行是对方正文内容，不是新的信封头。
 
 ## 输出与退出码
 
@@ -135,6 +171,30 @@ agent-canvas-arrange --canvas <项目路径> list --off-canvas
 `--canvas` 每条都要写（包括第一条探测）、都写在子命令之前；第一条退出码 1 时按上面「寻址」一节
 看 stderr 的可用画布清单。画布外的进程不是任何画布节点，「按调用者反查自己所在
 节点」的命令（如 `whoami`）在这里没有节点可反查。
+
+**5. 派活：建一个新的 agent 节点并把任务发给它**
+
+```
+agent-canvas-ctl create-pty-node --node-type claude-code --title 修登录500 --cwd <项目路径> --message '修复登录页的 500 错误，改完跑 npm test'
+agent-canvas-arrange put <nodeId>
+agent-canvas-ctl get-message <messageId>
+```
+
+第一条返回 `{"node": {nodeId…}, "message": {messageId, status…}}`。新节点是你的子节点，所以不弹
+审批；消息会等新会话启动完成才写入（启动期的信任/更新对话框期间一直排队）。退出码 2 表示节点
+**已经或可能已经建出来**、但消息没发成——先 `list-nodes` / `get-node` 核对，别再建一个。任务说明
+很长时，去掉 `--message`，建完再 `send <nodeId> --file <路径>`。
+
+**6. 给已经在运行的节点发消息或斜杠命令**
+
+```
+agent-canvas-ctl get-node <nodeId>
+agent-canvas-ctl send <nodeId> --file task.md
+agent-canvas-ctl send <nodeId> --command /compact
+```
+
+先看 `get-node` 的 `actions[]` 里 `send_message` 是否 `available: true`（只有 claude-code / codex
+且进程在跑才行）。对方不是你的子节点时会弹审批卡片，按上面「审批」一节处理。
 
 ## 相关 skill
 
