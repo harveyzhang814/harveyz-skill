@@ -70,7 +70,7 @@ test('authoring skill versions and F8 hashes match the published index', async (
   for (const [name, version] of [['init-skill', '1.3.0'], ['contribute-skill', '1.1.0'], ['publish-skill', '1.6.0']]) {
     const body = await skill(name)
     const entry = index.skills.find(item => item.path === `mint/${name}`)
-    const digest = createHash('sha256').update(body.replace(/^version:.*$/m, 'version: __HASH_PLACEHOLDER__')).digest('hex').slice(0, 16)
+    const digest = createHash('sha256').update(body.replace(/^version:.*$/gm, 'version: __HASH_PLACEHOLDER__')).digest('hex').slice(0, 16)
     assert.match(body, new RegExp(`^version: ["']?${version}["']?$`, 'm'))
     assert.equal(entry.contentVersion, version, name)
     assert.equal(entry.contentHash, digest, name)
