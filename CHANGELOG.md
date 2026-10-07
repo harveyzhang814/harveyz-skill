@@ -7,6 +7,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- `agent-canvas-control`：升至 1.2.0，配合 Agent Canvas agent 通信一期：新增「给其他 agent 发消息」一节（收件箱排队与就绪写入、信封、回执 `queued → delivered → received`、不重发、`held` 不重试、拒绝上限、撤回、收到消息时怎么认）；审批一节补上按条件审批（`send` 发给非子节点 / 画布外调用，派生深度过深的 `create-pty-node`）与「本会话内始终允许」；新增示例「派活给新节点」（`create-pty-node --message`）与「给运行中的节点发消息或斜杠命令」
+- `describe-node`：升至 1.1.0，适配 `summarize-self` 受理即返回、后台执行的新语义——返回体由 `{nodeId, title, description, …}` 改为 `{nodeId, status: "submitted", specUsed}`，不再等待模型调用；新增「怎么确认写回结果」（用 `get-node` 查 `backgroundJob`：`running` / `succeeded` / `failed`，`running` 超过 120 秒按丢失处理，无状态不等于成功）；「正在进行中」的条件改为 `backgroundJob` 为 `running`；兼容旧版 App 的同步返回形态。需配合 agent-canvas 8.x 中 `feature/nonblocking-commands` 之后的版本
+
+## [0.38.0] - 2026-10-03
+
+### Changed
+- `relation-review`：升至 1.1.0，治理动作由 `agent-canvas-ctl relation-*` 命令改为 Pilot 工具（`relation_review_queue` / `relation_promote` / `relation_deprecate` / `relation_merge` / `relation_rename` / `relation_revert`），参数改为结构化；升格前要先筛干净证据（整次拒绝、不用旧清单重试）；「命令不存在就跳过」改为「工具不可用就跳过」
+
+## [0.37.0] - 2026-10-02
+
+### Added
+- 平台适配标准：新增 skill 平台适配规范文档，并对已发布 skill 做了一轮适配审计；新增可移植性回归测试（`tests/skill-portability.test.mjs`）守住版本与 `contentHash`
+
+### Changed
+- `agent-canvas-control`：升至 1.1.0，由逐条命令清单精简为发现路径指引（`list-actions` / `describe-action`）、寻址、审批、安全、退出码与完整示例，避免与 Agent Canvas 能力目录漂移
+- 多个已发布 skill 去除对特定宿主的假设：补充可移植性降级路径，本地资源路径可移植化，共享指令与 research / goal 流程不再绑定单一宿主；`init-project` 改为感知安装目标；`contribute-skill` 保留用户显式指定的来源
+- `init-project`：升至 0.1.3，description 去掉中文触发词
+
+### Fixed
+- `agent-canvas-control`：修正 `stop-node` 返回字段（`stopRequested`，仅表示请求已发出）与对非 pty / 已停止节点的拒绝行为（退出码 1）；`put` / `hide` 部分成功时返回退出码 2；跨画布寻址改为先用 `--canvas <项目路径> resolve-canvas` 探测，避免在节点内误报成功
+- `learn-video`：不再不安全地后台执行
+- `browser-fetch`：导航测试改用本地 fixtures，不再依赖易变的线上页面
+- `skills-index.json`：`init-skill`、`learn-skill`、`survey-skillrepo` 的 `contentHash` 与内容不符，已校正
+
+### Known issues
+- `tests/version-check.bats` 的 "unreachable registry" 一条在已安装本地源的机器上会失败（`version --check` 走本地源分支而不是报 registry 不可达），其余测试套件全部通过
+
 ## [0.36.0] - 2026-09-23
 
 ### Added
