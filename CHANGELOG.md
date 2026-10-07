@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.39.0] - 2026-10-07
+
+### Added
+- 平台标准同步：新增 `scripts/sync-skill-platform-standard.mjs`，把平台适配标准同步进 `init-skill` / `contribute-skill` 内置的 `references/platform-adaptation.md`；新增 `tests/platform-standard-sync.test.mjs` 与 `tests/skill-platform-authoring.test.mjs`，校验标准副本、打包边界与发布元数据
+
+### Changed
+- `agent-canvas-control`：升至 1.2.0，配合 Agent Canvas agent 通信一期：新增「给其他 agent 发消息」一节（收件箱排队与就绪写入、信封、回执 `queued → delivered → received`、不重发、`held` 不重试、拒绝上限、撤回、收到消息时怎么认）；审批一节补上按条件审批（`send` 发给非子节点 / 画布外调用，派生深度过深的 `create-pty-node`）与「本会话内始终允许」；新增示例「派活给新节点」（`create-pty-node --message`）与「给运行中的节点发消息或斜杠命令」
+- `describe-node`：升至 1.1.0，适配 `summarize-self` 受理即返回、后台执行的新语义——返回体由 `{nodeId, title, description, …}` 改为 `{nodeId, status: "submitted", specUsed}`，不再等待模型调用；新增「怎么确认写回结果」（用 `get-node` 查 `backgroundJob`：`running` / `succeeded` / `failed`，`running` 超过 120 秒按丢失处理，无状态不等于成功）；「正在进行中」的条件改为 `backgroundJob` 为 `running`；兼容旧版 App 的同步返回形态。需配合 agent-canvas 8.x 中 `feature/nonblocking-commands` 之后的版本
+- `init-skill`：升至 1.3.0，新增「平台适配检查」（读取随 skill 安装的 `references/platform-adaptation.md`，缺失即停止），并改为先在基于 `staging` 的独立 worktree 里写入新 skill 再初始提交，不再直接在当前工作区建分支
+- `publish-skill`：升至 1.6.0，检查内置标准副本是否同步，但不对运行时兼容性作担保
+- `contribute-skill`：升至 1.1.0，复制前新增只读的源 skill 平台适配评估（Step 1a），适配修改须逐项展示并经确认；回写源目录需单独确认，复制确认不代替它
+- `npm test`：改为运行 `tests/*.test.mjs`，新增测试不再需要手工登记；F8 `contentHash` 测试改为替换全部 `version:` 行，与 `publish-skill` 的 sed 算法一致
+
 ## [0.38.0] - 2026-10-03
 
 ### Changed

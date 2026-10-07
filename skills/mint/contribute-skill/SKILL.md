@@ -2,8 +2,9 @@
 name: contribute-skill
 description: "Contribute, import, sync, or register a skill directory from another project into the harveyz-skill repo — auto-normalizes SKILL.md format, registers in skills-index.json, and performs bidirectional directory sync. Triggers whenever the user wants to add, contribute, push, migrate, import, or sync an existing skill into harvey-skill or harveyz-skill. Note: flow is from other projects into harveyz-skill; installing or copying an existing skill out to a local project does NOT trigger this skill."
 user_invocable: true
-version: "1.0.1"
+version: "1.1.0"
 ---
+<!-- platform-standard-sha256: ad3d2f32f40cc282ef20bd3a19631a16f079839cc3e086a09b99011cc201fa2a -->
 
 # contribute-skill
 
@@ -29,6 +30,12 @@ version: "1.0.1"
 验证：确认选定目录存在且包含 `SKILL.md`，否则停止并报错。将这个已验证目录的绝对路径保存为 `source_skill_dir`；后续所有源文件读取、状态检查、差异检查、复制和提交路径均使用它。
 
 在 Step 7 前确定源目录类型：若 `git -C "${source_skill_dir}" rev-parse --show-toplevel` 成功，将结果记为 `<源项目根目录>` 并按 Git 源流程执行；否则标记为非 Git 源，跳过 Git 状态检查和提交，仅执行文件同步并报告需手动提交。
+
+### Step 1a — 源 skill 平台适配评估（只读）
+
+从当前已安装的 `contribute-skill` 目录读取本地 `references/platform-adaptation.md`；缺失则停止并报告装机不完整，不依赖源仓库的 `docs/` 路径。读取已验证的 `source_skill_dir` 中的 `SKILL.md`、实际引用文件和 `platforms/` 文件，先确认目标宿主或有意限定范围、核心能力、路径来源、宿主调用差异、回退及验证状态。按标准将每项归入“确认断点／有意限定／待验证风险／通过静态审查”，附文件位置与理由；未实跑的宿主不得记为兼容通过。
+
+宿主专有命令若是其他目标宿主核心流程的必经条件且无可执行回退，列为确认断点；明确单宿主任务是有意限定，不静默改写成七宿主通用；共享流程已有顺序或对话回退但未实跑的，列为待验证风险。必要修改只形成候选 diff：共享语义保留在 `SKILL.md`，短宿主差异放明确适配章节，较长接口放 `platforms/SKILL.<host>.md`。Step 5 展示候选 diff 和影响范围，等用户确认后才应用；用户不同意改动时保留原文并如实报告限定或风险，不暗中泛化源 skill。
 
 ---
 
@@ -124,10 +131,14 @@ version: "1.0.1"
   skills-index.json 新增：{"path": "<bundle-category>/<name>", "bundle": "<bundle>"}
   （若新建 bundle）bundleMeta 新增：{"<bundle>": "<description>"}
 
+[平台适配评估]
+  确认断点／有意限定／待验证风险／通过静态审查：列出证据与未验证宿主
+  候选修改：展示逐文件 diff；不修改时写明理由
+
 [同步回源]
   格式化后完整目录 → `${source_skill_dir}/`
 
-确认继续？(y/n)
+确认复制、注册，以及逐项展示的适配修改？(y/n；可拒绝某项修改并保留原文)
 ```
 
 用户输入 `n` 则中止，不做任何修改。
@@ -151,6 +162,7 @@ version: "1.0.1"
 **修复策略：**
 - 可自动确定的字段（`name`、`version`、`user_invocable`、frontmatter 格式）：直接修复，无需用户确认
 - 涉及内容重写的字段（`description`）：以 diff 形式展示修改前后，等用户确认后再应用
+- Step 1a 的平台适配修改：仅应用 Step 5 已展示且获确认的逐文件 diff；新适配文件随目标目录复制并在共享入口写明读取点，不修改未确认的源文件
 
 **若 `SKILL.md` 格式严重损坏**（无法解析 frontmatter）：停止执行，报告具体问题，让用户手动修复后重试。
 
@@ -204,6 +216,8 @@ cd <harveyzSkillPath> && node scripts/generate-npmignore.js
 ### Step 7 — 同步回源仓库
 
 将 harveyz-skill 中目标 skill 目录的**完整内容**同步回源项目：
+
+先展示将覆盖或新增的源文件及 diff，并单独询问是否同步回源；用户未明确确认则跳过 Step 7。Step 5 的复制/注册确认不代替此处的同步回源用户确认。
 
 **先按 Step 1 确定的源目录类型分支：**
 
