@@ -2,7 +2,7 @@
 name: publish-skill
 description: "Validate and publish a skill to the harveyz-skill repository. Checks SKILL.md format compliance (frontmatter fields, semver version, name-directory match, verb-noun or single-verb naming convention) and registration in skills-index.json. Rules defined in docs/reference/skill-spec.md. Triggers: publish skill, register skill, validate skill format, check skill, add skill to index, is skill ready to publish."
 user_invocable: true
-version: "1.5.0"
+version: "1.6.0"
 ---
 
 # skill-publish
@@ -134,6 +134,12 @@ _fm() {
 | R3 | `bundle` 值存在于 `bundleMeta` | bundle key 必须已声明 |
 | R4 | `installScope` 字段存在且值合法 | 值须为 `essential`/`global`/`project` 之一；缺失或值非法时报**警告**（不阻止通过） |
 
+### Step 4a — 平台标准副本的分发核对（检查相关消费者时）
+
+若检查范围包含 `mint/init-skill` 或 `mint/contribute-skill`，运行只读的 `node scripts/sync-skill-platform-standard.mjs --check`，确认权威标准、两个随包副本及消费者 `SKILL.md` 的摘要标识没有漂移。然后运行 `npm pack --dry-run --ignore-scripts --json`，从输出的 `files[].path` 核对包内确有 `skills/mint/init-skill/references/platform-adaptation.md` 和 `skills/mint/contribute-skill/references/platform-adaptation.md`；缺失或命令失败列为分发问题，不把文件在工作树中存在等同于已打包。
+
+继续按 F8 与 Step 7 核对 `SKILL.md` 版本、索引的 `contentVersion` 和 `contentHash`；副本变化引起摘要标识变化时仍须按版本规则处理。此步骤仅核对同步、打包和元数据，不判定语义兼容。宿主适配器未实测时报告“未验证”，不宣称语义兼容或端到端通过。
+
 ### Step 5 — 输出报告
 
 按以下结构输出，所有问题集中展示：
@@ -155,6 +161,14 @@ skill-publish 检查结果
 --------
   skills/meta/my-skill
     R1  未在 skills-index.json 中注册
+
+分发问题（适用时）
+--------
+  平台标准副本漂移／未打包，或版本与索引未同步；列明实际文件和命令结果
+
+平台实测状态（适用时）
+--------
+  未实测的宿主适配器：未验证；本检查不宣称语义兼容
 
 格式警告（不阻止通过，建议修复）
 --------

@@ -253,15 +253,15 @@
       "path": "mint/init-skill",
       "bundle": "mint",
       "installScope": "project",
-      "contentHash": "4053e6476d1c3f09",
-      "contentVersion": "1.2.1"
+      "contentHash": "1ec3c99ce4e6a73b",
+      "contentVersion": "1.3.0"
     },
     {
       "path": "mint/publish-skill",
       "bundle": "mint",
       "installScope": "project",
-      "contentHash": "21b491de6e7f3157",
-      "contentVersion": "1.5.0"
+      "contentHash": "6ce6b83f99b11d82",
+      "contentVersion": "1.6.0"
     },
     {
       "path": "mint/archive-skill",
@@ -281,8 +281,8 @@
       "path": "mint/contribute-skill",
       "bundle": "mint",
       "installScope": "project",
-      "contentHash": "5ee62eb1fa043334",
-      "contentVersion": "1.0.1"
+      "contentHash": "f48338e6d5267a28",
+      "contentVersion": "1.1.0"
     },
     {
       "path": "mint/fix-skill",
