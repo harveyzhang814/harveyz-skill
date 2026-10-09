@@ -1,99 +1,56 @@
-# Repository Agent Guide
+# 仓库 Agent 指南
 
-## Overview
+## 仓库与技能来源
 
-This is the source-maintenance repository for Harvey's agent skills. Skills are authored and maintained under `skills/`, then installed or published for one or more agent hosts.
+本仓库维护 Harvey 的 Agent 技能。技能在 `skills/` 下编写，再安装或发布到不同宿主。`skills/` 是唯一的内容源；只在这里读取和修改技能，不要编辑已安装的副本或宿主的技能目录，因为它们可能落后于仓库。
 
-`skills/` is the authoritative source. Read and edit skill content here, never in an installed copy or a host-level skill directory: installed copies are deployment targets and may lag behind the repository.
+## 部署与发布
 
-## Deploying skills
-
-Always deploy a skill from the integrated `staging` branch, not from the current working tree. The current tree can be on an unfinished feature or documentation branch, so copying directly from it can silently install an older version.
+部署时始终从已集成的 `staging` 分支提取技能，不要从当前工作树复制。当前工作树可能处于尚未完成的分支。
 
 ```bash
-git archive staging skills/coding/<skill> | tar -x -C <temporary-directory>
-rsync -a --exclude '.DS_Store' <temporary-directory>/skills/coding/<skill>/ <target-skill-root>/<skill>/
+git archive staging skills/<category>/<skill> | tar -x -C <temporary-directory>
+rsync -a --exclude '.DS_Store' <temporary-directory>/skills/<category>/<skill>/ <target-skill-root>/<skill>/
 ```
 
-`<target-skill-root>` is determined by the selected installation target. Do not assume a particular host's configuration directory. After deployment, check the installed `SKILL.md` version against the intended release.
+按安装目标确定 `<target-skill-root>`，不要假定宿主配置目录。部署后核对已安装 `SKILL.md` 的版本是否为目标版本。
 
-## Skill structure and publishing
+技能位于 `skills/<category>/<skill-name>/`，每个目录包含 `SKILL.md`，也可包含 `references/`、脚本、资源和测试。`SKILL.md` 以 YAML frontmatter 开头，包含 `name`、`description`、`user_invocable`、`version` 等字段。
 
-Skills live under `skills/<category>/<skill-name>/`. Each skill directory contains `SKILL.md` and may contain `references/`, scripts, assets, or tests.
+发布技能时，在 `skills-index.json` 中登记 `path` 和 `bundle`；新增 bundle 时补充 `bundleMeta`；技能内容变化时更新 `contentHash` 和 `contentVersion`。`skills-index.json` 是打包依据，未登记的技能不会进入 npm 包。
 
-`SKILL.md` starts with YAML frontmatter such as:
+## 输出格式
 
-```yaml
----
-name: skill-name
-description: "What this skill does. Trigger phrases..."
-user_invocable: true
-version: "x.y.z"
----
-```
+- org-mode：粗体用单个星号；标题以 `*` 开头且不跳级。Denote 文件名格式为 `{YYYYMMDDTHHMMSS}--{title}__{type}.org`，保存到 `~/Documents/notes/`。ASCII 图只能使用 ASCII 字符。
+- Markdown 报告：可使用 YAML frontmatter 和用户配置的 `skillDir`，不受上述 org-mode 和 Denote 规则约束。
 
-When publishing a skill:
+## 测试
 
-1. Create or update `skills/<category>/<skill-name>/SKILL.md`.
-2. Register it in `skills-index.json` with its `path` and `bundle`.
-3. Add `bundleMeta` when introducing a bundle.
-4. Update the skill's `contentHash` and `contentVersion` when skill content changes.
+运行 `npm test` 验证 hskill CLI 行为及所有 `SKILL.md`。添加测试前先读 [测试指南](docs/reference/testing-guide.md)。
 
-`skills-index.json` is the packaging source of truth; unindexed skills are excluded from the npm package.
+## Git 与工作区
 
-## Output conventions
-
-For org-mode output, use single asterisks for bold text and start headings with `*` without skipping levels. Denote filenames use `{YYYYMMDDTHHMMSS}--{title}__{type}.org` and are written to `~/Documents/notes/`. ASCII diagrams may use only ASCII characters.
-
-Markdown reports may use YAML frontmatter and a user-configured `skillDir`; they do not follow the org-mode or Denote rules.
-
-## Testing
-
-Run:
-
-```bash
-npm test
-```
-
-This verifies hskill CLI behavior and validates all `SKILL.md` files. Before adding tests, read [docs/reference/testing-guide.md](docs/reference/testing-guide.md).
-
-## Git and worktree workflow
-
-Read [docs/reference/git-workflow.md](docs/reference/git-workflow.md) for the complete branch and merge workflow.
-
-- Use one `feature/`, `fix/`, `chore/`, `doc/`, or `release/` branch per related unit of work.
-- Create a branch and worktree from an explicit `staging` baseline. Do not let the current checkout choose the base implicitly.
-- Configure each worktree with `core.hooksPath=.githooks` and `merge.ff=false`.
-- Before merging, confirm the current branch with `git rev-parse --abbrev-ref HEAD`.
-- Merge to `staging` only when the user explicitly asks to merge or finish. From an eligible feature worktree, run `scripts/merge-to-staging.sh`; it uses an atomic local update with retry and does not push to `origin`. Do not manually merge into or directly commit to `main` or `staging`.
-
-For example:
+完整规则见 [Git 工作流规范](docs/reference/git-workflow.md)。每组相关改动使用一条 `feature/`、`fix/`、`chore/`、`doc/` 或 `release/` 分支，并从明确的 `staging` 基线创建分支和 worktree；不要隐式使用当前 checkout 作为基线。每个 worktree 都设置 `core.hooksPath=.githooks` 和 `merge.ff=false`。
 
 ```bash
 git worktree add <worktree-path> -b <type>/<slug> staging
 git -C <worktree-path> config core.hooksPath .githooks
 git -C <worktree-path> config merge.ff false
-(
-  cd <worktree-path>
-  scripts/merge-to-staging.sh
-)
 ```
 
-An agent host may provide its own way to bind subsequent operations to a worktree. Use it when available. Otherwise, every Git command must be scoped with `git -C <worktree-path>`, and file reads and writes must use absolute paths. A bare `cd` does not carry across independent command invocations.
+合并前运行 `git rev-parse --abbrev-ref HEAD` 确认分支。只有用户明确要求“合并”或“完成”时，才从符合条件的工作分支 worktree 运行 `scripts/merge-to-staging.sh`。脚本以本地原子更新和重试方式合并到 `staging`，不会推送 `origin`。不要手动合并到 `main` 或 `staging`，也不要直接向这两个分支提交。
 
-`.claude/worktrees/` is an existing repository path convention, including historical directories; it is not a required host API or a universal worktree location.
+优先使用宿主提供的 worktree 绑定方式；若无法绑定，每条 Git 命令都使用 `git -C <worktree-path>`，文件读写使用绝对路径。单独执行的 `cd` 不会影响后续命令。`.claude/worktrees/` 是本仓库现有的路径约定，包含历史目录，不是必需的宿主 API，也不是通用 worktree 路径。
 
-## Cross-session handoff
+## 跨会话交接
 
-`handoff` is a general-purpose skill, not a Claude-specific feature. In hosts that support skill invocation, invoke `handoff`; otherwise execute the workflow defined by the skill. Read `.hskill/handoff/config.md` for this repository's output location, Git workflow, verification commands, and authority references.
+`handoff` 是通用技能，不依赖 Claude。宿主支持技能调用时调用 `handoff`，否则按技能文档执行；仓库配置见 `.hskill/handoff/config.md`。保留 `author`、`verify`、`self-test`、`accept` 四个阶段。斜杠命令只是部分宿主的调用方式，并非流程要求。
 
-Keep the skill's four phases: `author`, `verify`, `self-test`, and `accept`. Slash-command syntax, if a host offers it, is only one invocation interface and is not part of the process requirement.
+交接使用独立分支和 worktree 时：
 
-For a handoff involving a separate branch and worktree:
+1. 交出方创建分支和 worktree，在交接文档中记录绝对路径与分支名，并保留该工作区。
+2. 接手方先验证交接，再在同一个 worktree 工作；不另建或删除分支与工作区。
+3. 交出方回到同一个 worktree 验收，不在主工作树或集成分支验收。
+4. 验收通过后，仅交出方负责合并并移除交接 worktree。
 
-1. The author creates the branch and worktree, records their absolute path and branch in the handoff document, and keeps that worktree available.
-2. The recipient verifies the handoff and works in that same worktree; they do not create a replacement worktree or branch and do not remove it.
-3. The author returns to that same worktree to accept the result. Acceptance runs there, not in the main checkout or an integration branch.
-4. Only the author merges the accepted branch and removes the handoff worktree afterward.
-
-Only one party may operate in a shared handoff worktree at a time. If the host cannot enter a worktree directly, use the explicit-path fallback described above.
+共享的交接 worktree 同一时间只允许一方操作。宿主无法直接进入时，使用上文的显式路径方式。
