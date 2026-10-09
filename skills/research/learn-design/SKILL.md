@@ -60,7 +60,7 @@ version: "1.0.0"
 
 ### Step 3 — 批量生成图
 
-1. 读一次 `ARCHIFY/SKILL.md` 与 `ARCHIFY/references/authoring-defaults.md`，再读**用到的**每种类型的 schema 与示例（路径见 Type router）。材料在 git 仓库内时，另读 `ARCHIFY/references/repository-authoring.md`，按它绑定 commit 与 `sources`，渲染时加 `--repo-root <材料仓库根>`。
+1. 读一次 `ARCHIFY/SKILL.md` 与 `ARCHIFY/references/authoring-defaults.md`，再读**用到的**每种类型的 schema 与示例（路径见 Type router）。这些文件在同一轮里一次读完，不要一个文件一轮——每多一轮都要把整个上下文重读一遍。材料在 git 仓库内时，另读 `ARCHIFY/references/repository-authoring.md`，按它绑定 commit 与 `sources`，渲染时加 `--repo-root <材料仓库根>`。
 2. **一次写完全部图**：`OUT/specs/<id>.<type>.json`。`meta.locale` 设 `zh-CN`，`meta.quality_profile` 设 `showcase`，`meta.output` 设 `diagrams/<id>.html`。图里每个部件、关系、状态都要能在材料里找到出处。
 3. **一次跑完全部校验**：
 

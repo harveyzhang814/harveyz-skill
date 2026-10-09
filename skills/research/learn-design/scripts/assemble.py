@@ -28,8 +28,12 @@ code{background:var(--soft);padding:1px 5px;border-radius:4px;font-size:.9em}
 
 RESIZE = """
 for (const f of document.querySelectorAll('iframe.diagram')) {
-  const fit = () => { try { const d = f.contentDocument; const c = d.querySelector('.container') || d.body; f.style.height = Math.ceil(c.getBoundingClientRect().height) + 'px'; } catch (_) {} };
-  f.addEventListener('load', () => { fit(); setTimeout(fit, 300); });
+  const box = () => { const d = f.contentDocument; return d.querySelector('.container') || d.body; };
+  const fit = () => { try { f.style.height = Math.ceil(box().getBoundingClientRect().height) + 'px'; } catch (_) {} };
+  const setup = () => { fit(); try { new f.contentWindow.ResizeObserver(fit).observe(box()); } catch (_) {} };
+  // 早于本脚本加载完的 iframe 不会再触发 load
+  if (f.contentDocument && f.contentDocument.readyState === 'complete' && f.contentDocument.body) setup();
+  else f.addEventListener('load', setup);
 }
 """
 
