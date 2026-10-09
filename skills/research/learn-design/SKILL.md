@@ -2,7 +2,7 @@
 name: learn-design
 description: "Explain an architecture design, spec, or product proposal as one offline HTML document: chapters by angle (structure, sequence, state, data flow, dedicated mechanism chapters, boundaries), with diagrams rendered deterministically by archify from typed JSON and tables where diagrams do not fit. Triggers: '/learn-design <path or topic>', 'help me understand this design', 'explain this spec/architecture/proposal with diagrams', 'I don't get the big picture of this design'. Not for a single diagram (use archify), text-only restatement (explain-pm), Mermaid (draw-diagram), or understanding a skill (learn-skill)."
 user_invocable: true
-version: "1.0.0"
+version: "1.1.0"
 model: sonnet
 ---
 
@@ -54,7 +54,7 @@ model: sonnet
 | 章节 | 回答 | 载体 |
 |---|---|---|
 | 定位 | 在系统里的位置、没有它会怎样、何时触发 | 文字 |
-| 结构 | 有哪些部件、谁不信任谁、边界在哪 | 图 |
+| 结构 | 本章涉及哪些部件、谁不信任谁、边界在哪 | 图 |
 | 主流程 | 谁先谁后、在哪等待、在哪失败 | 图 |
 | 状态流转 | 有哪些状态、什么驱动迁移、终态与回退 | 图 |
 | 数据流 | 数据或产物从哪来、到哪去、谁持有权威版本 | 图 |
@@ -70,14 +70,20 @@ model: sonnet
 - 一个机制用"一张图 + 三句话"讲得清，就并入相邻章节，不单独成章。
 - 材料里的实现细节（超时、重试次数、文件格式、条款编号）只在构成代价或边界时才进正文。
 
-图的类型从 `ARCHIFY/SKILL.md` 的 Type router 表选，以它为准。一张图只画本章那块；预计一张图读不清（节点挤、字小）就拆成两张。
+画什么由本 skill 决定，在这一步定死。每张图写一份**图契约**：回答哪个问题、画哪些部件／关系／状态、明确不画什么。不放全局总览图，每张图只画本章那块；预计一张图读不清（节点挤、字小）就拆成两张。图的类型按 `ARCHIFY/SKILL.md` 中 Type router 表的用途选。
 
-骨架只列主线、章节标题与每章那句判断、每张图的 id 与类型，不展开正文。把骨架给用户确认后继续。宿主不能交互时直接继续，并在交付报告里注明"骨架未经确认"。
+骨架只列主线、章节标题与每章那句判断、每张图的 id、类型与图契约，不展开正文。把骨架给用户确认后继续。宿主不能交互时直接继续，并在交付报告里注明"骨架未经确认"。
 
 ### Step 3 — 批量生成图
 
-1. 读一次 `ARCHIFY/SKILL.md` 与 `ARCHIFY/references/authoring-defaults.md`，再读**用到的**每种类型的 schema 与示例（路径见 Type router）。这些文件在同一轮里用并行的文件读取一次读完：不要一个文件一轮（每多一轮都要把整个上下文重读一遍），也不要用一条 `cat` 拼接（超出工具输出上限会被截断，还得再读回来）。材料在 git 仓库内时，另读 `ARCHIFY/references/repository-authoring.md`，按它绑定 commit 与 `sources`，渲染时加 `--repo-root <材料仓库根>`。
-2. **一次写完全部图**：`OUT/specs/<id>.<type>.json`。`meta.locale` 设 `zh-CN`，`meta.quality_profile` 设 `showcase`，`meta.output` 设 `diagrams/<id>.html`。图里每个部件、关系、状态都要能在材料里找到出处。
+分工：画什么以 Step 2 的图契约为准；archify 只决定怎么编码、画出来是否合格。
+
+1. 读一次 `ARCHIFY/SKILL.md` 与 `ARCHIFY/references/authoring-defaults.md`，再读**用到的**每种类型的 schema 与示例（路径见 Type router）。读的时候：
+   - `SKILL.md` 只用 Type router 表找路径；它的输出目录、finalize 用法、视觉复查、更新提示与交付格式都不适用，以本 skill 为准。
+   - `authoring-defaults.md` 只用布局、走线与间距规则；其中的构图建议（如架构图默认画系统总览）与图契约冲突时，以图契约为准。
+
+   这些文件在同一轮里用并行的文件读取一次读完：不要一个文件一轮（每多一轮都要把整个上下文重读一遍），也不要用一条 `cat` 拼接（超出工具输出上限会被截断，还得再读回来）。材料在 git 仓库内时，另读 `ARCHIFY/references/repository-authoring.md`，按它绑定 commit 与 `sources`，渲染时加 `--repo-root <材料仓库根>`。
+2. **一次写完全部图**：`OUT/specs/<id>.<type>.json`。`meta.locale` 设 `zh-CN`，`meta.quality_profile` 设 `showcase`，`meta.output` 设 `diagrams/<id>.html`。图里每个部件、关系、状态都要能在材料里找到出处。不写 `cards` 与 `meta.subtitle`：嵌入模式下不显示，要讲的事实写进正文。
 3. **一次跑完全部校验**：
 
    ```bash
