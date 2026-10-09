@@ -1,8 +1,8 @@
 ---
-name: learn-design
-description: "Explain an architecture design, spec, or product proposal as one offline HTML document: chapters by angle (structure, sequence, state, data flow, dedicated mechanism chapters, boundaries), with diagrams rendered deterministically by archify from typed JSON and tables where diagrams do not fit. Triggers: '/learn-design <path or topic>', 'help me understand this design', 'explain this spec/architecture/proposal with diagrams', 'I don't get the big picture of this design'. Not for a single diagram (use archify), text-only restatement (explain-pm), Mermaid (draw-diagram), or understanding a skill (learn-skill)."
+name: explain-design
+description: "Explain an architecture design, spec, or product proposal as one offline HTML document: chapters by angle (structure, sequence, state, data flow, dedicated mechanism chapters, boundaries), with diagrams rendered deterministically by archify from typed JSON and tables where diagrams do not fit. Triggers: '/explain-design <path or topic>', 'help me understand this design', 'explain this spec/architecture/proposal with diagrams', 'I don't get the big picture of this design'. Not for a single diagram (use archify), text-only restatement (explain-pm), Mermaid (draw-diagram), or understanding a skill (learn-skill)."
 user_invocable: true
-version: "1.1.0"
+version: "1.2.0"
 model: sonnet
 ---
 
@@ -33,10 +33,10 @@ model: sonnet
 
 ### Step 0 — 预检与读配置
 
-1. 读 `~/.hskill/learn-design/config.json`：`readerProfile`（读者画像路径）、`archifyDir`（可选）。文件不存在时问一次读者画像在哪并写入配置；用户说没有，就只按本 skill 的写作规则走。
+1. 读 `~/.hskill/explain-design/config.json`：`readerProfile`（读者画像路径）、`archifyDir`（可选）。文件不存在时问一次读者画像在哪并写入配置；用户说没有，就只按本 skill 的写作规则走。
 2. 定位 archify：`archifyDir` → `~/.agents/skills/archify` → `~/.claude/skills/archify` → `~/.codex/skills/archify`，取第一个含 `bin/archify.mjs` 的目录为 `ARCHIFY`。都没有 → 停止，提示用户 `git clone https://github.com/tt-a1i/archify.git <目录>` 后把 `archifyDir` 设为 `<目录>/archify`（或 `npx skills add tt-a1i/archify -g` 装成 skill），不代为安装。
 3. 确认 `node`、`python3` 可用。任一项失败，报告失败项、当前状态（未生成任何产物）与下一步动作后停止。
-4. 定产物目录：`ROOT=$(git rev-parse --show-toplevel 2>/dev/null || pwd)`（以当前工作目录为准，不跟随材料所在仓库），`OUT=$ROOT/.hskill/learn-design/<slug>-<YYYYMMDD-HHMMSS>/`。`slug` 只保留 `[a-z0-9-]`。目录已存在则换时间戳，不覆盖。
+4. 定产物目录：`ROOT=$(git rev-parse --show-toplevel 2>/dev/null || pwd)`（以当前工作目录为准，不跟随材料所在仓库），`OUT=$ROOT/.hskill/explain-design/<slug>-<YYYYMMDD-HHMMSS>/`。`slug` 只保留 `[a-z0-9-]`。目录已存在则换时间戳，不覆盖。
 
 `SKILL_DIR` 指本 skill 的实际安装目录，执行前绑定为绝对路径。
 
