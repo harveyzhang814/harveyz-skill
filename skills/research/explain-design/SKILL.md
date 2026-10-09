@@ -3,7 +3,7 @@ name: explain-design
 description: "Explain an architecture design, spec, or product proposal as one offline HTML document: chapters by angle (structure, sequence, state, data flow, dedicated mechanism chapters, boundaries), with diagrams rendered deterministically by archify from typed JSON and tables where diagrams do not fit. Manual invocation only: '/explain-design <path or topic>'. Not for a single diagram (use archify), text-only restatement (explain-pm), Mermaid (draw-diagram), or understanding a skill (learn-skill)."
 disable-model-invocation: true
 user_invocable: true
-version: "1.2.0"
+version: "1.2.1"
 model: sonnet
 ---
 
@@ -26,8 +26,10 @@ model: sonnet
 | 平台 | 模型 | 仅手动调用 | 验证 |
 |---|---|---|---|
 | Claude Code | Sonnet（frontmatter `model: sonnet`） | frontmatter `disable-model-invocation: true` | 实测 |
-| Codex | 跟随当前会话 | `agents/openai.yaml` 的 `policy.allow_implicit_invocation: false` | 未验证 |
+| Codex | `gpt-6.1-sol`（调用前选定） | `agents/openai.yaml` 的 `policy.allow_implicit_invocation: false` | 已用 Codex CLI 显式指定模型实测；skill 内自动切换未验证 |
 | 其他平台 | 跟随当前会话；宜选该平台上能稳定输出长 JSON 的较强模型 | 无对应机制 | 未验证 |
+
+Codex 调用前将当前会话模型选为 `gpt-6.1-sol`；`agents/openai.yaml` 不负责选择模型，本 skill 也不会自动切换会话模型。无法选用或确认实际模型时，在交付报告中如实说明。
 
 交付报告写明本次实际使用的模型。
 
