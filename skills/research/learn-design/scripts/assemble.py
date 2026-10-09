@@ -23,6 +23,7 @@ th,td{border:1px solid var(--line);padding:8px 10px;text-align:left;vertical-ali
 .c-read{background:#dcfce7;color:#166534}.c-infer{background:#fef9c3;color:#854d0e}.c-unknown{background:#fee2e2;color:#991b1b}
 iframe.diagram{width:100%;border:1px solid var(--line);border-radius:10px;margin:12px 0;display:block}
 code{background:var(--soft);padding:1px 5px;border-radius:4px;font-size:.9em}
+.anchors{font-size:13px;color:var(--muted)}
 @media (max-width:900px){.wrap{grid-template-columns:1fr}nav{display:none}}
 """
 
@@ -43,6 +44,31 @@ def embed(diagram_html: str) -> str:
     return f'<iframe class="diagram" height="600" srcdoc="{html.escape(tagged, quote=True)}"></iframe>'
 
 
+NOISE = [
+    ("路径:行号", r"[\w./-]+\.\w{1,5}:\d+"),
+    ("文件名", r"\b[\w./-]+\.(?:tsx?|jsx?|mjs|py|go|rs|java|kt|rb|sh|json|ya?ml|toml|md|css|html)\b"),
+    ("条款编号", r"§\s*\d+(?:\.\d+)*|裁决\s*R\d+|\bR\d{1,3}\b"),
+    ("代码片段", r"<code>.*?</code>"),
+    ("读到标签", r'class="c-read"'),
+]
+
+
+def lint(body: str):
+    """锚点区之外的噪音：返回 (正文字数, [(类型, 上下文)])。"""
+    text = re.sub(r"<!--.*?-->", "", body, flags=re.S)
+    text = re.sub(r'<section class="anchors">.*?</section>', "", text, flags=re.S)
+    chars = len(re.findall(r"[一-鿿]", re.sub(r"<[^>]+>", "", text)))
+    hits, seen = [], set()
+    for kind, pat in NOISE:
+        for m in re.finditer(pat, text):
+            if m.start() in seen:
+                continue
+            seen.add(m.start())
+            ctx = re.sub(r"<[^>]+>|\s+", " ", text[max(0, m.start() - 30):m.end() + 30]).strip()
+            hits.append((kind, ctx))
+    return chars, hits
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("content")
@@ -53,6 +79,7 @@ def main():
     content_path = Path(a.content)
     body = content_path.read_text(encoding="utf-8")
     ddir = content_path.parent / "diagrams"
+    chars, hits = lint(body)
 
     missing = []
 
@@ -84,7 +111,13 @@ def main():
             f'<style>{CSS}</style></head><body><div class="wrap"><nav>{"".join(toc)}</nav>'
             f'<main><h1>{t}</h1>{body}</main></div><script>{RESIZE}</script></body></html>')
     Path(a.out).write_text(page, encoding="utf-8")
-    print(f"ok: {a.out} ({len(page) // 1024} KB, {n} sections)")
+    print(f"ok: {a.out} ({len(page) // 1024} KB, {n} sections, 正文 {chars} 字)")
+    if not hits:
+        print("噪音检查：✓ 无")
+    for kind, ctx in hits:
+        print(f"⚠️ {kind}: …{ctx}…")
+    if hits:
+        print(f"噪音检查：⚠️ {len(hits)} 处")
 
 
 if __name__ == "__main__":

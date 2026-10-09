@@ -3,6 +3,7 @@ name: learn-design
 description: "Explain an architecture design, spec, or product proposal as one offline HTML document: chapters by angle (structure, sequence, state, data flow, dedicated mechanism chapters, boundaries), with diagrams rendered deterministically by archify from typed JSON and tables where diagrams do not fit. Triggers: '/learn-design <path or topic>', 'help me understand this design', 'explain this spec/architecture/proposal with diagrams', 'I don't get the big picture of this design'. Not for a single diagram (use archify), text-only restatement (explain-pm), Mermaid (draw-diagram), or understanding a skill (learn-skill)."
 user_invocable: true
 version: "1.0.0"
+model: sonnet
 ---
 
 # 图解方案
@@ -18,6 +19,15 @@ version: "1.0.0"
 - 只要文字复述给 PM → explain-pm
 - 画或修 Mermaid → draw-diagram
 - 理解某个 skill 的设计 → learn-skill
+
+## 平台与模型
+
+| 平台 | 模型 | 方式 | 验证 |
+|---|---|---|---|
+| Claude Code | Sonnet | frontmatter `model: sonnet` | 实测 |
+| 其他平台 | 跟随当前会话；宜选该平台上能稳定输出长 JSON 的较强模型 | 无按 skill 指定的机制，不能强制 | 未验证 |
+
+交付报告写明本次实际使用的模型。
 
 ## 执行步骤
 
@@ -48,19 +58,25 @@ version: "1.0.0"
 | 主流程 | 谁先谁后、在哪等待、在哪失败 | 图 |
 | 状态流转 | 有哪些状态、什么驱动迁移、终态与回退 | 图 |
 | 数据流 | 数据或产物从哪来、到哪去、谁持有权威版本 | 图 |
-| 机制专章 | 每个关键机制一章：触发 → 步骤 → 失败后状态 → 代价 | 图 + 文字 |
+| 机制专章 | 改变读者判断的关键机制：触发 → 失败后状态 → 代价（步骤交给图） | 图 + 文字 |
 | 边界与失败 | 输入边界、异常路径、明确不做什么 | 表 |
 | 代价与判断 | 每个重要决策至少一项代价；技术判断与产品判断分开 | 文字 |
 | 未确认项 | 推断的、没查的，汇总 | 列表 |
 | 源码锚点 | `路径:行号`，只放末尾 | 列表 |
 
+篇幅在这一步就定下来，写完再删改不了结构：
+
+- 每章先写一句"这章帮读者做出什么判断"，写不出就不设这章。
+- 一个机制用"一张图 + 三句话"讲得清，就并入相邻章节，不单独成章。
+- 材料里的实现细节（超时、重试次数、文件格式、条款编号）只在构成代价或边界时才进正文。
+
 图的类型从 `ARCHIFY/SKILL.md` 的 Type router 表选，以它为准。一张图只画本章那块；预计一张图读不清（节点挤、字小）就拆成两张。
 
-把骨架（主线 + 章节 + 每张图的 id 与类型）给用户确认后继续。宿主不能交互时直接继续，并在交付报告里注明"骨架未经确认"。
+骨架只列主线、章节标题与每章那句判断、每张图的 id 与类型，不展开正文。把骨架给用户确认后继续。宿主不能交互时直接继续，并在交付报告里注明"骨架未经确认"。
 
 ### Step 3 — 批量生成图
 
-1. 读一次 `ARCHIFY/SKILL.md` 与 `ARCHIFY/references/authoring-defaults.md`，再读**用到的**每种类型的 schema 与示例（路径见 Type router）。这些文件在同一轮里一次读完，不要一个文件一轮——每多一轮都要把整个上下文重读一遍。材料在 git 仓库内时，另读 `ARCHIFY/references/repository-authoring.md`，按它绑定 commit 与 `sources`，渲染时加 `--repo-root <材料仓库根>`。
+1. 读一次 `ARCHIFY/SKILL.md` 与 `ARCHIFY/references/authoring-defaults.md`，再读**用到的**每种类型的 schema 与示例（路径见 Type router）。这些文件在同一轮里用并行的文件读取一次读完：不要一个文件一轮（每多一轮都要把整个上下文重读一遍），也不要用一条 `cat` 拼接（超出工具输出上限会被截断，还得再读回来）。材料在 git 仓库内时，另读 `ARCHIFY/references/repository-authoring.md`，按它绑定 commit 与 `sources`，渲染时加 `--repo-root <材料仓库根>`。
 2. **一次写完全部图**：`OUT/specs/<id>.<type>.json`。`meta.locale` 设 `zh-CN`，`meta.quality_profile` 设 `showcase`，`meta.output` 设 `diagrams/<id>.html`。图里每个部件、关系、状态都要能在材料里找到出处。
 3. **一次跑完全部校验**：
 
@@ -75,10 +91,15 @@ version: "1.0.0"
 
 ### Step 4 — 写正文
 
+动笔前重读读者画像（若有）里"必须有""必须没有"两节——画像在 Step 1 读过，到这里已被大量材料冲淡。
+
 写 `OUT/content.html`，只写 `<body>` 内的片段：
 
-- `<h2>` 分章；主线放 `<div class="thesis">`；边界与对比用 `<table>`。
-- 每条事实标把握度：`<span class="c-read">读到</span>` 直接出自材料或代码、`<span class="c-infer">推断</span>` 由材料推出、`<span class="c-unknown">未查</span>` 未核实。
+- `<h2>` 分章；主线放 `<div class="thesis">`；边界与对比用 `<table>`；源码锚点放在末尾的 `<section class="anchors">` 里。
+- 每段都过一道判断：删掉它，读者对系统的理解或判断会变吗？不会就删。
+- 锚点区之外不出现文件名、`路径:行号`、函数名、命令参数、spec 条款编号（如 "§3.2""裁决 R22"）；需要时写进锚点区。
+- 数字只留构成代价或边界的；其余实现参数不写。
+- 把握度：没有标注即"读到"（直接出自材料或代码），在主线下方说明一次；正文只标 `<span class="c-infer">推断</span>` 与 `<span class="c-unknown">未查</span>`。
 - 图的位置放占位 `<!--diagram:<id>-->`。正文不复述图，只讲图里看不出的：为什么这样分、在哪等待、失败后处于什么状态、代价是什么。
 - 材料自相矛盾时如实写出两处说法，不替材料圆。
 
@@ -90,13 +111,17 @@ python3 "$SKILL_DIR/scripts/assemble.py" "$OUT/content.html" "$OUT/<slug>.html" 
 
 脚本把占位替换为内联的图（archify 嵌入模式），生成带目录的单个离线 HTML；占位找不到对应图时报错退出，此时修正占位或补图后重跑。
 
+脚本同时检查锚点区之外的噪音（文件名、`路径:行号`、spec 条款编号、`<code>` 片段、"读到"标签），逐条输出 `⚠️ <类型>: <上下文>`。只改被列出的位置后重跑，不通读重写；确需保留的（例如产品里的命令名）在交付报告里说明。
+
 交付报告：
 
 ```
-HTML：<绝对路径>（<大小>，<章节数> 章）
+HTML：<绝对路径>（<大小>，<章节数> 章，正文 <字数> 字）
 主线：<一句话>
+模型：<本次实际使用的模型>
 图：✓ <id>（<类型>）  ⚠️ <id> 降级为表格（原因）  ❌ <id>（未交付原因）
 未确认项：<实际条数>，其中值得优先查实的：<1-3 条>
+噪音检查：✓ 无  或  ⚠️ 保留 <n> 处（原因）
 验收：只过了 archify 自动校验，未做人工视觉检查
 ```
 
