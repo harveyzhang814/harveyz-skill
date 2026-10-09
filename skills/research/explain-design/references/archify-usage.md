@@ -1,4 +1,4 @@
-# archify 在 learn-design 中的用法
+# archify 在 explain-design 中的用法
 
 提炼自 archify 3.0.1（tt-a1i/archify）的 `references/authoring-defaults.md`、`authoring-contract.md` 与实测校验失败。只覆盖本 skill 用到的部分；schema 与示例仍从 `ARCHIFY` 读，它们是校验器的依据。archify 升级后若校验失败明显增多，重读上述原文并更新本文件。
 

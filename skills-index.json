@@ -28,7 +28,7 @@
     }
   ],
   "bundleMeta": {
-    "research": "研究工具（learn-video + extract-vision + survey-skillrepo + learn-paper + extract-cognition + probe-session + clip-url + fetch-paper + learn-design）",
+    "research": "研究工具（learn-video + extract-vision + survey-skillrepo + learn-paper + extract-cognition + probe-session + clip-url + fetch-paper + explain-design）",
     "feed": "追更工具（manage-creators — 人与渠道名册；sync-xtimeline + sync-ytchannel + sync-website — 按名册跑增量抓取；capture-opinion — 给人记一笔判断）",
     "creative": "创意工具（capture-todo + capture-insight）",
     "coding": "程序工具（init-project + init-workflow + setup-debug + init-goal + question-me + capture-vocab + rephrase + explain-pm）",
@@ -110,11 +110,11 @@
       "contentVersion": "0.9.3"
     },
     {
-      "path": "research/learn-design",
+      "path": "research/explain-design",
       "bundle": "research",
       "installScope": "global",
-      "contentHash": "9eefea316ec9b863",
-      "contentVersion": "1.1.0"
+      "contentHash": "361314f7f95fae6a",
+      "contentVersion": "1.2.0"
     },
     {
       "path": "feed/sync-xtimeline",
