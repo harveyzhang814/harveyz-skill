@@ -1,6 +1,7 @@
 ---
 name: explain-design
-description: "Explain an architecture design, spec, or product proposal as one offline HTML document: chapters by angle (structure, sequence, state, data flow, dedicated mechanism chapters, boundaries), with diagrams rendered deterministically by archify from typed JSON and tables where diagrams do not fit. Triggers: '/explain-design <path or topic>', 'help me understand this design', 'explain this spec/architecture/proposal with diagrams', 'I don't get the big picture of this design'. Not for a single diagram (use archify), text-only restatement (explain-pm), Mermaid (draw-diagram), or understanding a skill (learn-skill)."
+description: "Explain an architecture design, spec, or product proposal as one offline HTML document: chapters by angle (structure, sequence, state, data flow, dedicated mechanism chapters, boundaries), with diagrams rendered deterministically by archify from typed JSON and tables where diagrams do not fit. Manual invocation only: '/explain-design <path or topic>'. Not for a single diagram (use archify), text-only restatement (explain-pm), Mermaid (draw-diagram), or understanding a skill (learn-skill)."
+disable-model-invocation: true
 user_invocable: true
 version: "1.2.0"
 model: sonnet
@@ -12,9 +13,9 @@ model: sonnet
 
 ## 触发条件
 
-触发：用户对一个方案缺少全局理解、文字解释不够，要求"图解 / 讲给我听 / 帮我理解这个设计"，并给出文档、目录、代码或主题。
+仅手动调用：`/explain-design <文档路径、目录或主题>`，用于对一个方案缺少全局理解、文字解释不够的时候。不自动触发，agent 也不主动调用。
 
-不触发：
+其他需求改用：
 - 只要一张图 → archify
 - 只要文字复述给 PM → explain-pm
 - 画或修 Mermaid → draw-diagram
@@ -22,10 +23,11 @@ model: sonnet
 
 ## 平台与模型
 
-| 平台 | 模型 | 方式 | 验证 |
+| 平台 | 模型 | 仅手动调用 | 验证 |
 |---|---|---|---|
-| Claude Code | Sonnet | frontmatter `model: sonnet` | 实测 |
-| 其他平台 | 跟随当前会话；宜选该平台上能稳定输出长 JSON 的较强模型 | 无按 skill 指定的机制，不能强制 | 未验证 |
+| Claude Code | Sonnet（frontmatter `model: sonnet`） | frontmatter `disable-model-invocation: true` | 实测 |
+| Codex | 跟随当前会话 | `agents/openai.yaml` 的 `policy.allow_implicit_invocation: false` | 未验证 |
+| 其他平台 | 跟随当前会话；宜选该平台上能稳定输出长 JSON 的较强模型 | 无对应机制 | 未验证 |
 
 交付报告写明本次实际使用的模型。
 
