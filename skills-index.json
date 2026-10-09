@@ -113,8 +113,8 @@
       "path": "research/explain-design",
       "bundle": "research",
       "installScope": "global",
-      "contentHash": "361314f7f95fae6a",
-      "contentVersion": "1.2.0"
+      "contentHash": "4b2305541d9fd1c9",
+      "contentVersion": "1.2.1"
     },
     {
       "path": "feed/sync-xtimeline",
