@@ -91,8 +91,6 @@ model: sonnet
 
 ### Step 4 — 写正文
 
-动笔前重读读者画像（若有）里"必须有""必须没有"两节——画像在 Step 1 读过，到这里已被大量材料冲淡。
-
 写 `OUT/content.html`，只写 `<body>` 内的片段：
 
 - `<h2>` 分章；主线放 `<div class="thesis">`；边界与对比用 `<table>`；源码锚点放在末尾的 `<section class="anchors">` 里。
