@@ -113,8 +113,8 @@
       "path": "research/learn-design",
       "bundle": "research",
       "installScope": "global",
-      "contentHash": "74a5d9e34a4d7756",
-      "contentVersion": "1.0.0"
+      "contentHash": "9eefea316ec9b863",
+      "contentVersion": "1.1.0"
     },
     {
       "path": "feed/sync-xtimeline",
