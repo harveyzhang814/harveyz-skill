@@ -70,20 +70,18 @@ model: sonnet
 - 一个机制用"一张图 + 三句话"讲得清，就并入相邻章节，不单独成章。
 - 材料里的实现细节（超时、重试次数、文件格式、条款编号）只在构成代价或边界时才进正文。
 
-画什么由本 skill 决定，在这一步定死。每张图写一份**图契约**：回答哪个问题、画哪些部件／关系／状态、明确不画什么。不放全局总览图，每张图只画本章那块；预计一张图读不清（节点挤、字小）就拆成两张。图的类型按 `ARCHIFY/SKILL.md` 中 Type router 表的用途选。
+画什么由本 skill 决定，在这一步定死。每张图写一份**图契约**：回答哪个问题、画哪些部件／关系／状态、明确不画什么。不放全局总览图，每张图只画本章那块；预计一张图读不清（节点挤、字小）就拆成两张。图的类型按 `references/archify-usage.md` 的"选类型"表选。
 
-骨架只列主线、章节标题与每章那句判断、每张图的 id、类型与图契约，不展开正文。把骨架给用户确认后继续。宿主不能交互时直接继续，并在交付报告里注明"骨架未经确认"。
+骨架只列主线、章节标题与每章那句判断、每张图的 id、类型与图契约，不展开正文；写入 `OUT/skeleton.md`，后续步骤与事后核对都以它为准。把骨架给用户确认后继续。宿主不能交互时直接继续，并在交付报告里注明"骨架未经确认"。
 
 ### Step 3 — 批量生成图
 
 分工：画什么以 Step 2 的图契约为准；archify 只决定怎么编码、画出来是否合格。
 
-1. 读一次 `ARCHIFY/SKILL.md` 与 `ARCHIFY/references/authoring-defaults.md`，再读**用到的**每种类型的 schema 与示例（路径见 Type router）。读的时候：
-   - `SKILL.md` 只用 Type router 表找路径；它的输出目录、finalize 用法、视觉复查、更新提示与交付格式都不适用，以本 skill 为准。
-   - `authoring-defaults.md` 只用布局、走线与间距规则；其中的构图建议（如架构图默认画系统总览）与图契约冲突时，以图契约为准。
+1. 读 `SKILL_DIR/references/archify-usage.md`（编码约定、布局规则、常见失败），再读**用到的**每种类型的 schema、`schemas/common.schema.json` 与示例（路径见其中的"选类型"表）。archify 自己的 `SKILL.md` 与 `authoring-defaults.md` 不读：前者是独立画图任务的流程，后者的构图建议与图契约冲突，需要的部分已提炼进 `archify-usage.md`。
 
    这些文件在同一轮里用并行的文件读取一次读完：不要一个文件一轮（每多一轮都要把整个上下文重读一遍），也不要用一条 `cat` 拼接（超出工具输出上限会被截断，还得再读回来）。材料在 git 仓库内时，另读 `ARCHIFY/references/repository-authoring.md`，按它绑定 commit 与 `sources`，渲染时加 `--repo-root <材料仓库根>`。
-2. **一次写完全部图**：`OUT/specs/<id>.<type>.json`。`meta.locale` 设 `zh-CN`，`meta.quality_profile` 设 `showcase`，`meta.output` 设 `diagrams/<id>.html`。图里每个部件、关系、状态都要能在材料里找到出处。不写 `cards` 与 `meta.subtitle`：嵌入模式下不显示，要讲的事实写进正文。
+2. **一次写完全部图**：`OUT/specs/<id>.<type>.json`，字段按 `archify-usage.md` 的"固定约定"（不写 `cards` 与 `meta.subtitle`：嵌入模式下不显示，要讲的事实写进正文）。图里每个部件、关系、状态都要能在材料里找到出处。
 3. **一次跑完全部校验**：
 
    ```bash
@@ -92,7 +90,7 @@ model: sonnet
 
    每张图输出 `PASS`/`FAIL`，失败时附精简诊断；有失败则退出码 1。
 
-4. 只修失败的图：按 archify 的 delivery-contract 修 JSON，在命令末尾加 `<id>` 只重跑那几张。单图最多 3 轮；仍失败则该章改用表格或文字，删掉它的占位，并记入未确认项。
+4. 只修失败的图：先查 `archify-usage.md` 的"常见校验失败与修法"，表里没有再按诊断里的 `supportedFixes`，在命令末尾加 `<id>` 只重跑那几张。单图最多 3 轮；仍失败则该章改用表格或文字，删掉它的占位，并记入未确认项。
 5. **不读生成的 `diagrams/*.html`**（每个约 760KB），只看 finalize 输出。
 
 ### Step 4 — 写正文
