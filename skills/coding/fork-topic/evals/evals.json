@@ -1,0 +1,83 @@
+{
+  "skill_name": "fork-topic",
+  "evals": [
+    {
+      "id": 0,
+      "name": "fork-side-discussion-awaited",
+      "prompt": "我们在讨论新的缓存方案。已经定了：用进程内 LRU，不上 Redis——Redis 被否决是因为单机部署、多一个运维依赖不值。我说过不接受引入新的外部服务。讨论中冒出一个支线：缓存失效策略到底用 TTL 还是事件驱动，这个要单独讨论；主讨论里\"要不要给缓存加预热\"这个决定得等它的结论。现有缓存实现在 src/cache/lru.js，之前关于失效的讨论记在 docs/adr/0007-cache.md。帮我把失效策略这个支线分出去。",
+      "expected_output": "只输出一段放在代码块里的 prompt，不写任何文件。prompt 的目标是失效策略（TTL vs 事件驱动）并说明它从缓存方案讨论分出；写全已定结论（进程内 LRU）、否决方案及理由（Redis：单机部署、多一个运维依赖）、用户约束（不引入新外部服务）；两个文件只以路径+用途作为线索出现，不摘要其内容；末尾要求结束时交回一段可贴回主讨论的结论，因为主讨论的预热决定在等它。",
+      "files": [],
+      "assertions": [
+        {
+          "id": "no-files-written",
+          "source": "transcript",
+          "text": "整个过程没有创建或修改任何文件"
+        },
+        {
+          "id": "prompt-in-code-block",
+          "source": "reply",
+          "text": "prompt 放在一个代码块里，代码块外最多一句说明"
+        },
+        {
+          "id": "goal-present",
+          "source": "reply",
+          "text": "prompt 写明支线目标是失效策略（TTL 还是事件驱动），并说明它从缓存方案讨论分出"
+        },
+        {
+          "id": "rejected-with-reason",
+          "source": "reply",
+          "text": "prompt 写出 Redis 被否决，且带着理由（单机部署 / 多一个运维依赖）"
+        },
+        {
+          "id": "user-constraint",
+          "source": "reply",
+          "text": "prompt 写出用户约束：不引入新的外部服务"
+        },
+        {
+          "id": "pointers-not-content",
+          "source": "reply",
+          "text": "src/cache/lru.js 与 docs/adr/0007-cache.md 以路径加用途的线索形式出现，prompt 中没有对这两个文件内容的摘要、推测或代码片段"
+        },
+        {
+          "id": "return-requested",
+          "source": "reply",
+          "text": "prompt 要求接手方结束时交回一段可贴回主讨论的结论"
+        }
+      ]
+    },
+    {
+      "id": 1,
+      "name": "fork-background-new-topic",
+      "prompt": "我们刚才把新缓存方案的取舍定下来了：进程内 LRU，否决 Redis（单机部署，多一个运维依赖不值）。接下来我要开个新 session 讨论日志采集方案，跟缓存无关，但想让它带着这次的结论当背景，万一涉及到能对上。帮我开个新话题。",
+      "expected_output": "只输出一段放在代码块里的 prompt，不写任何文件。目标是日志采集方案；缓存结论（进程内 LRU、否决 Redis 及理由）作为背景出现；不要求交回结论（主讨论不在等它）；不出现 status、最小验收锚点、worktree 一类交接文档元素。",
+      "files": [],
+      "assertions": [
+        {
+          "id": "no-files-written",
+          "source": "transcript",
+          "text": "整个过程没有创建或修改任何文件"
+        },
+        {
+          "id": "goal-is-new-topic",
+          "source": "reply",
+          "text": "prompt 的目标是讨论日志采集方案"
+        },
+        {
+          "id": "carries-conclusions",
+          "source": "reply",
+          "text": "prompt 带着缓存结论作为背景：进程内 LRU，否决 Redis 及其理由"
+        },
+        {
+          "id": "no-return-request",
+          "source": "reply",
+          "text": "prompt 不要求接手方交回结论"
+        },
+        {
+          "id": "no-handoff-artifacts",
+          "source": "reply",
+          "text": "输出中没有 status、最小验收锚点、worktree、验收一类交接文档元素"
+        }
+      ]
+    }
+  ]
+}
