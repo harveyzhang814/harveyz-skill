@@ -343,12 +343,14 @@
     {
       "path": "coding/handoff",
       "bundle": "coding",
+      "installScope": "project",
       "contentHash": "d1eb122aceebb9e9",
       "contentVersion": "1.13.0"
     },
     {
       "path": "coding/fork-topic",
       "bundle": "coding",
+      "installScope": "global",
       "contentHash": "688c90727fcfec9f",
       "contentVersion": "1.0.0"
     },
