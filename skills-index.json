@@ -267,8 +267,8 @@
       "path": "mint/publish-skill",
       "bundle": "mint",
       "installScope": "project",
-      "contentHash": "6ce6b83f99b11d82",
-      "contentVersion": "1.6.0"
+      "contentHash": "43e882684507de03",
+      "contentVersion": "1.6.1"
     },
     {
       "path": "mint/archive-skill",
@@ -343,8 +343,14 @@
     {
       "path": "coding/handoff",
       "bundle": "coding",
-      "contentHash": "79f264c044ab2c60",
-      "contentVersion": "1.12.0"
+      "contentHash": "d1eb122aceebb9e9",
+      "contentVersion": "1.13.0"
+    },
+    {
+      "path": "coding/fork-topic",
+      "bundle": "coding",
+      "contentHash": "60da3475ec4b76fd",
+      "contentVersion": "1.0.0"
     },
     {
       "path": "feed/manage-creators",
