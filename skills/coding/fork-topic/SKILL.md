@@ -1,13 +1,13 @@
 ---
 name: fork-topic
-description: "Fork a side topic out of the current discussion into a concise, paste-ready prompt for another agent session. Writes in full only what the receiver cannot find on its own (the goal, conclusions reached, rejected options and why, the user's stated preferences); for anything findable in files or the repo, gives a pointer to where to look instead of the content. Outputs text only: no files, branches, or acceptance. Use handoff instead when the work must come back for formal acceptance. Triggers: '/fork-topic', 'fork this topic', 'split this off into a new session', 'spin off a side discussion', 'take these conclusions into a new topic'."
+description: "Fork a side topic out of the current discussion into a concise, paste-ready prompt for another agent session. Writes in full only what the receiver cannot find on its own (the goal, conclusions reached, rejected options and why, the user's stated preferences); for anything findable in files or the repo, gives a pointer to where to look instead of the content. Outputs text only: no files, branches, or acceptance. Use handoff instead when the work must come back for formal acceptance. Only on the user's request; do not suggest it unprompted. Triggers: '/fork-topic', 'fork this topic', 'split this off into a new session', 'spin off a side discussion', 'take these conclusions into a new topic'."
 user_invocable: true
 version: "1.0.0"
 ---
 
 # fork-topic — 把支线话题分出去
 
-讨论中冒出一个支线话题，要交给另一个 agent 单独展开。本 skill 把它写成一段**精简的可粘贴 prompt**。
+讨论中冒出一个支线话题，要交给另一个 agent 单独展开；或者带着本次讨论的结论去开一个新话题。本 skill 把它写成一段**精简的可粘贴 prompt**。
 
 主次：目的是把支线分出去；约束是 prompt 尽可能精简；手段是接手方**查不出**的写全，**查得出**的只给线索。
 
@@ -16,12 +16,13 @@ version: "1.0.0"
 ## 流程
 
 1. **确定支线话题**：以用户说的为准。说不清要分出去的是哪个话题 → 问一句，不猜。
-2. **抽取**：从当前对话里挑出与这个支线相关的信息，逐条判接手方查不查得出（判据见下）。与支线无关的主讨论内容不进 prompt。
+2. **抽取**：从当前对话里挑出与这个支线相关的信息，逐条判接手方查不查得出（判据见下）。与支线无关的主讨论内容不进 prompt；用户点名要带过去的背景结论算相关。
 3. **判断回流**：主讨论在等这个支线的结论吗（比如主讨论的某个决定被它卡住）？在等 → 写「交回要求」；不等 → 不写。
 4. **起草**：按「候选项」顺序组织，语言跟随当前对话。
-5. **自检**，两道都过才输出：
+5. **自检**，三道都过才输出：
    - 查不出的写全了吗？漏了，接手方会重新纠结已定的事、重提已否决的方案、或违背用户偏好。
    - 查得出的是不是只给了线索？逐条找有没有文件内容、代码结构、仓库文档的摘要或推测被写进来，有就删到只剩位置和用途。
+   - 每一句都来自对话、且支线用得上吗？自己的推论、扩写、对话里没出现过的约束，删掉。
 6. **输出**：prompt 放在一个代码块里。代码块外最多一句说明。
 
 ## 判据：查不查得出

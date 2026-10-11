@@ -67,7 +67,7 @@ test('publish-skill checks bundled standard copies without certifying runtime co
 
 test('authoring skill versions and F8 hashes match the published index', async () => {
   const index = JSON.parse(await readFile(resolve(root, 'skills-index.json'), 'utf8'))
-  for (const [name, version] of [['init-skill', '1.3.0'], ['contribute-skill', '1.1.0'], ['publish-skill', '1.6.0']]) {
+  for (const [name, version] of [['init-skill', '1.3.0'], ['contribute-skill', '1.1.0'], ['publish-skill', '1.6.1']]) {
     const body = await skill(name)
     const entry = index.skills.find(item => item.path === `mint/${name}`)
     const digest = createHash('sha256').update(body.replace(/^version:.*$/gm, 'version: __HASH_PLACEHOLDER__')).digest('hex').slice(0, 16)
