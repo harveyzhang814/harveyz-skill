@@ -2,7 +2,7 @@
 name: publish-skill
 description: "Validate and publish a skill to the harveyz-skill repository. Checks SKILL.md format compliance (frontmatter fields, semver version, name-directory match, verb-noun or single-verb naming convention) and registration in skills-index.json. Rules defined in docs/reference/skill-spec.md. Triggers: publish skill, register skill, validate skill format, check skill, add skill to index, is skill ready to publish."
 user_invocable: true
-version: "1.6.0"
+version: "1.6.1"
 ---
 
 # skill-publish
@@ -80,7 +80,7 @@ cat /tmp/sv-unregistered.txt
    fetch    extract  learn    forge    draw     manage   migrate
    scout    build    sync     publish  archive  contribute  analyze
    clean    release  validate init     dispatch close    setup
-   capture  clip     runby    dedup
+   capture  clip     runby    dedup    fork
    ```
 
    命中 → 直接合规。

@@ -1,0 +1,106 @@
+{
+  "skill_name": "fork-topic",
+  "evals": [
+    {
+      "id": 0,
+      "name": "fork-side-discussion-awaited",
+      "prompt": "我们在讨论新的缓存方案。已经定了：用进程内 LRU，不上 Redis——Redis 被否决是因为单机部署、多一个运维依赖不值。我说过不接受引入新的外部服务。讨论中冒出一个支线：缓存失效策略到底用 TTL 还是事件驱动，这个要单独讨论；主讨论里\"要不要给缓存加预热\"这个决定得等它的结论。现有缓存实现在 src/cache/lru.js，之前关于失效的讨论记在 docs/adr/0007-cache.md。帮我把失效策略这个支线分出去。",
+      "expected_output": "只输出一段放在代码块里的 prompt，不写任何文件。prompt 的目标是失效策略（TTL vs 事件驱动）并说明它从缓存方案讨论分出；写全已定结论（进程内 LRU）、否决方案及理由（Redis：单机部署、多一个运维依赖）、用户约束（不引入新外部服务）；两个文件只以路径+用途作为线索出现，不摘要其内容；末尾要求结束时交回一段可贴回主讨论的结论，因为主讨论的预热决定在等它。",
+      "files": [],
+      "assertions": [
+        {
+          "id": "no-files-written",
+          "source": "transcript",
+          "text": "整个过程没有创建或修改任何文件"
+        },
+        {
+          "id": "prompt-in-code-block",
+          "source": "reply",
+          "text": "prompt 放在一个代码块里，代码块外最多一句说明"
+        },
+        {
+          "id": "goal-present",
+          "source": "reply",
+          "text": "prompt 写明支线目标是失效策略（TTL 还是事件驱动），并说明它从缓存方案讨论分出"
+        },
+        {
+          "id": "rejected-with-reason",
+          "source": "reply",
+          "text": "prompt 写出 Redis 被否决，且带着理由（单机部署 / 多一个运维依赖）"
+        },
+        {
+          "id": "user-constraint",
+          "source": "reply",
+          "text": "prompt 写出用户约束：不引入新的外部服务"
+        },
+        {
+          "id": "pointers-not-content",
+          "source": "reply",
+          "text": "src/cache/lru.js 与 docs/adr/0007-cache.md 以路径加用途的线索形式出现，prompt 中没有对这两个文件内容的摘要、推测或代码片段"
+        },
+        {
+          "id": "return-requested",
+          "source": "reply",
+          "text": "prompt 要求接手方结束时交回一段可贴回主讨论的结论"
+        },
+        { "id": "no-extrapolation", "source": "reply", "text": "prompt 中没有对话里不存在的约束、结论或推论" }
+      ]
+    },
+    {
+      "id": 1,
+      "name": "fork-background-new-topic",
+      "prompt": "我们刚才把新缓存方案的取舍定下来了：进程内 LRU，否决 Redis（单机部署，多一个运维依赖不值）。接下来我要开个新 session 讨论日志采集方案，跟缓存无关，但想让它带着这次的结论当背景，万一涉及到能对上。帮我开个新话题。",
+      "expected_output": "只输出一段放在代码块里的 prompt，不写任何文件。目标是日志采集方案；缓存结论（进程内 LRU、否决 Redis 及理由）作为背景出现；不要求交回结论（主讨论不在等它）；不出现 status、最小验收锚点、worktree 一类交接文档元素。",
+      "files": [],
+      "assertions": [
+        {
+          "id": "no-files-written",
+          "source": "transcript",
+          "text": "整个过程没有创建或修改任何文件"
+        },
+        { "id": "prompt-in-code-block", "source": "reply", "text": "prompt 放在一个代码块里，代码块外最多一句说明" },
+        {
+          "id": "goal-is-new-topic",
+          "source": "reply",
+          "text": "prompt 的目标是讨论日志采集方案"
+        },
+        {
+          "id": "carries-conclusions",
+          "source": "reply",
+          "text": "prompt 带着缓存结论作为背景：进程内 LRU，否决 Redis 及其理由"
+        },
+        {
+          "id": "no-return-request",
+          "source": "reply",
+          "text": "prompt 不要求接手方交回结论"
+        },
+        {
+          "id": "no-handoff-artifacts",
+          "source": "reply",
+          "text": "输出中没有 status、最小验收锚点、worktree、验收一类交接文档元素"
+        },
+        { "id": "no-extrapolation", "source": "reply", "text": "prompt 中没有对话里不存在的约束、结论或推论（例如从缓存结论推出日志采集的约束）" }
+      ]
+    },
+    {
+      "id": 2,
+      "name": "fork-long-conversation-early-facts",
+      "prompt": "以下是本次对话到目前为止的记录：\n\n[用户] 我们来设计 API 限流。先说清楚：不要引入新的中间件，只能用现有的 Postgres。\n[助手] 明白。按租户限流还是按 API key？\n[用户] 按租户。算法你有什么建议？\n[助手] 两个候选：令牌桶，或者滑动窗口日志。\n[用户] 滑动窗口日志不要，每个请求都要记一行，表会涨得太快。就用令牌桶，每个租户一个桶。\n[助手] 好，按租户令牌桶。桶的状态存 Postgres 一张表，实现放在 src/ratelimit/bucket.ts。\n[用户] 行。告警阈值怎么定？\n[助手] 建议拒绝率超过 5% 持续 10 分钟就告警。\n[用户] 可以，告警发到 #ops 频道。\n[助手] 好。仪表盘要不要按租户拆？\n[用户] 要，按租户和接口两层拆。\n[助手] 收到。超限返回 429，响应头带 Retry-After。\n[用户] 对，跟 docs/rfc/012-ratelimit.md 里写的一致。\n[用户] 我先拟了个配额草稿，还没存文件：免费版每分钟 60 次，专业版每分钟 600 次，企业版每分钟 6000 次；批量导入接口单独算，不占这些额度。\n[助手] 这份配额有个前提没解决：批量导入任务一次会打出上千个请求，令牌桶会被瞬间打空。\n[用户] 对，批量导入的突发流量怎么处理，单独拉个话题讨论。配额这边得等那边的结论才能定。帮我把这个支线分出去。",
+      "expected_output": "只输出一段放在代码块里的 prompt，不写任何文件。目标是批量导入的突发流量怎么处理，并说明它从 API 限流设计讨论分出；写全对话开头的约束（不引入新中间件，只用现有 Postgres）、已定结论（按租户令牌桶）、否决方案及理由（滑动窗口日志：每个请求记一行，表涨得太快）、未落盘的配额草稿（三档配额，批量导入单独算）；bucket.ts 与 RFC 只以路径+用途出现；要求交回结论，因为配额在等它；不带告警阈值、仪表盘等与支线无关的内容。",
+      "files": [],
+      "assertions": [
+        { "id": "no-files-written", "source": "transcript", "text": "整个过程没有创建或修改任何文件" },
+        { "id": "prompt-in-code-block", "source": "reply", "text": "prompt 放在一个代码块里，代码块外最多一句说明" },
+        { "id": "goal-with-origin", "source": "reply", "text": "prompt 写明目标是批量导入的突发流量怎么处理，并说明它从 API 限流设计讨论分出" },
+        { "id": "early-constraint", "source": "reply", "text": "prompt 写出对话开头的约束：不引入新的中间件，只能用现有的 Postgres" },
+        { "id": "decided-conclusion", "source": "reply", "text": "prompt 写出已定结论：按租户的令牌桶" },
+        { "id": "rejected-with-reason", "source": "reply", "text": "prompt 写出滑动窗口日志被否决，且带着理由（每个请求记一行，表涨得太快）" },
+        { "id": "carries-draft", "source": "reply", "text": "prompt 带上未落盘的配额草稿中与支线相关的内容：三档配额数值，以及批量导入单独算、不占这些额度" },
+        { "id": "pointers-not-content", "source": "reply", "text": "src/ratelimit/bucket.ts 与 docs/rfc/012-ratelimit.md 以路径加用途的线索形式出现，没有对其内容的摘要或推测" },
+        { "id": "return-requested", "source": "reply", "text": "prompt 要求接手方结束时交回一段可贴回主讨论的结论" },
+        { "id": "no-irrelevant", "source": "reply", "text": "prompt 中没有告警阈值、#ops 频道、仪表盘拆分这类与支线无关的主讨论内容" },
+        { "id": "no-extrapolation", "source": "reply", "text": "prompt 中没有对话里不存在的约束、结论或推论" }
+      ]
+    }
+  ]
+}

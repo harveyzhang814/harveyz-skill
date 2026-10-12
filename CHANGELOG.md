@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.40.0] - 2026-10-12
+
+### Added
+- `fork-topic` 1.0.0：把讨论中的支线话题（或带着本次结论开新话题）写成一段精简的可粘贴 prompt——接手方查不出的（目标、已定结论、否决方案及理由、用户偏好）写全，查得出的只给线索（位置 + 为什么相关），不给内容；只输出文本，不落文件、不建工作区、不验收
+
+### Changed
+- `agent-canvas-control`：升至 1.3.0，配合 Agent Canvas agent 通信二期：新增「要对方回复」一节——`--expect-reply` 的默认用法是发完就结束本轮、回复作为新一轮推回（不 sleep、不轮询、不拖着本轮）；`wait-reply` 只用于 shell / 画布外调用方（回复停放待领取）和 agent 在本轮内的简短问询，不用于等长任务；`wait-reply` 的前台阻塞约束、默认 100 秒、codex 轮询同一会话、退出码 0/2/1；回执 `replied` / `closed-without-reply` 三种原因；收到要求回复的消息时把结论写在本轮最后一条回复里或用 `reply` 显式回复；消息链往返上限 20 条。新增示例「派两个活，拿回两份结果」。需配合 agent-canvas 合入 agent 通信二期之后的版本
+- `handoff`：升至 1.13.0，"只带讨论结论去开新话题、不需要验收"的场景移交 `fork-topic`：删去 author 第 2 步的讨论型例子、模板里"背景传递型"软判据举例与对应 eval；description 与第 2 步指向 `fork-topic`
+- `publish-skill`：升至 1.6.1，内置动词词表副本补 `fork`，与 `docs/reference/skill-spec.md` 同步
+
 ## [0.39.0] - 2026-10-07
 
 ### Added

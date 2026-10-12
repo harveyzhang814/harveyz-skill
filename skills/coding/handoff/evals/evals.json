@@ -100,36 +100,6 @@
       ]
     },
     {
-      "id": 3,
-      "name": "author-background-only-handoff",
-      "prompt": "我们刚才在这个 session 里把新缓存方案的取舍和结论定下来了，我要开一个新 session 去做完全不相关的另一件事，但想让新 session 保留这次讨论的结论作为背景，万一之后有人问起能答上来，不是要它去执行什么。帮我写个交接。",
-      "expected_output": "交接目的写成类似'仅传递背景结论，不要求接手方产出可验收的实现'一类描述；文档只出现背景与现状（讨论结论）+ 交接目的 + 最小验收锚点（软判据，如'接手方能复述讨论结论要点'）；不出现范围铁律/受影响文件/验证步骤/关键决定这类续做任务专属章节（必要性测试判定为不需要）。",
-      "files": [],
-      "frozen": "2026-08-17",
-      "assertions": [
-        {
-          "id": "purpose-is-background-only",
-          "source": "artifact",
-          "text": "交接目的写成「仅传递背景结论，不要求接手方产出可验收的实现」一类描述"
-        },
-        {
-          "id": "has-purpose-and-anchor",
-          "source": "artifact",
-          "text": "交接目的与最小验收锚点两节均存在"
-        },
-        {
-          "id": "no-continuation-sections",
-          "source": "artifact",
-          "text": "文档不含范围铁律、受影响文件、验证步骤、关键决定中的任何一节"
-        },
-        {
-          "id": "anchor-is-soft",
-          "source": "artifact",
-          "text": "最小验收锚点是软判据（如「接手方能复述讨论结论要点」），不是硬判据"
-        }
-      ]
-    },
-    {
       "id": 4,
       "name": "accept-goes-to-author-worktree",
       "prompt": "接手的 session 说 slugify 保留数字那个任务做完了。先跑 evals/fixtures/accept-worktree/setup.sh 把现场准备好（它会打印仓库路径和交接工作区路径），然后按交接文档验收，看能不能收。",

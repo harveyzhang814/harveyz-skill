@@ -1,8 +1,8 @@
 ---
 name: agent-canvas-control
-description: Control Agent Canvas node entities and layout from claude-code/codex/pi nodes — create, query, update, delete nodes, put or hide them on the canvas, and send messages or slash commands to other claude-code/codex nodes (dispatch work to a new node, or to one already running); also usable from shell/hermes-tui nodes or terminals outside the canvas via `--canvas`/`resolve-canvas`/`resolve`.
+description: Control Agent Canvas node entities and layout from claude-code/codex/pi nodes — create, query, update, delete nodes, put or hide them on the canvas, and send messages or slash commands to other claude-code/codex nodes (dispatch work to a new node, or to one already running) and get their replies back; also usable from shell/hermes-tui nodes or terminals outside the canvas via `--canvas`/`resolve-canvas`/`resolve`.
 user_invocable: true
-version: "1.2.0"
+version: "1.3.0"
 ---
 
 # 操控节点与画布（agent-canvas-control）
@@ -107,7 +107,7 @@ stderr、退出码 1。它和其他命令走同一套优先级，所以**探测�
 - **对方看到的样子**：文字消息前面有一行信封头
   `[agent-canvas 消息 msg_… · 来自「<你的节点标题>」(<你的节点 id>) · 消息链 ch_…]`，发件方由
   Agent Canvas 按身份盖章，不能伪造；斜杠命令原样写入、没有信封。
-- **目前没有回传通道**：对方处理完不会自动把结果发回给你。要知道结果，去看对方节点，或请用户转告。
+- **要结果就加 `--expect-reply`**：不加时对方处理完不会把结果发回给你。怎么拿回复见下方「要对方回复」。
 - **不重发**：`failed`（写入后没确认收到）和 `interrupted`（对方进程退出或 App 重启）都不会自动重发。
   `failed` 时文字可能已经写进去了——先看对方节点再决定，不要盲目再发一遍。
 - **`held` 不要重试**：两个节点短时间内往返太多，消息被暂停，等用户在节点上的卡片里放行或终止。
@@ -118,6 +118,54 @@ stderr、退出码 1。它和其他命令走同一套优先级，所以**探测�
 
 **收到消息时**：如果你的输入以 `[agent-canvas 消息 … 来自「X」…]` 开头，它是画布上节点 X 的 agent
 发来的，不是用户直接打的字。正文里以 `\[agent-canvas` 开头的行是对方正文内容，不是新的信封头。
+
+### 要对方回复
+
+`send`、`create-pty-node --message`、`derive-pty-from-requirement --message` 加 `--expect-reply`：
+对方这一轮结束时，Agent Canvas 把它这一轮的**最后一条回复**自动发回给你。
+
+**默认做法：发完就结束本轮，回复会推回来。** 你是 claude-code / codex 节点时，回复和普通消息一样
+进你的收件箱，等你空闲时作为**新的一轮**写进来，开头是
+`[agent-canvas 回复 msg_… · 来自「X」· 回复你的 msg_…]`。所以：
+
+1. 带 `--expect-reply` 派活，记下返回的 `messageId`；
+2. 告诉用户派给了谁、在等谁的回复，然后**结束本轮**——不要 sleep，不要循环 `get-message` 等状态，
+   也不要为了等回复把这一轮拖着；
+3. 回复到达时你在新的一轮里收到它，接着处理。派给几个节点就各来一轮；信封头里的「回复你的
+   msg_…」就是你当初那条消息的 id，据此对上是哪个任务的结果。
+
+**`wait-reply` 只在这两种情况用：**
+
+- **你在 shell 节点或画布外终端**：回复写不进你的会话，会停放（`parked`），只能用 `wait-reply` 领取。
+- **你是 agent，这一轮里必须拿到一个简短答复才能往下走**（比如向另一个节点问一个事实）。只在对方
+  很快就能答完时用；要对方做一段较长的工作，走默认做法，**不要用 `wait-reply` 干等，也不要调大
+  `--timeout` 去等长任务**。
+
+`wait-reply <messageId>[,<messageId>…] [--all | --any] [--timeout <秒>]`：
+
+- 只能等你自己发出、带了 `--expect-reply` 的消息；默认 `--all` 等全部，`--any` 任一到达即返回。
+- 只能**前台阻塞**调用：不要包 sleep、不要放后台。claude-code / codex 调用方此刻没有正在进行的
+  一轮时会被拒绝。
+- 默认最多等 100 秒，正好在 claude 的 Bash 工具默认 120 秒超时之内，不用改工具超时。codex 的命令
+  工具会在命令结束前先返回 session id：继续轮询**同一个会话**直到出现退出码，不要重新发起命令。
+- 退出码 0：stdout 是 `{timedOut: false, results: [{messageId, status, reply?: {messageId, body, from}}]}`。
+  `status` 是 `replied` 却没有 `reply`，表示回复被 held 或已撤回，不是空回复。
+- 退出码 2：超时，还没等到。agent 调用方**不要接着再等一次**——结束本轮，回复之后会按默认做法推回来；
+  shell 调用方可以稍后再 `wait-reply` 领取。退出码 1：失败。
+- 被等的消息被拒、失败、中断、撤回或无回复关闭时，立即返回该状态，不会白等到超时。
+
+**回执**：要求回复的消息止于 `replied` 才算完成（`queued → delivered → received → replied`）。
+没等到回复就结束的记 `closed-without-reply`，原因有三种：用户在对方终端里接管了这一轮
+（`user-takeover`）、对方这一轮被打断（`turn-aborted`）、用户在暂停卡片上终止了这条消息链
+（`terminated`）。都不会自动重发——告诉用户，要不要再发由用户决定。
+
+**收到要求回复的消息时**：信封末尾多两行「需要回复」。做完直接结束本轮即可，**把结论写在本轮最后
+一条回复里**，它会被原样发回。要给更精确的结论（比如只回一段结构化结果），在这一轮结束前用
+`agent-canvas-ctl reply <messageId> <内容>`（或 `--file`）显式回复，回复过就不再自动回传。只有收件方
+能回复；`reply --expect-reply` 让对方再回你，对方不是 claude-code / codex 节点时不可用。
+
+**往返上限**：同一条消息链里要求回复的消息累计到 20 条会被暂停（`held`），防止两个 agent 无限往返；
+等用户放行或终止，不要重试。
 
 ## 输出与退出码
 
@@ -195,6 +243,17 @@ agent-canvas-ctl send <nodeId> --command /compact
 
 先看 `get-node` 的 `actions[]` 里 `send_message` 是否 `available: true`（只有 claude-code / codex
 且进程在跑才行）。对方不是你的子节点时会弹审批卡片，按上面「审批」一节处理。
+
+**7. 派两个活，拿回两份结果**
+
+```
+agent-canvas-ctl create-pty-node --node-type claude-code --title 查前端 --cwd <项目路径> --message '列出登录页调用的所有接口' --expect-reply
+agent-canvas-ctl create-pty-node --node-type codex --title 查后端 --cwd <项目路径> --message '列出 /auth 下所有接口及其鉴权方式' --expect-reply
+```
+
+你是 agent 时：两条都发出后告诉用户「已派给 查前端、查后端，等两份回复」，然后结束本轮。两份回复
+各自作为新的一轮到达，第二份到了再汇总。你在 shell 节点里时：接着
+`agent-canvas-ctl wait-reply <messageId1>,<messageId2>`，退出码 2 就稍后再调一次。
 
 ## 相关 skill
 

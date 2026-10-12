@@ -1,7 +1,7 @@
 ---
 name: handoff
-description: Use when handing a task across sessions — writing a self-contained handoff doc for a fresh session to pick up (author), sanity-checking an inbound handoff before starting (verify), self-testing against the agreed criteria before reporting the work done or re-submitting after a rejection (self-test), or accepting completed work against the criteria agreed at handoff time (accept). Triggers on phrases like "write a handoff", "hand this off", "pick up this task", "sign off on this work". Generic skill — project-specific conventions are read from .hskill/handoff/config.md.
-version: "1.12.0"
+description: Use when handing a task across sessions — writing a self-contained handoff doc for a fresh session to pick up (author), sanity-checking an inbound handoff before starting (verify), self-testing against the agreed criteria before reporting the work done or re-submitting after a rejection (self-test), or accepting completed work against the criteria agreed at handoff time (accept). Triggers on phrases like "write a handoff", "hand this off", "pick up this task", "sign off on this work". Not for carrying discussion conclusions into a new topic with no acceptance — use fork-topic for that. Generic skill — project-specific conventions are read from .hskill/handoff/config.md.
+version: "1.13.0"
 user_invocable: true
 ---
 
@@ -30,7 +30,7 @@ Phase 3 之间。
    - 不存在 → **问用户一次**："本项目有无特殊交接约定（输出路径/分支工作流/验证工具）？"
      - 有 → 按 `references/config-schema.md` 引导生成 `.hskill/handoff/config.md`。
      - 无 → 用通用默认（`output_dir=docs/commute/`），以后不再问。
-2. **判断目的**：从当前对话判断这次交接是为了什么——不套预设分类，一句自然语言判断即可（例如"接手方续做同一个实现任务"或"把讨论结论作为背景传给接手方去开展新话题"）。这句话会写进文档开头的"交接目的"，且始终存在，不可省略。
+2. **判断目的**：从当前对话判断这次交接是为了什么——不套预设分类，一句自然语言判断即可（例如"接手方续做同一个实现任务"）。这句话会写进文档开头的"交接目的"，且始终存在，不可省略。只是带着讨论结论去开新话题、结果不需要回来验收的，不走 handoff，用 fork-topic。
 3. **汇集上下文**：以**当前对话**为真相源。涉及代码时读 `git status` / `git diff` 核对现状、排查受影响文件（若这两类内容按第 4 步判定为必要），并作为门禁的现实校验（纯规划交接可跳过）；spec/plan 作为权威指针。**不把 memory 写进文档**——memory 可能陈旧、且接手方访问不到你的 memory 目录；若某条 memory 是承载性背景，把**核实过的事实**内联进去，别留 `[[memory]]` 死链。现状一律以 git/仓库为准，不以 memory 为准。
 4. **备好交接工作区**（接手方会在**另一条分支**上开工时才做；就地同分支续做则整步跳过）：
    分支和 worktree 都由**你**建好，不留给接手方建。这是整条交接链能闭环的关键——工作区是你建的，

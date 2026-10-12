@@ -110,6 +110,7 @@ version: "1.0.0"
 | `validate` | 验证或校验 |
 | `init` | 初始化新配置 |
 | `dispatch` | 派发任务给其他 agent |
+| `fork` | 从当前讨论分出支线话题 |
 | `close` | 收尾或完成任务 |
 | `setup` | 准备环境 |
 | `capture` | 记录想法或洞察 |
