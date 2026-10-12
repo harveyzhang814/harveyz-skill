@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.40.0] - 2026-10-12
+
 ### Added
 - `fork-topic` 1.0.0：把讨论中的支线话题（或带着本次结论开新话题）写成一段精简的可粘贴 prompt——接手方查不出的（目标、已定结论、否决方案及理由、用户偏好）写全，查得出的只给线索（位置 + 为什么相关），不给内容；只输出文本，不落文件、不建工作区、不验收
 
