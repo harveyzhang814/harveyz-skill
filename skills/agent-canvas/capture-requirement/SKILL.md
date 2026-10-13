@@ -20,7 +20,7 @@ version: "1.0.2"
      --title <上一步的 title> --description <上一步的 description> \
      --priority <上一步的 priority> --status <上一步的 status> \
      [--acceptance-criteria <上一步的 acceptanceCriteria>] \
-     --acceptance-spec <spec 绝对路径>
+     --acceptance-spec <第 1 步的 specUsed>
    → { nodeId, requirementId }
 
 3. agent-canvas-ctl link-nodes \
@@ -31,6 +31,13 @@ version: "1.0.2"
 第 1 步以非零退出码报错时，说明这三种情况之一：没读到 spec、本节点已 implements 过某个
 需求节点（不重铸编号）、或本节点上一次调用还没返回；报错本身已说明是哪一种，直接把错误
 如实报出，不要重试或跳过。
+
+第 2 步的 `--acceptance-spec` 取第 1 步返回的 `specUsed`（已是绝对路径）。第 2 步因这个旗标
+以非零退出码报错时（spec 的「验收标准」一节有格式错误、文件不在 git 仓库内等），**不准去掉
+旗标重试**——那会建出一个没有验收条目的需求，而验收条目正是 `## 验收标准` 一节要立项的东西。
+把 stderr 原样报给用户，按报错修正 spec 后重跑第 2 步。退出码为 0 但 stderr 出现「未找到验收
+标准一节」或「验收标准一节没有条目」时，也要如实报告：按 AGENTS.md 4.2，spec 里本应有这一
+节，节点虽已建出却没有条目，由用户决定补 spec 重建还是接受。
 
 ## 孤儿处置
 
