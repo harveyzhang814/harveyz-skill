@@ -389,8 +389,8 @@
     {
       "path": "agent-canvas/capture-requirement",
       "bundle": "agent-canvas",
-      "contentHash": "db7f19ea77a3da50",
-      "contentVersion": "1.0.1"
+      "contentHash": "f63437d90f49b2b2",
+      "contentVersion": "1.0.2"
     },
     {
       "path": "agent-canvas/relation-review",
@@ -401,8 +401,8 @@
     {
       "path": "agent-canvas/close-node",
       "bundle": "agent-canvas",
-      "contentHash": "4894e691f9ba9d37",
-      "contentVersion": "1.0.5"
+      "contentHash": "3b8a6620dc32429c",
+      "contentVersion": "1.0.6"
     },
     {
       "path": "coding/analyze-claudemd",

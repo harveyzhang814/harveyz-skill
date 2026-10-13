@@ -2,7 +2,7 @@
 name: capture-requirement
 description: File the requirement the current session is implementing as a standalone requirement node and link an implements relation to it — call once after Gate 2 is finalized; only usable inside an Agent Canvas node.
 user_invocable: true
-version: "1.0.1"
+version: "1.0.2"
 ---
 
 # 需求立项（capture-requirement）
@@ -19,7 +19,8 @@ version: "1.0.1"
 2. agent-canvas-ctl create-requirement-node \
      --title <上一步的 title> --description <上一步的 description> \
      --priority <上一步的 priority> --status <上一步的 status> \
-     [--acceptance-criteria <上一步的 acceptanceCriteria>]
+     [--acceptance-criteria <上一步的 acceptanceCriteria>] \
+     --acceptance-spec <spec 绝对路径>
    → { nodeId, requirementId }
 
 3. agent-canvas-ctl link-nodes \

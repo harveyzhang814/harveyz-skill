@@ -3,7 +3,7 @@ name: close-node
 description: Wrap up the current canvas node when a round of work is done — advance requirement status, verify handoff closure, merge the branch, stop the process, and hide the node from the canvas; only usable inside an Agent Canvas node.
 disable-model-invocation: true
 user_invocable: true
-version: "1.0.5"
+version: "1.0.6"
 ---
 
 # 节点收尾（close-node）
@@ -33,7 +33,7 @@ agent-canvas-ctl node-relations <自己的 nodeId>  → implements 边 / hands-o
 | **交出方** | 自己的 nodeId == 某份交接文档的 `source_node` |
 | **接手方** | 自己的 nodeId == 某份交接文档的 `target_node` |
 
-"验收方"不是第四类——`/handoff` 的 accept 阶段由原 session 做，验收方就是交出方本人。
+"验证方"不是第四类——`/handoff` 的 accept 阶段（属于验证，不是版本验收）由原 session 做，验证方就是交出方本人。
 
 ### 3. 推进需求状态
 
@@ -47,14 +47,13 @@ agent-canvas-ctl get-node <需求节点id>     → availableActions / unavailabl
 只从 `availableActions` 里选，然后执行：
 
 ```
-agent-canvas-ctl submit-requirement-for-verification <需求节点id>
-agent-canvas-ctl pass-requirement-verification <需求节点id>
+agent-canvas-ctl submit-requirement <需求节点id> --commit <分支 HEAD>
 ```
 
-- 活干完了、还没人验 → `submit-requirement-for-verification`（进入 `verifying`）
-- 已经验收通过 → `pass-requirement-verification`（进入 `done`）。需求还在 `in_progress`
-  时不能直接到 `done`，须先提交验收再通过；只有用户确实确认过验收才这样连着做，否则停在
-  `verifying`。
+- 活干完了、还没人验收 → `submit-requirement`（进入 `in_acceptance`）。`--commit` 传本分支
+  HEAD 的完整 40 位 sha（`git rev-parse HEAD` 的输出），它是这次交付的提交，之后的版本验收
+  靠它找回验收标准。收尾方是实现方：送审之后需求就停在 `in_acceptance`，不要继续往 `done`
+  推，那一步不归实现方。
 - 这条需求要搁置（`deferred` 与 `status` 正交，不是它的取值）→ `defer-requirement <需求节点id>`
 - 想要的命令不在 `availableActions` 里，就**如实报告**"需求状态维持 X，因为 Y"（Y 取
   `unavailableActions` 给的原因），不要硬凑、不要绕路调别的命令。

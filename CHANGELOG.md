@@ -8,7 +8,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed
-- `close-node`：升至 1.0.5，第 3 步「推进需求状态」改用生命周期语义 action——`update-node-requirement` 不再接受 `--status` / `--deferred`；先用 `get-node` 读 `availableActions` / `unavailableActions`，只从可用 action 里选 `submit-requirement-for-verification` / `pass-requirement-verification` / `defer-requirement`；想要的命令不可用时如实报告原因，不硬凑、不绕路。需配合 Agent Canvas 应用发版后的版本再发布此 skill
+- `close-node`：升至 1.0.6，第 3 步「推进需求状态」改用生命周期语义 action——`update-node-requirement` 不再接受 `--status` / `--deferred`；先用 `get-node` 读 `availableActions` / `unavailableActions`，只从可用 action 里选 `submit-requirement <id> --commit <分支 HEAD>` / `defer-requirement`；收尾方是实现方，送审后需求停在 `in_acceptance`，不再有「通过」一步；想要的命令不可用时如实报告原因，不硬凑、不绕路。需配合 Agent Canvas 应用发版后的版本再发布此 skill
+- `capture-requirement`：升至 1.0.2，第 2 步 `create-requirement-node` 加 `--acceptance-spec <spec 绝对路径>`，把验收依据（spec 里的 `## 验收标准`）一并立项。需配合 Agent Canvas 应用发版后的版本再发布此 skill
 
 ## [0.40.0] - 2026-10-12
 
