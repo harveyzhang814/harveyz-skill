@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.41.0] - 2026-10-13
+
+### Added
+- `judge-release` 1.0.0（agent-canvas bundle）：需求第二道关的验收 skill。由 Agent Canvas 项目窗口顶部「当前版本待验收 N 条」提示条的「开始验收」拉起，初始消息带版本、运行提交、稳定时间和需求节点；对每条需求用 `get-node` 读条目、`git show <交付提交>:<验收依据>` 读验收标准正文，按验证方式分流——机器可查取证后 `record-requirement-verdict`，观察期从稳定时间起算、未到期只报告，人工裁决只整理清单请人到面板上判；全部通过才 `pass-requirement`，不通过由人决定，不调 `fail-requirement`、不改条目、不与需求建关系。仅人工触发（`disable-model-invocation`，Codex 禁隐式调用）。需配合 Agent Canvas 8.3.0 及以后的应用（内置 skill 清单已登记它）
+- `docs/reference/skill-spec.md` 动词表新增 `judge`（对照标准逐条下结论）
+
+### Changed
+- `close-node`：升至 1.0.6，第 3 步「推进需求状态」改用生命周期语义 action——`update-node-requirement` 不再接受 `--status` / `--deferred`；先用 `get-node` 读 `availableActions` / `unavailableActions`，只从可用 action 里选 `submit-requirement <id> --commit <分支 HEAD>` / `defer-requirement`；收尾方是实现方，送审后需求停在 `in_acceptance`，不再有「通过」一步；想要的命令不可用时如实报告原因，不硬凑、不绕路。需配合 Agent Canvas 8.3.0 及以后的应用
+- `capture-requirement`：升至 1.0.2，第 2 步 `create-requirement-node` 加 `--acceptance-spec <spec 绝对路径>`，把验收依据（spec 里的 `## 验收标准`）一并立项；`--acceptance-spec` 的值取第 1 步返回的 `specUsed`，第 2 步因该旗标报错时不准去掉旗标重试（会建出没有条目的需求），要把报错原样报给用户、按报错修正 spec 后重跑，stderr 出现「未找到验收标准一节」或「验收标准一节没有条目」时也如实报告。需配合 Agent Canvas 8.3.0 及以后的应用
+
 ## [0.40.0] - 2026-10-12
 
 ### Added

@@ -3,7 +3,7 @@ name: close-node
 description: Wrap up the current canvas node when a round of work is done — advance requirement status, verify handoff closure, merge the branch, stop the process, and hide the node from the canvas; only usable inside an Agent Canvas node.
 disable-model-invocation: true
 user_invocable: true
-version: "1.0.4"
+version: "1.0.6"
 ---
 
 # 节点收尾（close-node）
@@ -33,19 +33,30 @@ agent-canvas-ctl node-relations <自己的 nodeId>  → implements 边 / hands-o
 | **交出方** | 自己的 nodeId == 某份交接文档的 `source_node` |
 | **接手方** | 自己的 nodeId == 某份交接文档的 `target_node` |
 
-"验收方"不是第四类——`/handoff` 的 accept 阶段由原 session 做，验收方就是交出方本人。
+"验证方"不是第四类——`/handoff` 的 accept 阶段（属于验证，不是版本验收）由原 session 做，验证方就是交出方本人。
 
 ### 3. 推进需求状态
 
-沿 `implements` 边找到需求节点。判断它现在该是什么状态，然后：
+沿 `implements` 边找到需求节点。判断它现在该是什么状态。状态不能跳级，重复调用也会被拒，
+所以**先读 `availableActions`**，再据此选命令：
 
 ```
-agent-canvas-ctl update-node-requirement <需求节点id> --status <verifying|done>
+agent-canvas-ctl get-node <需求节点id>     → availableActions / unavailableActions（附原因）
 ```
 
-- 活干完了、还没人验 → `verifying`
-- 已经验收通过 → `done`
-- 这条需求要搁置（`deferred` 与 `status` 正交，不是它的取值）→ `--deferred true`
+只从 `availableActions` 里选，然后执行：
+
+```
+agent-canvas-ctl submit-requirement <需求节点id> --commit <分支 HEAD>
+```
+
+- 活干完了、还没人验收 → `submit-requirement`（进入 `in_acceptance`）。`--commit` 传本分支
+  HEAD 的完整 40 位 sha（`git rev-parse HEAD` 的输出），它是这次交付的提交，之后的版本验收
+  靠它找回验收标准。收尾方是实现方：送审之后需求就停在 `in_acceptance`，不要继续往 `done`
+  推，那一步不归实现方。
+- 这条需求要搁置（`deferred` 与 `status` 正交，不是它的取值）→ `defer-requirement <需求节点id>`
+- 想要的命令不在 `availableActions` 里，就**如实报告**"需求状态维持 X，因为 Y"（Y 取
+  `unavailableActions` 给的原因），不要硬凑、不要绕路调别的命令。
 - **拿不准就别改**，如实报告"需求状态维持 X，因为 Y"。改错了比不改更难发现。
 
 没有 `implements` 边 → 跳过这一步，不要顺手立项一个需求。
@@ -141,7 +152,7 @@ agent-canvas-ctl stop-node <自己的 nodeId>
 - **不代跑 `describe-node`、`relate-node`。** 那两个的第二次调用仍按 CLAUDE.md 由你自己
   在收尾前调，本 skill 与它们**并列**，不是它们的编排器。调本 skill 之前先把它们调完。
 - **不调 `capture-requirement`。** 需求立项只在闸门 2 发生一次，收尾不重复立项。
-- 不动 `implements` 边——只改需求节点自己的 `status`/`deferred`。
+- 不动 `implements` 边——只通过语义 action 推进需求节点的生命周期。
 - `stop-node` 不走 UI 那套阻断策略（busy / 有活跃 subagent / 绑着 worktree）。
   那三条是防人手滑的护栏，你显式调用是有意图的动作。**代价是这个工具很锋利**——
   第 7 步的自查是唯一的缓解，机制不会替你挡。
