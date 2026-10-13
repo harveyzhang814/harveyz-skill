@@ -36,7 +36,7 @@
     "design": "设计工具（scout-brand + build-style + sync-design）",
     "mint": "Skill 生命周期工具（init-skill + publish-skill + archive-skill + dedup-skill + contribute-skill + fix-skill + runby-opencode + scout-philosophy + learn-skill）",
     "devops": "项目运维工具（clean-git + release-project + sync-hotfix + sync-agent）",
-    "agent-canvas": "Agent Canvas 内置 skill（agent-canvas-control — 节点与画布操控；describe-node/relate-node/capture-requirement/relation-review/close-node — 画布节点生命周期治理）"
+    "agent-canvas": "Agent Canvas 内置 skill（agent-canvas-control — 节点与画布操控；describe-node/relate-node/capture-requirement/relation-review/close-node — 画布节点生命周期治理；judge-release — 对照验收标准逐条取证并写结论）"
   },
   "skills": [
     {
@@ -403,6 +403,12 @@
       "bundle": "agent-canvas",
       "contentHash": "3b8a6620dc32429c",
       "contentVersion": "1.0.6"
+    },
+    {
+      "path": "agent-canvas/judge-release",
+      "bundle": "agent-canvas",
+      "contentHash": "85048ad7dfd207f4",
+      "contentVersion": "1.0.0"
     },
     {
       "path": "coding/analyze-claudemd",
