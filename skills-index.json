@@ -344,8 +344,8 @@
       "path": "coding/handoff",
       "bundle": "coding",
       "installScope": "project",
-      "contentHash": "d1eb122aceebb9e9",
-      "contentVersion": "1.13.0"
+      "contentHash": "7c02870224a7ebfe",
+      "contentVersion": "1.14.0"
     },
     {
       "path": "coding/fork-topic",

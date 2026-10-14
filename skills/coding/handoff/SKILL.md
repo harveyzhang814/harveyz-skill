@@ -1,7 +1,7 @@
 ---
 name: handoff
 description: Use when handing a task across sessions — writing a self-contained handoff doc for a fresh session to pick up (author), sanity-checking an inbound handoff before starting (verify), self-testing against the agreed criteria before reporting the work done or re-submitting after a rejection (self-test), or accepting completed work against the criteria agreed at handoff time (accept). Triggers on phrases like "write a handoff", "hand this off", "pick up this task", "sign off on this work". Not for carrying discussion conclusions into a new topic with no acceptance — use fork-topic for that. Generic skill — project-specific conventions are read from .hskill/handoff/config.md.
-version: "1.13.0"
+version: "1.14.0"
 user_invocable: true
 ---
 
@@ -218,14 +218,32 @@ Phase 3 之间。
    当场置「打回」退回去，不必开始逐条重跑**：接手方连自己那一遍都没跑，你这一轮多半是在
    替它跑第一遍。
 
-3. 找文档里的**最小验收锚点**——这是唯一固定依据。**接手方自填的结论一律不采信，逐条自己跑**：验证产物"存在"不等于"跑得过"，点得出脚本名不等于那个脚本此刻是绿的。frontmatter 的 `acceptance` 指明是哪一档：`hard`（逐条对/错）→ 按锚点描述**逐条实跑**（单测/E2E/核验）；`soft`（定性描述）→ 按其描述做定性判断。字段与锚点正文不符时**以正文为准**并把字段改对——字段是索引，正文才是判据。
-4. 把验收结果（每条 pass/fail，或整体达成/未达成）追加记录到最小验收锚点所在章节末尾。**接手方若已自填过验收记录，另起小节并列，不覆盖也不合并**——两份并排放着，后来人才看得出哪些结论被第二方复核过。其中若有与实跑不符的陈述，**显式写出更正**，不要静默改掉：静默改掉等于把同一个错误留给下一次。
-5. 达成 → `status` 置 `已验收`；未达成 → `status` 置 `打回`。打回记录必须写清三件事，
+3. 找文档里的**最小验收锚点**——这是唯一固定依据（指交接时事先约定的判据；第 4 步的回归面核对不是另加判据，理由见该步）。**接手方自填的结论一律不采信，逐条自己跑**：验证产物"存在"不等于"跑得过"，点得出脚本名不等于那个脚本此刻是绿的。frontmatter 的 `acceptance` 指明是哪一档：`hard`（逐条对/错）→ 按锚点描述**逐条实跑**（单测/E2E/核验）；`soft`（定性描述）→ 按其描述做定性判断。字段与锚点正文不符时**以正文为准**并把字段改对——字段是索引，正文才是判据。
+4. **回归面核对**（锚点跑完之后；锚点已点名的不重复跑）。锚点只覆盖交接时预想的改动面，
+   实际改动面可能更大，而锚点没点名的既有测试此刻没有任何环节会去跑。
+   - **取实际改动面**：`git -C <验收目录> diff $(git -C <验收目录> merge-base <集成分支> HEAD)..HEAD --name-only`。
+     `<集成分支>` 是 author 建分支时写明的基线（通常是 `staging`）。**不要写成
+     `<集成分支>..HEAD`**：集成分支在分叉之后前进过，别人合入的改动会被混成本分支的。
+   - **找被波及组件现有的回归测试**：按上面的文件找它们所属组件在仓库里已有的测试，锚点没点名
+     的也跑。怎么跑、要不要真产物 E2E、隔离方式，按 `.hskill/handoff/config.md` 的
+     `verification` 段和项目自己的验证 skill。判成败的命令同样不接管道。找不到被波及的既有测试，
+     就在验收记录里写"已核对，无"并附改动面。
+   - **红了先归因，再定性**：在分叉点上跑同一条命令（`git worktree add --detach <临时路径>
+     $(git merge-base <集成分支> HEAD)`，验完 remove；别在交接工作区里切走）。
+     分叉点绿、现在红 → 本次改动引入，**按回归打回**；分叉点也红 → 既有的红，不打回，
+     在验收记录里写明命令和两边结果。
+   - **锚点遗漏要记**：跑到了锚点没点名的回归项，不论绿红都记入验收记录，注明这是写交接/验收
+     一方的疏漏，**不算接手方的**——接手方只对被约定的判据负责。
+   - **为什么这不算临时加判据**：锚点约定的是"这次要做到什么"，回归红是"本来能用的东西坏了"，
+     产品真的坏了与有没有被点名无关。所以本次改动引入的回归照样打回，哪怕锚点一字未提；
+     但接手方无需为此背锚点遗漏的责任。
+5. 把验收结果（每条 pass/fail，或整体达成/未达成，含第 4 步的回归面核对）追加记录到最小验收锚点所在章节末尾。**接手方若已自填过验收记录，另起小节并列，不覆盖也不合并**——两份并排放着，后来人才看得出哪些结论被第二方复核过。其中若有与实跑不符的陈述，**显式写出更正**，不要静默改掉：静默改掉等于把同一个错误留给下一次。
+6. 达成 → `status` 置 `已验收`；未达成 → `status` 置 `打回`。打回记录必须写清三件事，
    缺了接手方只能猜：**哪几条未达成**、**为什么**（判据原文 vs 实跑结果）、以及
    **复修后要重跑的范围**（默认全集；认为可以只跑子集就在这里点名）。退回接手方后，
    它重新走 Phase 2.5 才能再置回「待验收」。
-6. **达成才算真正完成**（硬判据要求逐条全绿；软判据按其描述定性判断是否达成）。
-7. 若第 1 步通过宿主能力进入了工作区，按文末对应宿主的方式离开并**保留**工作区；使用显式路径
+7. **达成才算真正完成**（硬判据要求逐条全绿且无本次引入的回归；软判据按其描述定性判断是否达成）。
+8. 若第 1 步通过宿主能力进入了工作区，按文末对应宿主的方式离开并**保留**工作区；使用显式路径
    兜底时无需切换会话状态，停止操作即可。任何情况下都不 remove，合并与清理由 author 后续处理。
 
 ## 状态生命周期
