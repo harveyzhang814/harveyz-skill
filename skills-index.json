@@ -407,8 +407,8 @@
     {
       "path": "agent-canvas/judge-release",
       "bundle": "agent-canvas",
-      "contentHash": "85048ad7dfd207f4",
-      "contentVersion": "1.0.0"
+      "contentHash": "123535281ac30a2f",
+      "contentVersion": "1.0.1"
     },
     {
       "path": "coding/analyze-claudemd",
