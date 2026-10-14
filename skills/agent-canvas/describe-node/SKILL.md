@@ -2,7 +2,7 @@
 name: describe-node
 description: Auto-generate a title and description for the Agent Canvas node you are running in — use it to summarize what the session is doing, name the node, or update its title/description; only usable inside an Agent Canvas node.
 user_invocable: true
-version: "1.1.0"
+version: "1.1.1"
 ---
 
 # 为当前节点生成标题与描述（describe-node）
@@ -21,10 +21,12 @@ agent-canvas-ctl summarize-self [--spec <规格文档绝对路径>]
 - `--spec` 指定据以撰写的规格文档，**必须是绝对路径**。相对路径不报错、退出码照样是
   0，只是读不到文件，`specUsed` 静默返回 null——和"没找到"长得一模一样。它是在主进程
   里按主进程的 cwd 解析的，不是你会话的当前目录，所以"从我这儿看是对的"不作数。
-- 不传 `--spec` 时会从本会话记录里自动发现你写过或读过的 `docs/superpowers/specs/*.md`，
-  按 Write > Edit > Read 取最后一次；**只有 Read 命中、且读过不止一份不同的 spec 时，
-  自动发现会直接放弃**（归属不明，它不猜）。会话里读过别人的 spec 就属于这种情况。
-  `specUsed` 为 null 就表示没用上，知道该用哪份就补传 `--spec`。
+- **有 spec 时一律显式传 `--spec`，包括第一次调用，不要依赖自动发现。** 不传时会从本会话
+  记录里自动发现你写过或读过的 `docs/superpowers/specs/*.md`，按 Write > Edit > Read
+  取最后一次；**只有 Read 命中、且读过不止一份不同的 spec 时，自动发现会直接放弃**
+  （归属不明，它不猜）。实测在 worktree 里刚 Write 完 spec 不传也落空过，落空后标题会
+  编成与本会话无关的内容。
+- 调完看返回的 `specUsed`：为 null 就表示没用上，补传 `--spec` 重跑。
 - **命令受理即返回**：stdout 返回 `{nodeId, status: "submitted", specUsed}`，退出码 0，
   表示**已受理**，不是已写回。模型调用（通常 5–15 秒，上限约 90 秒）和写回在主进程后台
   完成，**不要等它**，接着做别的事。返回里不再有 `title` / `description`。
