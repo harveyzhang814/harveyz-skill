@@ -10,7 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.41.0] - 2026-10-13
 
 ### Added
-- `judge-release` 1.0.0（agent-canvas bundle）：需求第二道关的验收 skill。由 Agent Canvas 项目窗口顶部「当前版本待验收 N 条」提示条的「开始验收」拉起，初始消息带版本、运行提交、稳定时间和需求节点；对每条需求用 `get-node` 读条目、`git show <交付提交>:<验收依据>` 读验收标准正文，按验证方式分流——机器可查取证后 `record-requirement-verdict`，观察期从稳定时间起算、未到期只报告，人工裁决只整理清单请人到面板上判；全部通过才 `pass-requirement`，不通过由人决定，不调 `fail-requirement`、不改条目、不与需求建关系。仅人工触发（`disable-model-invocation`，Codex 禁隐式调用）。需配合 Agent Canvas 8.3.0 及以后的应用（内置 skill 清单已登记它）
+- `judge-release` 1.0.1（agent-canvas bundle）：需求第二道关的验收 skill。由 Agent Canvas 项目窗口顶部「当前版本待验收 N 条」提示条的「开始验收」拉起，初始消息带版本、运行提交、稳定时间和需求节点；对每条需求用 `get-node --result-format=action-v1` 读条目（旧格式输出不含需求字段）、`git show <交付提交>:<验收依据>` 读验收标准正文，按验证方式分流——机器可查取证后 `record-requirement-verdict`，观察期从稳定时间起算、未到期只报告，人工裁决只整理清单请人到面板上判；全部通过才 `pass-requirement`，不通过由人决定，不调 `fail-requirement`、不改条目、不与需求建关系。仅人工触发（`disable-model-invocation`，Codex 禁隐式调用）。需配合 Agent Canvas 8.3.0 及以后的应用（内置 skill 清单已登记它）
 - `docs/reference/skill-spec.md` 动词表新增 `judge`（对照标准逐条下结论）
 
 ### Changed

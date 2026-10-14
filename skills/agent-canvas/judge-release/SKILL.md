@@ -3,7 +3,7 @@ name: judge-release
 description: Judge the requirements of a stable release against their acceptance criteria — read each requirement's acceptance items, gather evidence in the real environment, record per-item verdicts and pass the requirement when every item passes; launched by the pending-acceptance banner; only usable inside an Agent Canvas node.
 disable-model-invocation: true
 user_invocable: true
-version: "1.0.0"
+version: "1.0.1"
 ---
 
 # 对照验收标准逐条下结论（judge-release）
@@ -35,10 +35,12 @@ version: "1.0.0"
 ### 1. 读需求现状
 
 ```
-agent-canvas-ctl get-node <需求节点id>
+agent-canvas-ctl --result-format=action-v1 get-node <需求节点id>
 ```
 
-取需求的 `status`、交付提交（`deliveredCommit`）、验收依据（`acceptanceSpec`）、验收条目（`acceptanceItems`，每条有编号、类别、验证方式、一句话说明，已有结论也在里面）。
+**必须带 `--result-format=action-v1`，且写在 `get-node` 之前**：不带时输出是旧格式，只有标题、状态等通用字段，读不到下面这些需求字段。
+
+从 `value.node.requirement` 取需求的 `status`、交付提交（`deliveredCommit`）、验收依据（`acceptanceSpec`）、验收条目（`acceptanceItems`，每条有编号、类别、验证方式、一句话说明，已有结论在每条的 `verdict` 里）。`value.node.requirement` 不存在，说明这不是需求节点或节点编号不对，跳过并在汇总里报告。
 
 `status` 已经不是 `in_acceptance` 的，跳过这条需求并在汇总里报告"状态已是 X，未处理"。
 
@@ -74,10 +76,10 @@ agent-canvas-ctl record-requirement-verdict <需求节点id> --item <条目编�
 
 ### 4. 判断需求是否可以通过
 
-再取一次现状：
+再取一次现状（同样带 `--result-format=action-v1`，看每条的 `verdict`）：
 
 ```
-agent-canvas-ctl get-node <需求节点id>
+agent-canvas-ctl --result-format=action-v1 get-node <需求节点id>
 ```
 
 - 每条条目都有「通过」结论 → `agent-canvas-ctl pass-requirement <需求节点id>`。
