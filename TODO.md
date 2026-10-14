@@ -41,6 +41,21 @@ extract-url 目前用集中式 SQLite（`url-index.db`）维护所有文章的�
 
 ---
 
+### handoff 验收新增回归面核对
+**优先级**: P2 | **日期**: 2026-10-13
+
+`handoff` skill 的 accept 阶段（Phase 3）目前只跑交接文档里点名的最小验收锚点，锚点没点名的既有回归测试没有任何环节会去跑。agent-canvas 10-09「统一 PTY 注入」那次：交接锚点只点名了新功能的 6 条 E2E，没有回归草稿框原有的 12 个 E2E，author 和 accept 都只跑锚点点名的，合入 staging 后才被追问补测，补测又查出 4 个脚本因新锚点过时、3 个是 harness 既有的红。
+
+要做的：在 Phase 3 第 3 步（跑最小验收锚点）之后新增「回归面核对」。锚点跑完后，用 `git diff $(git merge-base <集成分支> HEAD)..HEAD --name-only` 取这次实际改动面（不用 `<集成分支>..HEAD`，集成分支前进后会把别人合入的改动混进来），找出被波及组件现有的回归测试，锚点没点名的也跑；红了先在分叉点上跑同一条命令归因，本次改动引入的按回归打回，既有的红在验收记录里写明；锚点遗漏同样记入验收记录。
+
+需协调的一点：Phase 3 第 3 步把最小验收锚点称为「唯一固定依据」。回归红是产品真的坏了，不算临时加判据，措辞要把这层说清。
+
+已定的范围：只改 accept 阶段；不加 author 阶段要求（漏点名的成本由 accept 兜底）；不加 `.hskill/handoff/config.md` 的项目专属段（找 E2E 靠 `ls scripts`、隔离跑法 `sim.js` 已按 `AGENT_CANVAS_HOME` 解析、真人驱动的判断属于 `simulate-user`）。
+
+落点：`skills/coding/handoff/SKILL.md`，需升版本、更新 `skills-index.json` 的 `contentHash` / `contentVersion`、补 CHANGELOG；单独开分支，与 `fix/describe-node-explicit-spec` 互不相关，各自走 `publish-skill`。完成后可删 agent-canvas 记忆 `feedback_handoff_anchors_must_name_regression_e2e`。
+
+---
+
 ## mermaid-diagram — 渲染样式增强
 
 ### [ ] CSS 注入提升 Mermaid 渲染质量
