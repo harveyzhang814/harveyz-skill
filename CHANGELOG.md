@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.41.1] - 2026-10-14
+
 ### Changed
 - `describe-node`：升至 1.1.1，`--spec` 由「知道该用哪份就补传」改为「有 spec 时一律显式传，包括第一次调用」，调完检查返回的 `specUsed` 不为 null；实测在 worktree 里刚 Write 完 spec 不传也落空过，落空后标题会编成与本会话无关的内容。无需等 Agent Canvas 应用发版
 
