@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- `handoff`：升至 1.14.0，accept 阶段（Phase 3）在「跑最小验收锚点」之后新增「回归面核对」：用 `git diff $(git merge-base <集成分支> HEAD)..HEAD --name-only` 取实际改动面（不用 `<集成分支>..HEAD`，集成分支前进后会混入别人合入的改动），找被波及组件现有的回归测试、锚点没点名的也跑；红了先在分叉点上跑同一条命令归因——本次改动引入的按回归打回，既有的红在验收记录里写明；锚点遗漏记入验收记录，算写交接/验收一方的疏漏、不算接手方的。同时说明「唯一固定依据」指事先约定的判据，回归红是产品真的坏了，不算临时加判据。起因：agent-canvas 统一 PTY 注入那次，交接只点名新功能的 E2E，author 与 accept 都只跑点名项，原有回归合入后才被追问补测
+
 ## [0.41.1] - 2026-10-14
 
 ### Changed
