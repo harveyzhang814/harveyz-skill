@@ -15,6 +15,10 @@
 !.npmignore
 !workflow-config.yml
 
+# 保留 Codex 项目配置
+!.codex/
+!.codex/config.toml
+
 # 保留 git hooks
 !.githooks/
 !.githooks/**
