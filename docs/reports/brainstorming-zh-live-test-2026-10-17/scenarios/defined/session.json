@@ -1,0 +1,33 @@
+{
+  "session_id": "2598842c-b6b8-4323-881d-a803822fedc9",
+  "turns": [
+    {
+      "turn": 1,
+      "exit_code": 0
+    },
+    {
+      "turn": 2,
+      "exit_code": 0
+    },
+    {
+      "turn": 3,
+      "exit_code": 0
+    },
+    {
+      "turn": 4,
+      "exit_code": 0
+    },
+    {
+      "turn": 5,
+      "exit_code": 0
+    },
+    {
+      "turn": 6,
+      "exit_code": 0
+    },
+    {
+      "turn": 7,
+      "exit_code": 0
+    }
+  ]
+}

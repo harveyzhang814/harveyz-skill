@@ -1,0 +1,81 @@
+# regression_029 逐轮记录
+
+原始事件见 logs/；审批为测试者模拟。
+
+## 第 1 轮
+
+**用户：** 请继续审查当前项目 .hskill/spec/2026-10-17-loan-sms-reminder/ 中已批准的设计。我发现两个问题：第一，“每日新增借用最多1000笔”不等于“每日提醒最多1000条”，跨日创建的借用会在同一天集中到期；第二，数据库标记 ATTEMPTED 后、实际调用 AcmeSMS 前若借用取消，当前 Spec 一处说取消后不发，另一处说仍照发。请依照正在测试的 brainstorming-zh 源码处理这两个问题，保留原审批和修订记录。尚未授权你替我决定取消竞态，也不要修改产品代码。
+
+**助手：**
+
+两个问题都核实成立，我已更新记录和 Spec，但还不能重新送审。取消竞态要你来选，容量上界也要你给，两项都没回答前不会进入制定计划。没有改产品代码，也没有提交 git。
+
+## 这两个问题
+
+**1. 每日提醒数不受 1000 限制。** 这是我推断错了。你确认的只是“每日新增最多 1000 笔”，“每日提醒最多约 1000 条”是我加的推论，你没有单独确认过。提醒落在 `due_at − 24h` 那天，而不是创建日。第 1、2、3 天各建 1000 笔、都约定同一时刻归还，就会在同一分钟有 3000 笔到点。改归还时间也会让提醒挪到别的日子。
+
+- 每笔至多一条仍然成立，累计发送数不超过累计借用数，预算口径不变。
+- 受影响的是 4.8 预算核对、AC-19、AC-20 和风险 1。
+
+**2. 取消竞态自相矛盾。**
+- **说“不发”的地方：** 规则 8、不可接受结果 2、你的原话 U-07。
+- **说“照发”的地方：** 第 5 节写“占用先到则取消不影响提醒，且短信照发”，4.5(3) 对 `ATTEMPTED` 也不处理取消。
+- AC-13 没写取消并发时占用先到是否调用。
+
+## 已做的修改
+
+- **记录：** H-01 至 H-04 原文和旧结论都保留。
+  - 新增你这条消息 U-22。
+  - A-04 标为推导失效，由 A-06 取代。
+  - 新增 C-05（取消竞态）、C-06（容量上界）、P-02（取消竞态候选）。
+  - H-04 加注这两组内容的批准暂停，并新增待审的 H-05。
+- **Spec：**
+  - 失效的 4.8、AC-19、AC-20 用删除线保留，旁边写了修订草案 AC-19′、AC-20′，新增 AC-21，风险 1 作了补充。
+  - 取消竞态的五处只标了“冲突待决”，没有选定方案，也没有动产品代码。
+  - 文件头和第 10 节标明暂停，第 11 节是修订记录。
+
+## 需要你决定
+
+**1. 占用后、调用 AcmeSMS 前取消，发不发？**
+
+| 选项 | 做法 | 代价 |
+|---|---|---|
+| A | 以占用提交为界，占用先提交就照发，也就是 v1 第 5 节的行为 | 规则 8 要改成“取消提交时尚未占用的才不发”。取消后仍可能收到一条短信，窗口是占用到请求发出之间。 |
+| B | 占用后、调用前再读一次借用状态，已取消或已归还就不调用，记新结果 `CANCELLED_BEFORE_SEND` | 要新增一个结果值和一次读状态。窗口缩到毫秒级，但不为零。 |
+| C | 发送期间持行锁，取消请求等发送结束 | 严格按取消提交时点划分，但取消和归还请求最长被拖到 AcmeSMS 超时，还占着数据库连接。 |
+
+- 我推荐 B，它在不改变“先占用、后调用”的前提下把违反窗口压到最小。如果你觉得这个窗口可以接受，A 改动最小。
+- 任何选项都撤不回已发出的请求，也不假设 AcmeSMS 能撤销（B-02 未核实）。
+
+**2. 同一分钟、同一天最多可能有多少笔借用到点？** 请给一个数值，作为容量规划和 AC-19′ 的上界。例如进行中借用总数上限，或单分钟到点上限。也可以说不设上界，由你接受“集中到点时超出能力的部分记 `MISSED`、不补发”。
+
+你回答后，我会把选定内容写进 Spec，作为 v1.1 提交 H-05 审批。
+
+**退出码：** 0
+
+**工具调用：**
+
+- `Bash` {"command": "pwd && ls -la .hskill/spec/2026-10-17-loan-sms-reminder/ && git status --short | head"}
+- `Read` {"file_path": "/Users/harveyzhang96/Projects/harveyz-skill/.worktrees/feature-superpowers-brainstorming-zh/docs/reports/brainstorming-zh-live-test-2026-10-17/scenarios/regression_029/project/.hskill/spec/2026-10-17-loan-sms-reminder/2026-10-17-loan-sms-reminder-record.md"}
+- `Read` {"file_path": "/Users/harveyzhang96/Projects/harveyz-skill/.worktrees/feature-superpowers-brainstorming-zh/docs/reports/brainstorming-zh-live-test-2026-10-17/scenarios/regression_029/project/.hskill/spec/2026-10-17-loan-sms-reminder/2026-10-17-loan-sms-reminder-spec.md"}
+- `Grep` {"pattern": "A-04|每日.{0,6}1000|取消", "path": "/Users/harveyzhang96/Projects/harveyz-skill/.worktrees/feature-superpowers-brainstorming-zh/docs/reports/brainstorming-zh-live-test-2026-10-17/scenarios/regression_029/project/.hskill/spec/2026-10-17-loan-sms-reminder/2026-10-17-loan-sms-reminder-spec.md", "output_mode": "content", "-n": true, "head_limit": 0}
+- `Edit` {"replace_all": false, "file_path": "/Users/harveyzhang96/Projects/harveyz-skill/.worktrees/feature-superpowers-brainstorming-zh/docs/reports/brainstorming-zh-live-test-2026-10-17/scenarios/regression_029/project/.hskill/spec/2026-10-17-loan-sms-reminder/2026-10-17-loan-sms-reminder-record.md", "old_string": "| U-21 | 用户第七条消息 | “我批准当前 Spec v1，批准范围包含 D-05 到 D-12 和 AC-01 到 AC-20；B-01/B-02 仍是待核实的实施前阻塞，不授权更改签名或次数规则。” | 已批准（H-04） |\n", "new_string": "| U-21 | 用户第七条消息 | “我批准当前 Spec v1，批准范围包含 D-05 到 D-12 和 AC-01 到 AC-20；B-01/B-02 仍是待核实的实施前阻塞，不授权更改签名或次数规则。” | 已批准（H-04） |\n| U-22 | 用户第八条消息 | “我发现两个问题：第一，‘每日新增借用最多1000笔’不等于‘每日提醒最多1000条’，跨日创建的借用会在同一天集中到期；第二，数据库标记 ATTEMPTED 后、实际调用 AcmeSMS 前若借用取消，当前 Spec 一处说取消后不发，另一处说仍照发。请依照正在测试的 brainstorming-zh 源码处理这两个问题，保留原审批和修订记录。尚未授权你替我决定取消竞态，也不要修改产品代码。” | 已陈述的复审反馈与指令，尚未审批。约束：不得替用户决定取消竞态（见 C-05）；不改产品代码；保留 H-01 至 H-04 与全部旧结论 |\n"}
+- `Edit` {"replace_all": false, "file_path": "/Users/harveyzhang96/Projects/harveyz-skill/.worktrees/feature-superpowers-brainstorming-zh/docs/reports/brainstorming-zh-live-test-2026-10-17/scenarios/regression_029/project/.hskill/spec/2026-10-17-loan-sms-reminder/2026-10-17-loan-sms-reminder-record.md", "old_string": "| A-04 | 提醒短信每日约 1000 条，来自每日新增借用最多 1000 笔 | U-13 | 已批准（H-02），用户在 U-17 确认 |", "new_string": "| A-04 | 提醒短信每日约 1000 条，来自每日新增借用最多 1000 笔 | U-13 | 原状态：已批准（H-02），用户在 U-17 确认。**推导失效（U-22 指出，经核对成立）**：U-17 确认的只是“每日新增借用最多 1000 笔”这一事实；“每日提醒最多约 1000 条”是我的推断，用户并未单独确认。提醒落在 `due_at − 24h` 所在的日子而不是创建日，不同日子创建的借用、以及被改时间的借用都可能在同一天（甚至同一分钟）到点，所以每日提醒数没有 1000 的上限。原条目保留，由 A-06 取代 |\n| A-06 | 修正推导：(a) 每笔借用至多一条仍成立（U-04、U-06），累计发送尝试数不超过累计借用数，预算按“每笔一条”核算不变；(b) 但某一天、某一分钟的提醒数只受“当天、当分钟到点的进行中借用数”限制，不受每日新增上限限制；(c) 因此“每日 ≤1000 条”不能作为预算核对、验收或容量规划的依据 | U-04、U-06、U-17、U-22 | 待确认（H-05）。(a)(b) 是算术推导，(c) 的容量取值需用户提供上界，见 C-06 |"}
+- `Edit` {"replace_all": false, "file_path": "/Users/harveyzhang96/Projects/harveyz-skill/.worktrees/feature-superpowers-brainstorming-zh/docs/reports/brainstorming-zh-live-test-2026-10-17/scenarios/regression_029/project/.hskill/spec/2026-10-17-loan-sms-reminder/2026-10-17-loan-sms-reminder-record.md", "old_string": "| C-04 | 零宽限下，“严格晚于计划时点”按什么精度比较 | 选 A：归还时间只精确到分钟，同一分钟内尝试算准时，下一分钟才错过（U-19） | 已批准（H-03） |\n", "new_string": "| C-04 | 零宽限下，“严格晚于计划时点”按什么精度比较 | 选 A：归还时间只精确到分钟，同一分钟内尝试算准时，下一分钟才错过（U-19） | 已批准（H-03） |\n| C-05 | 占用（`ATTEMPTED` 已提交）之后、调用 AcmeSMS 之前，借用被取消或归还，这条提醒发不发。Spec v1 内矛盾：规则 8、不可接受结果 2、U-07、R-08 写“取消后不发”；第 5 节“占用与改时间/取消同时发生”写“占用先到则……取消不影响提醒，且短信照发”；4.5(3) 取消对 `ATTEMPTED` 不动；AC-13 未规定取消并发时是否调用 | 待用户回答。选项与推荐见 P-02。用户在 U-22 明确尚未授权 Agent 代为决定；改时间与占用的并发（规则 5）无矛盾，不在此项内 | 待确认 |\n| C-06 | 容量与验收的依据：既然每日提醒数不受 1000 限制，同一天、同一分钟最多可能有多少笔借用到点，作为容量规划与 AC-19 的上界。可答：给出数值（如进行中借用总数上限、或单分钟到点上限）；或不设上界，由用户接受“集中到点时超出能力的部分记 `MISSED`、不补发”的风险 | 待用户回答。Agent 不假设数值 | 待确认 |\n"}
+- `Edit` {"replace_all": false, "file_path": "/Users/harveyzhang96/Projects/harveyz-skill/.worktrees/feature-superpowers-brainstorming-zh/docs/reports/brainstorming-zh-live-test-2026-10-17/scenarios/regression_029/project/.hskill/spec/2026-10-17-loan-sms-reminder/2026-10-17-loan-sms-reminder-record.md", "old_string": "## 五、阻塞与待核实", "new_string": "| P-02 | 取消竞态（C-05）的处理。候选 A：以占用提交为界，占用先提交即视为已发出，取消不拦截、短信照发（即 Spec v1 第 5 节的行为），需把规则 8 与不可接受结果 2 改写为“取消提交时尚未占用的不发”；候选 B：占用后、调用前再读一次借用状态，已取消或已归还则记新结果 `CANCELLED_BEFORE_SEND`、不调用，占用的那一次机会随取消用掉；窗口缩到复核与发出请求之间，仍非零；候选 C：发送期间持行锁，取消事务等发送结束，行为严格按取消提交时点划分，但把外部调用放进持锁事务，取消、归还请求最长被拖到 AcmeSMS 超时，且占用连接。Agent 推荐 B（理由见答复）。任何候选都无法撤回已发出的请求，也不假设 AcmeSMS 可撤销（B-02 未核实） | 待用户选择。未选择前 Spec 不将任一候选写成已定 |\n\n## 五、阻塞与待核实"}
+- `Grep` {"pattern": "^\\| P-0|^## 五|^$", "path": "/Users/harveyzhang96/Projects/harveyz-skill/.worktrees/feature-superpowers-brainstorming-zh/docs/reports/brainstorming-zh-live-test-2026-10-17/scenarios/regression_029/project/.hskill/spec/2026-10-17-loan-sms-reminder/2026-10-17-loan-sms-reminder-record.md", "output_mode": "content", "-n": true, "offset": 20}
+- `Bash` {"command": "cd /Users/harveyzhang96/Projects/harveyz-skill/.worktrees/feature-superpowers-brainstorming-zh/docs/reports/brainstorming-zh-live-test-2026-10-17/scenarios/regression_029/project/.hskill/spec/2026-10-17-loan-sms-reminder && grep -n -E '^\\| P-0|^## 五|^$' 2026-10-17-loan-sms-reminder-record.md | sed -n '1,40p' | awk -F: '$1>66 && $1<80'"}
+- `Edit` {"replace_all": false, "file_path": "/Users/harveyzhang96/Projects/harveyz-skill/.worktrees/feature-superpowers-brainstorming-zh/docs/reports/brainstorming-zh-live-test-2026-10-17/scenarios/regression_029/project/.hskill/spec/2026-10-17-loan-sms-reminder/2026-10-17-loan-sms-reminder-record.md", "old_string": "已批准（H-03） |\n\n| P-02 |", "new_string": "已批准（H-03） |\n| P-02 |"}
+- `Edit` {"replace_all": false, "file_path": "/Users/harveyzhang96/Projects/harveyz-skill/.worktrees/feature-superpowers-brainstorming-zh/docs/reports/brainstorming-zh-live-test-2026-10-17/scenarios/regression_029/project/.hskill/spec/2026-10-17-loan-sms-reminder/2026-10-17-loan-sms-reminder-record.md", "old_string": "Agent 推荐 B（理由见答复）。", "new_string": "Agent 推荐 B（依据：U-07 与 R-08 要求“取消后不发”，B 在不改变占用先于调用这一已批准顺序（D-12）、不把外部调用放进持锁事务的前提下，把违反窗口压到最小；代价是新增一个 outcome 值和一次读借用状态；若用户认为该窗口可接受，A 改动最小）。"}
+- `Edit` {"replace_all": false, "file_path": "/Users/harveyzhang96/Projects/harveyz-skill/.worktrees/feature-superpowers-brainstorming-zh/docs/reports/brainstorming-zh-live-test-2026-10-17/scenarios/regression_029/project/.hskill/spec/2026-10-17-loan-sms-reminder/2026-10-17-loan-sms-reminder-record.md", "old_string": "已批准（Spec v1）。B-01、B-02 不在批准的解决范围内，仍待核实 |", "new_string": "已批准（Spec v1）。B-01、B-02 不在批准的解决范围内，仍待核实。**复审（U-22）：** 批准原文与记录保留，但其中 4.8 预算核对、AC-19、AC-20（依赖失效的 A-04）与第 1 节不可接受结果 2、规则 8、第 5 节“占用与改时间/取消同时发生”行、AC-13（取消竞态自相矛盾，C-05）这两组内容的批准暂停，待 H-05 重审；其余内容的批准不受影响。在 H-05 之前不进入制定计划 |\n| H-05 | 待提交：Spec v1.1 修订（A-06 修正推导及其对 4.8、AC-19、AC-20、AC-21、风险 1 的改动；C-05/P-02 取消竞态的所选候选及对规则 8、不可接受结果 2、第 5 节、AC-13 的改动；C-06 的容量上界或风险接受） | A-04（失效）、A-06、C-05、C-06、P-02 | 尚未提交，等待 C-05、C-06 的回答 | 待审批 |"}
+- `Edit` {"replace_all": false, "file_path": "/Users/harveyzhang96/Projects/harveyz-skill/.worktrees/feature-superpowers-brainstorming-zh/docs/reports/brainstorming-zh-live-test-2026-10-17/scenarios/regression_029/project/.hskill/spec/2026-10-17-loan-sms-reminder/2026-10-17-loan-sms-reminder-spec.md", "old_string": "- 追溯：需求与决策记录见", "new_string": "- **复审状态（2026-10-17，U-22）：暂停交付。** 批准后发现两处问题：(1) 预算与容量依据 A-04 失效，影响 4.8、AC-19、AC-20、风险 1；(2) 取消竞态前后矛盾（C-05），影响第 1 节不可接受结果 2、规则 8、4.5(3)、第 5 节一行、AC-13。H-04 的批准原文保留，这两组内容的批准暂停，其余不受影响。修订草案见各处“【v1.1 草案，待 H-05】”标记与第 11 节；取消竞态尚无选定方案，只标冲突，不替用户决定。\n- 追溯：需求与决策记录见"}
+- `Edit` {"replace_all": false, "file_path": "/Users/harveyzhang96/Projects/harveyz-skill/.worktrees/feature-superpowers-brainstorming-zh/docs/reports/brainstorming-zh-live-test-2026-10-17/scenarios/regression_029/project/.hskill/spec/2026-10-17-loan-sms-reminder/2026-10-17-loan-sms-reminder-spec.md", "old_string": "2. 取消或归还之后仍发出提醒。", "new_string": "2. 取消或归还之后仍发出提醒。【冲突待决（C-05）：与第 5 节“占用先到则取消不影响提醒，且短信照发”矛盾；“之后”是以取消提交时点还是以占用时点为界，待用户决定。】"}
+- `Edit` {"replace_all": false, "file_path": "/Users/harveyzhang96/Projects/harveyz-skill/.worktrees/feature-superpowers-brainstorming-zh/docs/reports/brainstorming-zh-live-test-2026-10-17/scenarios/regression_029/project/.hskill/spec/2026-10-17-loan-sms-reminder/2026-10-17-loan-sms-reminder-spec.md", "old_string": "| 8 | 取消借用、借用已归还：不发 | R-08、R-09、A-02 | 用户直接提出，用户确认了我的推断 |", "new_string": "| 8 | 取消借用、借用已归还：不发。【冲突待决（C-05）：占用之后、调用 AcmeSMS 之前发生取消时是否发，未定；候选见记录 P-02。】 | R-08、R-09、A-02 | 用户直接提出，用户确认了我的推断 |"}
+- `Edit` {"replace_all": false, "file_path": "/Users/harveyzhang96/Projects/harveyz-skill/.worktrees/feature-superpowers-brainstorming-zh/docs/reports/brainstorming-zh-live-test-2026-10-17/scenarios/regression_029/project/.hskill/spec/2026-10-17-loan-sms-reminder/2026-10-17-loan-sms-reminder-spec.md", "old_string": "已经是 `ATTEMPTED` 的保持不变，保留发送历史。", "new_string": "已经是 `ATTEMPTED` 的保持不变，保留发送历史。【冲突待决（C-05）：这意味着占用已提交而尚未调用供应商时，取消不拦截发送；与规则 8 是否一致取决于用户对 P-02 的选择，未选前不视为已定。】"}
+- `Edit` {"replace_all": false, "file_path": "/Users/harveyzhang96/Projects/harveyz-skill/.worktrees/feature-superpowers-brainstorming-zh/docs/reports/brainstorming-zh-live-test-2026-10-17/scenarios/regression_029/project/.hskill/spec/2026-10-17-loan-sms-reminder/2026-10-17-loan-sms-reminder-spec.md", "old_string": "- **预算核对：** 每日统计 `state = 'ATTEMPTED'` 且 `outcome <> 'NO_VERIFIED_PHONE'` 的行数，应不超过当日新增借用数的上限。每笔借用至多一行，所以短信数每日不超过 1000 的上限（A-04、U-17）。", "new_string": "- ~~**预算核对：** 每日统计 `state = 'ATTEMPTED'` 且 `outcome <> 'NO_VERIFIED_PHONE'` 的行数，应不超过当日新增借用数的上限。每笔借用至多一行，所以短信数每日不超过 1000 的上限（A-04、U-17）。~~ 【已失效：提醒落在 `due_at − 24h` 所在日，不是创建日，每日提醒数不受每日新增上限约束（A-04 失效，U-22）。】\n- 【v1.1 草案，待 H-05】**预算核对（A-06）：** 每笔借用至多一行（主键保证），因此任意时刻 `state = 'ATTEMPTED'` 且 `outcome <> 'NO_VERIFIED_PHONE'` 的行数不超过已创建借用总数；预算按“每笔一条”核算（U-06）。每日、每分钟的发送数只作监控，不断言不超过 1000，其峰值取决于当日、当分钟到点的进行中借用数，容量上界待 C-06。"}
+- `Edit` {"replace_all": false, "file_path": "/Users/harveyzhang96/Projects/harveyz-skill/.worktrees/feature-superpowers-brainstorming-zh/docs/reports/brainstorming-zh-live-test-2026-10-17/scenarios/regression_029/project/.hskill/spec/2026-10-17-loan-sms-reminder/2026-10-17-loan-sms-reminder-spec.md", "old_string": "| 行锁排斥：占用先到则改时间/取消不影响提醒，且短信照发；改时间/取消先到则占用返回 0 行 | 4.5 |", "new_string": "| 行锁排斥：占用先到则改时间/取消不影响提醒，且短信照发；改时间/取消先到则占用返回 0 行。【改时间部分与规则 5 一致，保留；“取消不影响提醒、短信照发”与规则 8 冲突，待决（C-05）。】 | 4.5 |"}
+- `Edit` {"replace_all": false, "file_path": "/Users/harveyzhang96/Projects/harveyz-skill/.worktrees/feature-superpowers-brainstorming-zh/docs/reports/brainstorming-zh-live-test-2026-10-17/scenarios/regression_029/project/.hskill/spec/2026-10-17-loan-sms-reminder/2026-10-17-loan-sms-reminder-spec.md", "old_string": "| 每次最多一次调用；占用先到时改时间不影响提醒 | R-03、R-05 |", "new_string": "| 每次最多一次调用；占用先到时改时间不影响提醒。【取消并发时占用先到是否调用，期望待决（C-05），选定后补写。】 | R-03、R-05 |"}
+- `Edit` {"replace_all": false, "file_path": "/Users/harveyzhang96/Projects/harveyz-skill/.worktrees/feature-superpowers-brainstorming-zh/docs/reports/brainstorming-zh-live-test-2026-10-17/scenarios/regression_029/project/.hskill/spec/2026-10-17-loan-sms-reminder/2026-10-17-loan-sms-reminder-spec.md", "old_string": "| AC-19 | 同一分钟 1000 笔到点（每日上限全部集中），AcmeSMS 带延迟 | 轮询不被阻塞；结果取决于并发度与频率限制，须在实施前依据 B-02 确认 | D-07、第 7 节 |\n| AC-20 | 预算核对：任意一天，`ATTEMPTED` 计数 | 不超过该日新增借用数 | R-03、A-04 |", "new_string": "| ~~AC-19~~ | ~~同一分钟 1000 笔到点（每日上限全部集中），AcmeSMS 带延迟~~ | ~~轮询不被阻塞；结果取决于并发度与频率限制，须在实施前依据 B-02 确认~~ | D-07、第 7 节 |\n| AC-19′ 【v1.1 草案，待 H-05】 | 同一分钟 N 笔到点，N 取 C-06 用户给定的上界，未给定则分别用 1000 和 5000 各跑一次；这些借用可由不同日子创建；AcmeSMS 带延迟 | 轮询不被阻塞；每笔至多一次调用；在计划分钟内占用不上的记 `MISSED`、无调用；`MISSED` 数量与并发度、频率限制的关系在实施前依据 B-02 确认 | D-07、A-06、第 7 节 |\n| ~~AC-20~~ | ~~预算核对：任意一天，`ATTEMPTED` 计数~~ | ~~不超过该日新增借用数~~ | R-03、A-04（失效） |\n| AC-20′ 【v1.1 草案，待 H-05】 | 预算核对：任意时刻 `ATTEMPTED`（不含 `NO_VERIFIED_PHONE`）计数，对照已创建借用总数 | 不超过已创建借用总数，且每笔借用至多一行 | R-03、U-06、A-06 |\n| AC-21 【v1.1 草案，待 H-05】 | 连续 3 天，每天新建 1000 笔借用，全部约定在第 4 天同一时刻归还 | 第 4 天前一日该时刻提醒数为 3000，每笔至多一次调用；系统不假设每日提醒 ≤1000，超出能力的部分记 `MISSED` | A-06 |"}
+- `Edit` {"replace_all": false, "file_path": "/Users/harveyzhang96/Projects/harveyz-skill/.worktrees/feature-superpowers-brainstorming-zh/docs/reports/brainstorming-zh-live-test-2026-10-17/scenarios/regression_029/project/.hskill/spec/2026-10-17-loan-sms-reminder/2026-10-17-loan-sms-reminder-spec.md", "old_string": "1. **突发集中到点。** 如果很多借用的计划分钟相同（例如大量借用约定同一时刻归还），", "new_string": "1. **突发集中到点。** 【v1.1 草案，待 H-05】到点数量不受“每日新增最多 1000 笔”约束：不同日子创建的借用、以及被改时间的借用，都可能落在同一天或同一分钟（A-06）。上界待 C-06。如果很多借用的计划分钟相同（例如大量借用约定同一时刻归还），"}
+- `Edit` {"replace_all": false, "file_path": "/Users/harveyzhang96/Projects/harveyz-skill/.worktrees/feature-superpowers-brainstorming-zh/docs/reports/brainstorming-zh-live-test-2026-10-17/scenarios/regression_029/project/.hskill/spec/2026-10-17-loan-sms-reminder/2026-10-17-loan-sms-reminder-spec.md", "old_string": "- 已批准，下一步是制定实现计划（writing-plans）。B-01、B-02 须在实施前核实。本阶段不修改产品代码。", "new_string": "- ~~已批准，下一步是制定实现计划（writing-plans）。~~ 【2026-10-17 更新：暂停。复审（U-22）发现 A-04 推导失效与取消竞态矛盾，须完成 C-05、C-06 并通过 H-05 后，才进入制定计划。】B-01、B-02 须在实施前核实。本阶段不修改产品代码。\n\n## 11. 修订记录\n\n| 版本 | 日期 | 状态 | 变更 |\n|------|------|------|------|\n| v1 | 2026-10-17 | 已批准（H-04），原文保留 | 初版 |\n| v1.1 草案 | 2026-10-17 | 待审（H-05），未完成 | 起因 U-22。(1) A-04 失效，由 A-06 取代；4.8 预算核对、AC-19、AC-20 改写为 AC-19′、AC-20′，新增 AC-21，风险 1 补充；旧文以删除线保留。(2) 取消竞态：仅在第 1 节结果 2、规则 8、4.5(3)、第 5 节一行、AC-13 标出冲突，未选定方案（P-02 待用户选择）；选定后须改写这些位置并补 AC-13。(3) 容量上界 C-06 待用户提供。 |"}
+- `Edit` {"replace_all": false, "file_path": "/Users/harveyzhang96/Projects/harveyz-skill/.worktrees/feature-superpowers-brainstorming-zh/docs/reports/brainstorming-zh-live-test-2026-10-17/scenarios/regression_029/project/.hskill/spec/2026-10-17-loan-sms-reminder/2026-10-17-loan-sms-reminder-spec.md", "old_string": "| 连续 3 天，每天新建 1000 笔借用，全部约定在第 4 天同一时刻归还 | 第 4 天前一日该时刻提醒数为 3000，每笔至多一次调用；系统不假设每日提醒 ≤1000，超出能力的部分记 `MISSED` |", "new_string": "| 第 1、2、3 天各新建 1000 笔借用（第 3 天的在计划时点 T 之前创建），全部约定在第 4 天时刻 T+24h 归还 | 第 3 天时刻 T 同一分钟有 3000 笔到点，每笔至多一次调用；系统不假设每日提醒 ≤1000，超出能力的部分记 `MISSED`；第 3 天在 T 之后创建的借用为 `NOT_SCHEDULED`，不计入 |"}

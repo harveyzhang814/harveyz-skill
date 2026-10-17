@@ -1,0 +1,45 @@
+{
+  "session_id": "0c1c3e24-5423-4587-abca-f0a3aec046c5",
+  "turns": [
+    {
+      "turn": 1,
+      "exit_code": 0
+    },
+    {
+      "turn": 2,
+      "exit_code": 0
+    },
+    {
+      "turn": 3,
+      "exit_code": 0
+    },
+    {
+      "turn": 4,
+      "exit_code": 0
+    },
+    {
+      "turn": 5,
+      "exit_code": 0
+    },
+    {
+      "turn": 6,
+      "exit_code": 0
+    },
+    {
+      "turn": 7,
+      "exit_code": 0
+    },
+    {
+      "turn": 8,
+      "exit_code": 0
+    },
+    {
+      "turn": 9,
+      "exit_code": 0
+    },
+    {
+      "turn": 10,
+      "exit_code": 0
+    }
+  ]
+}

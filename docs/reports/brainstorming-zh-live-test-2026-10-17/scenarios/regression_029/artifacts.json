@@ -1,0 +1,47 @@
+[
+  {
+    "path": "README.md",
+    "bytes": 1270,
+    "sha256": "56590d8898a536d40eb524b5df748f6a074d2125277a84c0e6bccfc372511d85"
+  },
+  {
+    "path": "logs/turn-01.jsonl",
+    "bytes": 664324,
+    "sha256": "0209a8d73ae863f34f325f743b184697bdd873dc935a6c8bb06018f42ec75d51"
+  },
+  {
+    "path": "logs/turn-01.stderr",
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "path": "logs/turn-01.summary.json",
+    "bytes": 27127,
+    "sha256": "f6768f9a4f7d0d9b573071f8ff868da5958cc6f2e429093239c6b636db09e8ba"
+  },
+  {
+    "path": "logs/turn-01.user.txt",
+    "bytes": 583,
+    "sha256": "021e1cf4a09ee006d31c8863deb330ac790d0263d7a5be15ae51146523534efd"
+  },
+  {
+    "path": "project/.hskill/spec/2026-10-17-loan-sms-reminder/2026-10-17-loan-sms-reminder-record.md",
+    "bytes": 15309,
+    "sha256": "38cb457719d4f7ee8313655834bc644f67d788b73fae43d54d1e8f25c4298b4c"
+  },
+  {
+    "path": "project/.hskill/spec/2026-10-17-loan-sms-reminder/2026-10-17-loan-sms-reminder-spec.md",
+    "bytes": 46998,
+    "sha256": "50d1e031ef1f77e3dd720ce55f147033ffeb99f9065c10937cfe1ff7ccd5f992"
+  },
+  {
+    "path": "session.json",
+    "bytes": 127,
+    "sha256": "62c9fdf43a5ade03b92742750f304f261da3f208df08c7d4c920667a0a835d69"
+  },
+  {
+    "path": "transcript.md",
+    "bytes": 25238,
+    "sha256": "0b2354f250acc2e4259c565a95cda15dd57b51032c5cbb97187529214aa4272f"
+  }
+]

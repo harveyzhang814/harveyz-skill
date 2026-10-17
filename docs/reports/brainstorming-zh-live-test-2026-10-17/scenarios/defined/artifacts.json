@@ -1,0 +1,27 @@
+[
+  {
+    "path": "project/.hskill/spec/2026-10-17-snooze-reminder/2026-10-17-snooze-reminder-record.md",
+    "sha256": "be963a24782d8280cfc93a83e80ee2e9a9db471ce8fb56969c23afa848975668",
+    "bytes": 6291
+  },
+  {
+    "path": "project/.hskill/spec/2026-10-17-snooze-reminder/2026-10-17-snooze-reminder-spec.md",
+    "sha256": "5fddfd867b20565c5835d7291ad271b3df0cf6c804efebe73095440396dd77f8",
+    "bytes": 8662
+  },
+  {
+    "path": "project/README.md",
+    "sha256": "86adbb991ebef9e4c7380de6e29512f1dc60fce863e5951dc1e9bbf498352838",
+    "bytes": 286
+  },
+  {
+    "path": "project/task_service.py",
+    "sha256": "a056e0b512553104cdec961e4cafbc92900f5cc923c6153ec45f5af6aa171f23",
+    "bytes": 613
+  },
+  {
+    "path": "project/test_task_service.py",
+    "sha256": "0fa7d73a1850f591c800774c750b7e2f75a4f26ef2a9c401946a3d877748687f",
+    "bytes": 558
+  }
+]
