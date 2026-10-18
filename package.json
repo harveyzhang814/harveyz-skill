@@ -53,6 +53,7 @@
     "skills/mint/publish-skill/",
     "skills/mint/archive-skill/",
     "skills/mint/dedup-skill/",
+    "skills/mint/simplify-skill/",
     "skills/mint/contribute-skill/",
     "skills/mint/fix-skill/",
     "skills/mint/runby-opencode/",

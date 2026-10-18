@@ -34,7 +34,7 @@
     "coding": "程序工具（init-project + init-workflow + setup-debug + init-goal + question-me + capture-vocab + rephrase + explain-pm）",
     "writing": "写作工具（forge-doc + draw-diagram + manage-dir + migrate-spec）",
     "design": "设计工具（scout-brand + build-style + sync-design）",
-    "mint": "Skill 生命周期工具（init-skill + publish-skill + archive-skill + dedup-skill + contribute-skill + fix-skill + runby-opencode + scout-philosophy + learn-skill）",
+    "mint": "Skill 生命周期工具（init-skill + publish-skill + archive-skill + dedup-skill + simplify-skill + contribute-skill + fix-skill + runby-opencode + scout-philosophy + learn-skill）",
     "devops": "项目运维工具（clean-git + release-project + sync-hotfix + sync-agent）",
     "agent-canvas": "Agent Canvas 内置 skill（agent-canvas-control — 节点与画布操控；describe-node/relate-node/capture-requirement/relation-review/close-node — 画布节点生命周期治理；judge-release — 对照验收标准逐条取证并写结论）",
     "superpowers-rewrite": "Superpowers 个人改写版（init-spec — 从初步想法到获批 Spec）"
@@ -284,6 +284,13 @@
       "installScope": "project",
       "contentHash": "6ebfca98f37241d0",
       "contentVersion": "1.0.0"
+    },
+    {
+      "path": "mint/simplify-skill",
+      "bundle": "mint",
+      "installScope": "project",
+      "contentHash": "195fa1d5e587d496",
+      "contentVersion": "0.1.1"
     },
     {
       "path": "mint/contribute-skill",
