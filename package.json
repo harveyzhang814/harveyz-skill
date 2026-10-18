@@ -74,6 +74,7 @@
     "skills/agent-canvas/judge-release/",
     "skills/coding/analyze-claudemd/",
     "skills/superpowers-rewrite/init-spec/",
+    "skills/superpowers-rewrite/develop-plan/",
     "tools/hub/",
     "tools/sync-agent/",
     "tools/browser-fetch/",

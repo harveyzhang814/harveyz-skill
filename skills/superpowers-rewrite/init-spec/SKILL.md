@@ -2,7 +2,7 @@
 name: init-spec
 description: "Use when a rough idea or defined product or development goal needs to become a reviewed spec before implementation. Clarifies requirements, records decisions and their sources, presents major solution choices for user approval, and writes a standalone spec. Triggers: brainstorm a feature, clarify requirements, compare solution approaches, turn an idea into a spec, write a design spec, or build a new feature with unresolved requirements or key choices."
 user_invocable: true
-version: "0.1.38"
+version: "0.1.42"
 ---
 
 # 从初步想法到 Spec
@@ -126,5 +126,5 @@ Spec 只保留影响实现或验收的细节，详略随任务复杂度调整，
 
 有两个例外。如果他们选择跳过提问，本技能即告结束，这道门槛也随之解除。经他们同意的探索性试做可以构建；它始终标记为用后即弃，如果要保留试做成果，就属于新请求，必须重新经过这道门槛。
 
-项目文档获批后，下一步是制定计划。对于软件项目，调用 superpowers:writing-plans，不得调用其他技能。
+项目文档获批后，下一步是制定计划。对于软件项目，调用本 `superpowers-rewrite` bundle 的 `develop-plan` 技能，传递已批准的 Spec 路径、版本和范围；计划与 Spec 放在同一目录。沿用 HSkill 默认命名时，计划文件名为 `YYYY-MM-DD-<topic>-plan.md`，其中日期和 topic 与 Spec 一致。此处不得调用其他技能。
 </HARD-GATE>
