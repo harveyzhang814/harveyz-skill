@@ -37,7 +37,7 @@
     "mint": "Skill 生命周期工具（init-skill + publish-skill + archive-skill + dedup-skill + contribute-skill + fix-skill + runby-opencode + scout-philosophy + learn-skill）",
     "devops": "项目运维工具（clean-git + release-project + sync-hotfix + sync-agent）",
     "agent-canvas": "Agent Canvas 内置 skill（agent-canvas-control — 节点与画布操控；describe-node/relate-node/capture-requirement/relation-review/close-node — 画布节点生命周期治理；judge-release — 对照验收标准逐条取证并写结论）",
-    "superpowers-rewrite": "Superpowers 个人改写版（init-spec — 从初步想法到获批 Spec）"
+    "superpowers-rewrite": "Superpowers 个人改写版（init-spec — 从初步想法到获批 Spec；develop-plan — 制定实施计划）"
   },
   "skills": [
     {
@@ -422,8 +422,15 @@
       "path": "superpowers-rewrite/init-spec",
       "bundle": "superpowers-rewrite",
       "installScope": "global",
-      "contentHash": "5c591d59ae75fa44",
-      "contentVersion": "0.1.38"
+      "contentHash": "3588903fde66df37",
+      "contentVersion": "0.1.42"
+    },
+    {
+      "path": "superpowers-rewrite/develop-plan",
+      "bundle": "superpowers-rewrite",
+      "installScope": "global",
+      "contentHash": "98ab72407b9f73a2",
+      "contentVersion": "0.1.11"
     }
   ],
   "hooks": [
