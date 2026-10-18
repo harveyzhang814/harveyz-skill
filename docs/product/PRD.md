@@ -1,8 +1,8 @@
 # HSkill 产品需求
 
-## brainstorming-zh：从需求澄清到设计 Spec
+## init-spec：从初步想法到获批 Spec
 
-**状态：** 功能分支中的待集成技能，当前版本 0.1.37；尚未合并、部署或发布。
+**状态：** 当前版本 0.1.38，以 `staging` 为集成分支；尚未部署或发布。
 
 **目标：** 在产品需求或开发任务进入实现前，通过对话确认用户意图、记录关键决定、审查方案，并产出可供后续制定计划的独立 Spec。
 
@@ -14,6 +14,6 @@
 - 人工批准完整描述前不开始产品构建；获批后同步 Spec 与决定记录的状态。
 - 作为独立 `superpowers-rewrite` bundle 登记并打包，不覆盖上游同名技能。
 
-**范围外：** 本技能不负责实现产品代码、替代后续实施计划，当前分支也不执行安装、合并或发布。
+**范围外：** 本技能不负责实现产品代码、替代后续实施计划，也不负责安装或发布。
 
-**验证依据：** [改写流程分析](../reports/2026-10-17-brainstorming-rewrite-analysis.md)、[真实场景测试记录](../reports/brainstorming-zh-live-test-2026-10-17/README.md)和[新旧版对照评估](../reports/brainstorming-comparison-2026-10-17/README.md)。完整 `npm test` 仍有其他测试套件失败，见真实场景测试记录；不将其判为本技能通过。
+**流程依据：** [改写流程分析](../reports/2026-10-17-brainstorming-rewrite-analysis.md)。

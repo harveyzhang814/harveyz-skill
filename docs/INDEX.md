@@ -13,7 +13,7 @@ methodology: diataxis
 
 | 文件 | 用途 |
 |------|------|
-| [product/PRD.md](product/PRD.md) | brainstorming-zh 的目标、功能边界与验证依据 |
+| [product/PRD.md](product/PRD.md) | init-spec 的目标、功能边界与验证依据 |
 
 ## how-to/ — 操作指南
 
@@ -53,8 +53,6 @@ methodology: diataxis
 |------|------|
 | [reports/2026-09-24-published-skill-platform-audit.md](reports/2026-09-24-published-skill-platform-audit.md) | 按平台适配标准逐项评估 52 个已发布 skill，并给出分批处理建议 |
 | [reports/2026-10-17-brainstorming-rewrite-analysis.md](reports/2026-10-17-brainstorming-rewrite-analysis.md) | brainstorming-zh 初版的制作、原版流程与审阅基线 |
-| [reports/brainstorming-zh-live-test-2026-10-17/README.md](reports/brainstorming-zh-live-test-2026-10-17/README.md) | brainstorming-zh 的真实 CLI 场景、回归记录与独立审计 |
-| [reports/brainstorming-comparison-2026-10-17/README.md](reports/brainstorming-comparison-2026-10-17/README.md) | 新版与原版 Brainstorming 的同场景方案对照 |
 
 ## adr/ — 架构决策记录
 

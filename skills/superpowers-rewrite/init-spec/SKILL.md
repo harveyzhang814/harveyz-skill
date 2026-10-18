@@ -1,11 +1,11 @@
 ---
-name: brainstorming-zh
-description: "在任何创造性工作之前都必须使用本技能——无论是在软件领域还是其他领域（例如演讲、创业、装修），包括创建功能、构建组件、增加功能、修改行为，或规划任何新事物。"
+name: init-spec
+description: "Use when a rough idea or defined product or development goal needs to become a reviewed spec before implementation. Clarifies requirements, records decisions and their sources, presents major solution choices for user approval, and writes a standalone spec. Triggers: brainstorm a feature, clarify requirements, compare solution approaches, turn an idea into a spec, write a design spec, or build a new feature with unresolved requirements or key choices."
 user_invocable: true
-version: "0.1.37"
+version: "0.1.38"
 ---
 
-# 头脑风暴
+# 从初步想法到 Spec
 
 本技能帮助你在构建前核实用户想要什么、为什么想要，避免凭未经确认的理解做决定；通过提问厘清尚未成形的需求，才能依据用户意图处理他们未提及的选择。
 
