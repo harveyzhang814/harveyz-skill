@@ -289,8 +289,8 @@
       "path": "mint/simplify-skill",
       "bundle": "mint",
       "installScope": "project",
-      "contentHash": "195fa1d5e587d496",
-      "contentVersion": "0.1.1"
+      "contentHash": "1bbeeb0bbc71a713",
+      "contentVersion": "0.1.2"
     },
     {
       "path": "mint/contribute-skill",
