@@ -86,8 +86,8 @@
       "path": "research/extract-cognition",
       "bundle": "research",
       "installScope": "project",
-      "contentHash": "d8489acfb63f0a1c",
-      "contentVersion": "0.2.0"
+      "contentHash": "3fcdd96a14407ead",
+      "contentVersion": "0.3.0"
     },
     {
       "path": "research/probe-session",
