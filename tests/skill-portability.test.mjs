@@ -36,8 +36,10 @@ test('learn-video: mode and script paths are host-neutral', async () => {
   assert.match(body, /\$SKILL_DIR\/scripts\/archive\.py/)
   assert.match(body, /\$SKILL_DIR\/scripts\/build_creator_index\.py/)
   assert.match(body, /不能可靠启动并追踪长期任务.*启动前.*停止/)
-  assert.match(body, /package\.json.*npm run agent:serve.*存在/)
   assert.doesNotMatch(body, /\$HOME\/Projects\/(harveyz-skill|Video-Learner)/)
+  const rerun = await readFile(resolve(root, 'skills/research/learn-video/references/rerun.md'), 'utf8')
+  assert.match(rerun, /package\.json.*npm run agent:serve.*存在/)
+  assert.doesNotMatch(rerun, /\$HOME\/Projects\/(harveyz-skill|Video-Learner)/)
 })
 
 test('extract-vision: delegation and vision have safe fallbacks', async () => {
