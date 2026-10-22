@@ -93,8 +93,8 @@
       "path": "research/probe-session",
       "bundle": "research",
       "installScope": "project",
-      "contentHash": "91391f7b702e0797",
-      "contentVersion": "0.3.0"
+      "contentHash": "898c63f4fab2b0d2",
+      "contentVersion": "0.3.1"
     },
     {
       "path": "research/pdf-math-translate",
