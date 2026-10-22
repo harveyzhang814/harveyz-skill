@@ -212,50 +212,50 @@
       "path": "writing/forge-doc",
       "bundle": "writing",
       "installScope": "global",
-      "contentHash": "ef8993f13f1284c8",
-      "contentVersion": "2.5.2"
+      "contentHash": "1186c485b858377a",
+      "contentVersion": "2.6.1"
     },
     {
       "path": "writing/draw-diagram",
       "bundle": "writing",
       "installScope": "global",
-      "contentHash": "347865f4c7bf3d52",
-      "contentVersion": "1.4.0"
+      "contentHash": "6a5d55e7bf95ec0a",
+      "contentVersion": "1.5.0"
     },
     {
       "path": "writing/manage-dir",
       "bundle": "writing",
       "installScope": "project",
-      "contentHash": "89fa0c98f2ed7ded",
-      "contentVersion": "1.0.0"
+      "contentHash": "7128e228c9df8f13",
+      "contentVersion": "1.0.1"
     },
     {
       "path": "writing/migrate-spec",
       "bundle": "writing",
       "installScope": "project",
-      "contentHash": "596bfcc1ef5a2db6",
-      "contentVersion": "1.0.0"
+      "contentHash": "0a833b71007148ad",
+      "contentVersion": "1.1.0"
     },
     {
       "path": "design/scout-brand",
       "bundle": "design",
       "installScope": "project",
-      "contentHash": "135c0970bce0e998",
-      "contentVersion": "2.1.0"
+      "contentHash": "69dfa054c71f8df6",
+      "contentVersion": "2.2.0"
     },
     {
       "path": "design/build-style",
       "bundle": "design",
       "installScope": "project",
-      "contentHash": "cae8e09fcd2e8dc8",
-      "contentVersion": "1.4.1"
+      "contentHash": "6828f9938517c707",
+      "contentVersion": "1.5.0"
     },
     {
       "path": "design/sync-design",
       "bundle": "design",
       "installScope": "project",
-      "contentHash": "aaf5794eff6cf793",
-      "contentVersion": "5.0.0"
+      "contentHash": "ba5ea653fb0e8037",
+      "contentVersion": "5.1.0"
     },
     {
       "path": "mint/init-skill",

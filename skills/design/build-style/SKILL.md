@@ -2,7 +2,7 @@
 name: build-style
 description: "Derive format-specific configs from a brand design knowledge doc. Trigger when the user wants to generate doc-forge JSON/CSS, HTML CSS variables, Mermaid color scheme, or PPT theme from a design system. E.g. 'derive configs for BCG', 'generate doc-forge style for rb', 'create HTML theme from custom-style'."
 user_invocable: true
-version: "1.4.1"
+version: "1.5.0"
 ---
 
 ## 概述
@@ -14,10 +14,10 @@ version: "1.4.1"
 **映射标准：** 格式字段 ↔ Token 的完整映射规则定义在 `references/FORMAT-MAPPING.md`，推导时以该文件为权威依据。品牌文件提供 Token 值，FORMAT-MAPPING.md 提供映射规则，两者分离。
 
 支持输出格式：
-- **DOCX** — `doc-forge/<brand>-style.json`
-- **PDF** — `doc-forge/<brand>.css`
+- **DOCX** — `skills/writing/forge-doc/assets/<brand>-style.json`
+- **PDF** — `skills/writing/forge-doc/assets/<brand>.css`
 - **HTML** — CSS 变量块（打印到对话或写入文件）
-- **Mermaid** — 图表配色方案
+- **Mermaid** — 图表配色方案（`skills/writing/draw-diagram/themes/<brand>.json`）
 - **PPT** — 演示文稿主题描述
 
 ---
@@ -30,7 +30,7 @@ version: "1.4.1"
 
 > 请提供品牌名（如 bain / custom），或完整路径（如 knowledge/design/bain-style.md）
 
-确认目标格式（若未指定，默认推导 DOCX + PDF）：
+用户未指定格式时询问（不选则按 DOCX + PDF）：
 
 > 需要推导哪些格式？
 > 1. DOCX（doc-forge JSON）
@@ -236,31 +236,19 @@ H1_doc = 24
 
 ### Step 6 — 推导 Mermaid 主题并写入配置文件（按需）
 
-**themeVariables 键名查阅 `references/FORMAT-MAPPING.md` 第七节。**
-
 写入 `skills/writing/draw-diagram/themes/<brand>.json`，同时在对话中打印可直接嵌入的 `%%{init}%%` 块。
 
 主题文件按图类型分区存储，不同图类型使用不同样式机制。
 
 #### 6.1 flowchart — subgraph / node 推导
 
-`flowchart.subgraph` 以 H1_COLOR 为基准推算三层弱背景色（RGB 各通道独立，上限 255，结果转 hex）。
+`flowchart.subgraph` 固定为浅灰三层，不随品牌色变化：
 
-**目标：** 三层浅灰梯度，最深层差 ≈ 15%，提供可见但不抢视觉的分组底色。
-
-**标准路径**（H1_COLOR RGB 三通道均值 ≥ 128，属亮色）：
-
-| 字段 | 规则 |
-|------|------|
-| `flowchart.subgraph.layer1.fill` | 白色 `#FFFFFF` 与 H1_COLOR 按 80:20 混合后再向灰偏移，取 `#E8E8E8` 段 |
-| `flowchart.subgraph.layer2.fill` | 同上向浅推 → `#F0F0F0` 段 |
-| `flowchart.subgraph.layer3.fill` | 同上继续 → `#F5F5F5` 段 |
-| `flowchart.subgraph.*.stroke` | 同层 fill × 0.85（略深） |
-| `flowchart.subgraph.*.text` | `#212427`（固定深色） |
-
-> 简化规则：无论品牌色如何，subgraph 固定使用 `#E8→#F0→#F5` 浅灰梯度，保持弱背景特性。
-
-**深色品牌基准**（H1_COLOR RGB 均值 < 128）同上，不从 H1_COLOR 推导，直接用固定浅灰。
+| 字段 | fill | stroke | text |
+|------|------|--------|------|
+| `layer1` | `#E8E8E8` | `#C8C8C8` | `#212427` |
+| `layer2` | `#F0F0F0` | `#D0D0D0` | `#212427` |
+| `layer3` | `#F5F5F5` | `#D8D8D8` | `#212427` |
 
 **flowchart.node 推导：**
 
@@ -272,7 +260,7 @@ H1_doc = 24
 | `node.primary.fill` | H1_COLOR（品牌主色，关键节点） |
 | `node.primary.stroke` | H1_COLOR × 0.80 |
 | `node.primary.text` | H1_COLOR 深于 `rules.dark_text_threshold` → `#FFFFFF`，否则 `#212427` |
-| `node.secondary.fill` | `color.text.primary` 或深灰 `#555555` |
+| `node.secondary.fill` | `#555555`（深灰） |
 | `node.secondary.stroke` | 同上 × 0.70 |
 | `node.secondary.text` | `#FFFFFF` |
 
@@ -328,7 +316,7 @@ H1_doc = 24
 | cScale | 规则 |
 |--------|------|
 | 偶数位（0/2/4...） | H1_COLOR（品牌主色） |
-| 奇数位（1/3/5...） | `color.text.secondary` 或 `#666666`（中性灰） |
+| 奇数位（1/3/5...） | `#666666`（中性灰） |
 | `titleColor` | `#212427` |
 
 #### 6.6 semantic 色推导
@@ -349,7 +337,7 @@ semantic 的 `text` 字段：fill 深于 `rules.dark_text_threshold` → `#FFFFF
 {
   "_brand": "<品牌名>",
   "_source": "knowledge/design/<brand>-style.md",
-  "_derived_by": "design-derive v1.5.0",
+  "_derived_by": "build-style",
 
   "flowchart": {
     "subgraph": {
@@ -429,15 +417,14 @@ semantic 的 `text` 字段：fill 深于 `rules.dark_text_threshold` → `#FFFFF
 
 对于 DOCX 和 PDF 格式，写入文件后展示摘要：
 
-> `doc-forge/<brand>-style.json` 已生成  
-> `doc-forge/<brand>.css` 已生成  
-> `mermaid-diagram/themes/<brand>.json` 已生成（若包含 Step 6）
+> `skills/writing/forge-doc/assets/<brand>-style.json`、`<brand>.css` 已生成  
+> `skills/writing/draw-diagram/themes/<brand>.json` 已生成（若包含 Step 6）
 >
 > 请重点核查：
 > 1. **装饰线颜色** — H1/H2 border-bottom、H3 border-left 是否都使用了动作色（非文字色）？
 > 2. **字体降级** — 中文字体是否为 `PingFang SC`（macOS）或合适替代？
 > 3. **表格模式** — `border_mode` 是否与设计文档一致？
-> 4. **Mermaid 深色节点** — subgraph/node 所有 fill 深于 `#4A4A4A` 的是否都有 `color:#fff`？
+> 4. **Mermaid 深色节点** — subgraph/node 所有 fill 深于 `rules.dark_text_threshold`（`#808080`）的是否都有 `color:#fff`？
 >
 > 确认后可运行 `/forge-doc` 生成测试文档，或用 `/draw-diagram` 测试配色效果。
 
@@ -445,8 +432,5 @@ semantic 的 `text` 字段：fill 深于 `rules.dark_text_threshold` → `#FFFFF
 
 ## 注意事项
 
-- **动作色优先原则**：装饰线（heading borders、blockquote 左色条、list markers）必须使用动作色；若动作色视觉近黑（RGB 三通道之和 < 200），改用显色装饰线色或留空
+- **动作色优先原则**：装饰线（heading borders、blockquote 左色条、list markers）必须使用动作色；若动作色视觉近黑（RGB 三通道之和 < 150，同 scout-brand 定义），改用显色装饰线色或留空
 - **无值字段**：知识文档中标注为 `待补充` 的字段，使用合理默认值并在输出中注明
-- **rb 模式特殊处理**：`TABLE_ACCENT_COLOR` 和 `TABLE_ROW_SEP_COLOR` 只在 `border_mode: "rb"` 时填写
-- **字体中文名**：`font` 字段填 `PingFang SC`（macOS），对应英文字体在 `font_en` 字段
-- **颜色格式**：JSON 中颜色去掉 `#`，CSS 中保留 `#`
