@@ -128,8 +128,8 @@
       "path": "feed/sync-ytchannel",
       "bundle": "feed",
       "installScope": "project",
-      "contentHash": "67695c61331144ac",
-      "contentVersion": "0.7.4"
+      "contentHash": "5454a9384f114dca",
+      "contentVersion": "0.7.5"
     },
     {
       "path": "feed/sync-website",
