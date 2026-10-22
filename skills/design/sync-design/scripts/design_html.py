@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
 """sync-design 设计稿 HTML 工具（仅标准库）。
 
-  outline <html>             打印区段目录：样式段、图标定义区、状态块、脚本段的行号范围与大小
+  outline <html> [状态名]    打印区段目录：样式段、图标定义区、页头区、状态块、脚本段的行号范围与大小；
+                             给出状态名时只列名称或覆盖里有它的块
   migrate <manifest.json>    原地迁移 manifest 登记的所有稿子：删 base64 内嵌字体、重复图标收进
                              图标定义区、按 id / data-ui-state / data-state 属性补状态标记；
                              最后列出仍需人工（模型）补标记的状态
   check <manifest.json>      只检查不修改；有待迁移项时退出码为 1
+  verify <改前> <改后>        补标记后校验：去掉状态标记与标签间空白后两份必须一致，否则退出码为 1
 """
 import json
 import re
@@ -14,13 +16,13 @@ from collections import Counter
 from html.parser import HTMLParser
 from pathlib import Path
 
-ANCHOR = re.compile(r'^\s*──\s*(.+?)\s*──(.*)$', re.S)
+ANCHOR = re.compile(r'^\s*─{2,}\s*(.+?)\s*─{2,}(.*)$', re.S)
 SVG = re.compile(r'<svg\b([^>]*)>(.*?)</svg>', re.S)
 FONT_FACE = re.compile(
     r'@font-face\s*\{[^}]*?url\(\s*["\']?data:(?:font|application/(?:x-)?font)[^}]*\}\s*', re.S)
 SPRITE_OPEN = re.compile(r'<svg class="sd-sprite"[^>]*>')
 SVG_CHILD = re.compile(r'(?:^|[\s>+~,(])(?:path|circle|rect|polyline|polygon|ellipse|line|g)(?=$|[\s>+~,.:\[)])')
-PARTIAL_MIN = 40_000  # 小于这个字符数的稿子直接全量读，不要求状态标记
+PARTIAL_MIN = 40_000  # 少于 4 万字符的稿子直接全量读，不要求状态标记
 VOID = {'area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input', 'link', 'meta', 'source', 'track', 'wbr'}
 
 
@@ -39,8 +41,8 @@ def parse_anchor(comment):
 
 
 def mentions(text, state):
-    """标记名称里以完整词出现该状态名（前后不是字母数字、- 或 _）。"""
-    return re.search(r'(?<![\w-])' + re.escape(state) + r'(?![\w-])', text) is not None
+    """标记名称里以完整词出现该状态名（前后不是 ASCII 字母数字、- 或 _）。"""
+    return re.search(r'(?<![A-Za-z0-9_-])' + re.escape(state) + r'(?![A-Za-z0-9_-])', text) is not None
 
 
 class Scanner(HTMLParser):
@@ -51,12 +53,15 @@ class Scanner(HTMLParser):
         self.open_at = {}
         self.markers = []  # (行号, 深度, 名称, 覆盖)
         self.sprite = None
+        self.body_start = None
         self.body_end = None
 
     def handle_starttag(self, tag, attrs):
         line = self.getpos()[0]
         if tag in ('style', 'script'):
             self.open_at[tag] = line
+        if tag == 'body':
+            self.body_start = line
         if tag == 'svg' and ('class', 'sd-sprite') in attrs:
             self.sprite = [line, None, self.depth]
         if tag not in VOID:
@@ -91,9 +96,13 @@ def scan(text):
         if cur is None or m[1] <= cur:
             top.append(m)
             cur = m[1]
-    stops = sorted({m[0] for m in top} | {a for a, _ in s.ranges['script']} | {s.body_end or total})
-    blocks = [(line, next((x for x in stops if x > line), total + 1) - 1, name, covers)
-              for line, _, name, covers in top]
+    marks = {m[0] for m in top}
+    stops = sorted(marks | {a for a, _ in s.ranges['script']} | {s.body_end or total})
+    blocks = []
+    for line, _, name, covers in top:
+        stop = next((x for x in stops if x > line), total)
+        # 停在脚本段或 </body> 时含该行：正文末尾常和它们挤在同一行
+        blocks.append((line, stop - 1 if stop in marks else stop, name, covers))
     return s, blocks
 
 
@@ -181,7 +190,7 @@ def dedupe_icons(text, report):
         text = (body[:at] + '\n<!-- 图标定义区：重复图标只定义一次，正文用 <use> 引用 -->\n'
                 '<svg class="sd-sprite" aria-hidden="true" style="position:absolute;width:0;height:0;overflow:hidden">'
                 + symbols + '\n</svg>\n' + body[at:])
-    report.append(f'重复图标 {len(ids)} 种收进图标定义区，减少 {(before - len(text)) // 1000}KB')
+    report.append(f'重复图标 {len(ids)} 种收进图标定义区，减少 {(before - len(text)) // 1000}K 字符')
     return text
 
 
@@ -229,22 +238,27 @@ def problems(text, states):
     return out
 
 
-def cmd_outline(path):
+def cmd_outline(path, state=None):
     text = Path(path).read_text(encoding='utf-8')
     lines = text.split('\n')
     s, blocks = scan(text)
 
     def size(a, b):
-        return f'{sum(len(x) for x in lines[a - 1:b]) // 1000}KB'
+        return f'{sum(len(x) for x in lines[a - 1:b]) // 1000}K'
 
-    print(f'{path}  共 {len(lines)} 行，{len(text) // 1000}KB')
+    print(f'{path}  共 {len(lines)} 行，{len(text) // 1000}K 字符')
     for a, b in s.ranges['style']:
         print(f'  样式段      {a}-{b}  {size(a, b)}')
     if s.sprite:
         print(f'  图标定义区  {s.sprite[0]}-{s.sprite[1]}  {size(s.sprite[0], s.sprite[1])}')
+    head_from = max([s.body_start or 0, s.sprite[1] if s.sprite else 0] + [b for _, b in s.ranges['style']]) + 1
+    if blocks and blocks[0][0] > head_from:
+        print(f'  页头区      {head_from}-{blocks[0][0] - 1}  {size(head_from, blocks[0][0] - 1)}')
     top = {b[0] for b in blocks}
     by_line = {b[0]: b for b in blocks}
     for line, _, name, covers in s.markers:
+        if state and not any(mentions(n, state) for n in [name] + covers):
+            continue
         extra = f'  覆盖：{" | ".join(covers)}' if covers else ''
         if line in top:
             a, b = by_line[line][:2]
@@ -253,6 +267,8 @@ def cmd_outline(path):
             print(f'    └ 嵌套    {line}  {name}{extra}')
     for a, b in s.ranges['script']:
         print(f'  脚本段      {a}-{b}  {size(a, b)}')
+    if not s.ranges['script']:
+        print('  脚本段      无')
     if not blocks:
         print('  （没有状态标记：只能全量读）')
 
@@ -273,7 +289,7 @@ def cmd_migrate(manifest_path):
         left = problems(new, e.get('uiStates', []))
         todo += bool(left)
         if report or left:
-            print(f'{kind} {e["id"]}  {len(old) // 1000}KB -> {len(new) // 1000}KB')
+            print(f'{kind} {e["id"]}  {len(old) // 1000}K -> {len(new) // 1000}K 字符')
             for r in report:
                 print(f'  - {r}')
             for p in left:
@@ -287,16 +303,33 @@ def cmd_check(manifest_path):
         if not f.exists():
             print(f'[缺文件] {kind} {e["id"]}: {e["htmlFile"]}')
             continue
-        ps = problems(f.read_text(encoding='utf-8'), e.get('uiStates', []))
+        text = f.read_text(encoding='utf-8')
+        ps = problems(text, e.get('uiStates', []))
         if ps:
             bad += 1
-            print(f'[待迁移] {kind} {e["id"]} ({f.stat().st_size // 1000}KB): ' + '；'.join(ps))
+            print(f'[待迁移] {kind} {e["id"]} ({len(text) // 1000}K 字符): ' + '；'.join(ps))
     print('全部合规' if not bad else f'{bad} 份待迁移')
     return 1 if bad else 0
 
 
+def strip_markers(text):
+    text = re.sub(r'<!--(.*?)-->', lambda m: '' if ANCHOR.match(m.group(1)) else m.group(0), text, flags=re.S)
+    return re.sub(r'>\s+<', '><', text).strip()
+
+
+def cmd_verify(before, after):
+    a = strip_markers(Path(before).read_text(encoding='utf-8'))
+    b = strip_markers(Path(after).read_text(encoding='utf-8'))
+    if a == b:
+        print('一致：只动了状态标记和标签间空白')
+        return 0
+    i = next(i for i in range(min(len(a), len(b)) + 1) if i == min(len(a), len(b)) or a[i] != b[i])
+    print(f'不一致：除状态标记外还有改动，首个差异附近\n  改前：{a[max(0, i - 60):i + 60]!r}\n  改后：{b[max(0, i - 60):i + 60]!r}')
+    return 1
+
+
 if __name__ == '__main__':
-    cmds = {'outline': cmd_outline, 'migrate': cmd_migrate, 'check': cmd_check}
-    if len(sys.argv) != 3 or sys.argv[1] not in cmds:
+    cmds = {'outline': cmd_outline, 'migrate': cmd_migrate, 'check': cmd_check, 'verify': cmd_verify}
+    if len(sys.argv) < 3 or sys.argv[1] not in cmds:
         sys.exit(__doc__)
-    sys.exit(cmds[sys.argv[1]](sys.argv[2]))
+    sys.exit(cmds[sys.argv[1]](*sys.argv[2:]))
