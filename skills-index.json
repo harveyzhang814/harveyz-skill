@@ -149,8 +149,8 @@
       "path": "creative/capture-insight",
       "bundle": "creative",
       "installScope": "essential",
-      "contentHash": "282434dd8df30da8",
-      "contentVersion": "2.0.0"
+      "contentHash": "616eb7c46d4a8384",
+      "contentVersion": "2.0.1"
     },
     {
       "path": "coding/init-workflow",
