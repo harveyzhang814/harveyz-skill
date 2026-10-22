@@ -142,8 +142,8 @@
       "path": "creative/capture-todo",
       "bundle": "creative",
       "installScope": "essential",
-      "contentHash": "17eff9048a5da9af",
-      "contentVersion": "4.5.1"
+      "contentHash": "79640fb9b1ebbadd",
+      "contentVersion": "4.5.2"
     },
     {
       "path": "creative/capture-insight",
