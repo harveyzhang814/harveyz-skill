@@ -53,7 +53,6 @@ methodology: diataxis
 |------|------|
 | [reports/2026-09-24-published-skill-platform-audit.md](reports/2026-09-24-published-skill-platform-audit.md) | 按平台适配标准逐项评估 52 个已发布 skill，并给出分批处理建议 |
 | [reports/2026-10-17-brainstorming-rewrite-analysis.md](reports/2026-10-17-brainstorming-rewrite-analysis.md) | brainstorming-zh 初版的制作、原版流程与审阅基线 |
-| [reports/2026-10-22-simplify-skill-scan/README.md](reports/2026-10-22-simplify-skill-scan/README.md) | 用 simplify-skill 按 bundle 扫描 58 个 skill 的精简建议，以及顺带发现的跨 skill 接口错误 |
 
 ## adr/ — 架构决策记录
 
