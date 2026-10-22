@@ -19,8 +19,8 @@ Node.js 进程的日志通常来自三条路径：
 
 **winston plain text 格式**（形如 `2024-01-15 14:30:01 info message`）：非 ISO 格式，capture 层替换：
 ```bash
-node server.js 2>&1 | sed 's/^\([0-9-]* [0-9:]*\)/\1Z/' >> backend.log
-# 或直接注入新时间戳，忽略原有格式（macOS 用上方 python3 方案）
+node server.js 2>&1 | sed -E 's/^([0-9]{4}-[0-9]{2}-[0-9]{2}) ([0-9]{2}:[0-9]{2}:[0-9]{2})/\1T\2Z/' >> backend.log
+# 或直接注入新时间戳，忽略原有格式（python3 方案见下方「接入方式」）
 ```
 
 ## 捕获原则
