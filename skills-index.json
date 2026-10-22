@@ -226,8 +226,8 @@
       "path": "writing/manage-dir",
       "bundle": "writing",
       "installScope": "project",
-      "contentHash": "89fa0c98f2ed7ded",
-      "contentVersion": "1.0.0"
+      "contentHash": "7128e228c9df8f13",
+      "contentVersion": "1.0.1"
     },
     {
       "path": "writing/migrate-spec",
