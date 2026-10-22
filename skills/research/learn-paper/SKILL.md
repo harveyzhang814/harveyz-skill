@@ -1,15 +1,13 @@
 ---
 name: learn-paper
-version: "0.1.0"
+version: "0.1.1"
 description: "Deep-read a single academic PDF in three passes: 5C structural orientation, full content extraction, and critical reconstruction. Each pass produces a standalone Markdown file. Triggers: 'read this paper', 'deep-read paper', 'analyze this paper', 'take notes on this PDF', 'summarize paper', or when user provides a PDF path and wants to understand its content."
 user_invocable: true
 ---
 
-# read-paper
+# learn-paper
 
 三遍精读单篇 PDF 论文。每遍独立产出一个 Markdown 文件。
-
-底层方法论说明见 `docs/superpowers/specs/2026-06-16-read-paper-design.md`。
 
 ---
 
@@ -94,15 +92,7 @@ mkdir -p "<output_dir>/$slug"
 | `--pass 3` | 只执行第三遍，需检查 `2-extraction.md` 已存在 |
 | 无参数 | 执行全部三遍 |
 
-**依赖检查（单遍模式）：**
-
-```bash
-# --pass 2
-test -f "<output_dir>/$slug/1-orientation.md" || { echo "请先运行 --pass 1 生成前置文件"; exit 1; }
-
-# --pass 3
-test -f "<output_dir>/$slug/2-extraction.md" || { echo "请先运行 --pass 2 生成前置文件"; exit 1; }
-```
+前置文件不存在时，提示先运行对应的 `--pass` 并终止。
 
 ---
 
@@ -116,34 +106,9 @@ test -f "<output_dir>/$slug/2-extraction.md" || { echo "请先运行 --pass 2 �
 Read(file_path="<pdf_path>", pages="1-5")
 ```
 
-再从论文末尾向前搜索结论章节（最多尝试 3 次，每次窗口 4 页）：
+再找结论：从末页起每次向前读 4 页（`pages="<total-3>-<total>"`，依次前移），见到 Conclusion / 结论 / Discussion 即停，最多 3 次；`<total>` 取第 1 页读取时返回的总页数，或从前 5 页的页码推断。
 
-**策略：** 先读最后 4 页，若未见"Conclusion"/"结论"/"Discussion"关键词，则继续向前读前 4 页，如此最多 3 次。
-
-```
-# 第 1 次：读最后 4 页
-Read(file_path="<pdf_path>", pages="<total-3>-<total>")
-
-# 若未找到，第 2 次：再往前 4 页
-Read(file_path="<pdf_path>", pages="<total-7>-<total-4>")
-
-# 若仍未找到，第 3 次：再往前 4 页
-Read(file_path="<pdf_path>", pages="<total-11>-<total-8>")
-```
-
-`<total>` 通过读第 1 页时 PDF 工具返回的总页数判断，或从前 5 页内容中的页码推断。找到结论即停，不继续往前读。
-
-**分析任务：**
-
-基于读取内容完成 5C 评估：
-
-| 维度 | 分析问题 |
-|------|----------|
-| **Category（类别）** | 测量类 / 系统描述 / 理论分析 / 综述 / 其他？ |
-| **Context（背景）** | 解决什么问题？与哪些已知工作相关？ |
-| **Correctness（正确性）** | 核心假设是否明确合理？有无明显漏洞？ |
-| **Contributions（贡献）** | 主要创新点是什么？ |
-| **Clarity（清晰度）** | 结构是否清晰？摘要是否准确概括内容？ |
+**分析任务：** 基于读取内容完成 5C 评估，按下方模板中各维度的问题作答。
 
 **产出文件，用 Write 工具写入 `<output_dir>/<slug>/1-orientation.md`：**
 
@@ -160,11 +125,11 @@ Read(file_path="<pdf_path>", pages="<total-11>-<total-8>")
 
 ## 5C 评估
 
-- **Category（类别）**: 
-- **Context（背景）**: 
-- **Correctness（正确性）**: 
-- **Contributions（贡献）**: 
-- **Clarity（清晰度）**: 
+- **Category（类别）**: {测量类 / 系统描述 / 理论分析 / 综述 / 其他}
+- **Context（背景）**: {解决什么问题？与哪些已知工作相关？}
+- **Correctness（正确性）**: {核心假设是否明确合理？有无明显漏洞？}
+- **Contributions（贡献）**: {主要创新点是什么？}
+- **Clarity（清晰度）**: {结构是否清晰？摘要是否准确概括内容？}
 
 ---
 
@@ -187,9 +152,9 @@ Read(file_path="<pdf_path>", pages="11-20")
 ...循环直到读完全文
 ```
 
-每段读取后立即提取，不等全文读完再汇总（避免 context 溢出）。
+每段读取后立即提取，不等全文读完再汇总。
 
-**终止条件：** 每段读取后检查是否出现 References / Bibliography / 参考文献 的独立章节标题（通常单独成行、后面紧跟编号列表）。一旦检测到，立即停止继续读取后续页面——References 之后已无需提取的正文内容。
+**终止条件：** 每段读取后检查是否出现 References / Bibliography / 参考文献 的独立章节标题（通常单独成行、后面紧跟编号列表）。一旦检测到，立即停止继续读取后续页面。
 
 **每段提取内容：**
 
@@ -287,7 +252,7 @@ Read(file_path="<output_dir>/<slug>/2-extraction.md")
 
 ## 已识别缺陷
 
-（每条附来源标注：[基于论文] / [Agent推断] / [需核实]）
+（每条附来源标注）
 
 ## 与已知工作对比
 

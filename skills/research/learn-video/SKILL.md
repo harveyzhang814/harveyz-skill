@@ -1,6 +1,6 @@
 ---
 name: learn-video
-version: "1.9.2"
+version: "1.9.3"
 description: "Process a YouTube or Bilibili video using the vdl CLI: transcribe, generate article and summary. Triggers when the user provides a YouTube or Bilibili URL and wants to learn from, summarize, transcribe, or extract key points from the video — e.g. 'help me understand this talk', 'summarize this YouTube video', 'summarize this Bilibili video', 'get the transcript', 'process this video', 'summarize it'."
 user_invocable: true
 ---
@@ -38,8 +38,6 @@ python3 "$SKILL_DIR/scripts/store_config.py" check-downstream
 ```
 
 输出 `DRIFT:` 时，把对应的 `fix:` 命令原样报告给用户，由用户自己决定要不要执行——**不要代替用户改 vdl/scholia 的配置文件**，那是另一个程序的配置。输出 `SKIP:` 表示该下游工具未安装，忽略即可。
-
-这几个值分居不同文件，没有任何机制保证自动同步；漂了的话归档步骤会当场报错，不会静默写出孤儿 `meta.json`。
 
 **运行中写入失败时的处理。** 若上述核对都通过、但实际归档/写入时仍然失败（权限不足、目录只读等），必须原样把错误报告给用户并停下来，禁止擅自把 `knowledgeRoot` 或 vdl 的 `WORK_ROOT` 改指到别的路径来"绕过"。这两个值是多个 skill 共用的配置，擅自改会让产物静默散落到不同目录，用户毫不知情，且难以事后排查。
 
@@ -93,7 +91,7 @@ Claude Code 适配示例：可用 `AskUserQuestion` 展示四项；其他宿主�
 | `<LANG>` | `zh-CN`（中文对话）或 `en`（英文对话） |
 | `<LOGFILE>` | 本次任务专用日志文件路径，如 `/tmp/vdl-<时间戳或URL摘要>.log`，避免和其他任务混用同一个文件 |
 
-**必须后台启动，禁止前台阻塞调用。** 视频处理可能长达数小时（见「超长视频检测」），前台 Bash 调用会被运行环境的超时机制打断——任务本身在后端仍会继续跑，但 agent 拿到的是超时错误而不是真实结果，也就无法感知进度或在完成后向用户报告。
+**本 skill（含 `references/rerun.md`）中所有 `vdl` 主命令、`vdl rerun` 与 `--force` 重建一律后台启动**（前台调用会被宿主超时打断，拿不到终态）。
 
 启动前先确认当前宿主能可靠启动并追踪长期任务，且可持续读取 `<LOGFILE>` 至终态。若不能可靠启动并追踪长期任务，启动前向用户说明此限制并停止；不得启动一个无法收尾的孤儿任务。
 
@@ -132,93 +130,19 @@ echo "$TASKLINE"
   {"task_id":"...","elapsed":812,"transcript":"work/.../original_zh.md","article":"work/.../article.md","summary":"work/.../summary.md"}
   ```
   直接从这行 JSON 取 `transcript`/`article`/`summary` 三个路径，跳到「向用户报告」——不需要再手工拼 `work/<task_id>/...` 路径。
-- **失败**：日志中出现一行 `Error: Step <step_display_name> failed: <原因>`（stderr 已通过 `2>&1` 合并进日志）。提取步骤名和原因，跳到「处理步骤失败」。
+- **失败**：日志中出现一行 `Error: Step <step_display_name> failed: <原因>`（stderr 已通过 `2>&1` 合并进日志）。提取步骤名和原因，读取 `references/rerun.md` 按「处理步骤失败」处理。
 
 ---
 
-## 步骤名对照表
+## 失败重跑、改模式与换 focus
 
-`vdl rerun` 使用 **DAG 内部名**，不是进度显示名（日志里 `[...]` 方括号中打印的是进度显示名）：
-
-| 进度显示名 | `vdl rerun` 用这个 |
-|-----------|-------------------|
-| `fetch_info` | `fetch` |
-| `download_subs` | `subs` |
-| `convert_vtt_md` | `vtt2md` |
-| `translate` | `translate` |
-| `convert_md_vtt` | `md2vtt` |
-| `generate_article` | `article` |
-| `generate_summary` | `summary` |
-| `download_video` | `video` |
-| `download_audio` | `audio` |
-| `asr_transcribe` | `asr` |
-
----
-
-## 处理步骤失败
-
-某步骤失败后，用 **DAG 内部名** 重跑。`vdl rerun` 无论 `--reset step` 还是 `--reset downstream` 都会阻塞轮询直到该步骤（或下游）跑完，同样**必须后台启动**，不要前台阻塞调用：
-
-```bash
-# 仅重跑该步骤
-nohup vdl rerun <task_id> <dag_step_name> --reset step > <LOGFILE> 2>&1 &
-
-# 从该步骤级联重跑下游
-nohup vdl rerun <task_id> <dag_step_name> --reset downstream > <LOGFILE> 2>&1 &
-```
-
-按「进度汇报与完成判定」的方式 tail `<LOGFILE>`：`rerun` 不支持 `--json`，成功时终态是纯文本行 `Done in <n>s`（没有 JSON），失败判定依然是 `Error: Step ... failed`。成功后执行「获取结果」拿最新产物路径。
-
-### 常见错误
-
-**`BAD_ANCHOR_MODE`**：要重跑的步骤不属于当前任务模式的 DAG。
-例如：任务以 `transcript` 模式创建，则 `audio`/`video` 步骤不在 DAG 中，无法 rerun。
-→ 解决：用新模式 + `--force` 重建任务（见下方「更改任务模式」）。
-
-**`ECONNREFUSED 127.0.0.1:3000`**：后端服务已退出。
-`vdl` 主命令会自动启动服务；但 `vdl rerun`/`vdl status` 等子命令在服务不存在时**无法自启**。
-→ 解决：仅当用户已明确提供 `<VIDEO_LEARNER_ROOT>`、该目录的 `package.json` 存在且其中的 `npm run agent:serve` 脚本存在时，才手动启动服务，再执行子命令；否则询问用户或停止，不猜测源码根目录：
-```bash
-cd "<VIDEO_LEARNER_ROOT>" && npm run agent:serve &
-# 等服务就绪后再执行 rerun
-nohup vdl rerun <task_id> <step> --reset step > <LOGFILE> 2>&1 &
-```
-
----
-
-## 更改任务模式
-
-任务模式创建后不能直接修改。若需要在已完成任务上补跑不同模式的步骤（如为 `transcript` 任务补下载音频），用 `--force` 以新模式重建，同样后台启动：
-
-```bash
-nohup vdl "<URL>" --focus "<FOCUS>" --mode audio --force --json > <LOGFILE> 2>&1 &
-```
-
-由于 task_id 由 URL 决定，返回的仍是同一个任务，但模式更新、对应步骤会重新跑。按「进度汇报与完成判定」的方式处理这次调用。
-
----
-
-## 重新生成摘要（更换 focus）
-
-```bash
-nohup vdl rerun <task_id> summary --reset step > <LOGFILE> 2>&1 &
-```
-
-运行前可通过 HTTP API 更新 focus（需服务在运行）：
-
-```bash
-TOKEN=$(cat /tmp/vl-agent-token)
-curl -s -X POST http://127.0.0.1:3000/api/tasks/<task_id>/steps/summary/run \
-  -H "Authorization: Bearer $TOKEN" \
-  -H 'Content-Type: application/json' \
-  -d '{"focus": "<新关注点>", "reset_scope": "step"}'
-```
+步骤失败、需要为已有任务改模式、或用户要换 focus 重新生成摘要时，读取 `references/rerun.md`。
 
 ---
 
 ## 获取结果
 
-首次运行成功时，产物路径已经在「进度汇报与完成判定」里从终态 JSON 拿到了，不需要再跑下面的命令。以下命令用于事后重新查询，或 `rerun`（不产出 JSON）成功后刷新结果：
+仅在 `rerun` 成功后或事后重新查询时使用：
 
 ```bash
 # 摘要（TL;DR + Outline + Key Points + Action Items）
@@ -242,8 +166,6 @@ vdl result <task_id> --type article
     └── summary.md            # TL;DR + Outline + Key Points
 ```
 
-`work/` 这一层是 vdl 自己的布局（`core/paths.js` 把它写死在 `WORK_ROOT` 之下，`database.sqlite` 和 `index.jsonl` 也建在上面），不是本 skill 能去掉的。
-
 ---
 
 ## 归档到统一存储根
@@ -256,13 +178,11 @@ TASK_ID="<task_id>" python3 "$SKILL_DIR/scripts/archive.py"
 
 成功输出两行 `VIDEO_DIR: <path>` 和 `META_PATH: <path>`。**若报错说缺统一存储契约必填字段**（`source_url`/`title`/`fetched_at`），说明 vdl 那次没有把任务跑到 `completed`，不要试图在这里补字段——回去确认 vdl 那边的任务状态，或联系维护者核对 vdl 版本。
 
-校验通过后，顺手重建一次 creator 索引（零额外成本——流程本来就在跑脚本）：
+校验通过后重建 creator 索引：
 
 ```bash
 python3 "$SKILL_DIR/scripts/build_creator_index.py" build
 ```
-
-`meta.json` 是索引的唯一凭据（`find <knowledgeRoot> -name meta.json` 就是全量实体清单）；`creators.json` 是这份清单按 uploader 归好的第二层索引，不含 `registry.json` 的任何信息。
 
 ---
 

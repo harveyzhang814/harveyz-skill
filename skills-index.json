@@ -51,71 +51,71 @@
       "path": "research/extract-vision",
       "bundle": "research",
       "installScope": "global",
-      "contentHash": "c9f68c043bc09309",
-      "contentVersion": "1.2.1"
+      "contentHash": "00d837f67f116a34",
+      "contentVersion": "1.2.2"
     },
     {
       "path": "research/learn-video",
       "bundle": "research",
       "installScope": "global",
-      "contentHash": "88b278c447599308",
-      "contentVersion": "1.9.2"
+      "contentHash": "7a5e73ef7ec93ef3",
+      "contentVersion": "1.9.3"
     },
     {
       "path": "research/survey-skillrepo",
       "bundle": "research",
       "installScope": "global",
-      "contentHash": "ea823301b039a8aa",
-      "contentVersion": "2.0.2"
+      "contentHash": "c22496742e5346d1",
+      "contentVersion": "2.1.0"
     },
     {
       "path": "research/learn-paper",
       "bundle": "research",
       "installScope": "project",
-      "contentHash": "1fe085285d11bb6a",
-      "contentVersion": "0.1.0"
+      "contentHash": "ac55a887cacc148a",
+      "contentVersion": "0.1.1"
     },
     {
       "path": "research/fetch-paper",
       "bundle": "research",
       "installScope": "project",
-      "contentHash": "3dc8352a00c59f22",
-      "contentVersion": "0.2.2"
+      "contentHash": "072008bea5059c2e",
+      "contentVersion": "0.2.3"
     },
     {
       "path": "research/extract-cognition",
       "bundle": "research",
       "installScope": "project",
-      "contentHash": "d8489acfb63f0a1c",
-      "contentVersion": "0.2.0"
+      "contentHash": "3fcdd96a14407ead",
+      "contentVersion": "0.3.0"
     },
     {
       "path": "research/probe-session",
       "bundle": "research",
       "installScope": "project",
-      "contentHash": "91391f7b702e0797",
-      "contentVersion": "0.3.0"
+      "contentHash": "898c63f4fab2b0d2",
+      "contentVersion": "0.3.1"
     },
     {
       "path": "research/pdf-math-translate",
       "bundle": "research",
       "installScope": "project",
-      "contentHash": "94dde69e6bc5429c",
-      "contentVersion": "2.0.0"
+      "contentHash": "25fab4891079b9e6",
+      "contentVersion": "2.0.1"
     },
     {
       "path": "research/clip-url",
       "bundle": "research",
       "installScope": "project",
-      "contentHash": "4a6b63007235ffa1",
-      "contentVersion": "0.9.3"
+      "contentHash": "4a7b3afe8889411f",
+      "contentVersion": "0.9.4"
     },
     {
       "path": "research/explain-design",
       "bundle": "research",
       "installScope": "global",
-      "contentHash": "4b2305541d9fd1c9",
-      "contentVersion": "1.2.1"
+      "contentHash": "435be63a1e1b5ce1",
+      "contentVersion": "1.2.2"
     },
     {
       "path": "feed/sync-xtimeline",

@@ -3,13 +3,13 @@ name: explain-design
 description: "Explain an architecture design, spec, or product proposal as one offline HTML document: chapters by angle (structure, sequence, state, data flow, dedicated mechanism chapters, boundaries), with diagrams rendered deterministically by archify from typed JSON and tables where diagrams do not fit. Manual invocation only: '/explain-design <path or topic>'. Not for a single diagram (use archify), text-only restatement (explain-pm), Mermaid (draw-diagram), or understanding a skill (learn-skill)."
 disable-model-invocation: true
 user_invocable: true
-version: "1.2.1"
+version: "1.2.2"
 model: sonnet
 ---
 
 # 图解方案
 
-把一份架构设计、spec 或产品方案讲清楚，交付**一个离线可看的 HTML**：按角度分章，能用图的用图（archify 从 JSON 确定性渲染，靠程序校验而非看图验收），不适合画图的用表。要求准确、完整、结构清晰。
+把一份架构设计、spec 或产品方案讲清楚，交付**一个离线可看的 HTML**：按角度分章，能用图的用图（archify 从 JSON 确定性渲染，靠程序校验而非看图验收），不适合画图的用表。
 
 ## 触发条件
 
