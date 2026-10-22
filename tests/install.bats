@@ -220,7 +220,7 @@ _uninstall() {
 @test "install --skill: sync-hotfix installs SKILL.md to claude skills dir" {
   _install --skill sync-hotfix --target claude --scope user --force
   [ -f "${MOCK_HOME}/.claude/skills/sync-hotfix/SKILL.md" ]
-  [ "$(_skill_version "${MOCK_HOME}/.claude/skills/sync-hotfix/SKILL.md")" = "1.1.1" ]
+  [ "$(_skill_version "${MOCK_HOME}/.claude/skills/sync-hotfix/SKILL.md")" = "1.1.2" ]
 }
 
 @test "install --tool: roster lands a launcher and its package" {
