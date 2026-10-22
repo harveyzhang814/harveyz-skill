@@ -156,36 +156,36 @@
       "path": "coding/init-workflow",
       "bundle": "coding",
       "installScope": "essential",
-      "contentHash": "0a216adee0bad2ba",
-      "contentVersion": "4.1.4"
+      "contentHash": "83d6126adf09c23f",
+      "contentVersion": "4.1.5"
     },
     {
       "path": "coding/setup-debug",
       "bundle": "coding",
       "installScope": "project",
-      "contentHash": "dd9c06b0980d17ad",
-      "contentVersion": "1.0.0"
+      "contentHash": "57f68878c05960ac",
+      "contentVersion": "1.1.0"
     },
     {
       "path": "coding/init-goal",
       "bundle": "coding",
       "installScope": "global",
-      "contentHash": "00d8949db087059f",
-      "contentVersion": "1.3.1"
+      "contentHash": "01f4bb5f376041eb",
+      "contentVersion": "1.4.0"
     },
     {
       "path": "coding/question-me",
       "bundle": "coding",
       "installScope": "global",
-      "contentHash": "0cf0c3f4a44139ff",
-      "contentVersion": "3.0.2"
+      "contentHash": "1152587badd9a9fb",
+      "contentVersion": "3.1.0"
     },
     {
       "path": "coding/capture-vocab",
       "bundle": "coding",
       "installScope": "project",
       "contentHash": "88ac1d79e121caaa",
-      "contentVersion": "1.2.2"
+      "contentVersion": "1.2.3"
     },
     {
       "path": "coding/rephrase",
@@ -205,8 +205,8 @@
       "path": "coding/init-project",
       "bundle": "coding",
       "installScope": "global",
-      "contentHash": "3ca1c37debf03414",
-      "contentVersion": "0.1.4"
+      "contentHash": "acb311bc1488aa55",
+      "contentVersion": "0.1.5"
     },
     {
       "path": "writing/forge-doc",
@@ -352,8 +352,8 @@
       "path": "coding/handoff",
       "bundle": "coding",
       "installScope": "project",
-      "contentHash": "7c02870224a7ebfe",
-      "contentVersion": "1.14.0"
+      "contentHash": "7d5ce820e850319f",
+      "contentVersion": "1.15.0"
     },
     {
       "path": "coding/fork-topic",
@@ -429,8 +429,8 @@
       "path": "coding/analyze-claudemd",
       "bundle": "coding",
       "installScope": "global",
-      "contentHash": "8dafe21cdfff97e6",
-      "contentVersion": "1.0.0"
+      "contentHash": "f769534f93aa5e0b",
+      "contentVersion": "1.1.0"
     },
     {
       "path": "superpowers-rewrite/init-spec",

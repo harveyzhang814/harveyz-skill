@@ -2,7 +2,7 @@
 name: init-workflow
 description: "Initialize or update git branch management standards: reads .hskill/init-workflow/workflow-config.yml, audits config, incrementally generates and deploys git hooks (pre-commit, commit-msg, pre-push, post-checkout), and generates workflow docs. Triggers: initializing a new git repo, first-time git setup, user asks to set/update branch protection or naming rules, reinstalling git hooks, or syncing after skill/template updates."
 user_invocable: true
-version: "4.1.4"
+version: "4.1.5"
 ---
 
 # Git 工作流初始化
@@ -20,7 +20,7 @@ version: "4.1.4"
 git rev-parse --show-toplevel
 ```
 
-若不在 git 仓库中，询问用户是否先执行 `git init`，用户拒绝则优雅停止。
+若不在 git 仓库中，询问用户是否先执行 `git init`，用户拒绝则停止，告知需先 `git init` 再运行本 skill。
 
 ---
 
@@ -83,18 +83,7 @@ echo "" | grep -E "<pattern>" > /dev/null 2>&1; echo $?
 
 #### 4e. git config 健康检查
 
-检查以下两项本地 git config：
-
-```bash
-git config --local core.hooksPath   # 期望：.githooks
-git config --local merge.ff         # 期望：false
-```
-
-1. 读取 lock 文件的 `git_config` 节（不存在则跳过对比，直接检测实际值）
-2. 执行上述命令，获取实际值
-3. 实际值与期望不符，或实际值缺失 → 类型 E 冲突
-
-类型 E 冲突在 Step 5 列出（附期望值 vs 实际值），默认选项为"自动修复（A）"。Step 6 写入 hooks 后立即执行修复命令。类型 E 完整定义见 `references/conflict-analysis.md`。
+检查 `core.hooksPath`（期望 `.githooks`）和 `merge.ff`（期望 `false`），值不符或缺失 → 类型 E 冲突。Step 5 默认选「自动修复」，Step 6 写完 hooks 后立即执行修复。检测命令、和 lock 的对比规则见 `references/conflict-analysis.md`「类型 E」。
 
 ---
 
@@ -102,24 +91,7 @@ git config --local merge.ff         # 期望：false
 
 将 Step 4 发现的所有冲突**一次性呈现**，每条附带类型标签和选项，用户逐条决策后进入 Step 6。无冲突则直接进入 Step 6。
 
-呈现格式（以类型 C 手改冲突为例）：
-
-```
-发现 N 处需要决策的冲突，请逐条确认：
-
-─────────────────────────────────────────────────────────
-[1/N] 手改冲突（类型 C）
-文件: .githooks/pre-commit，块: branches.protected/main
-用户对生成代码做了如下修改：
-  - echo "❌ 禁止直接在 main 上提交。"
-  + echo "❌ [POLICY] 禁止直接在 main 上提交，违规请联系 @team-lead。"
-选项：
-  A) 保留用户修改（此块不重新生成）
-  B) 用新配置覆盖（丢弃用户修改）
-─────────────────────────────────────────────────────────
-```
-
-各冲突类型的完整选项定义见 `references/conflict-analysis.md`。
+呈现格式与 A–E 各类型的选项见 `references/conflict-analysis.md`（「Step 5 冲突呈现格式」「类型 E」两节）。
 
 ---
 
@@ -151,8 +123,6 @@ git config core.hooksPath .githooks
 git config merge.ff false
 ```
 
-`merge.ff false` 禁止 fast-forward 合并，确保每次合并都产生 merge commit，pre-commit 钩子才能检查合并来源分支。
-
 ---
 
 ### Step 6.5 — 验收测试（可选）
@@ -182,15 +152,11 @@ python3 <skill-path>/references/render_docs.py \
 # 输出 NEW / UPDATED / UNCHANGED
 ```
 
-脚本自动处理所有占位符（`{{BRANCH_TOPOLOGY_ASCII}}`、`{{BRANCH_TABLE}}`、`{{PROTECTION_RULES}}`、`{{NAMING_TABLE}}`、`{{COMMIT_FORMAT_SECTION}}`、`{{NAMING_EXEMPT}}`、`{{FAQ_SECTION}}` 等）——无需逐一处理，渲染逻辑详见 `references/render_docs.py`。
+脚本自动处理所有占位符，渲染逻辑见 `references/render_docs.py`。
 
-#### 7b. 差量写入
+#### 7b. 索引
 
-1. 若 `docs/reference/` 不存在则创建
-2. 将渲染后的内容与现有 `docs/reference/git-workflow.md` 对比
-   - 内容相同 → 跳过，标记 `UNCHANGED`
-   - 内容不同或文件不存在 → 写入，标记 `UPDATED` 或 `NEW`
-3. 若 `docs/INDEX.md` 存在，追加索引行（已存在则跳过）
+脚本已负责建目录、比对与写入（输出 NEW / UPDATED / UNCHANGED）。若 `docs/INDEX.md` 存在，追加索引行（已存在则跳过）。
 
 ---
 
@@ -222,7 +188,7 @@ python3 <skill-path>/references/render_docs.py \
 文件                                状态
 ─────────────────────────────────────────────────────
 .hskill/init-workflow/workflow-config.yml   已读取
-.githooks/.workflow-config.lock    UPDATED（记录新配置快照）
+.githooks/.workflow-config.lock.yml UPDATED（记录新配置快照）
 .githooks/pre-commit               UPDATED（main 块 hash 更新；develop 块新增）
 .githooks/commit-msg               UNCHANGED
 .githooks/pre-push                 UNCHANGED
@@ -238,9 +204,7 @@ CLAUDE.md                          已有引用，跳过
   [3/3] wip 类型引用断裂 → 用户选择保留用户代码
 ```
 
-首次安装时 Step 4 整体跳过，Step 6 直接设置两项配置；Step 9 对应行均显示 `✅`。
-
-若有保留的无法映射规则，附注提示。
+首次安装时，git config 两行均显示 `✅`。
 
 ---
 

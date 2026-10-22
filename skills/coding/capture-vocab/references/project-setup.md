@@ -4,7 +4,7 @@
 
 ## 项目 `CLAUDE.md` 加这一节
 
-**不要写「session 开始时读取整份 `vocab.md`」。** 那会让整份词汇表每个 session 进一次上下文，正是本 skill 要消除的成本。加这个：
+**不要写「session 开始时读取整份 `vocab.md`」**（理由见 `SKILL.md`）。加这个：
 
 ```markdown
 ## 术语澄清

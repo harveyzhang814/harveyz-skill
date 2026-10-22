@@ -1,7 +1,7 @@
 # workflow-config.yml
 # Git 工作流配置文件 — 由 /init-workflow skill 读取、审核并部署
 #
-# 使用方式：将此文件复制到项目根目录，按需修改后运行 /init-workflow
+# 使用方式：将此文件复制到 .hskill/init-workflow/workflow-config.yml，按需修改后运行 /init-workflow
 #
 # 每个节对应一个 git hook，注释掉整节 = 不安装该 hook
 
