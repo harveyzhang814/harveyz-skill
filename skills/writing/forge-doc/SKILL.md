@@ -2,16 +2,18 @@
 name: forge-doc
 description: "Convert documents between formats. Trigger when the user wants to convert or export a Markdown file to Word (.docx) or PDF — e.g. 'export as docx', 'convert to Word', 'export as pdf', 'generate PDF' — or when the user writes a document in the conversation and wants it as .docx or .pdf."
 user_invocable: true
-version: "2.5.2"
+version: "2.6.0"
 ---
 
-`SKILL_DIR` 为当前 host 安装本 skill 的目录（包含 `scripts/`、`assets/` 和 `preview/`）。
+`SKILL_DIR` 为当前 host 安装本 skill 的目录（包含 `scripts/`、`assets/` 和 `preview/`）；也可设为仓库中的 `skills/writing/forge-doc`，直接使用未安装的版本。
 
 ## 执行前必做：样式预览 → 选择样式
 
+Step 0、Step 1 的提问：host 有提问机制就用，没有就在对话中问。
+
 ### Step 0 — 询问是否查看样式预览
 
-**在运行任何转换命令之前**，若用户未显式指定样式，且当前 host 提供提问机制，则使用该机制；若该机制不可用，则在对话中询问：
+**在运行任何转换命令之前**，若用户未显式指定样式，询问：
 
 ```
 问题：是否先查看所有样式的预览效果？
@@ -32,7 +34,7 @@ python3 SKILL_DIR/scripts/generate_style_preview.py
 
 ### Step 1 — 询问样式
 
-再次询问时，若当前 host 提供提问机制，则使用该机制；若该机制不可用，则在对话中询问：
+若用户未显式指定样式，询问：
 
 ```
 问题：请选择输出样式
@@ -43,160 +45,33 @@ python3 SKILL_DIR/scripts/generate_style_preview.py
   4. 自定义（用户提供路径或描述）
 ```
 
-用户选定后再执行转换。**不得跳过此步骤，不得默认使用某一样式。**
+用户选定后再执行转换。**用户未指定样式时不得跳过此步骤，不得默认使用某一样式。**
 
 ---
 
-## 相对路径图片注意事项
+## 转换
 
-文档中含有相对路径图片（`![alt](./images/fig.png)` 或 `![[fig.png]]`）时，脚本以 MD 文件所在目录为根解析路径。
+支持标题、表格、代码块、列表、行内格式、引用块、图片和 Mermaid（DOCX 渲染为 PNG，PDF 渲染为 SVG）。
 
-**若 MD 文件不在图片的原始目录**（例如 Claude 将内容写入临时文件），必须通过 `--base-dir` 显式指定图片根目录：
+| 格式 | 脚本 | `--style` 文件 | 依赖 |
+|------|------|---------------|------|
+| DOCX | `SKILL_DIR/scripts/md_to_docx.py` | `.json` | `pip install python-docx`；含 Mermaid 时还需 playwright |
+| PDF | `SKILL_DIR/scripts/md_to_pdf.py` | `.css` | `pip install markdown` + playwright |
 
 ```bash
-# DOCX
-python3 SKILL_DIR/scripts/md_to_docx.py /tmp/draft.md \
-  --base-dir /Users/harvey/Documents/my-paper
-
-# PDF
-python3 SKILL_DIR/scripts/md_to_pdf.py /tmp/draft.md \
-  --base-dir /Users/harvey/Documents/my-paper
+python3 <脚本> input.md [output] [--style <文件>] [--base-dir <图片根目录>]
+python3 <脚本> --dump-style > style.json   # PDF 用 style.css；导出默认样式作为定制起点
 ```
 
-**最佳实践：转换用户已有的 MD 文件时，始终传入该文件的绝对路径，无需 `--base-dir`。**
+- 不给 output 时，在 input 同目录生成同名文件。
+- 内置样式在 `SKILL_DIR/assets/`，DOCX 用 `<slug>-style.json`，PDF 用 `<slug>.css`：
 
----
+  | slug | 样式 | 适用场景 |
+  |------|------|---------|
+  | `bain` | Bain & Company（红色） | Bain 正式输出 |
+  | `bcg` | BCG（深绿，麦肯锡横线表格） | BCG 正式输出 |
+  | `thesis` | 中文学术论文（宋体/黑体/Times New Roman，25磅行距） | 硕博学位论文、学术报告 |
 
-## 概述
-
-将 Markdown 文件转换为 Word（.docx）或 PDF。两种格式均支持标题、表格、代码块、列表、行内格式、引用块、嵌入图片和 Mermaid 图表（DOCX 渲染为 PNG，PDF 渲染为矢量 SVG）。
-
-**脚本位置：**
-- DOCX：`SKILL_DIR/scripts/md_to_docx.py`
-- PDF：`SKILL_DIR/scripts/md_to_pdf.py`
-
-**内置样式（`assets/` 目录）：**
-
-| 文件 | 说明 | 适用场景 |
-|------|------|---------|
-| `bain-style.json` / `bain.css` | Bain & Company 官方品牌（红色） | Bain 正式输出 |
-| `bcg-style.json` / `bcg.css` | BCG 官方品牌（深绿，麦肯锡横线表格） | BCG 正式输出 |
-| `thesis-style.json` / `thesis.css` | 中文学术论文（宋体/黑体/Times New Roman，25磅行距） | 硕博学位论文、学术报告 |
-
----
-
-## DOCX 转换
-
-**基础用法：**
-```bash
-python3 SKILL_DIR/scripts/md_to_docx.py input.md
-# → 在同目录生成 input.docx
-```
-
-**指定输出路径：**
-```bash
-python3 SKILL_DIR/scripts/md_to_docx.py input.md output.docx
-```
-
-**自定义样式：**
-```bash
-python3 SKILL_DIR/scripts/md_to_docx.py input.md --style custom.json
-```
-
-**导出默认样式以便修改：**
-```bash
-python3 SKILL_DIR/scripts/md_to_docx.py --dump-style > style.json
-```
-
-**依赖：** `pip install python-docx`（Mermaid 图表需额外安装 playwright，同 PDF 转换）
-
----
-
-## PDF 转换
-
-**基础用法：**
-```bash
-python3 SKILL_DIR/scripts/md_to_pdf.py input.md
-# → 在同目录生成 input.pdf
-```
-
-**指定输出路径：**
-```bash
-python3 SKILL_DIR/scripts/md_to_pdf.py input.md output.pdf
-```
-
-**自定义样式：**
-```bash
-python3 SKILL_DIR/scripts/md_to_pdf.py input.md --style custom.css
-```
-
-**导出默认 CSS 以便修改：**
-```bash
-python3 SKILL_DIR/scripts/md_to_pdf.py --dump-style > style.css
-```
-
-**依赖：** `pip install markdown`（playwright 已为必需项）
-
-**Mermaid（可选，离线使用）：** 在 skill 目录内执行 `npm install mermaid`。不安装时从 CDN 加载。
-
----
-
-## 支持的元素
-
-| Markdown | DOCX | PDF |
-|----------|------|-----|
-| `# H1` … `#### H4` | 带样式标题 | 带样式标题 |
-| 段落 | 首行缩进 2 字符，宋体 | 2em 缩进 |
-| **粗体**、*斜体*、`行内代码`、~~删除线~~、[链接](url) | 行内 runs | 行内 HTML |
-| 代码块（` ``` `） | Courier New，带缩进 | 等宽字体，灰底 |
-| `>` 引用块 | 仿宋，带缩进 | 缩进，灰色 |
-| 有序/无序列表 | 项目符号/编号 | 标准 HTML 列表 |
-| 管道表格 | 带表头底色 | 带表头底色 |
-| `---` 分隔线 | 灰色横线 | 灰色横线 |
-| `![alt](path)` 图片 | ✅ 相对/绝对路径均支持 | ✅ 通过 base_url 加载 |
-| ` ```mermaid` 图表 | ✅ 渲染为 PNG（需 playwright） | ✅ 渲染为 SVG |
-
----
-
-## 样式定制
-
-**DOCX** — style.json 键：`page`、`body`、`headings`（h1–h4）、`code_block`、`blockquote`、`table`。只需包含要覆盖的部分，其余使用默认值。
-
-**PDF** — style.css：标准 CSS 文件。用 `--dump-style` 导出完整默认样式作为起点。支持 Chromium 识别的所有 CSS 属性（包括用于页边距/尺寸的 `@page`）。
-
-**切换内置风格（Bain）：**
-```bash
-# DOCX
-python3 SKILL_DIR/scripts/md_to_docx.py input.md \
-  --style SKILL_DIR/assets/bain-style.json
-
-# PDF
-python3 SKILL_DIR/scripts/md_to_pdf.py input.md \
-  --style SKILL_DIR/assets/bain.css
-```
-
-**切换内置风格（BCG）：**
-```bash
-# DOCX
-python3 SKILL_DIR/scripts/md_to_docx.py input.md \
-  --style SKILL_DIR/assets/bcg-style.json
-
-# PDF
-python3 SKILL_DIR/scripts/md_to_pdf.py input.md \
-  --style SKILL_DIR/assets/bcg.css
-```
-
-**切换内置风格（中文学术论文）：**
-```bash
-# DOCX — 宋体/黑体正文，25磅行距，A4
-python3 SKILL_DIR/scripts/md_to_docx.py input.md \
-  --style SKILL_DIR/assets/thesis-style.json
-
-# PDF
-python3 SKILL_DIR/scripts/md_to_pdf.py input.md \
-  --style SKILL_DIR/assets/thesis.css
-```
-
----
-
-`SKILL_DIR` 也可设为仓库中的 `skills/writing/forge-doc` 目录，以直接使用未安装的 skill。
+- 图片（`![alt](./images/fig.png)` 或 `![[fig.png]]`）：相对路径以 MD 文件所在目录为根解析。转换已有的 MD 时传绝对路径；MD 不在图片原目录时（如写到 /tmp 的临时稿），加 `--base-dir <图片根目录>`，例如 `python3 SKILL_DIR/scripts/md_to_pdf.py /tmp/draft.md --base-dir /Users/harvey/Documents/my-paper`。
+- 离线 Mermaid：在 skill 目录执行 `npm install mermaid`，否则从 CDN 加载。
+- 自定义 DOCX 样式：style.json 键为 `page`、`body`、`headings`（h1–h4）、`code_block`、`blockquote`、`table`，只写要覆盖的部分。自定义 PDF 样式：标准 CSS，支持 `@page`。
