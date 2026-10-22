@@ -14,7 +14,6 @@
 | [feed-creative.md](feed-creative.md) | feed（5）+ creative（2） |
 | [writing-design.md](writing-design.md) | writing（4）+ design（3） |
 | [devops.md](devops.md) | devops（4，目录 `skills/meta/`） |
-| [agent-canvas-superpowers.md](agent-canvas-superpowers.md) | agent-canvas（7）+ superpowers-rewrite（2） |
 
 ## 精简范围外的问题（建议先修）
 
