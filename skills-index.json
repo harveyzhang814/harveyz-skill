@@ -219,8 +219,8 @@
       "path": "writing/draw-diagram",
       "bundle": "writing",
       "installScope": "global",
-      "contentHash": "347865f4c7bf3d52",
-      "contentVersion": "1.4.0"
+      "contentHash": "039ca3556d316428",
+      "contentVersion": "1.4.1"
     },
     {
       "path": "writing/manage-dir",

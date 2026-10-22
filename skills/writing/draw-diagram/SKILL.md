@@ -2,7 +2,7 @@
 name: draw-diagram
 description: "Professional Mermaid diagramming standards. Triggers immediately when the user mentions drawing diagrams, flowcharts, sequence diagrams, state machines, Gantt charts, quadrant charts, mind maps, or needs to embed any Mermaid chart in a Markdown document. Supports flowchart, sequenceDiagram, stateDiagram, timeline, gantt, quadrantChart, and mindmap."
 user_invocable: true
-version: "1.4.0"
+version: "1.4.1"
 ---
 
 # Mermaid 专业作图标准
@@ -83,7 +83,7 @@ Markdown 渲染器页面宽度通常 700–900px，图表必须适配：
 |------|---------|:----:|
 | Bain & Company | `themes/bain.json` | ✓ |
 | BCG | `themes/bcg.json` | |
-| Roland Berger | `themes/rb.json` | |
+| Roland Berger | `themes/rolandberger.json` | |
 
 用户未指定品牌时默认使用 Bain 主题。
 
