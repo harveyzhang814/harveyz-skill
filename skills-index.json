@@ -156,8 +156,8 @@
       "path": "coding/init-workflow",
       "bundle": "coding",
       "installScope": "essential",
-      "contentHash": "0a216adee0bad2ba",
-      "contentVersion": "4.1.4"
+      "contentHash": "83d6126adf09c23f",
+      "contentVersion": "4.1.5"
     },
     {
       "path": "coding/setup-debug",
