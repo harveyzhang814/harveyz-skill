@@ -282,8 +282,8 @@
       "path": "mint/dedup-skill",
       "bundle": "mint",
       "installScope": "project",
-      "contentHash": "610c6662a0d88cda",
-      "contentVersion": "1.0.1"
+      "contentHash": "4f3524ebf14c6383",
+      "contentVersion": "1.0.2"
     },
     {
       "path": "mint/simplify-skill",
