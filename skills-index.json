@@ -65,8 +65,8 @@
       "path": "research/survey-skillrepo",
       "bundle": "research",
       "installScope": "global",
-      "contentHash": "ea823301b039a8aa",
-      "contentVersion": "2.0.2"
+      "contentHash": "c22496742e5346d1",
+      "contentVersion": "2.1.0"
     },
     {
       "path": "research/learn-paper",
