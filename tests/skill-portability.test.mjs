@@ -99,9 +99,9 @@ test('runby-opencode: verify uses an explicit source and compare requires both a
 
 test('B portability release versions and index hashes match published SKILL.md content', async () => {
   const expectedVersions = new Map([
-    ['feed/sync-xtimeline', '0.8.4'],
-    ['feed/sync-ytchannel', '0.7.4'],
-    ['feed/sync-website', '0.2.3'],
+    ['feed/sync-xtimeline', '0.8.5'],
+    ['feed/sync-ytchannel', '0.7.5'],
+    ['feed/sync-website', '0.2.4'],
     ['coding/question-me', '3.1.0'],
     ['coding/rephrase', '1.0.2'],
     ['coding/init-project', '0.1.5'],

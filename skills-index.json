@@ -121,36 +121,36 @@
       "path": "feed/sync-xtimeline",
       "bundle": "feed",
       "installScope": "project",
-      "contentHash": "617a4ff1952ab433",
-      "contentVersion": "0.8.4"
+      "contentHash": "22b6559b8a7a3d96",
+      "contentVersion": "0.8.5"
     },
     {
       "path": "feed/sync-ytchannel",
       "bundle": "feed",
       "installScope": "project",
-      "contentHash": "67695c61331144ac",
-      "contentVersion": "0.7.4"
+      "contentHash": "5454a9384f114dca",
+      "contentVersion": "0.7.5"
     },
     {
       "path": "feed/sync-website",
       "bundle": "feed",
       "installScope": "project",
-      "contentHash": "027dcfaa8f0ee278",
-      "contentVersion": "0.2.3"
+      "contentHash": "3bff4f0e0f682803",
+      "contentVersion": "0.2.4"
     },
     {
       "path": "creative/capture-todo",
       "bundle": "creative",
       "installScope": "essential",
-      "contentHash": "17eff9048a5da9af",
-      "contentVersion": "4.5.1"
+      "contentHash": "54634ad3d28c2a73",
+      "contentVersion": "4.5.3"
     },
     {
       "path": "creative/capture-insight",
       "bundle": "creative",
       "installScope": "essential",
-      "contentHash": "282434dd8df30da8",
-      "contentVersion": "2.0.0"
+      "contentHash": "6b39218b34a2de66",
+      "contentVersion": "2.0.2"
     },
     {
       "path": "coding/init-workflow",
@@ -366,15 +366,15 @@
       "path": "feed/manage-creators",
       "bundle": "feed",
       "installScope": "project",
-      "contentHash": "7db2fbcbf26017d9",
-      "contentVersion": "0.3.1"
+      "contentHash": "9223f347f35b52f8",
+      "contentVersion": "0.3.2"
     },
     {
       "path": "feed/capture-opinion",
       "bundle": "feed",
       "installScope": "project",
-      "contentHash": "27a9cb1a55b0036a",
-      "contentVersion": "0.2.0"
+      "contentHash": "3ce558dc5fd6ea78",
+      "contentVersion": "0.2.1"
     },
     {
       "path": "agent-canvas/agent-canvas-control",
