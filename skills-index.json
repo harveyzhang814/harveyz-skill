@@ -72,8 +72,8 @@
       "path": "research/learn-paper",
       "bundle": "research",
       "installScope": "project",
-      "contentHash": "1fe085285d11bb6a",
-      "contentVersion": "0.1.0"
+      "contentHash": "ac55a887cacc148a",
+      "contentVersion": "0.1.1"
     },
     {
       "path": "research/fetch-paper",
