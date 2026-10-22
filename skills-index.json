@@ -100,8 +100,8 @@
       "path": "research/pdf-math-translate",
       "bundle": "research",
       "installScope": "project",
-      "contentHash": "94dde69e6bc5429c",
-      "contentVersion": "2.0.0"
+      "contentHash": "25fab4891079b9e6",
+      "contentVersion": "2.0.1"
     },
     {
       "path": "research/clip-url",
