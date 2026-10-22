@@ -2,8 +2,8 @@
 
 本文档定义此项目的分支管理规则与开发协作约定。
 
-> 本文档由 `git-workflow-init` 根据 `workflow-config.yml` 自动生成，请勿手动编辑。
-> 如需修改规则，请更新 `workflow-config.yml` 后重新运行 `/git-workflow-init`。
+> 本文档由 `init-workflow` 根据 `workflow-config.yml` 自动生成，请勿手动编辑。
+> 如需修改规则，请更新 `workflow-config.yml` 后重新运行 `/init-workflow`。
 
 ---
 
@@ -81,7 +81,7 @@ git config merge.ff false   # 禁止 fast-forward，确保 merge commit 可被�
 或通过 Claude Code 重新运行安装 skill：
 
 ```
-/git-workflow-init
+/init-workflow
 ```
 
 ---

@@ -2,7 +2,7 @@
 name: init-workflow
 description: "Initialize or update git branch management standards: reads .hskill/init-workflow/workflow-config.yml, audits config, incrementally generates and deploys git hooks (pre-commit, commit-msg, pre-push, post-checkout), and generates workflow docs. Triggers: initializing a new git repo, first-time git setup, user asks to set/update branch protection or naming rules, reinstalling git hooks, or syncing after skill/template updates."
 user_invocable: true
-version: "4.1.2"
+version: "4.1.4"
 ---
 
 # Git 工作流初始化
@@ -196,7 +196,7 @@ python3 <skill-path>/references/render_docs.py \
 
 ### Step 8 — 更新 AI 配置文件（可选）
 
-若文件中已包含 `docs/reference/git-workflow.md` 链接，跳过。
+若文件中已出现 `docs/reference/git-workflow.md` 这个路径（Markdown 链接或行内代码都算），跳过该文件。
 
 否则询问用户是否在已存在的 `CLAUDE.md`、`AGENTS.md`、`GEMINI.md` 中追加：
 

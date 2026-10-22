@@ -156,8 +156,8 @@
       "path": "coding/init-workflow",
       "bundle": "coding",
       "installScope": "essential",
-      "contentHash": "f15dc837ff4cee01",
-      "contentVersion": "4.1.2"
+      "contentHash": "0a216adee0bad2ba",
+      "contentVersion": "4.1.4"
     },
     {
       "path": "coding/setup-debug",
@@ -206,7 +206,7 @@
       "bundle": "coding",
       "installScope": "global",
       "contentHash": "3ca1c37debf03414",
-      "contentVersion": "0.1.3"
+      "contentVersion": "0.1.4"
     },
     {
       "path": "writing/forge-doc",
@@ -247,8 +247,8 @@
       "path": "design/build-style",
       "bundle": "design",
       "installScope": "project",
-      "contentHash": "f687f0aac9cfc722",
-      "contentVersion": "1.4.0"
+      "contentHash": "cae8e09fcd2e8dc8",
+      "contentVersion": "1.4.1"
     },
     {
       "path": "design/sync-design",
@@ -282,8 +282,8 @@
       "path": "mint/dedup-skill",
       "bundle": "mint",
       "installScope": "project",
-      "contentHash": "6ebfca98f37241d0",
-      "contentVersion": "1.0.0"
+      "contentHash": "610c6662a0d88cda",
+      "contentVersion": "1.0.1"
     },
     {
       "path": "mint/simplify-skill",
