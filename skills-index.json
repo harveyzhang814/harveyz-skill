@@ -296,8 +296,8 @@
       "path": "mint/contribute-skill",
       "bundle": "mint",
       "installScope": "project",
-      "contentHash": "f48338e6d5267a28",
-      "contentVersion": "1.1.0"
+      "contentHash": "791ce726dee4026d",
+      "contentVersion": "1.2.0"
     },
     {
       "path": "mint/fix-skill",
