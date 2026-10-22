@@ -2,12 +2,10 @@
 name: sync-agent
 description: "Manage Syncthing sync folders and devices at runtime. Query sync status, add/remove sync folders, add/remove devices, pause/resume folders, force scan. Reads Syncthing API credentials from ~/.hskill/sync-agent/state.json. Does NOT start/stop the daemon — use hskill sync start/setup for that. Triggers: sync status, add sync folder, remove device, pause sync, check sync, syncthing, show sync."
 user_invocable: true
-version: "1.1.1"
+version: "1.1.2"
 ---
 
 # sync-agent
-
-Manage Syncthing sync configuration and query status via the REST API.
 
 **Announce at start:** "Using sync-agent to [describe action]."
 
@@ -26,7 +24,7 @@ cat ~/.hskill/sync-agent/state.json
 若文件不存在：
 > Error: state.json not found. Run `hskill sync setup` first to initialize.
 
-从输出提取：`API_KEY`、`API_URL`（默认 `http://127.0.0.1:8384`）
+从输出提取 `api_key`、`api_url`（缺省 `http://127.0.0.1:8384`），下文记作 `API_KEY`、`API_URL`。
 
 **Step 2 — 确认 daemon 在运行**
 
@@ -39,20 +37,29 @@ curl -sf -H "X-API-Key: ${API_KEY}" "${API_URL}/rest/system/ping"
 
 ---
 
-## 操作：查看同步状态
+## 调用约定
 
-```bash
-# 获取 folder 列表
-curl -s -H "X-API-Key: ${API_KEY}" "${API_URL}/rest/config/folders"
+所有请求：`curl -s -w "\nHTTP %{http_code}" -H "X-API-Key: ${API_KEY}"`，带 body 的再加 `-H "Content-Type: application/json"`。返回 4xx/5xx：输出状态码和响应体，不继续后续步骤。
 
-# 获取 device 连接状态
-curl -s -H "X-API-Key: ${API_KEY}" "${API_URL}/rest/system/connections"
+`config.json` 指 `~/.hskill/sync-agent/config.json`。条目格式须与 `hskill sync setup` 一致：folder 写 `{"id","path","label"}`，device 写 `{"id","name"}`（键是 `id`，不是 REST 的 `deviceID`）。
 
-# 对每个 folder 获取同步进度
-curl -s -H "X-API-Key: ${API_KEY}" "${API_URL}/rest/db/completion?folder={FOLDER_ID}"
-```
+## 操作
 
-**输出格式：**
+| 操作 | 请求 | body | 回写 config.json |
+|---|---|---|---|
+| 查看状态 | `GET /rest/config/folders`；`GET /rest/system/connections`；每个 folder 再 `GET /rest/db/completion?folder={ID}` | — | 不改 |
+| 添加 folder | `POST /rest/config/folders` | `{"id","path","label","type":"sendreceive","devices":[]}` | `folders` 追加 |
+| 删除 folder | `DELETE /rest/config/folders/{ID}` | — | `folders` 移除该 id |
+| 添加 device | `POST /rest/config/devices` | `{"deviceID","name"}` | `devices` 追加 |
+| 删除 device | `DELETE /rest/config/devices/{ID}` | — | `devices` 移除该 id |
+| 暂停/恢复 | `GET /rest/config/folders/{ID}`，改 `paused` 后 `PUT` 回同一路径 | 完整 folder 配置 | 不改（paused 只在 Syncthing 内生效） |
+| 强制扫描 | `POST /rest/db/scan?folder={ID}` | — | 不改 |
+
+调 API 前校验，不通过不发请求：
+- 添加 folder：`ls {path}` 确认路径存在；不存在则告知用户并询问是否继续
+- 添加 device：device ID 须匹配 `^[A-Z0-9]{7}(-[A-Z0-9]{7}){7}$`，否则报错
+
+**查看状态输出格式：**
 ```
 Folders (N):
   {id:<20} {path:<35} {completion:.0f}%  {paused ? "paused" : "syncing/synced"}
@@ -61,126 +68,4 @@ Devices (N):
   {name:<20} {deviceID[:15]}...  {online/offline}
 ```
 
-**`.stignore` 检查（每个 folder）：**
-
-对每个 folder，执行：
-```bash
-FOLDER_PATH=$(echo {PATH} | sed "s|^~|$HOME|")
-[ -f "$FOLDER_PATH/.gitignore" ] && echo "has_gitignore" || echo "no_gitignore"
-[ -f "$FOLDER_PATH/.stignore" ] && grep -q "#include .gitignore" "$FOLDER_PATH/.stignore" && echo "stignore_ok" || echo "stignore_missing"
-```
-
-若 folder 有 `.gitignore` 但 `.stignore` 不存在或未包含 `#include .gitignore`，直接创建：
-```bash
-echo '#include .gitignore' > "$FOLDER_PATH/.stignore"
-```
-
-并在状态输出末尾告知：
-```
-✓ Created .stignore for {folder_id} ({path}) — linked to .gitignore
-```
-
----
-
-## 操作：添加 Folder
-
-1. 确认路径存在（`ls {path}`）；若不存在告知用户并询问是否继续
-2. 调用 REST API：
-```bash
-curl -s -X POST \
-  -H "X-API-Key: ${API_KEY}" \
-  -H "Content-Type: application/json" \
-  -d '{"id":"{ID}","path":"{PATH}","label":"{LABEL}","type":"sendreceive","devices":[]}' \
-  "${API_URL}/rest/config/folders"
-```
-3. 若返回 4xx/5xx：输出状态码和响应体，不静默失败
-4. 回写 config.json：将新 folder 追加到 `~/.hskill/sync-agent/config.json` 的 `folders` 数组
-5. **`.stignore` 检查：**
-```bash
-FOLDER_PATH=$(echo {PATH} | sed "s|^~|$HOME|")
-[ -f "$FOLDER_PATH/.gitignore" ] && ! grep -q "#include .gitignore" "$FOLDER_PATH/.stignore" 2>/dev/null
-```
-若条件成立，直接创建：
-```bash
-echo '#include .gitignore' > "$FOLDER_PATH/.stignore"
-```
-并告知：
-> ✓ Created .stignore for {ID} ({PATH}) — linked to .gitignore
-
----
-
-## 操作：删除 Folder
-
-```bash
-curl -s -X DELETE \
-  -H "X-API-Key: ${API_KEY}" \
-  "${API_URL}/rest/config/folders/{FOLDER_ID}"
-```
-
-从 `config.json` 的 `folders` 数组中移除对应条目。
-
----
-
-## 操作：添加 Device
-
-验证 device ID 格式：必须是 8 组 7 个大写字母数字，以 `-` 分隔（如 `XXXXXXX-XXXXXXX-XXXXXXX-XXXXXXX-XXXXXXX-XXXXXXX-XXXXXXX-XXXXXXX`），共 56 字符加 7 个分隔符 = 63 字符总长。
-
-```bash
-curl -s -X POST \
-  -H "X-API-Key: ${API_KEY}" \
-  -H "Content-Type: application/json" \
-  -d '{"deviceID":"{DEVICE_ID}","name":"{NAME}"}' \
-  "${API_URL}/rest/config/devices"
-```
-
-回写 config.json：追加到 `devices` 数组。
-
----
-
-## 操作：删除 Device
-
-```bash
-curl -s -X DELETE \
-  -H "X-API-Key: ${API_KEY}" \
-  "${API_URL}/rest/config/devices/{DEVICE_ID}"
-```
-
-从 `config.json` 的 `devices` 数组中移除对应条目。
-
----
-
-## 操作：暂停 / 恢复 Folder
-
-先获取当前 folder 配置：
-```bash
-curl -s -H "X-API-Key: ${API_KEY}" "${API_URL}/rest/config/folders/{FOLDER_ID}"
-```
-
-修改 `paused` 字段后 PUT 回去：
-```bash
-curl -s -X PUT \
-  -H "X-API-Key: ${API_KEY}" \
-  -H "Content-Type: application/json" \
-  -d '{...updated config with paused: true/false...}' \
-  "${API_URL}/rest/config/folders/{FOLDER_ID}"
-```
-
-回写 config.json（paused 状态不持久化到 config.json，仅在 Syncthing 内部生效）。
-
----
-
-## 操作：强制扫描
-
-```bash
-curl -s -X POST \
-  -H "X-API-Key: ${API_KEY}" \
-  "${API_URL}/rest/db/scan?folder={FOLDER_ID}"
-```
-
----
-
-## 错误处理原则
-
-- 所有 curl 调用加 `-w "\nHTTP %{http_code}"` 捕获状态码
-- 4xx/5xx：输出状态码 + 响应体，不继续后续步骤
-- 路径不存在、device ID 格式错误：在调用 API 前就报错
+**`.stignore` 规则**（查看状态时检查每个 folder；添加 folder 成功后检查新 folder）：folder 路径（`~` 展开为 `$HOME`）下有 `.gitignore`，且 `.stignore` 不存在或不含 `#include .gitignore` → 执行 `echo '#include .gitignore' > "$FOLDER_PATH/.stignore"`，并告知 `✓ Created .stignore for {id} ({path}) — linked to .gitignore`（查看状态时放在状态输出末尾）。
