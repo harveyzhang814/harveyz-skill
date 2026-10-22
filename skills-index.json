@@ -51,8 +51,8 @@
       "path": "research/extract-vision",
       "bundle": "research",
       "installScope": "global",
-      "contentHash": "c9f68c043bc09309",
-      "contentVersion": "1.2.1"
+      "contentHash": "00d837f67f116a34",
+      "contentVersion": "1.2.2"
     },
     {
       "path": "research/learn-video",
