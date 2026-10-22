@@ -44,8 +44,8 @@
       "path": "mint/learn-skill",
       "bundle": "mint",
       "installScope": "global",
-      "contentHash": "542f333a8a72024c",
-      "contentVersion": "2.0.1"
+      "contentHash": "4124e6f706533393",
+      "contentVersion": "2.0.2"
     },
     {
       "path": "research/extract-vision",
