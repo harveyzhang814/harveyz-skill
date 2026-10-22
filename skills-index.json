@@ -247,8 +247,8 @@
       "path": "design/build-style",
       "bundle": "design",
       "installScope": "project",
-      "contentHash": "cae8e09fcd2e8dc8",
-      "contentVersion": "1.4.1"
+      "contentHash": "6828f9938517c707",
+      "contentVersion": "1.5.0"
     },
     {
       "path": "design/sync-design",

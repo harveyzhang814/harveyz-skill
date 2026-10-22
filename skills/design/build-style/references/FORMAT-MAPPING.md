@@ -1,7 +1,7 @@
 # 跨格式 Token 映射标准
 
 > **文件用途：** 设计 Token → 各输出格式的权威映射规则。
-> **使用者：** `/design-derive` skill 读取本文件作为推导依据。
+> **使用者：** `/build-style` 读取本文件作为推导依据。
 > **与品牌文件的关系：** 本文件定义**映射规则**（通用），品牌文件定义**Token 值**（品牌特定），两者分离。
 
 ---
@@ -179,21 +179,7 @@
 
 ## 七、Mermaid themeVariables 完整映射
 
-```
-primaryColor        ← color.dataviz.1（主节点填充色）
-primaryBorderColor  ← color.dataviz.1 略深 10%
-primaryTextColor    ← color.interactive.primary-fg（主节点文字色）
-secondaryColor      ← color.dataviz.2（次节点填充色）
-tertiaryColor       ← color.dataviz.3（三级节点填充色）
-background          ← color.surface.page
-mainBkg             ← color.dataviz.1（同 primaryColor）
-clusterBkg          ← color.surface.section（子图背景）
-titleColor          ← color.text.heading
-lineColor           ← color.border.default
-edgeLabelBackground ← color.surface.page
-```
-
-深色节点（dataviz 色深）→ `color:#FFFFFF`；浅色节点（dataviz 色浅）→ `color:#000000`。
+Mermaid 主题文件结构与键名见 build-style SKILL.md Step 6（按图类型分区）。
 
 ---
 
