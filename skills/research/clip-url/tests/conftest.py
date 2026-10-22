@@ -15,6 +15,43 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts"))
 
+_BROWSER_FETCH_INSTALL_HINT = """\
+{what}需要 browser-fetch（Python >= 3.11 + Playwright + Chromium），本机不可用，已跳过。
+安装（在 harveyz-skill 仓库根目录）：
+  cd tools/browser-fetch
+  python3 -m venv .venv && .venv/bin/pip install -e .
+  .venv/bin/python -m playwright install chromium
+装好后重跑。探针原始输出：
+{detail}"""
+
+
+def _skip_unless_runs(tmp_path_factory, what, *args):
+    """Run a browser-fetch probe; skip with install steps instead of erroring
+    when it can't run here. Data dir is isolated so the probe never reads the
+    real ~/.hskill/browser-fetch state."""
+    from browser_fetch_cli import call
+
+    with pytest.MonkeyPatch.context() as mp:
+        mp.setenv("BROWSER_FETCH_DATA_DIR", str(tmp_path_factory.mktemp("probe-data")))
+        try:
+            call(*args)
+        except (RuntimeError, OSError) as e:
+            pytest.skip(_BROWSER_FETCH_INSTALL_HINT.format(what=what, detail=str(e)[-600:]))
+
+
+@pytest.fixture(scope="session")
+def require_browser_fetch_cli(tmp_path_factory):
+    """Launcher bootstrap + playwright import (no Chromium launch). For tests
+    that only shell out to browser-fetch subcommands like `profile`."""
+    _skip_unless_runs(tmp_path_factory, "browser-fetch CLI 测试", "profile", "list")
+
+
+@pytest.fixture(scope="session")
+def require_browser_fetch(tmp_path_factory, require_browser_fetch_cli):
+    """Whole chain including a Chromium launch, probed by fetching an inline
+    data: URL (no network or server). For tests that drive a real browser."""
+    _skip_unless_runs(tmp_path_factory, "真浏览器测试", "page", "data:text/html,<p>ok</p>")
+
 
 @pytest.fixture(autouse=True)
 def isolated_store_config(tmp_path, monkeypatch):
@@ -39,7 +76,7 @@ class _QuietHandler(http.server.SimpleHTTPRequestHandler):
 
 
 @pytest.fixture
-def local_site_urls(tmp_path):
+def local_site_urls(tmp_path, require_browser_fetch):
     site_dir = tmp_path / "site"
     site_dir.mkdir()
     (site_dir / "article.html").write_text(_ARTICLE_HTML, encoding="utf-8")
