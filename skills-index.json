@@ -233,8 +233,8 @@
       "path": "writing/migrate-spec",
       "bundle": "writing",
       "installScope": "project",
-      "contentHash": "596bfcc1ef5a2db6",
-      "contentVersion": "1.0.0"
+      "contentHash": "0a833b71007148ad",
+      "contentVersion": "1.1.0"
     },
     {
       "path": "design/scout-brand",
