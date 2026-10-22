@@ -2,7 +2,7 @@
 name: archive-skill
 description: "Archive, retire, deprecate, or sunset a skill from the active registry. Use this skill whenever someone wants to remove a skill from active use — even if they don't use the word 'archive'. Moves it to skills/archived/, removes it from skills-index.json, regenerates packaging config, and commits on a chore branch merged back to the original branch. Triggers: 'archive X skill', 'retire X', 'deprecate X', 'remove X from bundle', 'sunset X skill'."
 user_invocable: true
-version: "1.2.0"
+version: "1.2.1"
 ---
 
 # archive-skill
@@ -70,6 +70,7 @@ ls "${REPO_ROOT}/skills/archived/<name>" 2>/dev/null
   移动：skills/<category>/<name>/ → skills/archived/<name>/
   从 skills-index.json 移除该条目
   更新 bundleMeta.<bundle>：去掉描述中的 "<name>"
+  追加 <name> 到 archived.skills
   重新生成：package.json files[] 和 .npmignore
   Git：chore/archive-<name> → merge 回 <ORIGINAL_BRANCH>
 
@@ -101,7 +102,7 @@ git mv "skills/<category>/<name>" "skills/archived/<name>"
 **更新 bundleMeta 描述：** 描述格式为 `"研究工具（a + b + c）"`，从中删除 `<name>`：
 - 若在中间：删除 ` + <name>` 或 `<name> + `
 - 若为最后一项：删除 ` + <name>`
-- 若括号内只剩该项：将整个 `（<name>）` 删除，或保留空括号（均可）
+- 若括号内只剩该项：删除整个 `（<name>）`
 - 若描述中无该 skill 名：跳过，不报错
 
 **记录到 archived 列表：** 在顶层 `archived.skills` 数组中追加 `<name>`（数组不存在则创建 `"archived": { "skills": [], "tools": [] }`）。若 `<name>` 已在列表中，跳过不重复添加。
@@ -162,7 +163,6 @@ git merge --no-ff chore/archive-<name>
 | 有未提交变更 | Step 2 中止，提示 commit 或 stash |
 | `skills/archived/<name>/` 已存在 | Step 2 中止，提示手动处理 |
 | `generate-npmignore.js` 失败 | Step 6 中止，不执行 git 操作 |
-| skill 在磁盘但不在 index | 提示"仅做文件移动"，跳过 Step 5 |
 | bundleMeta 描述无该 skill 名 | 跳过描述更新，继续 |
 
 ---

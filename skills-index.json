@@ -275,8 +275,8 @@
       "path": "mint/archive-skill",
       "bundle": "mint",
       "installScope": "project",
-      "contentHash": "2f028d12b2285128",
-      "contentVersion": "1.2.0"
+      "contentHash": "054d2ae1118364bc",
+      "contentVersion": "1.2.1"
     },
     {
       "path": "mint/dedup-skill",
