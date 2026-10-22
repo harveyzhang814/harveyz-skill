@@ -163,8 +163,8 @@
       "path": "coding/setup-debug",
       "bundle": "coding",
       "installScope": "project",
-      "contentHash": "dd9c06b0980d17ad",
-      "contentVersion": "1.0.0"
+      "contentHash": "57f68878c05960ac",
+      "contentVersion": "1.1.0"
     },
     {
       "path": "coding/init-goal",

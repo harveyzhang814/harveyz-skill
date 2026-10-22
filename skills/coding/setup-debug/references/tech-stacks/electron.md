@@ -4,10 +4,7 @@
 
 ## 时间戳处理
 
-- **主进程 stdout**：通常无时间戳，capture 层注入（python3，跨平台）：
-  ```bash
-  electron . 2>&1 | python3 -u -c 'import sys,datetime; [print(datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"), l.rstrip(), flush=True) for l in iter(sys.stdin.readline,"")]' >> main.log &
-  ```
+- **主进程 stdout**：通常无时间戳，capture 层注入，python3 方案见下方「主进程捕获」。
 - **renderer console hook**：在 hook 代码里直接用 `new Date().toISOString()` 生成，已是 ISO 8601，无需额外处理（下方示例已包含）。
 - **electron-log 库**：默认格式含时间戳但非 ISO，建议配置 `log.transports.file.format = '[{iso}] [{level}] {text}'`。
 
@@ -15,7 +12,7 @@
 
 | 层 | 日志去向 | 捕获方式 |
 |---|---|---|
-| 主进程（main.js） | stdout/stderr（终端启动时可见） | 包裹启动命令（策略 B） |
+| 主进程（main.js） | stdout/stderr（终端启动时可见） | 包裹启动命令（见下方「主进程捕获」） |
 | 内嵌子服务（spawn + pipe） | 主进程 stdout（前缀标识来源） | 同上，无独立文件 |
 | preload 脚本 | renderer 的 DevTools console | renderer 层捕获 |
 | renderer（页面 JS） | DevTools console（F12） | preload 拦截或 CDP |
@@ -101,13 +98,13 @@ httpProcess.stdout.on('data', buf => console.log(`[service-name] ${buf.toString(
 httpProcess.stderr.on('data', buf => console.warn(`[service-name] ${buf.toString().trimEnd()}`));
 ```
 
-**后果：子服务没有独立日志文件**，它的所有输出都以 `[service-name]` 前缀合并进 `main-process.log`。
+**后果：子服务没有独立日志文件**，它的所有输出都以 `[service-name]` 前缀合并进 `main.log`。
 
-**识别方法：** 若在第二阶段发现某个服务（如 HTTP API）有进程但找不到独立日志文件，检查 Electron 主进程的启动代码，看是否有 `spawn` + stdout pipe 的模式。
+**识别方法：** 若在步骤 2 发现某个服务（如 HTTP API）有进程但找不到独立日志文件，检查 Electron 主进程的启动代码，看是否有 `spawn` + stdout pipe 的模式。
 
 **查询方法：** 不要找独立的 `http.log`，直接在主进程日志里按前缀过滤：
 ```bash
-grep '\[service-name\]' electron/main-process.log
+grep '\[service-name\]' tmp/logs/main.log
 ```
 
 **注意：** 这种模式下，子服务的 Bearer token、端口等运行时信息由主进程生成并保存在内存中，外部脚本无法直接读取——验证脚本需要使用主进程保存到文件的 token，而不能从子服务日志里提取。
