@@ -2,7 +2,7 @@
 name: forge-doc
 description: "Convert documents between formats. Trigger when the user wants to convert or export a Markdown file to Word (.docx) or PDF — e.g. 'export as docx', 'convert to Word', 'export as pdf', 'generate PDF' — or when the user writes a document in the conversation and wants it as .docx or .pdf."
 user_invocable: true
-version: "2.6.0"
+version: "2.6.1"
 ---
 
 `SKILL_DIR` 为当前 host 安装本 skill 的目录（包含 `scripts/`、`assets/` 和 `preview/`）；也可设为仓库中的 `skills/writing/forge-doc`，直接使用未安装的版本。
@@ -41,8 +41,9 @@ python3 SKILL_DIR/scripts/generate_style_preview.py
 选项：
   1. Bain & Company（红色品牌）— Bain 正式输出
   2. BCG（深绿品牌，麦肯锡横线表格）— BCG 正式输出
-  3. 中文学术论文（宋体/黑体，25磅行距）— 硕博论文、学术报告
-  4. 自定义（用户提供路径或描述）
+  3. Roland Berger — RB 正式输出
+  4. 中文学术论文（宋体/黑体，25磅行距）— 硕博论文、学术报告
+  5. 自定义（用户提供路径或描述）
 ```
 
 用户选定后再执行转换。**用户未指定样式时不得跳过此步骤，不得默认使用某一样式。**
@@ -70,6 +71,7 @@ python3 <脚本> --dump-style > style.json   # PDF 用 style.css；导出默认�
   |------|------|---------|
   | `bain` | Bain & Company（红色） | Bain 正式输出 |
   | `bcg` | BCG（深绿，麦肯锡横线表格） | BCG 正式输出 |
+  | `rolandberger` | Roland Berger | RB 正式输出 |
   | `thesis` | 中文学术论文（宋体/黑体/Times New Roman，25磅行距） | 硕博学位论文、学术报告 |
 
 - 图片（`![alt](./images/fig.png)` 或 `![[fig.png]]`）：相对路径以 MD 文件所在目录为根解析。转换已有的 MD 时传绝对路径；MD 不在图片原目录时（如写到 /tmp 的临时稿），加 `--base-dir <图片根目录>`，例如 `python3 SKILL_DIR/scripts/md_to_pdf.py /tmp/draft.md --base-dir /Users/harvey/Documents/my-paper`。

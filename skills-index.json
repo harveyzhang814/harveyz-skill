@@ -212,8 +212,8 @@
       "path": "writing/forge-doc",
       "bundle": "writing",
       "installScope": "global",
-      "contentHash": "945153d0e12bf840",
-      "contentVersion": "2.6.0"
+      "contentHash": "1186c485b858377a",
+      "contentVersion": "2.6.1"
     },
     {
       "path": "writing/draw-diagram",
