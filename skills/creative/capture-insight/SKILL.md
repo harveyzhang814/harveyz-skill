@@ -1,6 +1,6 @@
 ---
 name: capture-insight
-version: "2.0.1"
+version: "2.0.2"
 user_invocable: true
 description: "Capture and record a fleeting insight or observation. Triggers immediately when the user expresses an observation, judgment, or idea — phrases like 'I noticed', 'just an observation', 'record this', 'insight', 'I have a judgment', or tossing out an opinionated thought. Distinct from 'I have an idea to execute' (that's a task). Clarifies the core with 2-3 quick Q&As, then saves to the Writing Agent project's insights/ folder. Trigger early — insights are fragile."
 ---
@@ -115,7 +115,8 @@ if git show-ref --verify --quiet refs/heads/staging; then
   BASE_BRANCH=staging
 else
   BASE_BRANCH=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null \
-                | sed 's@^refs/remotes/origin/@@' || echo "main")
+                | sed 's@^refs/remotes/origin/@@')
+  BASE_BRANCH=${BASE_BRANCH:-main}
 fi
 
 # 3. 切换到 chore/insight（不存在则从 BASE_BRANCH 创建）

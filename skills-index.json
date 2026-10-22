@@ -142,15 +142,15 @@
       "path": "creative/capture-todo",
       "bundle": "creative",
       "installScope": "essential",
-      "contentHash": "79640fb9b1ebbadd",
-      "contentVersion": "4.5.2"
+      "contentHash": "54634ad3d28c2a73",
+      "contentVersion": "4.5.3"
     },
     {
       "path": "creative/capture-insight",
       "bundle": "creative",
       "installScope": "essential",
-      "contentHash": "616eb7c46d4a8384",
-      "contentVersion": "2.0.1"
+      "contentHash": "6b39218b34a2de66",
+      "contentVersion": "2.0.2"
     },
     {
       "path": "coding/init-workflow",
