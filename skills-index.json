@@ -107,8 +107,8 @@
       "path": "research/clip-url",
       "bundle": "research",
       "installScope": "project",
-      "contentHash": "4a6b63007235ffa1",
-      "contentVersion": "0.9.3"
+      "contentHash": "4a7b3afe8889411f",
+      "contentVersion": "0.9.4"
     },
     {
       "path": "research/explain-design",
