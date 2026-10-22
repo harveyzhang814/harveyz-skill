@@ -2,7 +2,7 @@
 name: contribute-skill
 description: "Contribute, import, sync, or register a skill directory from another project into the harveyz-skill repo — auto-normalizes SKILL.md format, registers in skills-index.json, and performs bidirectional directory sync. Triggers whenever the user wants to add, contribute, push, migrate, import, or sync an existing skill into harvey-skill or harveyz-skill. Note: flow is from other projects into harveyz-skill; installing or copying an existing skill out to a local project does NOT trigger this skill."
 user_invocable: true
-version: "1.2.0"
+version: "1.3.0"
 ---
 <!-- platform-standard-sha256: ad3d2f32f40cc282ef20bd3a19631a16f079839cc3e086a09b99011cc201fa2a -->
 
@@ -124,10 +124,14 @@ version: "1.2.0"
 ```
 即将执行以下操作：
 
+[工作区]
+  从 staging 新建分支 feature/contribute-<name>，工作区 <harveyzSkillPath>/.claude/worktrees/feature+contribute-<name>
+  （分支已存在时改为询问是否在该分支继续）
+
 [复制]
   源：`${source_skill_dir}/`
       （列出目录中所有文件）
-  目标：<harveyzSkillPath>/skills/<bundle-category>/<name>/
+  目标：<WT>/skills/<bundle-category>/<name>/
 
 [注册]
   skills-index.json 新增：{"path": "<bundle-category>/<name>", "bundle": "<bundle>", "installScope": "<scope>"}（跳过则无 installScope）
@@ -169,11 +173,19 @@ version: "1.2.0"
 
 ### Step 6b — 执行复制与注册
 
-按序执行以下操作：
+按序执行以下操作。全部写入都在独立工作区 `<WT>` 里进行，不在 `<harveyzSkillPath>` 当前 checkout 写入（它可能停在别的分支上）。
+
+**前置：建立隔离工作区**
+
+`staging` 必须可解析为提交（`git -C <harveyzSkillPath> rev-parse --verify 'staging^{commit}'`），否则停止。然后运行 `git -C <harveyzSkillPath> show-ref --quiet refs/heads/feature/contribute-<name>`：
+- 分支不存在 → `git -C <harveyzSkillPath> worktree add "<WT>" -b feature/contribute-<name> staging`，其中 `<WT>` 为 `<harveyzSkillPath>/.claude/worktrees/feature+contribute-<name>`
+- 分支已存在 → 问用户「分支 feature/contribute-<name> 已存在，是否在该分支继续？(y/n)」。n 则中止；y 则用 `git -C <harveyzSkillPath> worktree list` 找到它所在的工作区作为 `<WT>`，没有则 `git -C <harveyzSkillPath> worktree add "<WT>" feature/contribute-<name>`
+
+建好后运行 `git -C "<WT>" config core.hooksPath .githooks` 与 `git -C "<WT>" config merge.ff false`。任一命令失败即停止并保留现场。
 
 **0. 复制前检查目标路径**
 
-`<harveyzSkillPath>/skills/<bundle-category>/<name>/` 已存在时，先让用户选择，再继续：
+`<WT>/skills/<bundle-category>/<name>/` 已存在时，先让用户选择，再继续：
 ```
 目标路径已存在：skills/<bundle-category>/<name>/
 选择操作：
@@ -185,13 +197,13 @@ version: "1.2.0"
 **1. 复制 skill 目录**
 ```bash
 # 将源目录完整复制为目标路径
-cp -r "${source_skill_dir}/" <harveyzSkillPath>/skills/<bundle-category>/<name>/
+cp -r "${source_skill_dir}/" <WT>/skills/<bundle-category>/<name>/
 ```
 
 **2. 用格式化后的 SKILL.md 覆盖目标目录中的 SKILL.md**
 （将 Step 6a 规范化后的内容写入目标路径）
 
-**3. 更新 `<harveyzSkillPath>/skills-index.json`**
+**3. 更新 `<WT>/skills-index.json`**
 
 在 `skills[]` 数组末尾新增：
 ```json
@@ -207,7 +219,7 @@ cp -r "${source_skill_dir}/" <harveyzSkillPath>/skills/<bundle-category>/<name>/
 
 **4. 运行生成脚本**
 ```bash
-cd <harveyzSkillPath> && node scripts/generate-npmignore.js
+cd <WT> && node scripts/generate-npmignore.js
 ```
 
 > `generate-npmignore.js` 会更新 `package.json` 的 `files[]` 字段和 `.npmignore`，将新注册的 skill 路径加入分发列表。
@@ -233,14 +245,14 @@ cd <harveyzSkillPath> && node scripts/generate-npmignore.js
 
 ```bash
 # 检测差异
-diff -rq <harveyzSkillPath>/skills/<bundle-category>/<name>/ "${source_skill_dir}/"
+diff -rq <WT>/skills/<bundle-category>/<name>/ "${source_skill_dir}/"
 ```
 
 - **若无差异**：跳过，不产生 commit，提示用户"源目录内容已是最新，无需同步"
 - **若有差异**：
   ```bash
   # 复制目录内容（不含目录本身）到源目录，覆盖同名文件
-  cp -r <harveyzSkillPath>/skills/<bundle-category>/<name>/. "${source_skill_dir}/"
+  cp -r <WT>/skills/<bundle-category>/<name>/. "${source_skill_dir}/"
   ```
   若为 Git 源，再在**源项目**当前分支执行：
   ```bash
@@ -251,12 +263,12 @@ diff -rq <harveyzSkillPath>/skills/<bundle-category>/<name>/ "${source_skill_dir
 
 ---
 
-### Step 8 — 在 harveyz-skill 创建分支并 commit
+### Step 8 — 在 harveyz-skill 工作区 commit
 
-在 `<harveyzSkillPath>` 下先运行 `git show-ref --quiet refs/heads/feature/contribute-<name>`。分支已存在 → 问用户「分支 feature/contribute-<name> 已存在，是否切换到该分支继续？(y/n)」，y 则 `git checkout feature/contribute-<name>`，n 则中止；不存在 → `git checkout -b feature/contribute-<name>`。然后暂存并提交：
+在 Step 6b 建立的工作区里暂存并提交：
 
 ```bash
-cd <harveyzSkillPath>
+cd <WT>
 
 git add skills/<bundle-category>/<name>/
 git add skills-index.json
@@ -277,8 +289,9 @@ git commit -m "feat: contribute <name> from <source-project-name>"
 ✓ harveyz-skill
   - 新增 skill：skills/<bundle-category>/<name>/
   - 已注册到 bundle：<bundle>
-  - 分支：feature/contribute-<name>
-  - 下一步：确认后在该分支运行 scripts/merge-to-staging.sh 合并进 staging
+  - 分支：feature/contribute-<name>（基于 staging）
+  - 工作区：<WT>
+  - 下一步：确认后在 <WT> 运行 scripts/merge-to-staging.sh 合并进 staging
 
 ✓ 源项目（<project-name>）
   - 已同步格式化内容：`${source_skill_dir}/`
