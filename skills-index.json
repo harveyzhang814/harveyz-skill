@@ -429,8 +429,8 @@
       "path": "coding/analyze-claudemd",
       "bundle": "coding",
       "installScope": "global",
-      "contentHash": "8dafe21cdfff97e6",
-      "contentVersion": "1.0.0"
+      "contentHash": "f769534f93aa5e0b",
+      "contentVersion": "1.1.0"
     },
     {
       "path": "superpowers-rewrite/init-spec",
