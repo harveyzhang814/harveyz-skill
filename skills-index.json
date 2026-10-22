@@ -79,8 +79,8 @@
       "path": "research/fetch-paper",
       "bundle": "research",
       "installScope": "project",
-      "contentHash": "3dc8352a00c59f22",
-      "contentVersion": "0.2.2"
+      "contentHash": "072008bea5059c2e",
+      "contentVersion": "0.2.3"
     },
     {
       "path": "research/extract-cognition",

@@ -2,14 +2,12 @@
 name: fetch-paper
 description: "Locate and download a single academic paper's full text via legitimate open-access channels (arXiv, Unpaywall, Semantic Scholar, PMC, publisher OA pages). Verifies the paper's bibliographic record (DOI/arXiv ID) before searching, disambiguates when multiple candidates match, and reports one of four outcomes: auto-downloaded, free-but-manual, paid/registration-required, or not found. Maintains a growing list of free sources ranked by success rate. Triggers: 'find and download this paper', 'get me the PDF of <title>', 'download this paper', 'fetch paper <title/DOI>'."
 user_invocable: true
-version: "0.2.2"
+version: "0.2.3"
 ---
 
 # fetch-paper
 
 联网核实论文真实存在，仅通过合法开放获取渠道下载全文 PDF；找不到免费全文时，报告手动/付费入口而非代为绕过付费墙。
-
-底层设计说明见 `docs/superpowers/specs/2026-08-15-fetch-paper-design.md`。
 
 ---
 
@@ -20,13 +18,15 @@ ConfigPath: ~/.hskill/fetch-paper/config.json
 SourcesPath: ~/.hskill/fetch-paper/sources.json
 ```
 
+**宿主能力：** 下文的读取、文本写入、结构化请求（调用 Crossref / Unpaywall / Semantic Scholar / arXiv / PMC 等公开 API）、检索、下载（下载 PDF 并返回或创建临时文件），都指宿主提供的对应能力；shell 片段只是示例写法。写进配置的路径一律用 `$HOME` 展开，不写字面量 `~`。
+
 ---
 
 ## 执行流程
 
 ### Step 0：初始化配置与清单
 
-用宿主的文件读取能力读取 `~/.hskill/fetch-paper/config.json`。
+读取 `~/.hskill/fetch-paper/config.json`。
 
 若文件不存在，询问用户：
 
@@ -34,7 +34,7 @@ SourcesPath: ~/.hskill/fetch-paper/sources.json
 论文下载到哪个目录？（直接回车使用默认：~/Documents/paper-downloads）
 ```
 
-用户回复后，用宿主的文本写入能力创建配置（路径必须用 `$HOME` 展开，不可写字面量 `~`）。若使用 shell，这是一种示例写法：
+用户回复后写入配置：
 
 ```bash
 mkdir -p "$HOME/.hskill/fetch-paper"
@@ -42,13 +42,13 @@ download_dir="${用户指定路径/#\~/$HOME}"
 echo "{\"download_dir\": \"$download_dir\"}" > "$HOME/.hskill/fetch-paper/config.json"
 ```
 
-若文件已存在，解析 JSON 取出 `download_dir` 字段，展开残留的 `~`。若使用 shell，这是一种示例写法：
+若文件已存在，解析 JSON 取出 `download_dir` 字段，展开残留的 `~`：
 
 ```bash
 download_dir=$(python3 -c "import json,os; d=json.load(open('$HOME/.hskill/fetch-paper/config.json')); print(d['download_dir'].replace('~', os.environ['HOME'], 1))")
 ```
 
-用宿主的文件读取能力读取 `~/.hskill/fetch-paper/sources.json`。若不存在，用宿主的文本写入能力创建种子清单；若使用 shell，这是一种示例写法：
+读取 `~/.hskill/fetch-paper/sources.json`。若不存在，创建种子清单：
 
 ```bash
 cat > "$HOME/.hskill/fetch-paper/sources.json" <<'EOF'
@@ -81,7 +81,7 @@ EOF
 
 **若输入已含 DOI：**
 
-用宿主的**结构化请求能力**请求：
+请求：
 
 ```
 https://api.crossref.org/works/<DOI>
@@ -89,7 +89,7 @@ https://api.crossref.org/works/<DOI>
 
 **若输入已含 arXiv ID：**
 
-用宿主的**结构化请求能力**请求：
+请求：
 
 ```
 http://export.arxiv.org/api/query?id_list=<arXiv ID>
@@ -97,7 +97,7 @@ http://export.arxiv.org/api/query?id_list=<arXiv ID>
 
 **否则（只有标题/引用字符串）：**
 
-同时使用宿主的**检索能力**检索 `<标题>`，以及**结构化请求能力**请求：
+同时检索 `<标题>`，并请求：
 
 ```
 https://api.crossref.org/works?query.bibliographic=<urlencode(标题)>&rows=5
@@ -127,14 +127,14 @@ https://api.crossref.org/works?query.bibliographic=<urlencode(标题)>&rows=5
 
 ### Step 4：按优先级尝试免费渠道
 
-读取 `~/.hskill/fetch-paper/sources.json`，把 `auto: true` 的站点按 `success_count` 降序排序，依次尝试（命中一个立即停止，不再尝试后面的）：
+读取 `~/.hskill/fetch-paper/sources.json`，先把 `auto: true` 的站点按 `success_count` 降序依次尝试（下列 1–4 是各站点的请求方法，编号不代表顺序）；都未命中，再依次尝试 5、6。命中一个即停：
 
 1. **arXiv** — 若已确认 arXiv ID，PDF 直链为 `https://arxiv.org/pdf/<arXiv ID>`
-2. **Unpaywall** — 若已确认 DOI，用结构化请求能力请求 `https://api.unpaywall.org/v2/<DOI>?email=fetch-paper@localhost`，取响应中 `best_oa_location.url_for_pdf`
-3. **Semantic Scholar** — 用结构化请求能力请求 `https://api.semanticscholar.org/graph/v1/paper/DOI:<DOI>?fields=openAccessPdf`，取 `openAccessPdf.url`
-4. **PMC** — 若论文属生物医学领域，用结构化请求能力请求 `https://www.ncbi.nlm.nih.gov/pmc/utils/idconv/v1.0/?ids=<DOI>&format=json` 换取 PMC ID（该 URL 会 301 到 `pmc.ncbi.nlm.nih.gov` 新域名；重新请求一次；返回 JSON 里 PMC ID 在 `records[0].pmcid`）。**注意**：PDF 直链 `https://www.ncbi.nlm.nih.gov/pmc/articles/<PMC ID>/pdf/` 实测已失效——该链接最终落地到一个 200 状态的"Preparing to download..."HTML 中间页，需要浏览器执行 JS 解一个 Proof-of-Work 挑战（cloudpmc-viewer）并写入 cookie 才能拿到真正的 PDF，普通 HTTP 请求无法完成，判定为必然失败，直接记入「B 手动候选」，不必重试。另外 Unpaywall/Semantic Scholar 对 PMC 收录的论文通常也会把同一个 PMC 落地页当作 `best_oa_location`/`openAccessPdf`（但 `url_for_pdf` 常为 null），所以此渠道确实会被触达，只是触达后大概率下载失败
-5. **期刊官网 OA 页面** — 若 Crossref 元数据里 `license` 字段显示开放许可（如 CC-BY），尝试该页面上的 PDF 链接。**注意**：实测 Unpaywall/Semantic Scholar 判定为 OA 但 `url_for_pdf` 为 null 的情况很常见（渠道 2/3 未必能给出可下载直链），此时确实会落到这一步；但 ScienceDirect、MDPI 等主流出版商的文章落地页对自动化请求（含 curl 加常规浏览器 UA）普遍返回 403，即便该文确为 CC-BY 开放许可也一样——这是发布方的反爬拦截，不是个别失败。遇到 403 或非 PDF 响应直接判定该渠道失败，记入「B 手动候选」，不要反复重试同一出版商
-6. **作者/机构仓库自存版** — 用检索能力检索 `"<标题>" filetype:pdf`，人工判断结果是否为作者自存版（个人主页、机构仓库域名，而非镜像站）
+2. **Unpaywall** — 若已确认 DOI，请求 `https://api.unpaywall.org/v2/<DOI>?email=fetch-paper@localhost`，取响应中 `best_oa_location.url_for_pdf`
+3. **Semantic Scholar** — 请求 `https://api.semanticscholar.org/graph/v1/paper/DOI:<DOI>?fields=openAccessPdf`，取 `openAccessPdf.url`
+4. **PMC** — 仅限生物医学论文。请求 `https://www.ncbi.nlm.nih.gov/pmc/utils/idconv/v1.0/?ids=<DOI>&format=json` 换取 PMC ID（301 跳转后再请求一次，ID 在 `records[0].pmcid`）。PMC 的 PDF 直链要浏览器完成 JS 挑战，普通请求一定失败：直接把落地页记入「B 手动候选」，不尝试下载
+5. **期刊官网 OA 页面** — Crossref 的 `license` 显示开放许可（如 CC-BY）时，尝试页面上的 PDF 链接。主流出版商普遍拦截自动化请求，遇到 403 或非 PDF 响应即判失败，记入「B 手动候选」，不重试同一出版商
+6. **作者/机构仓库自存版** — 检索 `"<标题>" filetype:pdf`，人工判断结果是否为作者自存版（个人主页、机构仓库域名，而非镜像站）
 
 对每个候选 URL：
 - 使用宿主的**下载能力**请求二进制内容。下载能力必须返回或创建一个**临时文件**，并报告其路径；**记下这个临时文件路径**，Step 5 A 写盘时要用它。若宿主的下载能力不能保存二进制内容，才可用 `curl -L --fail --output <临时文件路径> <URL>` 创建临时文件，再继续校验；不得把 PDF 二进制字节交给仅接受文本的写入能力。
@@ -150,7 +150,7 @@ https://api.crossref.org/works?query.bibliographic=<urlencode(标题)>&rows=5
 
 ### Step 5：产出结果
 
-使用宿主的 shell 命令能力生成 paper slug（标题转小写、空格与特殊字符替换为 `-`、汉字保留）；例如：
+生成 paper slug（标题转小写、空格与特殊字符替换为 `-`、汉字保留）：
 
 ```bash
 slug=$(echo "<论文标题>" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9一-鿿]/-/g' | sed -E 's/-+/-/g' | sed 's/^-//;s/-$//')
@@ -158,19 +158,19 @@ slug=$(echo "<论文标题>" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9一-�
 
 **A. 自动下载成功**（Step 4 拿到了合法 PDF）：
 
-使用宿主的文件操作或 shell 命令能力创建目标目录；若使用 shell，例如：
+创建目标目录：
 
 ```bash
 mkdir -p "<download_dir>/$slug"
 ```
 
-用宿主的文件操作或 shell 命令能力把 Step 4 中下载能力返回的临时文件路径复制到目标位置（PDF 是二进制内容，不能用仅支持文本的写入能力写入，二进制字节会被破坏）。若使用 shell，例如：
+把 Step 4 中下载能力返回的临时文件路径复制到目标位置（PDF 是二进制内容，不能用仅支持文本的写入能力写入，二进制字节会被破坏）：
 
 ```bash
 cp "<下载能力返回的临时文件路径>" "<download_dir>/$slug/paper.pdf"
 ```
 
-用宿主的文本写入能力写入 `<download_dir>/$slug/metadata.md`：
+写入 `<download_dir>/$slug/metadata.md`：
 
 ```markdown
 # {论文标题}
@@ -188,11 +188,11 @@ cp "<下载能力返回的临时文件路径>" "<download_dir>/$slug/paper.pdf"
 - [自动] {站点名}：{URL}
 ```
 
-用宿主的文件读取与文本写入能力更新 `~/.hskill/fetch-paper/sources.json`，命中站点的 `success_count` 加 1（使用 JSON 解析与写入，保留其余字段不变）；若使用 shell，可用 `python3` 读写 JSON。
+更新 `~/.hskill/fetch-paper/sources.json`：命中站点的 `success_count` 加 1（使用 JSON 解析与写入，保留其余字段不变）。
 
 **B. 免费全文存在，但需手动下载**（有手动候选，但没有 auto 渠道成功）：
 
-不写 PDF。用宿主的文本写入能力写入 `<download_dir>/$slug/metadata.md`（同上结构），获取渠道行改为：
+不写 PDF。写入 `<download_dir>/$slug/metadata.md`（同上结构），获取渠道行改为：
 
 ```markdown
 - [手动下载] {站点名}：{URL} —— {具体操作，如"打开链接，点击 Download PDF 按钮"}
@@ -200,7 +200,7 @@ cp "<下载能力返回的临时文件路径>" "<download_dir>/$slug/paper.pdf"
 
 **C. 无免费全文，但有收费/需注册渠道**：
 
-用宿主的文本写入能力写入 `<download_dir>/$slug/metadata.md`，获取渠道行改为：
+写入 `<download_dir>/$slug/metadata.md`，获取渠道行改为：
 
 ```markdown
 - [付费/需注册] {站点名}：{URL} —— {购买 / 向作者请求全文 / 机构登录}
@@ -236,10 +236,3 @@ cp "<下载能力返回的临时文件路径>" "<download_dir>/$slug/paper.pdf"
 - **不做**：下载后不自动调用 `learn-paper` 精读（用户需另行触发）
 - **不做**：不深度校验全文内容与标题/摘要的一致性（核验只到"元数据记录真实存在"这一层）
 
----
-
-## 依赖
-
-- 检索能力（检索候选）
-- 结构化请求能力（调用 Crossref / Unpaywall / Semantic Scholar / arXiv / PMC 等公开 API）
-- 下载能力（下载 PDF 并返回或创建临时文件）
