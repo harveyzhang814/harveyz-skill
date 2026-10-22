@@ -1,6 +1,6 @@
 ---
 name: init-project
-version: "0.1.3"
+version: "0.1.4"
 description: Bootstrap a new project repository around the harveyz-skill toolchain, or audit an existing repo for what it is missing. Builds the repo skeleton, resolves and installs the skills the project type needs, and runs the initialization phases that can be triggered standalone. Invoke with /init-project [path] to set up, or /init-project check [path] for a read-only report of what is missing. Triggers: 'initialize a new project', 'set up a new repo', 'bootstrap this project', 'what is this repo missing'.
 user_invocable: true
 ---

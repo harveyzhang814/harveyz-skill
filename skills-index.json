@@ -206,7 +206,7 @@
       "bundle": "coding",
       "installScope": "global",
       "contentHash": "3ca1c37debf03414",
-      "contentVersion": "0.1.3"
+      "contentVersion": "0.1.4"
     },
     {
       "path": "writing/forge-doc",
