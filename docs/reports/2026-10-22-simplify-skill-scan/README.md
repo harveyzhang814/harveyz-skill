@@ -14,7 +14,6 @@
 | [feed-creative.md](feed-creative.md) | feed（5）+ creative（2） |
 | [writing-design.md](writing-design.md) | writing（4）+ design（3） |
 | [devops.md](devops.md) | devops（4，目录 `skills/meta/`） |
-| [agent-canvas-superpowers.md](agent-canvas-superpowers.md) | agent-canvas（7）+ superpowers-rewrite（2） |
 
 ## 精简范围外的问题（建议先修）
 
@@ -35,16 +34,15 @@
 
 ## 精简收益分档
 
-- **高**：init-spec（约 1,490 行未被引用的 `visual-companion.md` 与 `scripts/`，已核对 SKILL.md 无引用）、extract-cognition、sync-design、sync-website、release-project、publish-skill、init-skill、setup-debug、handoff、build-style、draw-diagram、sync-agent、capture-insight。
+- **高**：extract-cognition、sync-design、sync-website、release-project、publish-skill、init-skill、setup-debug、handoff、build-style、draw-diagram、sync-agent、capture-insight。
 - **中**：约 20 个，各减 10%–25%，见分报告。
-- **低/无**：simplify-skill、fork-topic、rephrase、explain-design、capture-vocab、judge-release 等。
+- **低/无**：simplify-skill、fork-topic、rephrase、explain-design、capture-vocab 等。
 
 ## 待决定
 
 1. init-skill 与 publish-skill 规则冲突：缺 installScope 是失败还是警告；单段动词名（如 `handoff`）是否允许。
-2. init-spec 的未引用文件：删除，还是接回流程。
-3. draw-diagram 与 build-style 的深色阈值统一为哪一套。
-4. release-project 打 tag 用 `-m`（必为 annotated）与「需要时加 -a」的说明不一致，改哪边。
+2. draw-diagram 与 build-style 的深色阈值统一为哪一套。
+3. release-project 打 tag 用 `-m`（必为 annotated）与「需要时加 -a」的说明不一致，改哪边。
 
 ## 修改时的约束
 
