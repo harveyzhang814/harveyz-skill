@@ -240,8 +240,8 @@
       "path": "design/scout-brand",
       "bundle": "design",
       "installScope": "project",
-      "contentHash": "135c0970bce0e998",
-      "contentVersion": "2.1.0"
+      "contentHash": "69dfa054c71f8df6",
+      "contentVersion": "2.2.0"
     },
     {
       "path": "design/build-style",
