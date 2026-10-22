@@ -373,8 +373,8 @@
       "path": "feed/capture-opinion",
       "bundle": "feed",
       "installScope": "project",
-      "contentHash": "27a9cb1a55b0036a",
-      "contentVersion": "0.2.0"
+      "contentHash": "3ce558dc5fd6ea78",
+      "contentVersion": "0.2.1"
     },
     {
       "path": "agent-canvas/agent-canvas-control",
