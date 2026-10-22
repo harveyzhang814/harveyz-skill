@@ -177,8 +177,8 @@
       "path": "coding/question-me",
       "bundle": "coding",
       "installScope": "global",
-      "contentHash": "0cf0c3f4a44139ff",
-      "contentVersion": "3.0.2"
+      "contentHash": "1152587badd9a9fb",
+      "contentVersion": "3.1.0"
     },
     {
       "path": "coding/capture-vocab",
