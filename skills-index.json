@@ -170,8 +170,8 @@
       "path": "coding/init-goal",
       "bundle": "coding",
       "installScope": "global",
-      "contentHash": "00d8949db087059f",
-      "contentVersion": "1.3.1"
+      "contentHash": "01f4bb5f376041eb",
+      "contentVersion": "1.4.0"
     },
     {
       "path": "coding/question-me",
