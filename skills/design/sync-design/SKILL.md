@@ -1,7 +1,7 @@
 ---
 name: sync-design
 description: Use after any UI source file change — detects changed view/component files via git diff and syncs them to high-fidelity HTML design backups. Also supports pre-development design phase: creates or updates design draft HTML based on user feature descriptions. Maintains a manifest as the source-of-truth mapping between source files, design drafts, and HTML previews. Trigger when user says "sync design", "update HTML preview", "design changed", "create design", "design this", or the Chinese equivalents, or after UI code edits.
-version: "5.0.0"
+version: "5.1.0"
 user_invocable: true
 ---
 
@@ -34,19 +34,22 @@ user_invocable: true
 
 ## 初始化（run first）
 
-读取 `.hskill/sync-design/manifest.json`。
+读取 `.hskill/sync-design/manifest.json`，按顺序检查（子流程见 `references/init.md`）：
 
-**文件不存在：** 执行[首次初始化](#首次初始化)，完成后继续流程。
+1. 文件不存在 → 首次初始化，完成后直接跳到第 5 项。
+2. `config.outputDir` 不以 `.hskill/` 开头（旧路径）→ 旧路径迁移，无论用户选是或否，完成后继续第 3 项。
+3. `entries` 为空 → 已有 HTML 导入，完成后继续第 4 项。
+4. `version` 小于 4 → 在现有字段基础上追加 `"drafts": []`，将 `version` 更新为 `4`，写回文件。
+5. 路由：根据本次模式，跳转至[设计阶段](#设计阶段)或继续[同步流程](#流程strict--不可跳过或合并阶段)。
 
-**文件存在，检查 `config.outputDir`：**
-- 不以 `.hskill/` 开头（旧路径）→ 执行[旧路径迁移](#旧路径迁移)，迁移完成后继续。
-- 以 `.hskill/` 开头 → 继续。
+---
 
-**`entries` 为空：** 执行[已有 HTML 导入](#已有-html-导入)，完成后继续。
+## 标准上下文（后读覆盖先读）
 
-**`version` 小于 4：** 在现有字段基础上追加 `"drafts": []`，将 `version` 更新为 `4`，写回文件后继续。
-
-**路由：** 根据本次模式，跳转至[设计阶段](#设计阶段)或继续[同步流程](#流程strict--不可跳过或合并阶段)。
+1. `manifest.config.designSpec`（若有）
+2. 所属平台的 `designSystemFile`（若有）
+3. 所属平台 `stackRef` 指向的 reference 中，与 `styleStrategy` 匹配的那一节；`styleStrategy` 为 `unknown`（或旧 manifest 里的 `null`）时，读源文件自行判断
+4. 所属平台 `notes`（优先于 reference，记录项目特定约定）
 
 ---
 
@@ -69,16 +72,31 @@ user_invocable: true
 #### 情况 A：drafts[] 中已有对应 entry（修改现有设计稿）
 
 1. 读取 `<draft.htmlFile>`
-2. 读取上下文（后读优先级更高，可覆盖前面内容）：
-   - `manifest.config.designSpec`（若存在）
-   - 该 entry 所属平台的 `designSystemFile`（若有）
-   - 该平台 `stackRef` 指向的 reference 文件中与 `styleStrategy` 匹配的样式策略
-   - 该平台 `notes`
+2. 读[标准上下文](#标准上下文后读覆盖先读)
 3. 根据用户描述确定修改范围（哪些 UI 状态或区块）
 4. 增量修改 HTML，只替换受影响区块；若有新 UI 状态，追加 `uiStates`
 5. 写回 HTML 文件，更新 `drafts[].uiStates`（去重后写入，不写回 manifest，等步骤 3 统一写回）
 
 #### 情况 B：无对应 draft entry（创建新设计稿）
+
+新增的 draft entry 格式：
+
+```json
+{
+  "id": "<screenName>-<platform>",
+  "platform": "<platform>",
+  "htmlFile": "<outputDir>/drafts/<screenName>-<platform>-design.html",
+  "uiStates": ["<见下表>"],
+  "description": "<见下表>",
+  "linkedEntryId": "<见下表>"
+}
+```
+
+| 字段 | 有完成稿 | 无完成稿 |
+|------|---------|---------|
+| `uiStates` | 继承完成稿 uiStates，按用户描述追加新状态 | 用户输入的状态列表 |
+| `description` | 从用户描述提炼 | 用户输入的描述 |
+| `linkedEntryId` | `<screenName>-<platform>`（直接填入，无需等待 sync 阶段回填） | `null` |
 
 **B1. 检查是否有对应完成稿**
 
@@ -87,19 +105,9 @@ user_invocable: true
 **有对应完成稿 →**
 
 1. 将完成稿 HTML（`entry.htmlFile`）复制到 `<outputDir>/drafts/<screenName>-<platform>-design.html` 作为基底
-2. 读取上下文（同情况 A 的优先级顺序）
+2. 读[标准上下文](#标准上下文后读覆盖先读)
 3. 根据用户描述增量修改（同情况 A 步骤 3–4）
-4. 新增 draft entry（`linkedEntryId` 直接填入，无需等待 sync 阶段回填）：
-   ```json
-   {
-     "id": "<screenName>-<platform>",
-     "platform": "<platform>",
-     "htmlFile": "<outputDir>/drafts/<screenName>-<platform>-design.html",
-     "uiStates": ["<继承完成稿 uiStates，按用户描述追加新状态>"],
-     "description": "<从用户描述提炼>",
-     "linkedEntryId": "<screenName>-<platform>"
-   }
-   ```
+4. 新增 draft entry（见上方 JSON 与差异表）
 
 **无对应完成稿 →**
 
@@ -107,25 +115,10 @@ user_invocable: true
    - `屏幕/组件名是什么？（kebab-case，如 "task-history"）`
    - `这个界面有哪些 UI 状态？（逗号分隔，如 idle, loading, error）`
    - `一句话描述这个界面的功能：`
-2. 读取上下文（后读优先级更高，可覆盖前面内容）：
-   - `manifest.config.designSpec`（若存在）
-   - 该平台的 `designSystemFile`（若有）
-   - 该平台 `stackRef` 指向的 reference 文件中与 `styleStrategy` 匹配的样式策略
-   - 该平台 `notes`
-   - `outputDir/drafts/` 下已有的同平台 HTML（选一个作风格参考）
+2. 读[标准上下文](#标准上下文后读覆盖先读)，再从 `outputDir/drafts/` 选一个已有的同平台 HTML 作风格参考
 3. 生成完整高保真 HTML（质量要求见[HTML 生成质量要求](#html-生成质量要求)）
 4. 输出路径：`<outputDir>/drafts/<screenName>-<platform>-design.html`
-5. 新增 draft entry：
-   ```json
-   {
-     "id": "<screenName>-<platform>",
-     "platform": "<platform>",
-     "htmlFile": "<outputDir>/drafts/<screenName>-<platform>-design.html",
-     "uiStates": ["<用户输入的状态列表>"],
-     "description": "<用户输入的描述>",
-     "linkedEntryId": null
-   }
-   ```
+5. 新增 draft entry（见上方 JSON 与差异表）
 
 根据文件路径匹配 `manifest.config.platforms` 确定所属平台；无法自动匹配时询问用户。
 
@@ -193,14 +186,9 @@ git diff <manifest.baseBranch>...HEAD --name-only -- <pattern1> <pattern2> ...
 git diff <entry.lastSyncCommit 或 manifest.baseBranch（如无 lastSyncCommit）>...HEAD -- <entry.sourceFiles 用空格分隔>
 ```
 
-**b. 读取上下文**（后读优先级更高，可覆盖前面内容）
+**b. 读取上下文**
 
-1. `manifest.config.designSpec`（若不存在则跳过）
-2. 该 entry 所属平台的 `designSystemFile`（若有）
-3. 该平台 `stackRef` 指向的 reference 文件
-4. 该平台 `styleStrategy` — 只执行 reference 中与此字段匹配的样式策略；若为 `null` 则从源文件自行判断
-5. 该平台 `notes` — 优先级高于 reference，记录项目特定约定
-6. `<entry.htmlFile>`（若不存在则降级为全量生成：读取所有 `entry.sourceFiles` 完整源码）
+读[标准上下文](#标准上下文后读覆盖先读)，再读 `<entry.htmlFile>`（若不存在则降级为全量生成：读取所有 `entry.sourceFiles` 完整源码）。
 
 **c. 确定更新范围**
 
@@ -240,15 +228,9 @@ git diff <entry.lastSyncCommit 或 manifest.baseBranch（如无 lastSyncCommit�
 
 根据文件路径匹配 `manifest.config.platforms` 确定所属平台；无法自动匹配时询问用户。
 
-**c. 读取上下文**（后读优先级更高，可覆盖前面内容）
+**c. 读取上下文**
 
-1. `manifest.config.designSpec`（若存在）
-2. 该平台的 `designSystemFile`（若有）
-3. 该平台 `stackRef` 指向的 reference 文件
-4. 该平台 `styleStrategy` — 只执行 reference 中与此字段匹配的样式策略
-5. 该平台 `notes` — 优先级高于 reference
-6. 源文件完整内容（及 `notes` 或 reference 中指定的关联文件）
-7. `manifest.config.outputDir` 下**已有的同平台** HTML 文件（选一个作风格参考）
+读[标准上下文](#标准上下文后读覆盖先读)，再读源文件全文（及 `notes` 或 reference 中指定的关联文件），再从 `manifest.config.outputDir` 选一个**已有的同平台** HTML 作风格参考。
 
 **d. 生成完整高保真 HTML**（质量要求见[HTML 生成质量要求](#html-生成质量要求)）
 
@@ -268,9 +250,7 @@ git diff <entry.lastSyncCommit 或 manifest.baseBranch（如无 lastSyncCommit�
 }
 ```
 
-**f. 回填 linkedEntryId**
-
-在 `manifest.drafts[]` 中查找 `id` 与新 entry 相同的 draft。若存在且 `linkedEntryId` 为 `null`，将其 `linkedEntryId` 更新为本 entry 的 `id`。
+**f. 回填 linkedEntryId**（同更新队列 e）
 
 ---
 
@@ -287,11 +267,11 @@ git diff <entry.lastSyncCommit 或 manifest.baseBranch（如无 lastSyncCommit�
 
 ### 阶段 4：确认与写回
 
-输出同步摘要，包含以下分类（有内容的分类才展示）：更新的 entry（id + htmlFile + 变动范围）、新建的 HTML 文件（文件名 + 描述）、配置变更（哪个 platform 的 uiFilePatterns 新增了什么 pattern）、忽略的文件（路径）。
+输出同步摘要，包含以下分类（有内容的分类才展示）：更新的 entry（id + htmlFile + 变动范围）、新建的 HTML 文件（文件名 + 描述）、配置变更（哪个 platform 的 uiFilePatterns 新增了什么 pattern）、忽略的文件（路径）。询问用户确认或取消。
 
 **用户选「确认」：**
 1. `git rev-parse HEAD` 获取当前 commit hash
-2. 将所有已处理 entry 的 `lastSyncCommit` 更新为该 hash
+2. 将所有已处理 entry 的 `lastSyncCommit` 更新为该 hash（不更新则下次 diff 基准错误、漏同步）
 3. 写回 `.hskill/sync-design/manifest.json`（含配置演进的 patterns 变更）
 4. 询问是否 `git add` 并给出建议 commit message：
    `chore: sync HTML design backups — <entry id 列表>`
@@ -312,143 +292,7 @@ git diff <entry.lastSyncCommit 或 manifest.baseBranch（如无 lastSyncCommit�
 - 用户显式指令：「设计稿可以删了」「design done」「清理 <页面> 的设计稿」
 - 上下文信号含「合并」「删除草稿」等
 
-### 检查点 1：linkedEntryId 存在
-
-查找目标 draft 的 `linkedEntryId`：
-- 为 `null` → 输出「❌ 阻止：该页面完成稿尚未生成，无法验证。」退出。
-- 非 null → 在 `manifest.entries[]` 中定位对应 entry，继续。
-
-### 检查点 2：uiStates 全覆盖
-
-对比 `draft.uiStates` 与 `entry.uiStates`：
-- draft 中有、entry 中无的状态 → 输出「❌ 阻止：以下 UI 状态尚未反映到完成稿：<列表>。建议先运行 sync 补全。」退出。
-- 全部覆盖 → 继续。
-
-### 检查点 3：HTML 设计意图比对
-
-读取 `draft.htmlFile` 和 `entry.htmlFile`，确认 draft 中的主要布局结构与组件区块在完成稿中有对应实现：
-- 发现明显缺失（主要区块或关键组件未出现在完成稿中）→ 输出「❌ 阻止：以下设计元素未在完成稿中实现：<列表>。建议先运行 sync 补全。」退出。
-- 通过 → 继续。
-
-### 确认与删除
-
-输出确认摘要：
-> 「设计稿 `<draft.htmlFile>` 的所有设计意图已在完成稿中实现。确认删除设计稿？」
-
-- **取消：** 保留设计稿，不做任何修改。
-- **确认：**
-  1. 删除 `draft.htmlFile` 对应的 HTML 文件
-  2. 从 `manifest.drafts[]` 中移除该 entry
-  3. 写回 `manifest.json`
-  4. 输出：「设计稿 `<id>` 已删除。」
-
----
-
-## 首次初始化
-
-（manifest 文件不存在时执行）
-
-### 1. 询问基础配置
-
-1. `这个项目的 base 分支是什么？（如 main / staging）`
-2. `HTML 设计备份存放在哪个目录？（默认：.hskill/sync-design/html/）`
-3. `设计规范文件路径是什么？（如 DESIGN.md；若无请留空）`
-
-### 2. 自动检测技术栈
-
-先读取 `references/stacks.md`，根据其中的检测信号（特征文件、package.json 依赖、框架配置文件等）扫描项目，匹配技术栈，加载对应的 `references/stack-<name>.md`。
-
-多个栈同时检测到时，按 `stacks.md` 中的优先级取最具体的一个，次要技术在 `notes` 中说明。
-
-### 3. 运行发现命令
-
-从加载的 `stack-*.md` 读取【发现命令】，执行以发现实际存在的 UI 文件，推导 `uiFilePatterns`（取最小覆盖的 glob）。
-
-同时按 `stack-*.md` 中的【设计系统文件候选】探测是否存在对应文件，确定 `designSystemFile`。
-
-同时通过特征文件判断 `styleStrategy`：tailwind.config 文件 → `tailwind`；*.module.css/scss → `css-modules`；*.css.ts → `vanilla-extract`；package.json 中的 styled-components/emotion → 对应值；uno.config → `unocss`；以上均无则看全局 SCSS/CSS 文件。多种混用时记录主要策略，其余在 `notes` 中说明。
-
-`styleStrategy` 取值：`tailwind` / `css-modules` / `vanilla-extract` / `styled-components` / `emotion` / `unocss` / `scss` / `css` / `unknown`。
-
-### 4. 展示检测结果并请用户确认
-
-向用户展示检测结果：说明检测到的技术栈名称（及对应的 reference 文件），列出建议的平台配置（每个平台的 uiFilePatterns 及发现的文件数、designSystemFile、styleStrategy），询问配置是否正确，允许用户提出调整。
-
-等待用户确认或修改。确认后追加询问：
-
-> `这个项目有哪些与参考文档不同的约定需要记录？（若无请留空）`
-
-将用户输入记为该平台的 `notes`。
-
-### 5. 创建 Manifest
-
-创建 `.hskill/sync-design/` 目录，写入 `manifest.json`：
-
-```json
-{
-  "version": 4,
-  "baseBranch": "<用户输入>",
-  "config": {
-    "outputDir": "<用户输入>",
-    "designSpec": "<路径 或 null>",
-    "platforms": {
-      "<platform-id>": {
-        "label": "<平台展示名>",
-        "stackRef": "references/stack-<name>.md",
-        "uiFilePatterns": ["<自动推导的 glob>"],
-        "designSystemFile": "<路径 或 null>",
-        "styleStrategy": "<检测到的样式方案>",
-        "notes": "<用户补充的项目特定约定，或 null>"
-      }
-    }
-  },
-  "entries": [],
-  "drafts": [],
-  "ignoredFiles": []
-}
-```
-
-完成后按本次模式路由：跳转至[设计阶段](#设计阶段)或继续[同步流程](#流程strict--不可跳过或合并阶段)。
-
----
-
-## 已有 HTML 导入
-
-（manifest 存在但 `entries` 为空时执行）
-
-1. 扫描 `manifest.config.outputDir` 下所有 `*.html` 文件。
-2. 对每个 HTML 文件询问：
-
-   > `发现现有 HTML 文件：<文件名>。要为它建立 manifest 映射吗？`
-
-   - **跳过：** 不处理，继续下一个。
-   - **是：** 依次询问：
-     1. `对应哪些源文件？（相对于项目根的路径，多个用逗号分隔）`
-     2. `覆盖哪些 UI 状态？（如 idle, loading，用逗号分隔）`
-     3. `一句话描述：`
-   - 构造 entry（`lastSyncCommit` 设为 `null`）加入 `entries`。
-
-3. 全部处理完毕后，写入 manifest 后按本次模式路由：跳转至[设计阶段](#设计阶段)或继续[同步流程](#流程strict--不可跳过或合并阶段)。
-
----
-
-## 旧路径迁移
-
-（manifest 存在，且 `config.outputDir` 不以 `.hskill/` 开头时执行）
-
-询问用户：
-
-> `检测到 HTML 设计备份位于旧路径 "<outputDir>"。是否自动迁移至 .hskill/sync-design/html/？`
-
-**是：**
-
-1. 将旧目录下所有 `*.html` 文件移动到 `.hskill/sync-design/html/`。
-2. 更新 manifest：`config.outputDir` → `.hskill/sync-design/html`；所有 `entries[].htmlFile` 替换旧路径前缀。
-3. 写回 manifest。
-4. 询问是否删除旧目录（仅当已清空时）。
-5. 输出迁移摘要：`迁移完成：旧路径 <outputDir> → .hskill/sync-design/html（N 个文件）`
-
-**否：** 保持现有路径，按本次模式路由：跳转至[设计阶段](#设计阶段)或继续[同步流程](#流程strict--不可跳过或合并阶段)。
+触发后先读 `references/draft-delete.md` 并按其执行：三个检查点全部通过且用户确认后才删除。
 
 ---
 
@@ -464,15 +308,4 @@ git diff <entry.lastSyncCommit 或 manifest.baseBranch（如无 lastSyncCommit�
 - `manifest.drafts[]` 已写回，entry 的 `uiStates` 与 HTML 内容一致。
 - 有对应完成稿的 draft，其 `linkedEntryId` 已正确填写；无对应完成稿的 draft，`linkedEntryId` 为 `null`。
 
-## 反模式
-
-| 错误行为 | 正确做法 |
-|----------|----------|
-| 跳过初始化直接进流程 | 必须先读取 manifest，确认 outputDir 和 baseBranch 正确 |
-| HTML 中引用外部 URL（CDN、字体服务） | 所有资源内联，无外部依赖 |
-| 用户取消后仍写回 manifest | 用户取消 = manifest 不更新，HTML 文件已写入磁盘但状态未记录 |
-| 未更新 `lastSyncCommit` 就退出 | 下次 diff 基准错误，导致漏同步 |
-| 手动编辑 manifest.json 绕过流程 | 通过 Skill 流程维护，保持 entries 与实际文件一致 |
-| 跳过三重检查点直接删除设计稿 | 必须经过 linkedEntryId · uiStates · HTML 三个检查点，全部通过后再由用户确认删除 |
-| 设计稿和完成稿存入同一目录 | 设计稿存 `outputDir/drafts/`，完成稿存 `outputDir/`，目录严格分离 |
-| 完成稿不存在时尝试删除设计稿 | linkedEntryId 为 null 时阻止删除，输出明确提示 |
+不手动编辑 manifest.json；entries 与实际文件的一致性靠本流程维护。
