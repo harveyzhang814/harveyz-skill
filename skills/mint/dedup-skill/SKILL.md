@@ -2,7 +2,7 @@
 name: dedup-skill
 description: "Detect semantic overlap between two or more skills at the logical-block level. Use this skill whenever someone wants to compare skills for duplication, find overlapping steps between skills, check if two skills share logic, or audit skill responsibilities. Triggers: 'compare X and Y skills', 'find overlap between X and Y', 'do X and Y duplicate logic', 'audit skill duplication'."
 user_invocable: true
-version: "1.0.0"
+version: "1.0.1"
 ---
 
 检测两个或多个 skill 之间的语义重复内容，粒度为语义块级别（不依赖标题结构）。发现重叠后给出职责归属建议，由用户决定最终处置方式。
@@ -99,7 +99,7 @@ node -e "const idx=require('./skills-index.json'); idx.skills.forEach(s=>console
 ### 确定输出目录
 
 1. 从仓库根目录的 `docs/skill-analysis/` 开始，逐级向上查找 `DIR_METHOD.md`，查找上限为仓库根目录（不超出 git rev-parse --show-toplevel 所在目录）
-2. 若找到，调用 `dir-manage` skill 处理目录路径
+2. 若找到，调用 `manage-dir` skill 处理目录路径
 3. 若未找到，默认使用 `docs/skill-analysis/`（执行 `mkdir -p`）
 
 ### 报告文件名
