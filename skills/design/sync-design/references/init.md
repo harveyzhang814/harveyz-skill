@@ -44,7 +44,7 @@
 
 ```json
 {
-  "version": 4,
+  "version": 5,
   "baseBranch": "<用户输入>",
   "config": {
     "outputDir": "<用户输入>",
@@ -66,7 +66,7 @@
 }
 ```
 
-完成后回到 SKILL.md 初始化清单第 5 项（路由）。
+完成后回到 SKILL.md 初始化清单第 6 项（路由）。
 
 ---
 

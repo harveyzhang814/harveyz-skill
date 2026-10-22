@@ -1,7 +1,7 @@
 ---
 name: sync-design
-description: Use after any UI source file change — detects changed view/component files via git diff and syncs them to high-fidelity HTML design backups. Also supports pre-development design phase: creates or updates design draft HTML based on user feature descriptions. Maintains a manifest as the source-of-truth mapping between source files, design drafts, and HTML previews. Trigger when user says "sync design", "update HTML preview", "design changed", "create design", "design this", or the Chinese equivalents, or after UI code edits.
-version: "5.1.0"
+description: Use after any UI source file change — detects changed view/component files via git diff and syncs them to high-fidelity HTML design backups. Also supports pre-development design phase: creates or updates design draft HTML based on user feature descriptions. Maintains a manifest as the source-of-truth mapping between source files, design drafts, and HTML previews. Trigger when user says "sync design", "update HTML preview", "design changed", "create design", "design this", "migrate design drafts", or the Chinese equivalents, or after UI code edits.
+version: "5.2.0"
 user_invocable: true
 ---
 
@@ -15,15 +15,19 @@ user_invocable: true
 
 **Announce at start:** "I'm using sync-design to detect UI changes and update HTML design backups."
 
+`SKILL_DIR` 为当前 host 安装本 skill 的目录（包含 `scripts/`）。
+
 ---
 
 ## 模式检测
 
-读取用户消息和上下文，判断调用意图，**记录为本次模式**（设计 / 同步），初始化完成后据此路由。
+读取用户消息和上下文，判断调用意图，**记录为本次模式**（设计 / 同步 / 迁移），初始化完成后据此路由。
 
 **设计模式触发词：** 「设计」「create design」「做个设计稿」「帮我设计」「design this」；或描述功能需求/界面改动但无代码变动信号。
 
 **同步模式触发词：** 「sync design」「同步」「update HTML preview」「design changed」；或存在 UI 源文件 git diff。
+
+**迁移模式触发词：** 「迁移设计稿」「migrate design drafts」。
 
 **歧义时辅助判断：**
 - `drafts[]` 非空且无 UI 文件 git diff → 倾向设计模式
@@ -36,11 +40,12 @@ user_invocable: true
 
 读取 `.hskill/sync-design/manifest.json`，按顺序检查（子流程见 `references/init.md`）：
 
-1. 文件不存在 → 首次初始化，完成后直接跳到第 5 项。
+1. 文件不存在 → 首次初始化，完成后直接跳到第 6 项。
 2. `config.outputDir` 不以 `.hskill/` 开头（旧路径）→ 旧路径迁移，无论用户选是或否，完成后继续第 3 项。
 3. `entries` 为空 → 已有 HTML 导入，完成后继续第 4 项。
 4. `version` 小于 4 → 在现有字段基础上追加 `"drafts": []`，将 `version` 更新为 `4`，写回文件。
-5. 路由：根据本次模式，跳转至[设计阶段](#设计阶段)或继续[同步流程](#流程strict--不可跳过或合并阶段)。
+5. `version` 小于 5 且本次模式不是迁移 → 询问「已有设计稿是旧格式，要现在批量迁移吗？（迁移后改稿只读相关区块；稍后也可以说"迁移设计稿"）」；选是则执行 `references/migrate.md`。无论选什么，将 `version` 更新为 `5` 写回，只问这一次。
+6. 路由：根据本次模式，跳转至[设计阶段](#设计阶段)、继续[同步流程](#流程strict--不可跳过或合并阶段)，或执行 `references/migrate.md`。
 
 ---
 
@@ -50,6 +55,36 @@ user_invocable: true
 2. 所属平台的 `designSystemFile`（若有）
 3. 所属平台 `stackRef` 指向的 reference 中，与 `styleStrategy` 匹配的那一节；`styleStrategy` 为 `unknown`（或旧 manifest 里的 `null`）时，读源文件自行判断
 4. 所属平台 `notes`（优先于 reference，记录项目特定约定）
+
+---
+
+## 稿子结构
+
+生成规范和读取规则都以这一节为准。
+
+| 层 | 按什么分 | 说明 |
+|----|---------|------|
+| 目录 | 阶段 | `outputDir/` 放完成稿（跟代码同步），`outputDir/drafts/` 放设计稿（代码之前） |
+| 文件 | 界面单元 × 平台 | 一个窗口、面板、弹窗或跨界面体系一份，文件名 `<screenName>-<platform>-design.html`；单元粒度在建稿时由用户定 |
+| 区段 | 内容类型，顺序固定 | ① 样式段：token 子段在前，组件样式按组件分块（`/* ── 组件名 ── */`）；② 图标定义区：重复图标只定义一次；③ 状态画面区：按 UI 状态分块；④ 脚本段（可选） |
+| 状态块 | 不再切分 | 一块是一个状态的完整画面，是读取的最小单位 |
+
+**状态标记：** 每个状态块前一行写 `<!-- ── <名称> ── -->`，标记独占一行。名称中以完整词出现该状态在 `uiStates` 里的名字，可加注记（如 `<!-- ── 状态 2：loading (DRAFT) ── -->`）。一块画面承载多个状态（组合状态、靠切换实现的状态）时，在标记里写 `覆盖：状态1 | 状态2`。被脚本拼接的共享内容块同样加标记，名称自取。块里嵌套的标记不切分外层块。
+
+### 局部读取
+
+稿子小于 40KB 时直接全量读。否则先跑 `python3 SKILL_DIR/scripts/design_html.py outline <htmlFile>` 拿到各区段与各状态块的行号范围，再按行号只读需要的部分：
+
+| 要做的事 | 读取范围 |
+|---------|---------|
+| 改某个状态的画面（含同步时 diff 只牵涉某几个状态） | 样式段 + 目标状态块 |
+| 新增状态 | 样式段 + 一个相近状态块作模板；新块带标记，追加到状态画面区 |
+| 只改组件样式 | 样式段 |
+| 换图标 | 图标定义区里该图标 + grep 到的引用处 |
+| 改切换、拼接逻辑 | 脚本段 + 相关状态块 |
+| 改 token、改在多个状态里重复出现的组件结构、`outline` 显示没有状态标记、全量重生成 | 全量读 |
+
+图标定义区一般不读：状态块里只有引用，改画面用不到图标形状。
 
 ---
 
@@ -71,9 +106,9 @@ user_invocable: true
 
 #### 情况 A：drafts[] 中已有对应 entry（修改现有设计稿）
 
-1. 读取 `<draft.htmlFile>`
-2. 读[标准上下文](#标准上下文后读覆盖先读)
-3. 根据用户描述确定修改范围（哪些 UI 状态或区块）
+1. 读[标准上下文](#标准上下文后读覆盖先读)
+2. 根据用户描述确定修改范围（哪些 UI 状态或区块）
+3. 按[局部读取](#局部读取)读 `<draft.htmlFile>` 中该范围
 4. 增量修改 HTML，只替换受影响区块；若有新 UI 状态，追加 `uiStates`
 5. 写回 HTML 文件，更新 `drafts[].uiStates`（去重后写入，不写回 manifest，等步骤 3 统一写回）
 
@@ -104,10 +139,9 @@ user_invocable: true
 
 **有对应完成稿 →**
 
-1. 将完成稿 HTML（`entry.htmlFile`）复制到 `<outputDir>/drafts/<screenName>-<platform>-design.html` 作为基底
-2. 读[标准上下文](#标准上下文后读覆盖先读)
-3. 根据用户描述增量修改（同情况 A 步骤 3–4）
-4. 新增 draft entry（见上方 JSON 与差异表）
+1. 用文件复制命令将完成稿 HTML（`entry.htmlFile`）复制到 `<outputDir>/drafts/<screenName>-<platform>-design.html` 作为基底，不经模型读写
+2. 对新副本执行情况 A 步骤 1–4
+3. 新增 draft entry（见上方 JSON 与差异表）
 
 **无对应完成稿 →**
 
@@ -115,7 +149,7 @@ user_invocable: true
    - `屏幕/组件名是什么？（kebab-case，如 "task-history"）`
    - `这个界面有哪些 UI 状态？（逗号分隔，如 idle, loading, error）`
    - `一句话描述这个界面的功能：`
-2. 读[标准上下文](#标准上下文后读覆盖先读)，再从 `outputDir/drafts/` 选一个已有的同平台 HTML 作风格参考
+2. 读[标准上下文](#标准上下文后读覆盖先读)，再从 `outputDir/drafts/` 选一个已有的同平台 HTML，只读其样式段作风格参考
 3. 生成完整高保真 HTML（质量要求见[HTML 生成质量要求](#html-生成质量要求)）
 4. 输出路径：`<outputDir>/drafts/<screenName>-<platform>-design.html`
 5. 新增 draft entry（见上方 JSON 与差异表）
@@ -188,12 +222,12 @@ git diff <entry.lastSyncCommit 或 manifest.baseBranch（如无 lastSyncCommit�
 
 **b. 读取上下文**
 
-读[标准上下文](#标准上下文后读覆盖先读)，再读 `<entry.htmlFile>`（若不存在则降级为全量生成：读取所有 `entry.sourceFiles` 完整源码）。
+读[标准上下文](#标准上下文后读覆盖先读)。`<entry.htmlFile>` 不存在时降级为全量生成：读取所有 `entry.sourceFiles` 完整源码。
 
 **c. 确定更新范围**
 
 - entry 在全量重生成队列中 → 读取所有 `entry.sourceFiles` 完整源码重新生成。
-- 否则 → 根据 diff 判断受影响的 UI 状态或组件区块，只替换该部分。
+- 否则 → 根据 diff 判断受影响的 UI 状态或组件区块，按[局部读取](#局部读取)读 `<entry.htmlFile>` 中该范围，只替换该部分。
 
 **d. 写回 HTML 文件**（质量要求见[HTML 生成质量要求](#html-生成质量要求)）
 
@@ -230,7 +264,7 @@ git diff <entry.lastSyncCommit 或 manifest.baseBranch（如无 lastSyncCommit�
 
 **c. 读取上下文**
 
-读[标准上下文](#标准上下文后读覆盖先读)，再读源文件全文（及 `notes` 或 reference 中指定的关联文件），再从 `manifest.config.outputDir` 选一个**已有的同平台** HTML 作风格参考。
+读[标准上下文](#标准上下文后读覆盖先读)，再读源文件全文（及 `notes` 或 reference 中指定的关联文件），再从 `manifest.config.outputDir` 选一个**已有的同平台** HTML，只读其样式段作风格参考。
 
 **d. 生成完整高保真 HTML**（质量要求见[HTML 生成质量要求](#html-生成质量要求)）
 
@@ -259,9 +293,11 @@ git diff <entry.lastSyncCommit 或 manifest.baseBranch（如无 lastSyncCommit�
 1. **Token 来源：** 所有颜色、字体、间距值从当次读取的设计规范和设计系统文件中提取，不得凭记忆填写。
 2. **CSS 变量命名：** 与设计规范文件中的 token 名完全一致（以实际读取为准，不预设变量名）。
 3. **UI 状态完整性：** `entry.uiStates` 中的每个状态必须在 HTML 中有对应可视区块或 class 切换。
-4. **离线可用：** 禁止引用任何外部 URL。样式全部内联在 `<style>` 中，单文件可直接在浏览器打开预览。
-5. **风格对齐：** 与同项目已有 HTML 文件保持一致的代码风格：CSS 变量声明格式、状态区块注释格式（`/* ── 状态名 ── */`）、整体结构顺序。
+4. **离线可用：** 禁止引用任何外部 URL。样式全部内联在 `<style>` 中，单文件可直接在浏览器打开预览。字体不得 base64 内嵌，只写字体名并带系统字体回退（如 `"Inter", system-ui, sans-serif`）。
+5. **风格对齐：** 与同项目已有 HTML 文件保持一致的代码风格：CSS 变量声明格式、组件样式注释格式（`/* ── 组件名 ── */`）、整体结构顺序。
 6. **高保真要求：** 尺寸、圆角、阴影、字号、行高尽量还原设计规范；规范未涉及的参考设计系统文件中的具体值。
+7. **结构：** 区段顺序与状态标记见[稿子结构](#稿子结构)。`uiStates` 中每个状态都能在某个标记里找到（名称或 `覆盖`）。
+8. **图标只定义一次：** 同一图标出现两次以上时，放进正文开头的图标定义区（`<svg class="sd-sprite" aria-hidden="true" style="position:absolute;width:0;height:0;overflow:hidden">` 内的 `<symbol id="sd-icon-N">`，不写 viewBox），用到的地方保留原 `<svg>` 的属性、内容换成 `<use href="#sd-icon-N"/>`。样式里有选择器指向图标内部元素（如 `.x svg path`）的图标不收。
 
 ---
 
@@ -301,11 +337,13 @@ git diff <entry.lastSyncCommit 或 manifest.baseBranch（如无 lastSyncCommit�
 **同步模式：**
 - `.hskill/sync-design/manifest.json` 已写回，所有已处理 entry 的 `lastSyncCommit` 为当前 commit hash。
 - 更新或新建的每个 HTML 文件在 `outputDir/` 下存在，可直接在浏览器打开预览。
-- HTML 文件满足阶段 3「HTML 生成质量要求」的 6 条约束。
+- HTML 文件满足阶段 3「HTML 生成质量要求」的 8 条约束；本次写过的稿子不出现在 `python3 SKILL_DIR/scripts/design_html.py check <manifest>` 的待迁移列表里。
 
 **设计模式：**
 - 所有确认处理的页面，其设计稿 HTML 已写入 `outputDir/drafts/`，可直接在浏览器打开预览。
-- `manifest.drafts[]` 已写回，entry 的 `uiStates` 与 HTML 内容一致。
+- `manifest.drafts[]` 已写回，entry 的 `uiStates` 与 HTML 内容一致；本次写过的稿子不出现在 `check` 的待迁移列表里。
 - 有对应完成稿的 draft，其 `linkedEntryId` 已正确填写；无对应完成稿的 draft，`linkedEntryId` 为 `null`。
+
+**迁移模式：** 见 `references/migrate.md` 的完成标准。
 
 不手动编辑 manifest.json；entries 与实际文件的一致性靠本流程维护。
