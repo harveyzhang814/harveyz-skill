@@ -205,8 +205,8 @@
       "path": "coding/init-project",
       "bundle": "coding",
       "installScope": "global",
-      "contentHash": "3ca1c37debf03414",
-      "contentVersion": "0.1.4"
+      "contentHash": "acb311bc1488aa55",
+      "contentVersion": "0.1.5"
     },
     {
       "path": "writing/forge-doc",
