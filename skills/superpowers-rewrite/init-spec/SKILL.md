@@ -2,7 +2,7 @@
 name: init-spec
 description: "Use when a rough idea or defined product or development goal needs to become a reviewed spec before implementation. Clarifies requirements, records decisions and their sources, presents major solution choices for user approval, and writes a standalone spec. Triggers: brainstorm a feature, clarify requirements, compare solution approaches, turn an idea into a spec, write a design spec, or build a new feature with unresolved requirements or key choices."
 user_invocable: true
-version: "0.1.42"
+version: "0.1.43"
 ---
 
 # 从初步想法到 Spec
@@ -99,7 +99,7 @@ Spec 只保留影响实现或验收的细节，详略随任务复杂度调整，
 
 ### 书面设计
 
-写作前确认决定记录已通过上述人工复核，核实方案依赖的现状，缺乏依据时补查；若结果改变获批决定，更新决定记录并重新送审。
+写作前核实方案依赖的现状，缺乏依据时补查；若结果改变获批决定，更新决定记录并重新送审。
 
 只将决定记录中当前已批准的决定写入 Spec，使该领域有能力的构建者无需追问即可制定计划；补充实施所需的现状、约束和未核实前提，标明版本、审查状态、已批准范围及未决事项，送审稿不得预记为已批准。
 
@@ -107,7 +107,7 @@ Spec 只保留影响实现或验收的细节，详略随任务复杂度调整，
 
 **一致性检查。** 送审前按获批需求核对 Spec 的正常、变更、异常及并发路径、图示、验收和估算；方案修订后重查受影响的旧验收用例，确认同一场景的需求、规则、流程及验收结果一致。无依据者标待核实，冲突或歧义提出方案及影响、更新决定记录并重新送审；批准后发现则暂停交付。
 
-**可视化辅助。** 图示有助于人或 Agent 理解、审查 Spec 时，在相关内容旁嵌入 UML 或其他技术图示，呈现架构、组件、数据流、时序、状态或关键流程；文字足够清楚时无需绘制。图示须标明关键元素、关系、条件和异常路径，与正文一致，优先使用 Mermaid 等可随 Spec 维护的文本图示；图示不代替关键决定的文字说明。
+**可视化辅助。** 图示有助于理解或审查 Spec 时，在相关内容旁嵌入 UML 或其他技术图示，优先用 Mermaid 绘制；图示须标明关键元素、关系、条件和异常路径并与正文一致。文字足够清楚时无需绘制，图示不代替关键决定的文字说明。
 
 **保存位置。** HSkill 系列将 Spec 保存为决定记录同目录下的 `YYYY-MM-DD-<topic>-spec.md`；其他任务沿用用户指定的位置。
 

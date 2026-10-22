@@ -379,44 +379,51 @@
     {
       "path": "agent-canvas/agent-canvas-control",
       "bundle": "agent-canvas",
-      "contentHash": "b433a18e7ba11957",
-      "contentVersion": "1.3.0"
+      "installScope": "global",
+      "contentHash": "d171163b793d279e",
+      "contentVersion": "1.3.1"
     },
     {
       "path": "agent-canvas/describe-node",
       "bundle": "agent-canvas",
-      "contentHash": "1d9c8d0fc69ee45a",
-      "contentVersion": "1.1.1"
+      "installScope": "project",
+      "contentHash": "3c0d9ac9a5be95b5",
+      "contentVersion": "1.1.2"
     },
     {
       "path": "agent-canvas/relate-node",
       "bundle": "agent-canvas",
-      "contentHash": "395d08fedfa3a113",
-      "contentVersion": "1.0.2"
+      "installScope": "project",
+      "contentHash": "1181492c24b6ca28",
+      "contentVersion": "1.0.3"
     },
     {
       "path": "agent-canvas/capture-requirement",
       "bundle": "agent-canvas",
-      "contentHash": "cfdfa7b2f15a099c",
-      "contentVersion": "1.0.2"
+      "installScope": "project",
+      "contentHash": "ecaa7ecba2d9c5b9",
+      "contentVersion": "1.0.3"
     },
     {
       "path": "agent-canvas/relation-review",
       "bundle": "agent-canvas",
-      "contentHash": "614a78797797ca60",
-      "contentVersion": "1.1.0"
+      "installScope": "project",
+      "contentHash": "8d5888629b9721fb",
+      "contentVersion": "1.1.1"
     },
     {
       "path": "agent-canvas/close-node",
       "bundle": "agent-canvas",
-      "contentHash": "3b8a6620dc32429c",
-      "contentVersion": "1.0.6"
+      "installScope": "project",
+      "contentHash": "9bad73adb309bbe0",
+      "contentVersion": "1.0.7"
     },
     {
       "path": "agent-canvas/judge-release",
       "bundle": "agent-canvas",
-      "contentHash": "123535281ac30a2f",
-      "contentVersion": "1.0.1"
+      "installScope": "project",
+      "contentHash": "549a45c8dee95eb2",
+      "contentVersion": "1.0.2"
     },
     {
       "path": "coding/analyze-claudemd",
@@ -429,15 +436,15 @@
       "path": "superpowers-rewrite/init-spec",
       "bundle": "superpowers-rewrite",
       "installScope": "global",
-      "contentHash": "3588903fde66df37",
-      "contentVersion": "0.1.42"
+      "contentHash": "451cecdf4d9c368d",
+      "contentVersion": "0.1.43"
     },
     {
       "path": "superpowers-rewrite/develop-plan",
       "bundle": "superpowers-rewrite",
       "installScope": "global",
-      "contentHash": "98ab72407b9f73a2",
-      "contentVersion": "0.1.11"
+      "contentHash": "edea0e42af86df8d",
+      "contentVersion": "0.1.12"
     }
   ],
   "hooks": [

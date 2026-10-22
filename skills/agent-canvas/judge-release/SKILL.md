@@ -3,7 +3,7 @@ name: judge-release
 description: Judge the requirements of a stable release against their acceptance criteria — read each requirement's acceptance items, gather evidence in the real environment, record per-item verdicts and pass the requirement when every item passes; launched by the pending-acceptance banner; only usable inside an Agent Canvas node.
 disable-model-invocation: true
 user_invocable: true
-version: "1.0.1"
+version: "1.0.2"
 ---
 
 # 对照验收标准逐条下结论（judge-release）
@@ -11,7 +11,7 @@ version: "1.0.1"
 如果当前不在 Agent Canvas 的画布节点里（即环境变量 `AGENT_CANVAS_MCP_URL` 未设置，
 或 `agent-canvas-ctl` 命令不存在），这个 skill 不适用，直接跳过，不要尝试执行下面的命令。
 
-**人工触发**，不自动触发。Codex 通过 `agents/openai.yaml` 禁止隐式调用。一般由项目窗口顶部「待验收」提示条的「开始验收」拉起：验收节点建好后，会收到一条初始消息。
+**人工触发**，不自动触发。一般由项目窗口顶部「待验收」提示条的「开始验收」拉起：验收节点建好后，会收到一条初始消息。
 
 ## 输入
 
@@ -100,6 +100,4 @@ agent-canvas-ctl --result-format=action-v1 get-node <需求节点id>
 - 不改条目：不增删、不改条目的内容或验证方式。
 - 不改状态到 `in_progress`。
 - 不调 `fail-requirement`：不通过时由人决定打回还是改标准。
-- 不给人工裁决条目写结论。
-- 不在非稳定版本上写结论：初始消息没给运行提交时停下报告。
 - 不做验收之外的事：不修代码、不改 spec，也不与这些需求建任何关系——验收节点不是实现方。
