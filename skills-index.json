@@ -303,8 +303,8 @@
       "path": "mint/fix-skill",
       "bundle": "mint",
       "installScope": "global",
-      "contentHash": "e0aafcea982eab9c",
-      "contentVersion": "2.1.0"
+      "contentHash": "45cb2b976069fcb2",
+      "contentVersion": "2.1.1"
     },
     {
       "path": "mint/runby-opencode",
@@ -317,8 +317,8 @@
       "path": "mint/scout-philosophy",
       "bundle": "mint",
       "installScope": "project",
-      "contentHash": "5c3b14c8dfa460b9",
-      "contentVersion": "1.0.1"
+      "contentHash": "7a6896491f39b96c",
+      "contentVersion": "1.0.2"
     },
     {
       "path": "meta/clean-git",
