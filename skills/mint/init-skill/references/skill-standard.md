@@ -2,7 +2,7 @@
 
 init-skill 生成 / 检查 SKILL.md 时遵循。每条哲学按"**触发 → 必做 → 检查 → 不适用**"组织。
 
-强度标注 `[强]` 表示反例不可接受（数据丢失 / 安全事故），`[中]` 表示有累积成本但不致命。
+强度标注 `[强]` 表示反例不可接受（数据丢失 / 安全事故），`[中]` 表示有累积成本但不致命，`[弱]` 表示建议遵守，违反只影响可读性或可追溯性。
 
 ---
 
@@ -15,23 +15,14 @@ init-skill 生成 / 检查 SKILL.md 时遵循。每条哲学按"**触发 → 必
 - `description` 全英文 ≥ 10 字符（中文触发短语放正文"触发条件"节）
 - `version` 是 semver 三段 `X.Y.Z`，新 skill 从 `1.0.0`
 - `user_invocable` 显式 `true` 或 `false`
-- 注册到 `skills-index.json`，含 `path` / `bundle` / `installScope`
+- 注册到 `skills-index.json`，含 `path` / `bundle`；`installScope` 应填（缺失时 publish-skill 报警告）
 - 正文至少含一个中文字符（团队约定）
 
 ---
 
-## 命名与形式约定（Φ18 [中]）
+## 形式约定
 
-`name` 用 `<verb>-<noun>` 格式，2 词全小写连字符。动词必须在词表：
-
-```
-extract  learn   forge    draw     manage    migrate  scout
-build    sync    publish  archive  contribute  analyze  clean
-release  validate init    dispatch close    setup    capture
-dedup    runby
-```
-
-特殊：`runby-*` 后 noun 不受词表约束。
+命名规范不在本标准内，由 publish-skill 的 F7/F9 检查。
 
 `description` 格式：`"<动词短语>. Triggers: '<场景1>', '<场景2>'..."`，仅英文。
 
