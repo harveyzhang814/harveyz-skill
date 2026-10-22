@@ -44,8 +44,8 @@
       "path": "mint/learn-skill",
       "bundle": "mint",
       "installScope": "global",
-      "contentHash": "542f333a8a72024c",
-      "contentVersion": "2.0.1"
+      "contentHash": "4124e6f706533393",
+      "contentVersion": "2.0.2"
     },
     {
       "path": "research/extract-vision",
@@ -261,29 +261,29 @@
       "path": "mint/init-skill",
       "bundle": "mint",
       "installScope": "project",
-      "contentHash": "1ec3c99ce4e6a73b",
-      "contentVersion": "1.3.0"
+      "contentHash": "906eb897be6649bf",
+      "contentVersion": "1.4.0"
     },
     {
       "path": "mint/publish-skill",
       "bundle": "mint",
       "installScope": "project",
-      "contentHash": "43e882684507de03",
-      "contentVersion": "1.6.1"
+      "contentHash": "57a34d3ffa05d6b1",
+      "contentVersion": "1.7.0"
     },
     {
       "path": "mint/archive-skill",
       "bundle": "mint",
       "installScope": "project",
-      "contentHash": "2f028d12b2285128",
-      "contentVersion": "1.2.0"
+      "contentHash": "0b6dfaaad6c1d34c",
+      "contentVersion": "1.3.0"
     },
     {
       "path": "mint/dedup-skill",
       "bundle": "mint",
       "installScope": "project",
-      "contentHash": "610c6662a0d88cda",
-      "contentVersion": "1.0.1"
+      "contentHash": "4f3524ebf14c6383",
+      "contentVersion": "1.0.2"
     },
     {
       "path": "mint/simplify-skill",
@@ -296,15 +296,15 @@
       "path": "mint/contribute-skill",
       "bundle": "mint",
       "installScope": "project",
-      "contentHash": "f48338e6d5267a28",
-      "contentVersion": "1.1.0"
+      "contentHash": "93c3b52f2f47620d",
+      "contentVersion": "1.3.0"
     },
     {
       "path": "mint/fix-skill",
       "bundle": "mint",
       "installScope": "global",
-      "contentHash": "e0aafcea982eab9c",
-      "contentVersion": "2.1.0"
+      "contentHash": "45cb2b976069fcb2",
+      "contentVersion": "2.1.1"
     },
     {
       "path": "mint/runby-opencode",
@@ -317,8 +317,8 @@
       "path": "mint/scout-philosophy",
       "bundle": "mint",
       "installScope": "project",
-      "contentHash": "5c3b14c8dfa460b9",
-      "contentVersion": "1.0.1"
+      "contentHash": "7a6896491f39b96c",
+      "contentVersion": "1.0.2"
     },
     {
       "path": "meta/clean-git",

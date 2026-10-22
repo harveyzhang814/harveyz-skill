@@ -2,7 +2,7 @@
 name: dedup-skill
 description: "Detect semantic overlap between two or more skills at the logical-block level. Use this skill whenever someone wants to compare skills for duplication, find overlapping steps between skills, check if two skills share logic, or audit skill responsibilities. Triggers: 'compare X and Y skills', 'find overlap between X and Y', 'do X and Y duplicate logic', 'audit skill duplication'."
 user_invocable: true
-version: "1.0.1"
+version: "1.0.2"
 ---
 
 检测两个或多个 skill 之间的语义重复内容，粒度为语义块级别（不依赖标题结构）。发现重叠后给出职责归属建议，由用户决定最终处置方式。
@@ -20,7 +20,11 @@ version: "1.0.1"
 读取 `skills-index.json` 获取所有已注册 skill 的 path 末段：
 
 ```bash
-node -e "const idx=require('./skills-index.json'); idx.skills.forEach(s=>console.log(s.path.split('/').pop()+'\t'+s.path));"
+REPO_ROOT=$(git rev-parse --show-toplevel)
+node -e "
+  const idx = JSON.parse(require('fs').readFileSync('${REPO_ROOT}/skills-index.json','utf8'));
+  idx.skills.forEach(s => console.log(s.path.split('/').pop()+'\t'+s.path));
+"
 ```
 
 匹配规则：
@@ -30,7 +34,7 @@ node -e "const idx=require('./skills-index.json'); idx.skills.forEach(s=>console
 | 完全匹配 | 直接使用 |
 | 部分匹配 1 个 | 提示用户确认 "是否指 X？" |
 | 部分匹配多个 | 列出候选项，请用户选择 |
-| 0 匹配 | 提示 skill 不存在，询问是否重新输入 |
+| 0 匹配 | 提示不存在，列出全部可用 skill 名，询问是否重新输入 |
 
 **3. 确认列表**
 所有 skill 名匹配完成后，展示确认列表，等待用户确认后继续。
@@ -172,10 +176,9 @@ node -e "const idx=require('./skills-index.json'); idx.skills.forEach(s=>console
 |------|----------|
 | 某个 skill 的 SKILL.md 不存在 | 报错提示，跳过该 skill，继续处理其他 skill |
 | 用户指定了 3 个以上 skill | 正常处理，聚类时同时考虑所有 skill |
-| 两个 skill 共享同一个 references 文件 | 不算重叠，references 是共享资源 |
 | 重叠块仅为模板/示例内容 | 标记为低优先级，单独列出，不混入主重叠清单 |
 | skill 正文极短（< 3 个语义块） | 正常处理，说明块数量有限 |
-| skill 名在 index 中 0 匹配 | 报错，列出所有可用 skill 名后退出 |
+| skill 名在 index 中 0 匹配 | 提示不存在，列出全部可用 skill 名，询问是否重新输入 |
 | 对比同一个 skill 与自身 | 报错："请指定不同的 skill" |
 
 ---
@@ -184,4 +187,4 @@ node -e "const idx=require('./skills-index.json'); idx.skills.forEach(s=>console
 
 - 不自动修改任何 skill 文件（仅分析，不执行）
 - 不对比 skill 的 frontmatter 字段（name、description、version 等）
-- 不扫描全库 skill（如需批量扫描，参考 `references/auto-scan.md`）
+- 不扫描全库 skill

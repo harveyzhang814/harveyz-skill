@@ -2,7 +2,7 @@
 name: archive-skill
 description: "Archive, retire, deprecate, or sunset a skill from the active registry. Use this skill whenever someone wants to remove a skill from active use — even if they don't use the word 'archive'. Moves it to skills/archived/, removes it from skills-index.json, regenerates packaging config, and commits on a chore branch merged back to the original branch. Triggers: 'archive X skill', 'retire X', 'deprecate X', 'remove X from bundle', 'sunset X skill'."
 user_invocable: true
-version: "1.2.0"
+version: "1.3.0"
 ---
 
 # archive-skill
@@ -44,7 +44,7 @@ ORIGINAL_BRANCH=$(git rev-parse --abbrev-ref HEAD)
 ```
 若结果为 `HEAD`（detached），提示：
 `当前处于 detached HEAD 状态，无法确定要 merge 回的目标分支。请先切换到一个具名分支后重试。`
-然后退出。
+然后退出。若结果为 `main`，提示：`main 不接受直接合并，请从 staging 或其他分支发起归档。` 退出。
 
 **2. 无未提交变更**
 ```bash
@@ -69,9 +69,10 @@ ls "${REPO_ROOT}/skills/archived/<name>" 2>/dev/null
 
   移动：skills/<category>/<name>/ → skills/archived/<name>/
   从 skills-index.json 移除该条目
-  更新 bundleMeta.<bundle>：去掉描述中的 "<name>"
+  更新 bundleMeta.<bundle>：去掉描述中的 "<name>"（非标准格式时列出修改前后的描述）
+  追加 <name> 到 archived.skills
   重新生成：package.json files[] 和 .npmignore
-  Git：chore/archive-<name> → merge 回 <ORIGINAL_BRANCH>
+  Git：chore/archive-<name> → merge 回 <ORIGINAL_BRANCH>（staging 经 scripts/merge-to-staging.sh）
 
 确认继续？(y/n)
 ```
@@ -101,8 +102,9 @@ git mv "skills/<category>/<name>" "skills/archived/<name>"
 **更新 bundleMeta 描述：** 描述格式为 `"研究工具（a + b + c）"`，从中删除 `<name>`：
 - 若在中间：删除 ` + <name>` 或 `<name> + `
 - 若为最后一项：删除 ` + <name>`
-- 若括号内只剩该项：将整个 `（<name>）` 删除，或保留空括号（均可）
+- 若括号内只剩该项：删除整个 `（<name>）`
 - 若描述中无该 skill 名：跳过，不报错
+- 若描述不是 `（a + b + c）` 格式（如含 `—` 说明、`；` 分组、`/` 分隔）：按 Step 3 预览中用户确认过的修改后描述写入
 
 **记录到 archived 列表：** 在顶层 `archived.skills` 数组中追加 `<name>`（数组不存在则创建 `"archived": { "skills": [], "tools": [] }`）。若 `<name>` 已在列表中，跳过不重复添加。
 
@@ -133,10 +135,12 @@ git commit -m "chore: archive <name> skill"
 
 ## Step 8 — 合并回原分支
 
-```bash
-git checkout <ORIGINAL_BRANCH>
-git merge --no-ff chore/archive-<name>
-```
+- `ORIGINAL_BRANCH` 为 `staging`：仍在 `chore/archive-<name>` 上运行 `"${REPO_ROOT}/scripts/merge-to-staging.sh"`（只更新本地 staging，不 push），成功后 `git checkout staging` 回到原分支。脚本非 0 退出（含冲突）时停止，保留现场并报告脚本输出，不手动 checkout staging 再 merge。
+- 其他分支：
+  ```bash
+  git checkout <ORIGINAL_BRANCH>
+  git merge --no-ff chore/archive-<name>
+  ```
 
 完成后输出摘要：
 
@@ -159,10 +163,11 @@ git merge --no-ff chore/archive-<name>
 | 情况 | 处理 |
 |------|------|
 | Detached HEAD | Step 2 中止，提示切换到具名分支 |
+| 原分支为 `main` | Step 2 中止 |
+| 原分支为 `staging` | Step 8 经 `merge-to-staging.sh` 合并 |
 | 有未提交变更 | Step 2 中止，提示 commit 或 stash |
 | `skills/archived/<name>/` 已存在 | Step 2 中止，提示手动处理 |
 | `generate-npmignore.js` 失败 | Step 6 中止，不执行 git 操作 |
-| skill 在磁盘但不在 index | 提示"仅做文件移动"，跳过 Step 5 |
 | bundleMeta 描述无该 skill 名 | 跳过描述更新，继续 |
 
 ---

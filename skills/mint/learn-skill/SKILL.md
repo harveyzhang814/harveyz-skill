@@ -2,7 +2,7 @@
 name: learn-skill
 description: "Deep-reads a single skill's SKILL.md to help you understand its internal logic. Analyzes across four dimensions: Execution Flow (how it runs and all branches), Standards (design thinking and hard specs), Boundary Conditions (what it's designed for and not), and Design Philosophy (synthesized from the first three). Use when you want to understand a skill's design intent, execution flow, condition branches, applicable boundaries, or the reasoning behind its design. Trigger phrases: 'help me understand this skill', 'how does this skill work', 'explain this skill', 'what is this skill doing', 'walk me through this skill', 'what's the design philosophy of this skill', 'what are the branches in this skill', 'what are the limitations of this skill'."
 user_invocable: true
-version: "2.0.1"
+version: "2.0.2"
 ---
 
 # learn-skill
@@ -31,18 +31,18 @@ version: "2.0.1"
 
 从上下文判断要分析哪个 skill：
 
-1. **直接路径**：用户提供了路径（如 `skills/meta/analyze-skill/`）→ 直接使用
-2. **名称推断**：用户提到了 skill 名称 → 在当前 repo 及常见 skill 安装目录中搜索
+1. **直接路径**：用户提供了路径（如 `skills/mint/publish-skill/`）→ 直接使用
+2. **名称推断**：用户提到了 skill 名称 → 在当前 repo 及当前 host 已知的用户级或项目级 skill 目录中搜索
 3. **当前上下文**：对话中刚刚在讨论某个 skill → 直接分析该 skill
 4. **不明确**：列出候选，请用户选择
 
-读取目标 `SKILL.md`。若存在 `references/` 子目录，完整读取其中每个文件。若 skill 中调用了外部脚本（如 bash 脚本、工具封装），尝试完整读取这些脚本；无法访问的脚本记录路径和调用接口，留待分析时标注。
+读取目标 `SKILL.md`、`references/` 下每个文件和被调用的外部脚本；读不到的脚本记下路径和调用接口。
 
 ---
 
 ## Step 2 — 四维解读
 
-从以下四个维度解读 skill，**按顺序执行**：先分析现象（流程、规范、边界），最后综合推断本质（设计哲学）。每个维度的目标是让读者理解，不是评判好坏。具体引用 skill 中的实际段落或步骤来说明，不要泛泛而谈。
+按维度 1→4 顺序执行：先流程、规范、边界，最后综合出设计哲学。每个论点引用 skill 中的具体段落或步骤。
 
 ---
 
@@ -117,7 +117,7 @@ version: "2.0.1"
 - **准确性**：描述是否和原文一致，有没有误读？
 - **心理模型**：读完报告的人，能不能不翻原文就理解这个 skill 是怎么工作的？
 - **逻辑链**：维度 4（设计哲学）中的每一个结论，是否都能在维度 1-3 的分析或原始 SKILL.md 中找到支撑证据？
-  - 找到证据：在输出时标注来源（来自维度 X 或原文第 N 步）
+  - 找到证据：标注来源，格式为「（来自维度 X）」或「（原文 Step N）」
   - 未找到证据：**先回到原始 SKILL.md 主动寻找支撑**；找到则补入对应维度；仍无法找到则修改或删除该结论
 
 发现问题就补进分析，然后进入 Step 4。
@@ -126,9 +126,7 @@ version: "2.0.1"
 
 ## Step 4 — 生成功能摘要
 
-基于四维分析，用**一段话**概括这个 skill 的核心功能——它做什么、针对什么场景、产出是什么。不写评价，不写建议，不重复四维报告的内容。
-
-这段话的用途是跨 skill 比较索引：在设计新 skill 时，可据此快速判断现有 skill 在功能或概念上是否存在重叠，或有值得借鉴之处。写完后进入 Step 5 输出。
+基于四维分析，用**一段话**概括这个 skill 的核心功能——它做什么、针对什么场景、产出是什么。不写评价，不写建议，不重复四维报告的内容（用作跨 skill 比较索引，判断功能重叠或可借鉴处）。写完后进入 Step 5 输出。
 
 ---
 
@@ -136,7 +134,7 @@ version: "2.0.1"
 
 **语言：全部中文。** 保留英文的只有：维度标题括号内的英文名、代码/命令/字段名。
 
-报告按维度 1→2→3→4 顺序输出，Mermaid 图放在维度 1 的节点分析之后。不要加评分、verdict，或建议修改的段落。维度 4 中有证据支撑的结论，以括号标注来源，如「（来自维度 1）」或「（原文 Step N）」。
+报告按维度 1→2→3→4 顺序输出，Mermaid 图放在维度 1 的节点分析之后。不要加评分、verdict，或建议修改的段落。
 
 报告结尾询问用户：「还有哪个部分想深入了解？」
 
