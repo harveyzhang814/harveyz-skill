@@ -104,6 +104,7 @@ Electron 应用可能有多个独立窗口（主窗口、偏好设置、托盘�
 渲染层框架对应的样式读取策略见：
 - React 渲染层 → `stack-react.md` 中的"源文件读取策略"
 - Vue 渲染层 → `stack-vue.md` 中的"源文件读取策略"
+- 无框架（纯 HTML/CSS/JS，`styleStrategy` 为 `css`）→ 读页面 HTML 及其 `<link>` 的 CSS、`<script>` 引入的 JS；`<template>` 与 JS 里拼出的 DOM 都是要还原的结构，按 JS 里的状态分支（`phase`、`dataset`、`hidden` 切换等）拆出各 UI 状态
 
 Electron 特有补充：
 - **IPC 调用**（`ipcRenderer.invoke()`）在 HTML 备份中显示为占位状态（loading 或默认值），不需还原真实数据

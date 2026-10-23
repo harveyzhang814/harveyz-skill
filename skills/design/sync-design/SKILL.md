@@ -1,7 +1,7 @@
 ---
 name: sync-design
 description: Use after any UI source file change — detects changed view/component files via git diff and syncs them to high-fidelity HTML design backups. Also supports pre-development design phase: creates or updates design draft HTML based on user feature descriptions. Maintains a manifest as the source-of-truth mapping between source files, design drafts, and HTML previews. Trigger when user says "sync design", "update HTML preview", "design changed", "create design", "design this", "migrate design drafts", or the Chinese equivalents, or after UI code edits.
-version: "5.2.0"
+version: "5.2.1"
 user_invocable: true
 ---
 
@@ -13,7 +13,7 @@ user_invocable: true
 - **同步模式**（默认）：检测 UI 源文件变动，更新高保真 HTML 完成稿（存于 `outputDir/`）
 - **设计模式**：根据功能描述创建或修改设计稿 HTML（存于 `outputDir/drafts/`）
 
-**Announce at start:** "I'm using sync-design to detect UI changes and update HTML design backups."
+**Announce at start:** "I'm using sync-design to keep HTML design drafts and backups in sync with the UI."
 
 `SKILL_DIR` 为当前 host 安装本 skill 的目录（包含 `scripts/`）。
 
@@ -53,8 +53,8 @@ user_invocable: true
 
 1. `manifest.config.designSpec`（若有）
 2. 所属平台的 `designSystemFile`（若有）
-3. 所属平台 `stackRef` 指向的 reference 中，与 `styleStrategy` 匹配的那一节；`styleStrategy` 为 `unknown`（或旧 manifest 里的 `null`）时，读源文件自行判断
-4. 所属平台 `notes`（优先于 reference，记录项目特定约定）
+3. 所属平台 `stackRef` 指向的 reference 中，与 `styleStrategy` 匹配的那一节；没有匹配的节、或 `styleStrategy` 为 `unknown`（或旧 manifest 里的 `null`）时跳过此项，读源文件自行判断
+4. 所属平台 `notes`（优先于 reference，记录项目特定约定）；`notes` 点名的关联文件（如视觉语言参照的源文件）在两种模式下都按需读
 
 ---
 
@@ -94,7 +94,7 @@ user_invocable: true
 | 只改某个状态块里的文案、行内样式值、属性 | 名称或覆盖里列有该状态的所有块 |
 | 改某个状态的画面，要新增或改动样式规则（含同步时 diff 只牵涉某几个状态） | 上一行 + 样式段 |
 | 状态靠脚本切换（覆盖它的块里看不出差别） | 上两行之一 + 脚本段 |
-| 新增状态 | 样式段 + 一个相近状态块作模板；新块带标记，追加到状态画面区 |
+| 新增状态 | 样式段 + 一个相近状态块作模板 + 页头区（状态切换栏要加上新状态）；新块带标记，追加到状态画面区 |
 | 只改组件样式 | 样式段 |
 | 换图标 | 图标定义区里该图标 + grep 到的引用处 |
 | 改切换、拼接逻辑 | 脚本段 + 相关状态块 |
@@ -127,7 +127,7 @@ user_invocable: true
 2. 根据用户描述确定修改范围（哪些 UI 状态或区块）
 3. 按[局部读取](#局部读取)读 `<draft.htmlFile>` 中该范围
 4. 增量修改 HTML，只替换受影响区块；若有新 UI 状态，追加 `uiStates`
-5. 写回 HTML 文件，更新 `drafts[].uiStates`（去重后写入，不写回 manifest，等步骤 3 统一写回）
+5. 写回 HTML 文件，更新 `drafts[].uiStates`（去重后写入，先不写回 manifest，等「3. 写回与摘要」统一写回）
 
 #### 情况 B：无对应 draft entry（创建新设计稿）
 
@@ -171,7 +171,7 @@ user_invocable: true
 4. 输出路径：`<outputDir>/drafts/<screenName>-<platform>-design.html`
 5. 新增 draft entry（见上方 JSON 与差异表）
 
-根据文件路径匹配 `manifest.config.platforms` 确定所属平台；无法自动匹配时询问用户。
+根据用户描述判断所属平台（`manifest.config.platforms` 中的哪一个）；无法判断时询问用户。
 
 ---
 
@@ -187,10 +187,10 @@ user_invocable: true
 
 ### 阶段 1：Diff 检测
 
-将 `manifest.config.platforms` 中所有平台的 `uiFilePatterns` 和 `designSystemFile`（非 null）汇总，传给 git 作为过滤参数：
+将 `manifest.config.platforms` 中所有平台的 `uiFilePatterns` 和 `designSystemFile`（非 null）汇总，传给 git 作为过滤参数。每个 pattern 前加 `:(glob)` 并加引号：不加时 git 不按 glob 规则解释 `**/`，`dir/**/*.ext` 匹配不到 `dir/` 下直接放的文件，漏检且不报错。
 
 ```bash
-git diff <manifest.baseBranch>...HEAD --name-only -- <pattern1> <pattern2> ...
+git diff <manifest.baseBranch>...HEAD --name-only -- ':(glob)<pattern1>' ':(glob)<pattern2>' ... <designSystemFile>
 ```
 
 **如果过滤后列表为空：**
@@ -244,11 +244,15 @@ git diff <entry.lastSyncCommit 或 manifest.baseBranch（如无 lastSyncCommit�
 **c. 确定更新范围**
 
 - entry 在全量重生成队列中 → 读取所有 `entry.sourceFiles` 完整源码重新生成。
-- 否则 → 根据 diff 判断受影响的 UI 状态或组件区块，按[局部读取](#局部读取)读 `<entry.htmlFile>` 中该范围，只替换该部分。
+- 否则 → 根据 diff 判断受影响的 UI 状态或组件区块，按[局部读取](#局部读取)读 `<entry.htmlFile>` 中该范围，只替换该部分。`lastSyncCommit` 没及时更新时，diff 里会混有 HTML 已经反映的改动：以 HTML 现状为准，只补缺的部分。
 
-**d. 写回 HTML 文件**（质量要求见[HTML 生成质量要求](#html-生成质量要求)）
+**d. 补齐状态清单**
 
-**e. 回填 linkedEntryId**
+diff 引入了新的 UI 状态（新的条件分支、反馈态等）时，追加到 `entry.uiStates`（去重），HTML 中给出对应块或写进覆盖。再看 `drafts[]` 中 `id` 与本 entry 相同的 draft：它有、`entry.uiStates` 没有的状态，代码已经实现的同样追加。不追加的话，设计稿删除检查点 2 会一直阻止。
+
+**e. 写回 HTML 文件**（质量要求见[HTML 生成质量要求](#html-生成质量要求)）
+
+**f. 回填 linkedEntryId**
 
 在 `manifest.drafts[]` 中查找 `id` 与本 entry 相同的 draft。若存在且 `linkedEntryId` 为 `null`，将其更新为本 entry 的 `id`（即 `<screenName>-<platform>`）。
 
@@ -256,11 +260,11 @@ git diff <entry.lastSyncCommit 或 manifest.baseBranch（如无 lastSyncCommit�
 
 #### 新建队列（无 manifest entry）
 
-对队列中的每个文件：
+对队列中的文件按目录分组逐个处理（同一界面的 HTML、脚本、样式常放在一起，先处理页面文件）：
 
 **a. 检查 pattern 覆盖**
 
-该文件所在目录是否被现有任一 `uiFilePatterns` 覆盖？
+该文件是否被现有任一 `uiFilePatterns` 覆盖（按阶段 1 的 `:(glob)` 语义判断，`**/` 可匹配零层目录）？
 
 **未覆盖** → 在后续询问中附带提示：
 > "此文件目录 `<dir>/` 未在当前配置中。是否将 `<建议 pattern>` 加入 `<platform>.uiFilePatterns`？"
@@ -272,6 +276,7 @@ git diff <entry.lastSyncCommit 或 manifest.baseBranch（如无 lastSyncCommit�
 1. `发现未映射的 UI 文件：<文件路径>。要为它创建 HTML 设计备份吗？`
    - **跳过并永久忽略：** 加入 `manifest.ignoredFiles`，结束此文件处理。
    - **本次跳过：** 不修改 ignoredFiles。
+   - **并入已有界面：** 它是本次已建或已有某个 entry 的同一界面（如页面的脚本、样式文件）→ 加入该 entry 的 `sourceFiles`，结束此文件处理。
    - **是：** 继续。
 2. `屏幕/组件名是什么？（kebab-case，如 "task-history"）`
 3. `这个界面有哪些 UI 状态？（逗号分隔，如 idle, loading, error）`
@@ -281,7 +286,7 @@ git diff <entry.lastSyncCommit 或 manifest.baseBranch（如无 lastSyncCommit�
 
 **c. 读取上下文**
 
-读[标准上下文](#标准上下文后读覆盖先读)，再读源文件全文（及 `notes` 或 reference 中指定的关联文件），再从 `manifest.config.outputDir` 选一个**已有的同平台** HTML，只读其样式段作风格参考。
+读[标准上下文](#标准上下文后读覆盖先读)，再读本 entry 所有源文件全文（含并入的文件，及 reference 中指定的关联文件），再从 `manifest.config.outputDir`（不含 `drafts/`）选一个**已有的同平台** HTML，只读其样式段作风格参考。`drafts[]` 中有 `id` 为 `<screenName>-<platform>` 的设计稿时，也读它：它是这次实现的设计依据，按它的结构组织状态块，删除检查点 3 才对得上。
 
 **d. 生成完整高保真 HTML**（质量要求见[HTML 生成质量要求](#html-生成质量要求)）
 
@@ -294,14 +299,14 @@ git diff <entry.lastSyncCommit 或 manifest.baseBranch（如无 lastSyncCommit�
   "id": "<screenName>-<platform>",
   "platform": "<platform>",
   "htmlFile": "<outputDir>/<screenName>-<platform>-design.html",
-  "sourceFiles": ["<文件路径>"],
+  "sourceFiles": ["<文件路径，含并入的文件>"],
   "uiStates": ["<状态列表>"],
   "lastSyncCommit": null,
   "description": "<用户输入的描述>"
 }
 ```
 
-**f. 回填 linkedEntryId**（同更新队列 e）
+**f. 回填 linkedEntryId**（同更新队列 f）
 
 ---
 
@@ -313,14 +318,14 @@ git diff <entry.lastSyncCommit 或 manifest.baseBranch（如无 lastSyncCommit�
 4. **离线可用：** 禁止引用任何外部 URL。样式全部内联在 `<style>` 中，单文件可直接在浏览器打开预览。字体不得 base64 内嵌，只写字体名并带系统字体回退（如 `"Inter", system-ui, sans-serif`）。
 5. **风格对齐：** 与同项目已有 HTML 文件保持一致的代码风格：CSS 变量声明格式、组件样式注释格式（`/* ── 组件名 ── */`）、整体结构顺序。
 6. **高保真要求：** 尺寸、圆角、阴影、字号、行高尽量还原设计规范；规范未涉及的参考设计系统文件中的具体值。
-7. **结构：** 区段顺序与状态标记见[稿子结构](#稿子结构)。`uiStates` 中每个状态都能在某个标记里找到（名称或 `覆盖`）。
+7. **结构：** 区段顺序与状态标记见[稿子结构](#稿子结构)。新建的稿子，`uiStates` 中每个状态都能在某个标记里找到（名称或 `覆盖`）；增量修改少于 4 万字符的旧稿时，给改到的块补标记即可（`check` 只对 4 万字符以上的稿子强制这一条）。
 8. **图标只定义一次：** 同一图标出现两次以上时，放进正文开头的图标定义区（`<svg class="sd-sprite" aria-hidden="true" style="position:absolute;width:0;height:0;overflow:hidden">` 内的 `<symbol id="sd-icon-N">`，不写 viewBox），用到的地方保留原 `<svg>` 的属性、内容换成 `<use href="#sd-icon-N"/>`。样式里有选择器指向图标内部元素（如 `.x svg path`）的图标不收。
 
 ---
 
 ### 阶段 4：确认与写回
 
-输出同步摘要，包含以下分类（有内容的分类才展示）：更新的 entry（id + htmlFile + 变动范围）、新建的 HTML 文件（文件名 + 描述）、配置变更（哪个 platform 的 uiFilePatterns 新增了什么 pattern）、忽略的文件（路径）。询问用户确认或取消。
+输出同步摘要，包含以下分类（有内容的分类才展示）：更新的 entry（id + htmlFile + 变动范围 + 新追加的 uiStates）、新建的 HTML 文件（文件名 + 描述）、配置变更（哪个 platform 的 uiFilePatterns 新增了什么 pattern）、忽略的文件（路径）。询问用户确认或取消。
 
 **用户选「确认」：**
 1. `git rev-parse HEAD` 获取当前 commit hash
@@ -328,7 +333,7 @@ git diff <entry.lastSyncCommit 或 manifest.baseBranch（如无 lastSyncCommit�
 3. 写回 `.hskill/sync-design/manifest.json`（含配置演进的 patterns 变更）
 4. 询问是否 `git add` 并给出建议 commit message：
    `chore: sync HTML design backups — <entry id 列表>`
-5. 在本次确认写回的所有 entry 中，检查 `manifest.drafts[]` 是否有 `linkedEntryId` 与之匹配且 `htmlFile` 对应文件仍存在的 draft。若有，逐一提示：
+5. 在本次确认写回的所有 entry 中，检查 `manifest.drafts[]` 是否有 `linkedEntryId` 与之匹配且 `htmlFile` 对应文件仍存在的 draft。若有，逐一提示（某个被检查点阻止不影响其余）：
    > "`<id>` 的完成稿已同步，是否检查并删除对应设计稿？"
    - **是：** 跳转至[设计稿删除](#设计稿删除)流程。
    - **否：** 跳过，不修改 `drafts[]`。
@@ -352,7 +357,7 @@ git diff <entry.lastSyncCommit 或 manifest.baseBranch（如无 lastSyncCommit�
 ## 完成标准
 
 **同步模式：**
-- `.hskill/sync-design/manifest.json` 已写回，所有已处理 entry 的 `lastSyncCommit` 为当前 commit hash。
+- `.hskill/sync-design/manifest.json` 已写回，所有已处理 entry 的 `lastSyncCommit` 为当前 commit hash；代码已实现的状态都在 `entry.uiStates` 里。
 - 更新或新建的每个 HTML 文件在 `outputDir/` 下存在，可直接在浏览器打开预览。
 - HTML 文件满足阶段 3「HTML 生成质量要求」的 8 条约束；本次写过的稿子不出现在 `python3 SKILL_DIR/scripts/design_html.py check <manifest>` 的待迁移列表里。
 
@@ -363,4 +368,4 @@ git diff <entry.lastSyncCommit 或 manifest.baseBranch（如无 lastSyncCommit�
 
 **迁移模式：** 见 `references/migrate.md` 的完成标准。
 
-不手动编辑 manifest.json；entries 与实际文件的一致性靠本流程维护。
+manifest.json 只由本流程写回（按 JSON 读写，保持原有缩进），不要让用户手改；entries 与实际文件的一致性靠本流程维护。
