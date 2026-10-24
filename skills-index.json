@@ -114,8 +114,8 @@
       "path": "research/explain-design",
       "bundle": "research",
       "installScope": "global",
-      "contentHash": "435be63a1e1b5ce1",
-      "contentVersion": "1.2.2"
+      "contentHash": "60f3f01bccc4a0a4",
+      "contentVersion": "1.2.4"
     },
     {
       "path": "feed/sync-xtimeline",
