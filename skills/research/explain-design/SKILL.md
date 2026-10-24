@@ -3,7 +3,7 @@ name: explain-design
 description: "Explain an architecture design, spec, or product proposal as one offline HTML document: chapters by angle (structure, sequence, state, data flow, dedicated mechanism chapters, boundaries), with diagrams rendered deterministically by archify from typed JSON and tables where diagrams do not fit. Manual invocation only: '/explain-design <path or topic>'. Not for a single diagram (use archify), text-only restatement (explain-pm), Mermaid (draw-diagram), or understanding a skill (learn-skill)."
 disable-model-invocation: true
 user_invocable: true
-version: "1.2.2"
+version: "1.2.3"
 model: sonnet
 ---
 

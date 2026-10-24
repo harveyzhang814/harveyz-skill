@@ -31,10 +31,16 @@ RESIZE = """
 for (const f of document.querySelectorAll('iframe.diagram')) {
   const box = () => { const d = f.contentDocument; return d.querySelector('.container') || d.body; };
   const fit = () => { try { f.style.height = Math.ceil(box().getBoundingClientRect().height) + 'px'; } catch (_) {} };
-  const setup = () => { fit(); try { new f.contentWindow.ResizeObserver(fit).observe(box()); } catch (_) {} };
-  // 早于本脚本加载完的 iframe 不会再触发 load
-  if (f.contentDocument && f.contentDocument.readyState === 'complete' && f.contentDocument.body) setup();
-  else f.addEventListener('load', setup);
+  const setup = () => {
+    if (f.dataset.fitted) return;
+    f.dataset.fitted = '1';
+    fit(); try { new f.contentWindow.ResizeObserver(fit).observe(box()); } catch (_) {}
+  };
+  f.addEventListener('load', setup);
+  // 早于本脚本加载完的 iframe 不会再触发 load。srcdoc 载入前的占位文档是
+  // about:blank，它的 readyState 也是 complete，只认 about:srcdoc
+  const d = f.contentDocument;
+  if (d && d.URL === 'about:srcdoc' && d.readyState === 'complete') setup();
 }
 """
 
