@@ -1,8 +1,8 @@
 ---
 name: develop-plan
-description: Use after init-spec approves a software Spec, or when other clear requirements need a multi-step implementation plan before coding
+description: "Turn an approved Spec or clear requirements into a multi-step implementation plan with exact files, interfaces, tests, and task dependencies, before coding. Use after init-spec approves a software Spec. Triggers: 'write an implementation plan', 'break this into tasks', 'make a plan for this spec'."
 user_invocable: true
-version: "0.1.12"
+version: "0.2.0"
 ---
 
 # 制定实施计划
@@ -10,6 +10,14 @@ version: "0.1.12"
 ## 作用（说明）
 
 将已批准的 Spec 或明确需求转为实施计划，供不熟悉代码库的工程师执行。
+
+## 触发条件
+
+`init-spec` 批准 Spec 后，或已有明确需求、需要在编码前拆成多步实施计划时使用，例如“写实施计划”“拆成任务”“出个 plan”。
+
+不触发：
+- 需求未定或关键方案待选 → `init-spec`
+- 计划已写好、要开始实施 → `superpowers:subagent-driven-development` 或 `superpowers:executing-plans`
 
 ## 指令
 
@@ -56,7 +64,7 @@ version: "0.1.12"
 ```markdown
 # [功能名称] 实施计划
 
-> **For agentic workers:** REQUIRED SUB-SKILL: 使用 superpowers:subagent-driven-development（推荐）或 superpowers:executing-plans 逐项实施；用 `- [ ]` 跟踪步骤。
+> **For agentic workers:** REQUIRED SUB-SKILL: 使用 [执行交接时选定的执行技能] 逐项实施；用 `- [ ]` 跟踪步骤。
 
 **Goal:** [用一句话描述将构建什么]
 
@@ -163,4 +171,4 @@ git commit -m "feat: add specific feature"
 - **子代理驱动（Subagent-driven）**——每项任务由新子代理实施并独立审查，最后审查整个分支；审查更密集，上下文成本更高。
 - **原生执行（Native）**——当前会话逐项实施，最后独立审查整个分支；上下文成本更低。
 
-确认后，子代理驱动使用 `superpowers:subagent-driven-development`；原生执行使用 `superpowers:executing-plans`。
+确认后，子代理驱动使用 `superpowers:subagent-driven-development`；原生执行使用 `superpowers:executing-plans`。将选定的技能写入计划开头的 `REQUIRED SUB-SKILL`，再调用它。
