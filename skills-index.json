@@ -436,15 +436,15 @@
       "path": "superpowers-rewrite/init-spec",
       "bundle": "superpowers-rewrite",
       "installScope": "global",
-      "contentHash": "451cecdf4d9c368d",
-      "contentVersion": "0.1.43"
+      "contentHash": "bf0bbfedaf36ea0a",
+      "contentVersion": "0.2.0"
     },
     {
       "path": "superpowers-rewrite/develop-plan",
       "bundle": "superpowers-rewrite",
       "installScope": "global",
-      "contentHash": "edea0e42af86df8d",
-      "contentVersion": "0.1.12"
+      "contentHash": "2a2bf576985743f9",
+      "contentVersion": "0.2.0"
     }
   ],
   "hooks": [
