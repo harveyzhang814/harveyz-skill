@@ -2,7 +2,7 @@
 name: capture-requirement
 description: File the requirement the current session is implementing as a standalone requirement node and link an implements relation to it — call once after Gate 2 is finalized; only usable inside an Agent Canvas node.
 user_invocable: true
-version: "1.0.3"
+version: "2.0.0"
 ---
 
 # 需求立项（capture-requirement）
@@ -27,7 +27,8 @@ version: "1.0.3"
      --from <第 1 步的 callerNodeId> --to <第 2 步的 nodeId> --type implements
 ```
 
-第 1 步**只撰写、不落盘**。传 `--spec` 时必须是绝对路径；不传时按本会话记录自动发现。
+第 1 步**只撰写、不落盘**。传 `--spec` 时必须是绝对路径；不传时按本会话记录自动发现（Claude 节点会走证据 + 裁判，但仍应
+显式传 `--spec`：验收 spec 选错的代价比标题高）。
 第 1 步以非零退出码报错时，说明这三种情况之一：没读到 spec、本节点已 implements 过某个
 需求节点（不重铸编号）、或本节点上一次调用还没返回；报错本身已说明是哪一种，直接把错误
 如实报出，不要重试或跳过。

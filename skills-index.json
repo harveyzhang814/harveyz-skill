@@ -387,8 +387,8 @@
       "path": "agent-canvas/describe-node",
       "bundle": "agent-canvas",
       "installScope": "project",
-      "contentHash": "3c0d9ac9a5be95b5",
-      "contentVersion": "1.1.2"
+      "contentHash": "78daf08f2c54e3f1",
+      "contentVersion": "2.0.0"
     },
     {
       "path": "agent-canvas/relate-node",
@@ -401,8 +401,8 @@
       "path": "agent-canvas/capture-requirement",
       "bundle": "agent-canvas",
       "installScope": "project",
-      "contentHash": "ecaa7ecba2d9c5b9",
-      "contentVersion": "1.0.3"
+      "contentHash": "82481c8bd14f608c",
+      "contentVersion": "2.0.0"
     },
     {
       "path": "agent-canvas/relation-review",
