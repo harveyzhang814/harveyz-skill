@@ -363,6 +363,13 @@
       "contentVersion": "1.0.0"
     },
     {
+      "path": "coding/recap",
+      "bundle": "coding",
+      "installScope": "global",
+      "contentHash": "c3b76275cd80b2d2",
+      "contentVersion": "1.0.0"
+    },
+    {
       "path": "feed/manage-creators",
       "bundle": "feed",
       "installScope": "project",

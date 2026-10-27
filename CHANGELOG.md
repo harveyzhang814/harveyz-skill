@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- `recap` 1.0.0：在当前对话里产出一份全局回顾，人先读、新 session 的 agent 后用——倒金字塔七节（一句话 → 当前状态与下一步 → 已定结论 → 未决问题 → 背景 → 线索 → 核实冲突），用不上的节省略；写进报告前轻量核实路径/分支是否存在，不符处单列、只列事实不裁决；推出来的标「（推断）」，来自压缩摘要的标「（未核实）」；线索写成「路径 — 为什么看」，不抄内容；直接输出 Markdown，不落文件、不建分支、不验收
+
 ### Changed
 - `describe-node`：升至 2.0.0（不兼容旧做法）。Claude 节点改为不传 `--spec`，由 App 自己认 spec：先从本会话和画布收集证据，必要时在后台交给模型裁判挑一份。回执新增 `specStatus`（`given` / `resolved` / `pending` / `none`）；`pending` 时回执里 `specUsed` 为 null 属正常，不要重跑，最终结果看 `get-node` 的 `backgroundJob.specUsed`。回执里没有 `specStatus` 说明 App 是旧版，按旧规则显式传 `--spec`。Codex、pi 节点照旧一律显式传。需配合 Agent Canvas 8.5.1 之后的版本
 - `capture-requirement`：升至 2.0.0，说明 Claude 节点不传 `--spec` 时 `draft-requirement` 也会走证据加裁判，但立项仍应显式传 `--spec`：验收 spec 选错的代价比标题高
