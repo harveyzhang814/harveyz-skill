@@ -1,11 +1,11 @@
 ---
-name: recap
-description: "Recap the big picture of the current conversation, human-first and agent-usable, for someone who has lost track of it or wants to restart the overall work in a fresh session: where things stand and what comes next, decisions with reasons (including rejected options), open questions, background, and pointers to docs, code and branches. Rendered Markdown in the reply. Text only: no files, branches, or acceptance. Use fork-topic to split off a single side topic; use handoff when work must come back for acceptance. Only on the user's request; do not suggest it unprompted. Triggers: '/recap', 'full recap', 'big picture', 'where are we overall', 'recap the whole conversation'."
+name: full-recap
+description: "Recap the big picture of the current conversation, human-first and agent-usable, for someone who has lost track of it or wants to restart the overall work in a fresh session: where things stand and what comes next, decisions with reasons (including rejected options), open questions, background, and pointers to docs, code and branches. Rendered Markdown in the reply. Text only: no files, branches, or acceptance. Use fork-topic to split off a single side topic; use handoff when work must come back for acceptance. Only on the user's request; do not suggest it unprompted. Triggers: '/full-recap', 'full recap', 'big picture', 'where are we overall', 'recap the whole conversation'."
 user_invocable: true
 version: "1.0.0"
 ---
 
-# recap — 回顾当前对话的全貌
+# full-recap — 回顾当前对话的全貌
 
 把当前对话写成一份全局回顾。读者主次：人第一，用来找回对全貌的掌控；新 session 的 agent 第二，用来知道从哪开始调查。
 

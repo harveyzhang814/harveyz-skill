@@ -1,8 +1,8 @@
-# recap 设计
+# full-recap 设计
 
 ## 定位
 
-长对话里丢了对全貌的掌控，或者想换个新 session 重新做整体性工作时，在当前对话里调用 recap，产出一份全局回顾：背景、已定结论、进度、文档与代码线索。
+长对话里丢了对全貌的掌控，或者想换个新 session 重新做整体性工作时，在当前对话里调用 full-recap，产出一份全局回顾：背景、已定结论、进度、文档与代码线索。
 
 读者主次：**人第一，新 session 的 agent 第二**。人读来找回方向；agent 读来知道从哪开始调查。查得出的东西只给调查方向，不替 agent 查完。
 
@@ -10,10 +10,10 @@
 
 ## 边界
 
-- **触发**：只由用户发起（`/recap`、"full recap"、"big picture"、"回顾一下全貌"、"我们整体到哪了"）。agent 不主动建议。
+- **触发**：只由用户发起（`/full-recap`、"full recap"、"big picture"、"回顾一下全貌"、"我们整体到哪了"）。agent 不主动建议。
 - **不做**：不落文件、不建分支或工作区、不验收、不替用户派发。存档或交接是另外的需求。
-- **与 fork-topic 的分界**：fork-topic 写一条支线、求精简；recap 写整个对话、求全面。
-- **与 handoff 的分界**：handoff 交出任务并要回来验收；recap 不交任务。
+- **与 fork-topic 的分界**：fork-topic 写一条支线、求精简；full-recap 写整个对话、求全面。
+- **与 handoff 的分界**：handoff 交出任务并要回来验收；full-recap 不交任务。
 - **不读 memory 进报告**：memory 可能陈旧，新 session 也读不到。依据只有当前对话 + 第 2 步的核实结果。
 
 代价：不落文件，报告只活在当前对话里，没复制就丢了；换来零仓库副作用。
@@ -74,10 +74,10 @@
 
 ## 落地
 
-- 位置：`skills/coding/recap/SKILL.md`，与 fork-topic、handoff 同类。
+- 位置：`skills/coding/full-recap/SKILL.md`，与 fork-topic、handoff 同类。
 - 注册：`skills-index.json`，`bundle: coding`、`installScope: global`（同 fork-topic）。
 - description 写清与 fork-topic、handoff 的分界；不改那两个 skill 的 description。
-- 命名：单段动词 `recap`。不在动词词表里，会触发 F9 警告（不阻断）；这次不扩词表。
+- 命名：`full-recap`。原名 `recap` 与 Claude Code 内置命令 `/recap` 同名（Skill 工具报 "recap is a built-in CLI command, not a skill"），改名避开。首段 `full` 不是动词，会触发 F7 警告（不阻断）；命名规则另行讨论。
 
 ## 测试
 
