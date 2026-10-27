@@ -30,13 +30,13 @@
   "bundleMeta": {
     "research": "研究工具（learn-video + extract-vision + survey-skillrepo + learn-paper + extract-cognition + probe-session + clip-url + fetch-paper + explain-design）",
     "feed": "追更工具（manage-creators — 人与渠道名册；sync-xtimeline + sync-ytchannel + sync-website — 按名册跑增量抓取；capture-opinion — 给人记一笔判断）",
-    "creative": "创意工具（capture-todo + capture-insight）",
+    "creative": "创意工具（capture-todo（仅人工调用）+ capture-insight）",
     "coding": "程序工具（init-project + init-workflow + setup-debug + init-goal + question-me + capture-vocab + rephrase + explain-pm）",
     "writing": "写作工具（forge-doc + draw-diagram + manage-dir + migrate-spec）",
     "design": "设计工具（scout-brand + build-style + sync-design）",
     "mint": "Skill 生命周期工具（init-skill + publish-skill + archive-skill + dedup-skill + simplify-skill + contribute-skill + fix-skill + runby-opencode + scout-philosophy + learn-skill）",
     "devops": "项目运维工具（clean-git + release-project + sync-hotfix + sync-agent）",
-    "agent-canvas": "Agent Canvas 内置 skill（agent-canvas-control — 节点与画布操控；describe-node/relate-node/capture-requirement/relation-review/close-node — 画布节点生命周期治理；judge-release — 对照验收标准逐条取证并写结论）",
+    "agent-canvas": "Agent Canvas 内置 skill（agent-canvas-control — 节点与画布操控；describe-node/relate-node/capture-requirement/relation-review/close-node — 画布节点生命周期治理；capture-intent — 随口需求立成需求节点；judge-release — 对照验收标准逐条取证并写结论）",
     "superpowers-rewrite": "Superpowers 个人改写版（init-spec — 从初步想法到获批 Spec；develop-plan — 制定实施计划）"
   },
   "skills": [
@@ -403,6 +403,13 @@
       "installScope": "project",
       "contentHash": "ecaa7ecba2d9c5b9",
       "contentVersion": "1.0.3"
+    },
+    {
+      "path": "agent-canvas/capture-intent",
+      "bundle": "agent-canvas",
+      "installScope": "project",
+      "contentHash": "60bcf201ce7fbd04",
+      "contentVersion": "1.0.0"
     },
     {
       "path": "agent-canvas/relation-review",
