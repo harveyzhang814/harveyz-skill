@@ -18,7 +18,8 @@
         { "id": "pointer-format", "source": "reply", "text": "docs/specs/comments-design.md 与 feature/comments 以『路径 — 为什么看』的一行线索出现，没有对其内容的摘要或推测" },
         { "id": "verified-existence", "source": "transcript", "text": "输出前检查过上述路径或分支是否存在（如 ls / test -e / git branch 一类命令）" },
         { "id": "conflict-reported", "source": "reply", "text": "核实冲突一节指出对话提到的文件或分支在当前环境不存在，且不替用户判断哪边对" },
-        { "id": "no-extrapolation", "source": "reply", "text": "没有对话里不存在的结论、约束或推论" }
+        { "id": "tier-markers", "source": "reply", "text": "推出来的条目标「（推断）」、未核实的标「（未核实）」；对话里明确定下的条目（如 SQLite、B 方案）不带这类标注" },
+        { "id": "no-extrapolation", "source": "reply", "text": "没有对话里不存在的结论、约束，也没有未标注「（推断）」的推论" }
       ]
     },
     {
@@ -31,7 +32,7 @@
         { "id": "no-files-written", "source": "transcript", "text": "整个过程没有创建或修改任何文件" },
         { "id": "no-empty-sections", "source": "reply", "text": "没有内容为空、『无』或『暂无』的章节标题" },
         { "id": "first-line-decidable", "source": "reply", "text": "第一节一句话说出做了什么（README 安装说明调整顺序）且已完成" },
-        { "id": "no-extrapolation", "source": "reply", "text": "没有对话里不存在的结论、待办或建议" }
+        { "id": "no-extrapolation", "source": "reply", "text": "没有对话里不存在的结论、待办或建议，也没有未标注「（推断）」的推论" }
       ]
     },
     {
