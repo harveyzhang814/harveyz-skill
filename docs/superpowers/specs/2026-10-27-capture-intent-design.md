@@ -45,21 +45,26 @@
    - 用户没点名别的项目 → 用当前画布，命令不带 `--canvas`。
    - 用户点名了别的项目 → 先拿到可用画布清单：用一个肯定不存在的路径跑 `agent-canvas-ctl --canvas <该路径> resolve-canvas`，失败时 stderr 会列出可用画布，从中按绑定路径匹配；再对匹配到的路径跑 `agent-canvas-ctl --canvas <路径> resolve-canvas`，退出码为 0 才算定下来。后续所有命令都带上同一个 `--canvas`。
    - 清单里没有这个项目 → 如实报告「该项目画布未打开」，然后停止，不改写到别的画布。
-4. **查 schema**：每次都跑 `agent-canvas-ctl describe-action create_requirement_node`，取字段与枚举，不在 skill 里写死。查到的 schema 和下面写法规范对不上时（比如 priority 的枚举变了），以 schema 为准，并在报告里说明。
+4. **查 schema**：每次都跑 `agent-canvas-ctl describe-action create_requirement_node`，从 `inputSchema` 取字段、类型、枚举和必填项，从 CLI 那条 binding 的 `usage` 与 `args.flags` 取命令写法。skill 里**不写死任何字段名、参数名和枚举值**，只写下节各字段的语义；把语义对到字段上靠的是 schema 里的字段名与 `description`。
+   - 语义对不上任何字段（比如 schema 里已经没有「优先级」这一项）→ 跳过这项，并在报告里说明。
+   - schema 有必填字段、下节没有对应的语义 → 停下来报告，不去猜怎么填。
+   - 枚举的档数和下节写的不一样（比如优先级从三档变成五档）→ 照下节的相对位置映射过去，并在确认摘要里标出来，让用户看一眼。
 5. **查重**：在目标画布上用需求的关键词跑 `search-nodes <关键词> --limit 5`，只看需求节点。有语义重叠时问用户：「发现可能重叠的需求 **[标题]（[编号]）**，跳过还是仍然新建？」
 6. **确认摘要**：「记录为：**[画布/项目]** — [标题]，[优先级]。确认吗？」，用户确认后才写入。
-7. **写入**：`agent-canvas-ctl [--canvas <路径>] create-requirement-node --title <标题> --description <正文> --priority <优先级> [--acceptance-criteria <文字>]`。不传 `--status`（缺省就是 open），不传 `--acceptance-spec`（没有 spec）。
+7. **写入**：按第 4 步取到的 `usage` 拼出 `create-requirement-node` 命令，用户点名了别的项目时在子命令前加 `--canvas <路径>`。只传下节语义对得上的字段；状态字段不传，取缺省值；验收依据文件不传（没有 spec）。
 8. **报告**：给出节点的 `requirementId`（YYMMDD-XX）和标题。写入失败时把 stderr 原样报出，不重试。
 
 ## 写法规范（写在 skill 里）
 
-- **标题**：`<对象> <类型> <描述>`，与画布上已有的需求标题一致，例如「feed feat 实现 Creator/Channel 名册架构」「publish-skill fix 命名检查由阻断改为建议」。
+本节只写各字段的语义，不写字段名和取值；括号里是 2026-10-27 schema 中对应的字段，仅供写 skill 时参照，**不进 SKILL.md**。
+
+- **标题**（`title`）：`<对象> <类型> <描述>`，与画布上已有的需求标题一致，例如「feed feat 实现 Creator/Channel 名册架构」「publish-skill fix 命名检查由阻断改为建议」。
   - 对象：受影响的 skill、模块或子系统名。
   - 类型：`feat` / `fix` / `refactor` / `docs` / `chore`。
   - 描述：写出关键区分点，不用「优化」「修复」这类泛词，也不堆细节。
-- **description**：写做什么、为什么。**不写怎么做**。篇幅以说清楚为准。
-- **priority**：默认 `medium`；用户表示紧急用 `high`，表示不重要用 `low`。
-- **acceptanceCriteria**：只在第 2 步拆出了完成标准时才填，内容照用户原意写，不替用户补全。
+- **需求正文**（`description`）：写做什么、为什么。**不写怎么做**。篇幅以说清楚为准。
+- **优先级**（`priority`）：默认取中间档；用户表示紧急取最高档，表示不重要取最低档。
+- **验收文字**（`acceptanceCriteria`）：只在第 2 步拆出了完成标准时才填，内容照用户原意写，不替用户补全。
 
 ## capture-todo 收窄为人工调用
 
@@ -85,6 +90,7 @@ capture-todo 会逐步退役，退役前和 capture-intent 的触发词重叠。
 - 查重：建测试节点前先手动建一条相似节点，确认第 5 步能发现并提问；跑完两条都 purge 掉。
 - 未打开画布：点名一个画布没开的项目，确认第 3 步报告后停止，没有建出任何节点。
 - capture-todo：确认 frontmatter 带 `disable-model-invocation: true`，`agents/openai.yaml` 存在。
+- 不写死 schema：`grep -nE -- '--(title|description|priority|status|acceptance-criteria)|\b(low|medium|high|open|in_progress)\b' skills/agent-canvas/capture-intent/SKILL.md` 没有命中。
 
 ## 验收标准
 
