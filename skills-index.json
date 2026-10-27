@@ -363,10 +363,10 @@
       "contentVersion": "1.0.0"
     },
     {
-      "path": "coding/recap",
+      "path": "coding/full-recap",
       "bundle": "coding",
       "installScope": "global",
-      "contentHash": "c3b76275cd80b2d2",
+      "contentHash": "2a57204110b80c00",
       "contentVersion": "1.0.0"
     },
     {
