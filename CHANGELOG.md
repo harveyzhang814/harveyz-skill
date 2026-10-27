@@ -8,7 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- `capture-intent`：1.0.0，新 skill。把随口提出、以后要做的需求立成 Agent Canvas 需求节点（取代 capture-todo 在画布项目里的角色）：2-3 轮澄清 → 定目标画布（默认当前画布，点名别的项目时写到它已打开的画布，没开就停止）→ 运行时用 `describe-action` 读需求节点 schema，skill 里只写字段语义、不写死字段名和枚举 → `search-nodes` 查重 → 确认 → 写入。不连关系边、不放上画布
+- `capture-intent`：1.0.0，新 skill。把随口提出、以后要做的需求立成 Agent Canvas 需求节点（取代 capture-todo 在画布项目里的角色）：2-3 轮澄清 → 定目标画布（默认当前画布，点名别的项目时写到它已打开的画布，没开就停止）→ 运行时用 `describe-action` 读需求节点 schema，skill 里只写字段语义、不写死字段名和枚举 → `search-nodes` 查重 → 确认 → 写入。不连关系边、不放上画布。需配合内置 skill 清单已登记 capture-intent 的 Agent Canvas 应用；在那之前不要发布 capture-todo 4.6.0 的收窄，否则画布项目里随口记需求两个 skill 都不会触发
 
 ### Changed
 - `handoff`：升至 1.14.0，accept 阶段（Phase 3）在「跑最小验收锚点」之后新增「回归面核对」：用 `git diff $(git merge-base <集成分支> HEAD)..HEAD --name-only` 取实际改动面（不用 `<集成分支>..HEAD`，集成分支前进后会混入别人合入的改动），找被波及组件现有的回归测试、锚点没点名的也跑；红了先在分叉点上跑同一条命令归因——本次改动引入的按回归打回，既有的红在验收记录里写明；锚点遗漏记入验收记录，算写交接/验收一方的疏漏、不算接手方的。同时说明「唯一固定依据」指事先约定的判据，回归红是产品真的坏了，不算临时加判据。起因：agent-canvas 统一 PTY 注入那次，交接只点名新功能的 E2E，author 与 accept 都只跑点名项，原有回归合入后才被追问补测

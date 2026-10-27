@@ -30,7 +30,7 @@ version: "1.0.0"
   1. 跑 `agent-canvas-ctl --canvas /nonexistent resolve-canvas`。它必然以退出码 1 失败，stderr 逐行列出当前可用画布的绑定路径。
   2. 按项目名匹配其中一条路径；有多条候选就让用户选。
   3. 跑 `agent-canvas-ctl --canvas <路径> resolve-canvas`，退出码为 0 才算定下来。之后每条命令都在子命令**之前**带同一个 `--canvas <路径>`。
-- 清单里没有该项目 → 报告「<项目> 的画布没开，记不进去」，然后停止。不改写到别的画布，也不直接改 `~/.agent-canvas/` 下的文件。
+- 清单里没有该项目 → 报告「<项目> 的画布没开，记不进去」，然后停止。不改写到别的画布，不直接改 `~/.agent-canvas/` 下的文件，也不改写 TODO.md 或回退到 capture-todo。
 
 ## 3. 查 schema
 
@@ -61,12 +61,12 @@ agent-canvas-ctl describe-action create_requirement_node
 ## 5. 查重
 
 ```bash
-agent-canvas-ctl [--canvas <路径>] search-nodes <需求关键词> --limit 5
+agent-canvas-ctl [--canvas <路径>] search-nodes <需求关键词> --limit 20
 ```
 
 只看结果里 `kind` 为 requirement 的节点。有语义重叠时问：
 
-> 发现可能重叠的需求 **[标题]（[编号]）**，跳过还是仍然新建？
+> 发现可能重叠的需求 **[标题]**，跳过还是仍然新建？
 
 用户选跳过就到此结束。
 
@@ -74,7 +74,7 @@ agent-canvas-ctl [--canvas <路径>] search-nodes <需求关键词> --limit 5
 
 > 记录为：**[项目/画布]** — [标题]，[优先级]。确认吗？
 
-有枚举映射或被跳过的字段，一并列出。用户确认后才写入。
+第 3 步里有按相对位置映射的枚举、或对不上任何字段而被跳过的语义，一并列出；没传的可选字段不用列。用户确认后才写入。
 
 ## 7. 写入与报告
 
