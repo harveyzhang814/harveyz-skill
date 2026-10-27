@@ -8,6 +8,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed
+- `describe-node`：升至 2.0.0（不兼容旧做法）。Claude 节点改为不传 `--spec`，由 App 自己认 spec：先从本会话和画布收集证据，必要时在后台交给模型裁判挑一份。回执新增 `specStatus`（`given` / `resolved` / `pending` / `none`）；`pending` 时回执里 `specUsed` 为 null 属正常，不要重跑，最终结果看 `get-node` 的 `backgroundJob.specUsed`。回执里没有 `specStatus` 说明 App 是旧版，按旧规则显式传 `--spec`。Codex、pi 节点照旧一律显式传。需配合 Agent Canvas 8.5.1 之后的版本
+- `capture-requirement`：升至 2.0.0，说明 Claude 节点不传 `--spec` 时 `draft-requirement` 也会走证据加裁判，但立项仍应显式传 `--spec`：验收 spec 选错的代价比标题高
 - `handoff`：升至 1.14.0，accept 阶段（Phase 3）在「跑最小验收锚点」之后新增「回归面核对」：用 `git diff $(git merge-base <集成分支> HEAD)..HEAD --name-only` 取实际改动面（不用 `<集成分支>..HEAD`，集成分支前进后会混入别人合入的改动），找被波及组件现有的回归测试、锚点没点名的也跑；红了先在分叉点上跑同一条命令归因——本次改动引入的按回归打回，既有的红在验收记录里写明；锚点遗漏记入验收记录，算写交接/验收一方的疏漏、不算接手方的。同时说明「唯一固定依据」指事先约定的判据，回归红是产品真的坏了，不算临时加判据。起因：agent-canvas 统一 PTY 注入那次，交接只点名新功能的 E2E，author 与 accept 都只跑点名项，原有回归合入后才被追问补测
 
 ## [0.41.1] - 2026-10-14
