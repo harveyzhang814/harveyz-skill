@@ -71,6 +71,7 @@
     "skills/agent-canvas/describe-node/",
     "skills/agent-canvas/relate-node/",
     "skills/agent-canvas/capture-requirement/",
+    "skills/agent-canvas/capture-intent/",
     "skills/agent-canvas/relation-review/",
     "skills/agent-canvas/close-node/",
     "skills/agent-canvas/judge-release/",

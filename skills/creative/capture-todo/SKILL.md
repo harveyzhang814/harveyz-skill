@@ -1,8 +1,9 @@
 ---
 name: capture-todo
-version: "4.5.3"
+version: "4.6.0"
 user_invocable: true
-description: "Add a new requirement, task, or feature request to any project's TODO.md — from any working directory. Triggers whenever the user wants to capture a new need — even phrased casually like 'we should do X later', 'add this to the backlog', 'note this down', 'remember to build X', 'we need to do Y at some point', or 'record this for later'."
+description: "Manual invocation only: '/capture-todo'. Add a requirement, task, or feature request to a project's TODO.md from any working directory. In Agent Canvas projects use capture-intent instead, which files the need as a requirement node."
+disable-model-invocation: true
 ---
 
 # 写入 TODO
