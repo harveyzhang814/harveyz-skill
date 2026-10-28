@@ -2,7 +2,7 @@
 name: init-skill
 description: "Initialize a new skill from scratch in the harveyz-skill repo — scaffolds SKILL.md, directory structure, and a feature branch from a design spec or free-form notes. Applies the condensed skill design standard (16 philosophies + system mechanisms). Triggers: 'create new skill', 'scaffold a skill', 'init skill', 'bootstrap skill from notes', 'create skill from spec', 'help me start a new skill', 'initialize a skill'."
 user_invocable: true
-version: "1.3.0"
+version: "1.4.0"
 ---
 <!-- platform-standard-sha256: ad3d2f32f40cc282ef20bd3a19631a16f079839cc3e086a09b99011cc201fa2a -->
 
@@ -26,12 +26,6 @@ version: "1.3.0"
 
 ---
 
-## 参考标准
-
-Step 2 从当前已安装的 skill 目录读取两份本地标准：`references/skill-standard.md`（设计哲学与系统机制）和 `references/platform-adaptation.md`（跨宿主判定边界）。两者随本 skill 安装，不依赖源仓库的 `docs/` 路径。
-
----
-
 ## 执行流程（6 步）
 
 ### Step 0 — 需求澄清
@@ -43,10 +37,7 @@ Step 2 从当前已安装的 skill 目录读取两份本地标准：`references/
 - **命名偏好**：是否有指定名称，或由当前 agent 根据内容提出候选？
 - **目标宿主／有意限定范围**：是跨宿主使用，还是有意只服务某个宿主或研究对象？
 
-澄清策略：
-- 每次只问一个问题，不堆叠
-- 上下文能推断的不再问
-- 持续提问直到需求完整、无歧义为止
+澄清策略：一次一问；上下文能推断的不问；问到无歧义为止。
 
 只有需求明确后才进入 Step 1。
 
@@ -64,13 +55,13 @@ Step 2 从当前已安装的 skill 目录读取两份本地标准：`references/
 
 ### Step 2 — 提炼要素 + 标准检查
 
-**2a. 加载标准：** 从本 skill 的实际安装目录读取 `references/skill-standard.md` 与 `references/platform-adaptation.md`；若任一文件缺失，停止并报告装机不完整，不从个人固定目录猜测。读取路径由当前 skill 目录确定，不把字面量 `SKILL_DIR` 当路径执行。
+**2a. 加载标准：** 从本 skill 的实际安装目录读取 `references/skill-standard.md`（设计哲学与系统机制）与 `references/platform-adaptation.md`（跨宿主判定边界），两者随本 skill 安装，不依赖源仓库的 `docs/` 路径；若任一文件缺失，停止并报告装机不完整，不从个人固定目录猜测。读取路径由当前 skill 目录确定，不把字面量 `SKILL_DIR` 当路径执行。
 
 **2b. 提炼要素：** 从设计文档中提取以下字段：
 
 | 字段 | 提取值 | 规范约束 |
 |------|--------|---------|
-| `name` | `<verb>-<noun>` 格式 | 动词必须在标准词表中 |
+| `name` | 候选目录名 | 不在此校验命名规范（由 publish-skill F7/F9 检查） |
 | `bundle` | 从现有 bundleMeta 中选 | 可新建 |
 | `description` | 英文，含触发短语 | ≥ 10 字符，仅英文 |
 | 正文大纲 | 中文，核心步骤列表 | — |
@@ -131,13 +122,20 @@ version: "1.0.0"
 （2-4 条明确边界）
 ```
 
-若 skill 有领域或技术栈参考材料（查找表、模板、禁忌清单）且超过 20 行，按标准 Φ18 提取到 `references/<dim>/`；短小宿主差异写在共享正文的明确适配章节，较长的宿主工具、委派或 worktree 调用放 `platforms/SKILL.<host>.md`。共享正文保留任务顺序、授权点、失败条件以及能力缺失时的回退或安全停止；适配文件不得改写这些语义。没有真实差异就不创建空适配器，也不机械生成七份宿主文件。
+若 skill 有领域或技术栈参考材料（查找表、模板、禁忌清单）且超过 20 行，按标准「形式约定」提取到 `references/<dim>/`；短小宿主差异写在共享正文的明确适配章节，较长的宿主工具、委派或 worktree 调用放 `platforms/SKILL.<host>.md`。共享正文保留任务顺序、授权点、失败条件以及能力缺失时的回退或安全停止；适配文件不得改写这些语义。没有真实差异就不创建空适配器，也不机械生成七份宿主文件。
 
 将生成内容展示给用户预览。**等用户明确确认后才进入 Step 4。**
 
 ### Step 4 — 建立隔离工作区（仍不写 skill）
 
-先确认 Step 3 的完整预览已获用户明确同意。随后以仓库根目录为基准做只读检查：当前工作区必须干净，`staging` 必须可解析为明确提交，目标路径与目标分支不得已存在；脏工作区停止，目标路径已存在停止并提示更新已有 skill。宿主原生 worktree 入口只有能指定 `staging` 基线、独立分支和目标路径时才可使用；不能指定或绑定基线则回退到下列显式路径 Git 命令，回退也不可用时停止，不在当前 checkout 写入。
+前置（只读，在 REPO_ROOT）；任一不满足即停止：
+- Step 3 预览已获用户明确同意
+- 工作区干净（`status --porcelain` 为空），脏工作区停止
+- `staging` 可解析为提交
+- 目标路径已存在则停止，提示改为更新已有 skill；目标分支已存在同样停止
+- `.worktrees/` 被 git 忽略
+
+宿主原生 worktree 入口只有能指定 `staging` 基线、独立分支和目标路径时才可使用；不能指定或绑定基线则回退到下列 Git 命令，回退也不可用时停止，不在当前 checkout 写入。
 
 ```bash
 REPO_ROOT=$(git rev-parse --show-toplevel)
@@ -152,7 +150,7 @@ git -C "$WT" config core.hooksPath .githooks
 git -C "$WT" config merge.ff false
 ```
 
-`status` 必须为空、`branch --list` 必须为空，`check-ignore` 必须成功；任一条件不满足即停止。创建 worktree 后重新确认其分支名和 `skills/<category>/<name>/` 不存在。若创建或配置失败，保留现场并报告，不回到 `staging` 写文件。
+创建 worktree 后重新确认其分支名和 `skills/<category>/<name>/` 不存在。若创建或配置失败，保留现场并报告，不回到 `staging` 写文件。
 
 ### Step 5 — 在独立工作区写入并初始 commit
 

@@ -1,7 +1,7 @@
 # <品牌名> 设计系统
 
-> **文件用途：** 跨格式设计单一真相来源。供 `/design-derive` skill 读取后推导各输出格式的具体配置。
-> **生成方式：** 由 `/style-scout` 调查官网自动生成，或手动维护。
+> **文件用途：** 跨格式设计单一真相来源。供 `/build-style` 读取后推导各输出格式的具体配置。
+> **生成方式：** 由 `/scout-brand` 调查官网自动生成，或手动维护。
 > **来源页面：** <调查所用的主页 + 报告页 URL>
 
 ---
@@ -22,7 +22,7 @@
 >
 > - **Primitive**：调查得到的原始色值，按色相分组，不赋予语义
 > - **Semantic**：将 Primitive 映射到功能角色（交互 / 文字 / 表面 / 边框 / 状态 / 数据可视化）
-> - **Component**：将 Semantic 映射到具体组件属性，是 `/design-derive` 的直接读取来源
+> - **Component**：将 Semantic 映射到具体组件属性，是 `/build-style` 的直接读取来源
 >
 > 值使用 `{token-name}` 格式引用上层，避免重复写 hex。
 
@@ -119,7 +119,7 @@
 
 ### 2.3 Component Tokens（组件引用）
 
-> 颜色"用在哪"。**是 `/design-derive` 的直接读取来源。**
+> 颜色"用在哪"。**是 `/build-style` 的直接读取来源。**
 > 值引用 2.2 Semantic Tokens。
 >
 > **装饰线规则硬编码于此层：** heading 装饰线 → `{color.interactive.primary}`，
@@ -312,107 +312,4 @@
 - **图表背景：** 白色 / 透明 / `{color.surface.section}`
 - **图表字体：** 同正文 / 专用
 - **坐标轴 / 网格线颜色：** `{color.border.default}`
-- **Mermaid 节点颜色映射：** 见 9 节推导指南
-
----
-
-## 9. 各格式推导指南
-
-> `/design-derive` skill 读取 **2.3 Component Tokens** 解析色值（顺着引用链向上查）。
-> Primitive hex 是最终输出值，Semantic / Component 层只是引用路径。
-
-### 解析引用链示例
-
-```
-comp.heading.h1.deco-line
-  → {color.interactive.primary}
-    → {<hue>-400}
-      → #96F878   ← 最终写入 CSS / JSON 的值
-```
-
----
-
-### → DOCX（doc-forge style.json）
-
-| JSON 字段 | 读取 Token | 备注 |
-|-----------|-----------|------|
-| `headings.h1.color` | `comp.heading.h1.color` → resolve | hex，去掉 # |
-| `headings.h1.font_en` | 3.2 标题降级字体栈第一项 | |
-| `body.font` / `body.font_en` | 3.2 正文降级字体栈 | |
-| `table.border_mode` | 5.2 边框模式 | |
-| `table.rule_color` | `comp.table.border-header` → resolve | |
-| `table.accent_color` | `comp.table.accent-line` → resolve | rb 模式 |
-| `table.row_sep_color` | `comp.table.border-row` → resolve | rb 模式 |
-| `blockquote.color` | `comp.blockquote.color` → resolve | |
-| `body.first_line_indent_chars` | 4.3 首行缩进 | |
-
-### → PDF（doc-forge CSS）
-
-| CSS 属性 | 读取 Token | 备注 |
-|----------|-----------|------|
-| `h1 border-bottom color` | `comp.heading.h1.deco-line` → resolve | **非文字色** |
-| `h2 border-bottom color` | `comp.heading.h2.deco-line` → resolve | |
-| `h3 border-left color` | `comp.heading.h3.left-bar` → resolve | |
-| `blockquote border-left color` | `comp.blockquote.left-bar` → resolve | |
-| `pre background` | `comp.code.bg` → resolve | |
-| `pre border-left color` | `comp.code.left-bar` → resolve | |
-| `body font-family` | 3.2 正文降级栈 | |
-| `h1/h2 font-family` | 3.2 标题降级栈 | |
-
-### → HTML（CSS 自定义属性）
-
-```css
-:root {
-  /* Semantic 层直接导出为 CSS 变量 */
-  --color-interactive:     /* color.interactive.primary → resolve */;
-  --color-interactive-fg:  /* color.interactive.primary-fg → resolve */;
-  --color-text-heading:    /* color.text.heading → resolve */;
-  --color-text-body:       /* color.text.body → resolve */;
-  --color-text-muted:      /* color.text.muted → resolve */;
-  --color-text-link:       /* color.text.link → resolve */;
-  --color-surface-page:    #FFFFFF;
-  --color-surface-section: /* color.surface.section → resolve */;
-  --color-surface-card:    /* color.surface.card → resolve */;
-  --color-surface-dark:    /* color.surface.dark → resolve */;
-  --color-border:          /* color.border.default → resolve */;
-  --color-border-accent:   /* color.border.accent → resolve */;
-  --font-heading:          "...";  /* 3.2 标题降级栈 */
-  --font-body:             "...";  /* 3.2 正文降级栈 */
-  --font-mono:             "...";  /* 3.2 等宽栈 */
-  --space-unit:            8px;
-}
-```
-
-### → Mermaid（图表配色）
-
-```
-%%{init: {"theme": "base", "themeVariables": {
-  "primaryColor":        color.dataviz.1 → resolve,
-  "primaryBorderColor":  color.dataviz.1 略深 10%,
-  "secondaryColor":      color.dataviz.2 → resolve,
-  "tertiaryColor":       color.dataviz.3 → resolve,
-  "background":          color.surface.page → resolve,
-  "clusterBkg":          color.surface.section → resolve,
-  "titleColor":          color.text.heading → resolve,
-  "lineColor":           color.border.default → resolve
-}}}%%
-```
-
-- 深色节点（dataviz.1 若为深色）：`color:#fff`
-- 浅色节点（dataviz.1 若为浅色）：`color:#000`
-- 语义节点：`color.status.*` → resolve
-
-### → PPT（演示文稿主题）
-
-| 槽位 | 读取 Token |
-|------|-----------|
-| Color 1（深/文字） | `color.text.heading` → resolve |
-| Color 2（浅/背景） | `color.surface.page` |
-| Accent 1（主动作） | `color.interactive.primary` → resolve |
-| Accent 2 | `color.dataviz.2` → resolve |
-| Accent 3 | `color.dataviz.3` → resolve |
-| Accent 4 | `color.surface.section` → resolve |
-| 超链接 | `color.text.link` → resolve |
-
-- **标题幻灯片：** `color.surface.dark` 背景 + `color.text.inverse` 文字 + `color.interactive.primary` 装饰线
-- **内容幻灯片：** `color.surface.page` 背景 + `color.text.body` 正文 + `color.interactive.primary` 小面积点缀
+- **Mermaid 节点颜色映射：** 由 `/build-style` Step 6 推导

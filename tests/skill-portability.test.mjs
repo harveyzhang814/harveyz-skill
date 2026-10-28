@@ -36,8 +36,10 @@ test('learn-video: mode and script paths are host-neutral', async () => {
   assert.match(body, /\$SKILL_DIR\/scripts\/archive\.py/)
   assert.match(body, /\$SKILL_DIR\/scripts\/build_creator_index\.py/)
   assert.match(body, /不能可靠启动并追踪长期任务.*启动前.*停止/)
-  assert.match(body, /package\.json.*npm run agent:serve.*存在/)
   assert.doesNotMatch(body, /\$HOME\/Projects\/(harveyz-skill|Video-Learner)/)
+  const rerun = await readFile(resolve(root, 'skills/research/learn-video/references/rerun.md'), 'utf8')
+  assert.match(rerun, /package\.json.*npm run agent:serve.*存在/)
+  assert.doesNotMatch(rerun, /\$HOME\/Projects\/(harveyz-skill|Video-Learner)/)
 })
 
 test('extract-vision: delegation and vision have safe fallbacks', async () => {
@@ -97,12 +99,12 @@ test('runby-opencode: verify uses an explicit source and compare requires both a
 
 test('B portability release versions and index hashes match published SKILL.md content', async () => {
   const expectedVersions = new Map([
-    ['feed/sync-xtimeline', '0.8.4'],
-    ['feed/sync-ytchannel', '0.7.4'],
-    ['feed/sync-website', '0.2.3'],
-    ['coding/question-me', '3.0.2'],
+    ['feed/sync-xtimeline', '0.8.5'],
+    ['feed/sync-ytchannel', '0.7.5'],
+    ['feed/sync-website', '0.2.4'],
+    ['coding/question-me', '3.1.0'],
     ['coding/rephrase', '1.0.2'],
-    ['coding/init-project', '0.1.3'],
+    ['coding/init-project', '0.1.5'],
     ['mint/runby-opencode', '1.1.1'],
   ])
   const index = JSON.parse(await readFile(resolve(root, 'skills-index.json'), 'utf8'))

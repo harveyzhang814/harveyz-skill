@@ -2,24 +2,12 @@
 name: survey-skillrepo
 description: "Analyzes any skill repository (skills/ directory + SKILL.md format) using the 4-layer onion model. Produces a repo-level summary at {skillDir}/{repo-name}/analysis-{YYYY-MM-DD}.md, complementing learn-skill which handles per-skill deep analysis. Triggers: 'analyze this skill repo', 'do a systematic study of the skill repo', 'output skill repo analysis report', 'understand the design intent of this skill system'. Accepts optional path argument: /survey-skillrepo ~/path/to/repo."
 user_invocable: true
-version: "2.0.2"
+version: "2.1.0"
 ---
 
 # survey-skillrepo
 
-> **版本：** v2.0.0
-> **定位：** 对任意 skill 仓库进行系统性分析的工具 Skill
 > **关系：** 与 `learn-skill` 共享输出目录，两者是同一分析过程的两步
-
----
-
-## 触发条件
-
-- `/survey-skillrepo ~/path/to/repo`（带路径参数）
-- "分析这个 skill 仓库"
-- "对这个 skill 仓库做系统性研究"
-- "输出 skill 仓库的分析报告"
-- "理解这个 skill 系统的设计意图"
 
 ---
 
@@ -31,7 +19,7 @@ version: "2.0.2"
 1. 询问用户目标目录路径（建议默认值：`$HOME/Documents/skill-library`）
 2. 将用户输入的路径解析为绝对路径（展开 `~` 和 `$HOME`）
 3. 若目录不存在则创建
-4. 将解析后的绝对路径写入 `$HOME/.hskill/config.json`（文件不存在则新建）
+4. 写入 `$HOME/.hskill/config.json` 的 `skillDir` 字段（文件不存在则新建；已有其他字段时只增改 `skillDir`，不覆盖）
 
 **如果已存在**：直接使用，不打扰用户。
 
@@ -41,7 +29,7 @@ version: "2.0.2"
 
 按以下优先级确定目标路径：
 
-1. **带路径参数**（如 `/analyze-skill ~/path/to/skill-repo`）→ 直接使用该路径
+1. **带路径参数**（如 `/survey-skillrepo ~/path/to/repo`）→ 直接使用该路径
 2. **无参数**：检测当前目录是否包含 `skills/` 子目录且其中有 SKILL.md 文件 → 是则直接使用
 3. **检测不到**：询问用户输入目标仓库路径
 
@@ -74,8 +62,7 @@ version: "2.0.2"
 
 ### 目录覆盖
 - [ ] 所有子目录均已列出实际文件清单
-
-**执行前必须读取 `references/prohibitions.md`**
+- [ ] 列出的每个文件都已验证存在
 
 ---
 
@@ -139,17 +126,17 @@ CHANGELOG.md                        （版本演进反推设计决策变化）
 
 基于 `learn-skill` 的输出，聚合以下分析：
 
-**工具权限矩阵**：从每个 skill 的 SKILL.md `allowed-tools` 字段动态读取，构建矩阵表格。数据必须从实际文件读取，不得推断。
+**工具权限矩阵**：从每个 skill 的 SKILL.md `allowed-tools` 字段动态读取，构建矩阵表格。数据必须从实际文件读取，不得推断，不得取自 `.tmpl` 或记忆；正文描述不得与矩阵矛盾。
 
 | Skill | Bash | Read | Write | Edit | Glob | Grep | Agent | AskUserQ | WebSearch |
 |-------|------|------|-------|------|------|------|-------|---------|-----------|
 
-**三类交互关系**：
+**三类交互关系（不得混淆）**：
 - **自动触发**：某 skill 执行时确定性地调用另一个 skill
 - **建议序列**：推荐的 skill 使用顺序
 - **前置配置**：运行时依赖（如 config 文件、已安装工具等）
 
-**依赖结构图**：skill 之间的调用关系（如 `analyze-skill` → `learn-skill`）
+**依赖结构图**：skill 之间的调用关系（如 `survey-skillrepo` → `learn-skill`）
 
 ---
 
@@ -173,7 +160,6 @@ CHANGELOG.md                        （版本演进反推设计决策变化）
 将报告保存至 `{skillDir}/{repo-name}/analysis-{YYYY-MM-DD}.md`，同名文件存在时直接覆盖。
 
 - `skillDir`：config.json 中的绝对路径
-- `repo-name`：`basename $(git rev-parse --show-toplevel)` 取得；非 git 仓库则使用目录名
 - `date`：YYYY-MM-DD 格式
 
 文件结构：
@@ -195,6 +181,3 @@ skills_count: {发现的 skill 总数}
 - 发现的 skill 数量
 - learn-skill 已生成的个别分析文件列表
 
----
-
-*survey-skillrepo v2.0.0 | 2026-06-19*

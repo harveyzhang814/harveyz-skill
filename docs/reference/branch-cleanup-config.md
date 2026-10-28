@@ -1,4 +1,4 @@
-# .claude/branch-cleanup.md 配置格式
+# .hskill/clean-git/branch-cleanup.md 配置格式
 
 `git-cleanup` skill 在项目根目录查找此文件，按其中规则对本地分支分类。文件不存在时 skill 使用内置默认规则运行，结束后提示生成。
 

@@ -9,6 +9,12 @@ methodology: diataxis
 | 文件 | 用途 |
 |------|------|
 
+## product/ — 产品需求
+
+| 文件 | 用途 |
+|------|------|
+| [product/PRD.md](product/PRD.md) | init-spec 的目标、功能边界与验证依据 |
+
 ## how-to/ — 操作指南
 
 | 文件 | 用途 |
@@ -33,7 +39,7 @@ methodology: diataxis
 | [reference/git-branch-rules.md](reference/git-branch-rules.md) | 分支模型、分支定义、命名规则、违规行为表（v1.0.0） |
 | [reference/agent-cli-guide.md](reference/agent-cli-guide.md) | AI agent / CI 脚本调用 hskill 的完整参考（JSON 输出格式、info 子命令、hooks 子命令、bundle 子命令、uninstall、upgrade、非 TTY 行为） |
 | [reference/testing-guide.md](reference/testing-guide.md) | hskill 测试文件结构、bats 写法规范、hooks.bats 场景、hook 脚本验收测试模式 |
-| [reference/branch-cleanup-config.md](reference/branch-cleanup-config.md) | `.claude/branch-cleanup.md` 格式规范：Always Delete / Keep glob 规则、LLM 上下文段、内置默认值 |
+| [reference/branch-cleanup-config.md](reference/branch-cleanup-config.md) | `.hskill/clean-git/branch-cleanup.md` 格式规范：Always Delete / Keep glob 规则、LLM 上下文段、内置默认值 |
 | [reference/hskill-cache.md](reference/hskill-cache.md) | hskill 本地缓存命令接口（cache clear/status/set-ttl）、缓存文件字段定义、失效规则 |
 | [reference/hotfix-lifecycle.md](reference/hotfix-lifecycle.md) | HOTFIXES.md 格式规范（字段定义、编号规则）、fix-skill 自动写入行为、sync-hotfix 合并回源工作流 |
 | [reference/hub-reference.md](reference/hub-reference.md) | hub CLI 完整参考：projects/tasks/git 子命令、所有参数、JSON 输出格式、错误格式 |
@@ -46,6 +52,7 @@ methodology: diataxis
 | 文件 | 用途 |
 |------|------|
 | [reports/2026-09-24-published-skill-platform-audit.md](reports/2026-09-24-published-skill-platform-audit.md) | 按平台适配标准逐项评估 52 个已发布 skill，并给出分批处理建议 |
+| [reports/2026-10-17-brainstorming-rewrite-analysis.md](reports/2026-10-17-brainstorming-rewrite-analysis.md) | brainstorming-zh 初版的制作、原版流程与审阅基线 |
 
 ## adr/ — 架构决策记录
 

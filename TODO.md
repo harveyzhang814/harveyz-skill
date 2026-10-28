@@ -41,7 +41,7 @@ extract-url 目前用集中式 SQLite（`url-index.db`）维护所有文章的�
 
 ---
 
-### handoff 验收新增回归面核对
+### [x] handoff 验收新增回归面核对
 **优先级**: P2 | **日期**: 2026-10-13
 
 `handoff` skill 的 accept 阶段（Phase 3）目前只跑交接文档里点名的最小验收锚点，锚点没点名的既有回归测试没有任何环节会去跑。agent-canvas 10-09「统一 PTY 注入」那次：交接锚点只点名了新功能的 6 条 E2E，没有回归草稿框原有的 12 个 E2E，author 和 accept 都只跑锚点点名的，合入 staging 后才被追问补测，补测又查出 4 个脚本因新锚点过时、3 个是 harness 既有的红。

@@ -1,6 +1,6 @@
 ---
 name: fix-skill
-version: "2.1.0"
+version: "2.1.1"
 description: "Diagnose and fix errors in any skill file autonomously. Called automatically by other skills on failure. Attempts up to 3 rounds of AI-driven diagnosis and repair, accumulating context across rounds. Writes a fix session document in real time. On success, notifies caller to auto-retry. On all-round failure, restores the original file and preserves the full diagnosis record."
 user_invocable: false
 ---
@@ -144,10 +144,4 @@ ATTEMPTS: <N>
 
 ## 调用方响应约定
 
-| FIX_RESULT | 行为 |
-|------------|------|
-| `AUTO_RETRY` | 重试原失败步骤（仅一次）；通知用户「已自动修复，共 N 轮，记录见 SESSION_PATH」 |
-| `FAILURE` | 报告原始错误 + 「已尝试 3 轮均失败，已回滚，记录见 SESSION_PATH」 |
-| `FAILURE+RESTORE_FAILED` | 立即告警：「修复失败且还原异常，file 状态不可知，backup 保留，请手动处理，记录见 SESSION_PATH」 |
-
-其他 skill 集成 fix-skill 时，参考 `references/caller-integration-template.md`（含标准步骤片段和根因文件判断指引）。
+调用方按 `FIX_RESULT` 的响应方式见 `references/caller-integration-template.md`（含标准步骤片段和根因文件判断指引）。

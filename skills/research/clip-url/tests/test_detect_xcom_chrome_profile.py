@@ -35,12 +35,12 @@ def _run(chrome_base: Path, data_dir: Path) -> str:
     return result.stdout
 
 
-def test_no_chrome_dir_reports_none_found(tmp_path):
+def test_no_chrome_dir_reports_none_found(tmp_path, require_browser_fetch_cli):
     output = _run(tmp_path / "NoChromeHere", tmp_path / "data")
     assert "RECOMMENDED_PROFILE: (none found)" in output
 
 
-def test_profile_with_no_cookies_db_reports_none_found(tmp_path):
+def test_profile_with_no_cookies_db_reports_none_found(tmp_path, require_browser_fetch_cli):
     chrome_base = tmp_path / "Chrome"
     (chrome_base / "Default").mkdir(parents=True)
     output = _run(chrome_base, tmp_path / "data")
@@ -48,7 +48,7 @@ def test_profile_with_no_cookies_db_reports_none_found(tmp_path):
     assert "RECOMMENDED_PROFILE: (none found)" in output
 
 
-def test_profile_with_auth_cookies_is_recommended(tmp_path):
+def test_profile_with_auth_cookies_is_recommended(tmp_path, require_browser_fetch_cli):
     chrome_base = tmp_path / "Chrome"
     default_dir = chrome_base / "Default"
     default_dir.mkdir(parents=True)
@@ -63,7 +63,7 @@ def test_profile_with_auth_cookies_is_recommended(tmp_path):
     assert "some_other_cookie" not in output
 
 
-def test_profile_with_unrelated_cookies_only_is_not_recommended(tmp_path):
+def test_profile_with_unrelated_cookies_only_is_not_recommended(tmp_path, require_browser_fetch_cli):
     chrome_base = tmp_path / "Chrome"
     default_dir = chrome_base / "Default"
     default_dir.mkdir(parents=True)

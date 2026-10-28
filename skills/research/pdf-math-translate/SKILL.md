@@ -2,7 +2,7 @@
 name: pdf-math-translate
 description: "PDFMathTranslate: translates scientific paper PDFs into Chinese, exporting to Markdown/Word. Produces both bilingual and translation-only outputs. Supports 24 translation services including Google/DeepL/OpenAI. On first use, auto-detects the local CLI path and capabilities and writes them to ~/.hskill/pdf-math-translate/config.md. One of Harvey's frequently used tools."
 user_invocable: true
-version: "2.0.0"
+version: "2.0.1"
 author: Hermes Agent
 license: MIT
 platforms: [macos, linux]
@@ -28,56 +28,16 @@ ls "$HOME/.hskill/pdf-math-translate/config.md" 2>/dev/null && echo "EXISTS" || 
 
 ## Init 阶段（仅首次运行）
 
-依次执行以下探测命令，不实际运行翻译：
+依次执行以下探测，不实际运行翻译：
 
-### 1. 定位 CLI 二进制
-
-```bash
-which pdf2zh
-```
-
-### 2. 解析实际 Python 解释器
-
-```bash
-head -1 "$(which pdf2zh)"
-```
-
-shebang 行给出实际 Python 解释器路径。
-
-### 3. 探测安装方式与源码路径
-
-```bash
-PY="<上一步解出的解释器路径>"
-$PY -c "import pdf2zh; print(pdf2zh.__file__)"
-```
-
-- 若返回路径包含 `site-packages`：普通安装，无源码仓库路径
-- 若返回路径不包含 `site-packages`（指向某个仓库目录）：editable install，记录该仓库根路径
-
-### 4. 记录版本号
-
-```bash
-pdf2zh --version
-```
-
-### 5. 探测 precise 模式可用性
-
-```bash
-$PY -c "import pdf2zh_next" 2>&1
-```
-
-- 无报错 → precise 模式可用
-- `ModuleNotFoundError` → 只有 fast 模式可用
-
-### 6. 探测 PYTHONPATH 冲突风险
-
-```bash
-echo "$PYTHONPATH"
-```
-
-- 为空 → 无风险
-- 非空但指向的 venv 与 `$PY` 版本一致 → 无风险
-- 非空且指向其他 Python 版本的 venv/site-packages → 记录为风险，规避方法是执行 pdf2zh 前 `unset PYTHONPATH`
+| # | 探测 | 命令 | 判定 / 记录 |
+|---|---|---|---|
+| 1 | CLI 路径 | `which pdf2zh` | 记录路径 |
+| 2 | 解释器 | `head -1 "$(which pdf2zh)"` | shebang 给出的解释器路径，记为 `$PY` |
+| 3 | 安装方式 | `$PY -c "import pdf2zh; print(pdf2zh.__file__)"` | 路径含 `site-packages` 为 regular install；否则为 editable install，记录该仓库根路径 |
+| 4 | 版本 | `pdf2zh --version` | 记录版本号 |
+| 5 | precise 模式 | `$PY -c "import pdf2zh_next" 2>&1` | 无报错为可用；`ModuleNotFoundError` 为不可用（只有 fast） |
+| 6 | PYTHONPATH | `echo "$PYTHONPATH"` | 非空且指向其他 Python 版本的 venv/site-packages 时记为风险，规避方法是执行 pdf2zh 前 `unset PYTHONPATH`；其余情况为无风险 |
 
 ### 7. 询问用户默认输出目录
 
@@ -167,43 +127,12 @@ pdf2zh document.pdf --word --no-pdf -o <输出目录>
 - 自动隐含 `--extract-elements`
 - 与 `--markdown` 互斥
 
-### 完整参数表
+### 常用参数
 
-| 参数 | 说明 |
-|------|------|
-| `--lang-in` / `-li` | 源语言代码 |
-| `--lang-out` / `-lo` | 目标语言代码 |
-| `--service` / `-s` | 翻译服务（见下方服务列表），默认 `google` |
-| `--output` / `-o` | 输出目录 |
-| `--mode` | `fast`（默认，v1）/ `precise`（v2，需要 `pdf2zh_next`，本机是否可用见 config.md） |
-| `--pages` / `-p` | 指定翻译的页码列表 |
-| `--thread` / `-t` | 翻译并发线程数 |
-| `--extract-elements` | 提取图表为独立图片文件（`--word`/`--markdown` 会自动隐含） |
-| `--elements-output-dir` | 提取元素的输出目录，不指定则与翻译后 PDF 同目录 |
-| `--markdown` | 导出为 Markdown（互斥于 `--word`） |
-| `--word` | 导出为 Word .docx（互斥于 `--markdown`） |
-| `--no-pdf` | 配合 `--word` 使用，丢弃中间 mono/dual PDF，只保留 docx |
-| `--compatible` / `-cp` | 转换为 PDF/A 格式提升兼容性 |
-| `--skip-subset-fonts` | 跳过字体子集化，提升兼容性但增大文件体积 |
-| `--ignore-cache` | 忽略缓存，强制重新翻译 |
-| `--config` | 指定配置文件路径 |
-| `--mcp` | 以 STDIO 模式启动 MCP server |
-| `--sse` | 以 SSE 模式启动 MCP server |
-| `--dir` | 翻译整个目录 |
-| `--debug` / `-d` | debug 日志级别 |
-
-### 支持的翻译服务
-
-`google`（默认）、`bing`、`deepl`、`deeplx`、`ollama`、`xinference`、`openai`、`azure-openai`、`azure`、`modelscope`、`zhipu`、`silicon`、`302ai`、`gemini`、`tencent`、`anythingllm`、`dify`、`argos`、`grok`、`groq`、`deepseek`、`minimax`、`openailiked`、`qwen-mt`
-
-### 语言对说明
-
-- 中译英：`ZH-EN`
-- 英译中：`EN-ZH`
+`-o` 输出目录；`--lang-in` / `--lang-out`（默认 `en` → `zh`）；`--service`（默认 `google`）；`--mode fast|precise`；`--pages`；`--markdown` 与 `--word` 互斥；`--no-pdf` 只配合 `--word` 使用。其他参数和服务列表以 `pdf2zh --help` 为准。
 
 ## 注意事项
 
-- **首次运行**：自动下载 ONNX 模型（约 300MB），缓存在 `~/.paddlex/`
+- **首次运行**：自动下载版面模型，缓存在 `~/.cache/babeldoc/`
 - **elements 目录**：Markdown/Word 导出的必要中间产物，保留
-- **precise 模式**：依赖 `pdf2zh_next`，是否已安装以本机 config.md 为准，未安装时只能用 `fast` 模式
 - 安装问题：`pip install -e .` 可能因 babeldoc 版本冲突失败，优先使用已有工具链

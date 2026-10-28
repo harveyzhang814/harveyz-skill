@@ -14,7 +14,7 @@ NODE="$(which node)"
 
 SKILL1_NAME="survey-skillrepo"
 SKILL1_SRC="${REPO_ROOT}/skills/research/survey-skillrepo"
-SKILL1_VER="2.0.2"
+SKILL1_VER="2.1.0"
 
 SKILL2_NAME="manage-dir"
 SKILL2_SRC="${REPO_ROOT}/skills/writing/manage-dir"
@@ -220,7 +220,7 @@ _uninstall() {
 @test "install --skill: sync-hotfix installs SKILL.md to claude skills dir" {
   _install --skill sync-hotfix --target claude --scope user --force
   [ -f "${MOCK_HOME}/.claude/skills/sync-hotfix/SKILL.md" ]
-  [ "$(_skill_version "${MOCK_HOME}/.claude/skills/sync-hotfix/SKILL.md")" = "1.1.1" ]
+  [ "$(_skill_version "${MOCK_HOME}/.claude/skills/sync-hotfix/SKILL.md")" = "1.1.2" ]
 }
 
 @test "install --tool: roster lands a launcher and its package" {

@@ -1,17 +1,14 @@
 ---
 name: capture-todo
-version: "4.5.1"
+version: "4.6.0"
 user_invocable: true
-description: "Add a new requirement, task, or feature request to any project's TODO.md — from any working directory. Triggers whenever the user wants to capture a new need — even phrased casually like 'we should do X later', 'add this to the backlog', 'note this down', 'remember to build X', 'we need to do Y at some point', or 'record this for later'."
+description: "Manual invocation only: '/capture-todo'. Add a requirement, task, or feature request to a project's TODO.md from any working directory. In Agent Canvas projects use capture-intent instead, which files the need as a requirement node."
+disable-model-invocation: true
 ---
 
 # 写入 TODO
 
-快速捕获需求：先用 2-3 个问题把需求说清楚，再根据完整的需求信息匹配项目、生成标题，最后写入 TODO.md。
-
-## 核心原则
-
-**先把需求说清楚，再定项目归属。** 完整的需求描述是项目匹配最好的材料。问题只聚焦需求本身，不聚焦方案。够写一条清晰的任务条目就停，不要拖长。
+快速捕获需求：先用 2-3 个问题澄清需求（只问需求、不问方案，够写一条清晰条目就停），再据此匹配项目、生成标题，最后写入 TODO.md。顺序不能反：完整的需求描述是匹配项目的依据。
 
 ---
 
@@ -26,25 +23,18 @@ description: "Add a new requirement, task, or feature request to any project's T
 **提问方式：**
 - 每次只问一个问题
 - 优先给选项而非开放题："这个更像 (A) 缺失功能 还是 (B) 现有功能的问题？"
-- 2 轮够用时不要凑到 3 轮
 
 ---
 
 ## 阶段二 — 确认项目归属
 
-需求收集完毕后，用 Read 工具读取项目注册表：
-
-```
-~/.hskill/todo-tool/PROJECTS.md
-```
-
-同时用 Bash 运行 `pwd` 获取当前目录。
+需求收集完毕后，读取项目注册表 `~/.hskill/todo-tool/PROJECTS.md`，并取当前工作目录。注册表每条是 `- **项目名** \`本地路径\`` 加一行描述，下文的 `local_path` 指这个路径。
 
 ### 匹配逻辑
 
 综合以下信号推断候选项目：
 
-1. **当前目录**：`pwd` 输出是否是某个项目 `local_path` 的子路径 → 强信号
+1. **当前目录**：当前工作目录是否是某个项目 `local_path` 的子路径 → 强信号
 2. **需求关键词 + 项目描述**：需求描述中的词汇是否与项目名或描述匹配 → 中信号
 3. **语义推断**：需求内容在哪个项目的业务范围内 → 弱信号
 
@@ -52,20 +42,15 @@ description: "Add a new requirement, task, or feature request to any project's T
 
 | 情况 | 行动 |
 |------|------|
-| 唯一高置信匹配 | 告知并请确认："这是 **[项目名]** 的需求，对吗？" |
+| 强信号命中，或仅一个项目有中信号 | 告知并请确认："这是 **[项目名]** 的需求，对吗？" |
 | 2-3 个候选 | 列出候选，请用户选择 |
 | 无匹配或不确定 | 展示完整项目列表，让用户选 |
-
-> **谨慎原则**：宁可多问一次，不写入错误项目。
 
 ### 生成标题
 
 项目确认后，根据完整需求生成任务标题：
 
-- 祈使句，动词开头，直接说明要做什么
-- ≤20 字，超出则提炼核心、去掉修饰语
-- 足够具体，让人一眼看出任务核心，避免泛泛的"优化"、"修复"
-- 不堆砌细节，只抓最关键的区分点
+祈使句、动词开头、≤20 字（超了就去掉修饰语）；写出关键区分点，不用"优化""修复"这类泛词，也不堆细节。
 
 **示例：**
 - ✗ "优化系统" → ✓ "重构视频解析模块以支持多格式输入"
@@ -103,7 +88,8 @@ if git show-ref --verify --quiet refs/heads/staging; then
   BASE_BRANCH=staging
 else
   BASE_BRANCH=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null \
-                | sed 's@^refs/remotes/origin/@@' || echo "main")
+                | sed 's@^refs/remotes/origin/@@')
+  BASE_BRANCH=${BASE_BRANCH:-main}
 fi
 
 # 3. 切换到 chore/todo（不存在则从 BASE_BRANCH 创建）
@@ -116,7 +102,7 @@ fi
 
 **非 git 仓库**：若 `local_path` 不在 git 仓库中，跳过此步骤，直接写入文件。
 
-**BRANCH_GUARD hook**：执行 `git checkout -b chore/todo` 时，BRANCH_GUARD hook 可能会提示与其他分支语义相似。`chore/todo` 是永久追踪分支，不是功能分支，**直接确认新建，忽略相似分支警告**，继续执行后续步骤。
+**BRANCH_GUARD hook**：新建 `chore/todo` 时若 BRANCH_GUARD hook 提示有相似分支，**直接确认新建**，它是永久追踪分支，不是功能分支。
 
 ### 重复检查
 
@@ -160,9 +146,7 @@ git add TODO.md
 git commit -m "todo: add [任务标题]"
 
 # 2. 合并到 staging（或主分支）
-# --no-commit 让 git 自动写入标准格式的 MERGE_MSG（Merge branch 'chore/todo'），
-# 满足 pre-commit 的分支来源校验；再用 -m 传 Conventional Commits 格式，
-# 满足 commit-msg 校验。两路分开处理，避免双 hook 冲突。
+# 分两步：--no-commit 保留标准 MERGE_MSG 以通过 pre-commit，-m 用 Conventional Commits 以通过 commit-msg
 git checkout "$BASE_BRANCH"
 git merge --no-ff --no-commit chore/todo
 git commit -m "chore(todo): add [任务标题]"

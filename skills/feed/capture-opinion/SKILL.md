@@ -1,7 +1,7 @@
 ---
 name: capture-opinion
-version: "0.2.0"
-description: "Record your own judgment about a specific creator already on the roster. You say what you think of them, this skill tidies it into points, stamps it with the current time, shows it back for confirmation, then appends it to that creator's profile. Trigger phrases: '/capture-opinion <name>', '/capture-opinion', 'I have a take on this blogger', 'let me note down what I think of <name>', 'what do I think of <name>', 'show me my profile of <name>'. Scoped to people on the roster — a standalone insight not tied to a watched creator is capture-insight, and adding or removing a watched channel is manage-creators. Running an incremental fetch is sync-xtimeline / sync-ytchannel. Never saves to Obsidian and never tags — saving an article or tweet is clip-url."
+version: "0.2.1"
+description: "Record your own judgment about a specific creator already on the roster. You say what you think of them, this skill tidies it into points, stamps it with the current time, shows it back for confirmation, then appends it to that creator's profile. Trigger phrases: '/capture-opinion <name>', '/capture-opinion', 'I have a take on this blogger', 'let me note down what I think of <name>', 'what do I think of <name>', 'show me my profile of <name>'. Scoped to people on the roster — a standalone insight not tied to a watched creator is capture-insight, and adding or removing a watched channel is manage-creators. Running an incremental fetch is sync-xtimeline / sync-ytchannel / sync-website. Never saves to Obsidian and never tags — saving an article or tweet is clip-url."
 user_invocable: true
 ---
 
@@ -69,9 +69,9 @@ date "+%Y-%m-%d %H:%M"
 EOF
 ```
 
-正文走 stdin，不要塞进 `--body`——归纳后的多行 Markdown 走命令行参数会被引号和换行搞坏。
+正文走 stdin，不用 `--body`（多行 Markdown 放进命令行参数会被引号和换行搞坏）。
 
-依据默认记成 `人工`，这个值同时就是作者标记（将来 agent 自己写的观察会填真实来源）。**只有用户主动说了这一笔是看了什么才来的**（比如给了一条推文链接），才加 `--source "<用户给的来源>"`。
+依据默认记成 `人工`（同时作为作者标记）。**只有用户主动说了这一笔是看了什么才来的**（比如给了一条推文链接），才加 `--source "<用户给的来源>"`。
 
 成功输出 `OK <画像文件路径>`，把路径转告用户。
 
@@ -85,18 +85,15 @@ EOF
 
 ## 边界
 
-不抓取、不翻译、不写名册、不改游标、不进 Obsidian、不打标。
-
-关注谁走 [manage-creators](../manage-creators/)，跑一次增量抓取走 [sync-xtimeline](../sync-xtimeline/) 或 [sync-ytchannel](../sync-ytchannel/)，单条物料入库走 [clip-url](../../research/clip-url/)。
+关注谁走 [manage-creators](../manage-creators/)，跑一次增量抓取走 [sync-xtimeline](../sync-xtimeline/)、[sync-ytchannel](../sync-ytchannel/) 或 [sync-website](../sync-website/)，单条物料入库走 [clip-url](../../research/clip-url/)。
 
 **跟 [capture-insight](../../creative/capture-insight/) 的分界是观察对象**：这一笔是冲着名册上某个具体的人去的，才归这里；不挂在任何人身上的独立想法归 capture-insight。判断不了就问用户，不要自己挑一个。
 
-「当前判断」那一段（从观察重算出一句总结）现在还没有入口，观察攒够了再说。
-
-两个已知限制，用户问起时如实说：
+三个已知限制，用户问起时如实说：
 
 - 写盘是全文件重写，没有加锁。你在编辑器里手改画像的同时跑这个 skill，后落盘的赢。
 - 新条目固定插在最前，不按时间戳重排。补录一条旧时间的观察，它会出现在最上面。
+- 画像的「当前判断」段（从观察重算一句总结）还没有入口，用户要求时如实说做不到。
 
 设计文档：`docs/superpowers/specs/2026-08-26-creator-channel-registry-design.md`。
 

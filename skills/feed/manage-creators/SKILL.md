@@ -1,13 +1,13 @@
 ---
 name: manage-creators
-version: "0.3.1"
-description: "Maintain the roster of watched creators and their channels — the shared watchlist behind sync-xtimeline and sync-ytchannel. Add a channel URL, merge two handles that turn out to be the same person, rename a placeholder, view the roster with cursor state. Trigger phrases: '/manage-creators add <url>', '/manage-creators list', '/manage-creators merge <a> <b>', '/manage-creators rename <id> <name>', '/manage-creators remove <id>', 'watch this X account', 'watch this YouTube channel', 'who am I following'. Does not fetch anything — running an incremental fetch is sync-xtimeline / sync-ytchannel; writing a creator's profile is the cognition layer."
+version: "0.3.2"
+description: "Maintain the roster of watched creators and their channels — the shared watchlist behind sync-xtimeline, sync-ytchannel and sync-website. Add a channel URL, merge two handles that turn out to be the same person, rename a placeholder, view the roster with cursor state. Trigger phrases: '/manage-creators add <url>', '/manage-creators list', '/manage-creators merge <a> <b>', '/manage-creators rename <id> <name>', '/manage-creators remove <id>', 'watch this X account', 'watch this YouTube channel', 'who am I following'. Does not fetch anything — running an incremental fetch is sync-xtimeline / sync-ytchannel / sync-website; writing a creator's profile is the cognition layer."
 user_invocable: true
 ---
 
 # manage-creators
 
-维护"关注了哪些人、每个人有哪些渠道"这份名册。抓取本身不归它管——`sync-xtimeline` 和 `sync-ytchannel` 从这份名册读渠道列表去抓。
+维护"关注了哪些人、每个人有哪些渠道"这份名册。抓取本身不归它管——`sync-xtimeline`、`sync-ytchannel`、`sync-website` 从这份名册读渠道列表去抓。
 
 **渠道必属于一个人。** 机构号、聚合频道也当人处理。`add` 会自动建一个占位人（名字先用 handle 顶着），之后用 `merge` 把"这俩 handle 其实是同一个人"合起来。
 
@@ -31,24 +31,9 @@ ls ~/.hskill/roster/config.json 2>/dev/null && echo "EXISTS" || echo "NOT_FOUND"
 
 1. 询问用户名册数据要存在哪个目录（`DATA_DIR`，必须由用户手动提供，不得猜测）。可建议默认值 `~/.hskill/roster`。提醒用户：这个目录里的画像文件是累积出来的、删了长不回来，值得跟笔记一样对待（`registry.json` 和 `state.json` 都可重建，画像不能）。
 2. 运行 `<roster_path> init <DATA_DIR>`。
+3. 若 `~/.hskill/sync-xtimeline/config.json` 或 `~/.hskill/sync-ytchannel/config.json` 存在（旧版关注列表），问用户一次是否迁移；同意就读 `references/migration.md` 执行。迁移后**不要自己替用户 `merge`**，只列出名字相近的候选对，交给用户确认。
 
-**若用户此前用过 sync-xtimeline / sync-ytchannel**，初始化后问一次是否迁移旧关注列表：
-
-```bash
-<roster_path> migrate \
-  --from-xtimeline "$(python3 -c "import json,pathlib;print(pathlib.Path(json.loads((pathlib.Path.home()/'.hskill/sync-xtimeline/config.json').read_text())['DATA_DIR']).expanduser()/'watchlist.json')")" \
-  --from-ytchannel "$(python3 -c "import json,pathlib;print(pathlib.Path(json.loads((pathlib.Path.home()/'.hskill/sync-ytchannel/config.json').read_text())['DATA_DIR']).expanduser()/'watchlist.json')")"
-```
-
-任一旧配置不存在就省掉对应的参数。迁移是幂等的，重复跑安全。迁移后告诉用户：每个 handle 现在各自是一个人，同一个人的 X 和 YouTube 需要用 `merge` 合并，并主动列出名字相近的候选对给用户确认——**不要自己替用户合并**。
-
-**若已有名册是旧 schema（`registry.json` 里的渠道没有 `key` 字段）**，先跑一次：
-
-```bash
-<roster_path> migrate-schema
-```
-
-幂等，可重复跑。升级后名册按归一 `key` 去重，`state.json` 的游标键也同步改写成归一形态——不跑这一步，新版 roster 找旧游标会找不到，表现为该渠道被当成新渠道重刷一次基线。
+**roster 命令报「名册数据是旧 schema」时**，运行 `<roster_path> migrate-schema`（幂等），然后重跑原命令。
 
 ## 用法
 
@@ -56,7 +41,7 @@ ls ~/.hskill/roster/config.json 2>/dev/null && echo "EXISTS" || echo "NOT_FOUND"
 
 | 用户说 | 运行 | 报告 |
 |---|---|---|
-| `add <url>` | `<roster> registry add <url>` | `OK <id> <platform>:<handle>` → 告知已加入，并提示这是占位人、可用 `rename` 填正式名字。`add` 现在也吃网站文章列表页 URL（`platform` 会是 `website`）。渠道按归一后的 key（去 `@`、trim、转小写）去重——同一个频道换个大小写的链接再 `add` 一次会报"已在名册中"，不会建出第二个人 |
+| `add <url>` | `<roster> registry add <url>` | `OK <id> <platform>:<handle>` → 告知已加入，并提示这是占位人、可用 `rename` 填正式名字。支持 X、YouTube、网站列表页 URL（后者 `platform` 为 `website`）。渠道按归一 key（去 `@`、trim、小写）去重，重复时报"已在名册中"。 |
 | `list` | `<roster> registry list` | 原样展示。`EMPTY` 表示还没关注任何人 |
 | `merge <a> <b>` | `<roster> registry merge <a> <b>` | `OK merged b into a` → 告知 b 的 id 已进 aliases，旧引用仍可查到 |
 | `rename <id> <name>` | `<roster> registry rename <id> <name>` | `OK` |
@@ -67,7 +52,7 @@ ls ~/.hskill/roster/config.json 2>/dev/null && echo "EXISTS" || echo "NOT_FOUND"
 
 ## 边界
 
-不抓取、不翻译、不写画像、不进 Obsidian。跑一次增量抓取走 [sync-xtimeline](../sync-xtimeline/) 或 [sync-ytchannel](../sync-ytchannel/)。单条物料入库走 [clip-url](../../research/clip-url/)，单个视频精读走 [learn-video](../../research/learn-video/)。
+不抓取、不翻译、不写画像、不进 Obsidian。跑一次增量抓取走 [sync-xtimeline](../sync-xtimeline/)、[sync-ytchannel](../sync-ytchannel/) 或 [sync-website](../sync-website/)。单条物料入库走 [clip-url](../../research/clip-url/)，单个视频精读走 [learn-video](../../research/learn-video/)。
 
 设计文档：`docs/superpowers/specs/2026-08-26-creator-channel-registry-design.md`。
 
@@ -76,3 +61,4 @@ ls ~/.hskill/roster/config.json 2>/dev/null && echo "EXISTS" || echo "NOT_FOUND"
 | 文件 | 用途 |
 |------|------|
 | `scripts/roster_locate.py` | 定位 roster launcher（跟 `browser_fetch_locate.py` 同款，独立副本） |
+| `references/migration.md` | 从旧版 sync-xtimeline / sync-ytchannel 关注列表迁移 |

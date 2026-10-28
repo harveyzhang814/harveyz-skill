@@ -21,27 +21,49 @@ th,td{border:1px solid var(--line);padding:8px 10px;text-align:left;vertical-ali
 .thesis{border-left:4px solid var(--accent);background:var(--soft);padding:12px 16px;margin:16px 0}
 .c-read,.c-infer,.c-unknown{font-size:12px;padding:0 6px;border-radius:4px;margin-left:4px;white-space:nowrap}
 .c-read{background:#dcfce7;color:#166534}.c-infer{background:#fef9c3;color:#854d0e}.c-unknown{background:#fee2e2;color:#991b1b}
-iframe.diagram{width:100%;border:1px solid var(--line);border-radius:10px;margin:12px 0;display:block}
+.diagram-scroll{overflow-x:auto;margin:12px 0}
+iframe.diagram{box-sizing:border-box;width:100%;border:1px solid var(--line);border-radius:10px;margin:0 auto;display:block}
 code{background:var(--soft);padding:1px 5px;border-radius:4px;font-size:.9em}
-.anchors{font-size:13px;color:var(--muted)}
-@media (max-width:900px){.wrap{grid-template-columns:1fr}nav{display:none}}
+.anchors{font-size:13px;color:var(--muted);overflow-wrap:anywhere}
+@media (max-width:900px){.wrap{grid-template-columns:minmax(0,1fr)}nav{display:none}}
 """
 
 RESIZE = """
-for (const f of document.querySelectorAll('iframe.diagram')) {
+// 宽度默认占满正文栏；图高超过视口 MAX_VH 时收窄居中；但缩放不低于 MIN_SCALE，
+// 栏宽不够时外层横向滚动——字小到读不清比滚动更糟。高度始终跟随图的实际高度。
+const MIN_SCALE = 0.75, MAX_VH = 0.85;
+const frames = [...document.querySelectorAll('iframe.diagram')];
+for (const f of frames) {
   const box = () => { const d = f.contentDocument; return d.querySelector('.container') || d.body; };
-  const fit = () => { try { f.style.height = Math.ceil(box().getBoundingClientRect().height) + 'px'; } catch (_) {} };
-  const setup = () => { fit(); try { new f.contentWindow.ResizeObserver(fit).observe(box()); } catch (_) {} };
-  // 早于本脚本加载完的 iframe 不会再触发 load
-  if (f.contentDocument && f.contentDocument.readyState === 'complete' && f.contentDocument.body) setup();
-  else f.addEventListener('load', setup);
+  const fit = () => { try {
+    f.style.height = Math.ceil(box().getBoundingClientRect().height) + f.offsetHeight - f.clientHeight + 'px';
+  } catch (_) {} };
+  f.size = () => { try {
+    const svg = f.contentDocument.querySelector('.diagram-container svg'), { width: vw, height: vh } = svg.viewBox.baseVal;
+    const b = box().getBoundingClientRect(), s = svg.getBoundingClientRect();
+    const px = f.offsetWidth - s.width, py = b.height - s.height;
+    const cap = (innerHeight * MAX_VH - py) * vw / vh + px;
+    f.style.width = Math.round(Math.max(vw * MIN_SCALE + px, Math.min(f.parentElement.clientWidth, cap))) + 'px';
+  } catch (_) {} };
+  const setup = () => {
+    if (f.dataset.fitted) return;
+    f.dataset.fitted = '1';
+    f.size(); fit(); try { new f.contentWindow.ResizeObserver(fit).observe(box()); } catch (_) {}
+  };
+  f.addEventListener('load', setup);
+  // 早于本脚本加载完的 iframe 不会再触发 load。srcdoc 载入前的占位文档是
+  // about:blank，它的 readyState 也是 complete，只认 about:srcdoc
+  const d = f.contentDocument;
+  if (d && d.URL === 'about:srcdoc' && d.readyState === 'complete') setup();
 }
+addEventListener('resize', () => frames.forEach(f => f.dataset.fitted && f.size()));
 """
 
 
 def embed(diagram_html: str) -> str:
     tagged = re.sub(r"<html\b", '<html data-embed="true"', diagram_html, count=1)
-    return f'<iframe class="diagram" height="600" srcdoc="{html.escape(tagged, quote=True)}"></iframe>'
+    return (f'<div class="diagram-scroll"><iframe class="diagram" height="600" '
+            f'srcdoc="{html.escape(tagged, quote=True)}"></iframe></div>')
 
 
 NOISE = [

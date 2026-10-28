@@ -13,22 +13,14 @@ Node.js 进程的日志通常来自三条路径：
 
 **pino / winston（JSON 格式）**：默认输出包含 ISO 8601 时间戳字段（`time` 或 `timestamp`），格式已符合要求，不需要额外处理。
 
-**console.log 直接输出（无时间戳）**：capture 层注入（python3 方案，跨平台兼容）：
-```bash
-node server.js 2>&1 | python3 -u -c '
-import sys, datetime
-for line in iter(sys.stdin.readline, ""):
-    ts = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
-    print(ts, line.rstrip(), flush=True)
-' >> backend.log
-```
+**console.log 直接输出（无时间戳）**：capture 层注入，python3 方案见下方「接入方式」。
 
 **注意：`awk strftime` 仅 Linux（gawk）可用，macOS BSD awk 不支持。统一用 python3 方案可避免平台差异。**
 
 **winston plain text 格式**（形如 `2024-01-15 14:30:01 info message`）：非 ISO 格式，capture 层替换：
 ```bash
-node server.js 2>&1 | sed 's/^\([0-9-]* [0-9:]*\)/\1Z/' >> backend.log
-# 或直接注入新时间戳，忽略原有格式（macOS 用上方 python3 方案）
+node server.js 2>&1 | sed -E 's/^([0-9]{4}-[0-9]{2}-[0-9]{2}) ([0-9]{2}:[0-9]{2}:[0-9]{2})/\1T\2Z/' >> backend.log
+# 或直接注入新时间戳，忽略原有格式（python3 方案见下方「接入方式」）
 ```
 
 ## 捕获原则

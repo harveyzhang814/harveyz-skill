@@ -30,161 +30,162 @@
   "bundleMeta": {
     "research": "研究工具（learn-video + extract-vision + survey-skillrepo + learn-paper + extract-cognition + probe-session + clip-url + fetch-paper + explain-design）",
     "feed": "追更工具（manage-creators — 人与渠道名册；sync-xtimeline + sync-ytchannel + sync-website — 按名册跑增量抓取；capture-opinion — 给人记一笔判断）",
-    "creative": "创意工具（capture-todo + capture-insight）",
+    "creative": "创意工具（capture-todo（仅人工调用）+ capture-insight）",
     "coding": "程序工具（init-project + init-workflow + setup-debug + init-goal + question-me + capture-vocab + rephrase + explain-pm）",
     "writing": "写作工具（forge-doc + draw-diagram + manage-dir + migrate-spec）",
     "design": "设计工具（scout-brand + build-style + sync-design）",
-    "mint": "Skill 生命周期工具（init-skill + publish-skill + archive-skill + dedup-skill + contribute-skill + fix-skill + runby-opencode + scout-philosophy + learn-skill）",
+    "mint": "Skill 生命周期工具（init-skill + publish-skill + archive-skill + dedup-skill + simplify-skill + contribute-skill + fix-skill + runby-opencode + scout-philosophy + learn-skill）",
     "devops": "项目运维工具（clean-git + release-project + sync-hotfix + sync-agent）",
-    "agent-canvas": "Agent Canvas 内置 skill（agent-canvas-control — 节点与画布操控；describe-node/relate-node/capture-requirement/relation-review/close-node — 画布节点生命周期治理；judge-release — 对照验收标准逐条取证并写结论）"
+    "agent-canvas": "Agent Canvas 内置 skill（agent-canvas-control — 节点与画布操控；describe-node/relate-node/capture-requirement/relation-review/close-node — 画布节点生命周期治理；capture-intent — 随口需求立成需求节点；judge-release — 对照验收标准逐条取证并写结论）",
+    "superpowers-rewrite": "Superpowers 个人改写版（init-spec — 从初步想法到获批 Spec；develop-plan — 制定实施计划）"
   },
   "skills": [
     {
       "path": "mint/learn-skill",
       "bundle": "mint",
       "installScope": "global",
-      "contentHash": "542f333a8a72024c",
-      "contentVersion": "2.0.1"
+      "contentHash": "4124e6f706533393",
+      "contentVersion": "2.0.2"
     },
     {
       "path": "research/extract-vision",
       "bundle": "research",
       "installScope": "global",
-      "contentHash": "c9f68c043bc09309",
-      "contentVersion": "1.2.1"
+      "contentHash": "00d837f67f116a34",
+      "contentVersion": "1.2.2"
     },
     {
       "path": "research/learn-video",
       "bundle": "research",
       "installScope": "global",
-      "contentHash": "88b278c447599308",
-      "contentVersion": "1.9.2"
+      "contentHash": "7a5e73ef7ec93ef3",
+      "contentVersion": "1.9.3"
     },
     {
       "path": "research/survey-skillrepo",
       "bundle": "research",
       "installScope": "global",
-      "contentHash": "ea823301b039a8aa",
-      "contentVersion": "2.0.2"
+      "contentHash": "c22496742e5346d1",
+      "contentVersion": "2.1.0"
     },
     {
       "path": "research/learn-paper",
       "bundle": "research",
       "installScope": "project",
-      "contentHash": "1fe085285d11bb6a",
-      "contentVersion": "0.1.0"
+      "contentHash": "ac55a887cacc148a",
+      "contentVersion": "0.1.1"
     },
     {
       "path": "research/fetch-paper",
       "bundle": "research",
       "installScope": "project",
-      "contentHash": "3dc8352a00c59f22",
-      "contentVersion": "0.2.2"
+      "contentHash": "072008bea5059c2e",
+      "contentVersion": "0.2.3"
     },
     {
       "path": "research/extract-cognition",
       "bundle": "research",
       "installScope": "project",
-      "contentHash": "d8489acfb63f0a1c",
-      "contentVersion": "0.2.0"
+      "contentHash": "3fcdd96a14407ead",
+      "contentVersion": "0.3.0"
     },
     {
       "path": "research/probe-session",
       "bundle": "research",
       "installScope": "project",
-      "contentHash": "91391f7b702e0797",
-      "contentVersion": "0.3.0"
+      "contentHash": "898c63f4fab2b0d2",
+      "contentVersion": "0.3.1"
     },
     {
       "path": "research/pdf-math-translate",
       "bundle": "research",
       "installScope": "project",
-      "contentHash": "94dde69e6bc5429c",
-      "contentVersion": "2.0.0"
+      "contentHash": "25fab4891079b9e6",
+      "contentVersion": "2.0.1"
     },
     {
       "path": "research/clip-url",
       "bundle": "research",
       "installScope": "project",
-      "contentHash": "4a6b63007235ffa1",
-      "contentVersion": "0.9.3"
+      "contentHash": "4a7b3afe8889411f",
+      "contentVersion": "0.9.4"
     },
     {
       "path": "research/explain-design",
       "bundle": "research",
       "installScope": "global",
-      "contentHash": "4b2305541d9fd1c9",
-      "contentVersion": "1.2.1"
+      "contentHash": "60f3f01bccc4a0a4",
+      "contentVersion": "1.2.4"
     },
     {
       "path": "feed/sync-xtimeline",
       "bundle": "feed",
       "installScope": "project",
-      "contentHash": "617a4ff1952ab433",
-      "contentVersion": "0.8.4"
+      "contentHash": "22b6559b8a7a3d96",
+      "contentVersion": "0.8.5"
     },
     {
       "path": "feed/sync-ytchannel",
       "bundle": "feed",
       "installScope": "project",
-      "contentHash": "67695c61331144ac",
-      "contentVersion": "0.7.4"
+      "contentHash": "5454a9384f114dca",
+      "contentVersion": "0.7.5"
     },
     {
       "path": "feed/sync-website",
       "bundle": "feed",
       "installScope": "project",
-      "contentHash": "027dcfaa8f0ee278",
-      "contentVersion": "0.2.3"
+      "contentHash": "3bff4f0e0f682803",
+      "contentVersion": "0.2.4"
     },
     {
       "path": "creative/capture-todo",
       "bundle": "creative",
       "installScope": "essential",
-      "contentHash": "17eff9048a5da9af",
-      "contentVersion": "4.5.1"
+      "contentHash": "b9192710a63e0f3f",
+      "contentVersion": "4.6.0"
     },
     {
       "path": "creative/capture-insight",
       "bundle": "creative",
       "installScope": "essential",
-      "contentHash": "282434dd8df30da8",
-      "contentVersion": "2.0.0"
+      "contentHash": "6b39218b34a2de66",
+      "contentVersion": "2.0.2"
     },
     {
       "path": "coding/init-workflow",
       "bundle": "coding",
       "installScope": "essential",
-      "contentHash": "f15dc837ff4cee01",
-      "contentVersion": "4.1.2"
+      "contentHash": "83d6126adf09c23f",
+      "contentVersion": "4.1.5"
     },
     {
       "path": "coding/setup-debug",
       "bundle": "coding",
       "installScope": "project",
-      "contentHash": "dd9c06b0980d17ad",
-      "contentVersion": "1.0.0"
+      "contentHash": "57f68878c05960ac",
+      "contentVersion": "1.1.0"
     },
     {
       "path": "coding/init-goal",
       "bundle": "coding",
       "installScope": "global",
-      "contentHash": "00d8949db087059f",
-      "contentVersion": "1.3.1"
+      "contentHash": "01f4bb5f376041eb",
+      "contentVersion": "1.4.0"
     },
     {
       "path": "coding/question-me",
       "bundle": "coding",
       "installScope": "global",
-      "contentHash": "0cf0c3f4a44139ff",
-      "contentVersion": "3.0.2"
+      "contentHash": "1152587badd9a9fb",
+      "contentVersion": "3.1.0"
     },
     {
       "path": "coding/capture-vocab",
       "bundle": "coding",
       "installScope": "project",
       "contentHash": "88ac1d79e121caaa",
-      "contentVersion": "1.2.2"
+      "contentVersion": "1.2.3"
     },
     {
       "path": "coding/rephrase",
@@ -204,99 +205,106 @@
       "path": "coding/init-project",
       "bundle": "coding",
       "installScope": "global",
-      "contentHash": "3ca1c37debf03414",
-      "contentVersion": "0.1.3"
+      "contentHash": "acb311bc1488aa55",
+      "contentVersion": "0.1.5"
     },
     {
       "path": "writing/forge-doc",
       "bundle": "writing",
       "installScope": "global",
-      "contentHash": "ef8993f13f1284c8",
-      "contentVersion": "2.5.2"
+      "contentHash": "1186c485b858377a",
+      "contentVersion": "2.6.1"
     },
     {
       "path": "writing/draw-diagram",
       "bundle": "writing",
       "installScope": "global",
-      "contentHash": "347865f4c7bf3d52",
-      "contentVersion": "1.4.0"
+      "contentHash": "6a5d55e7bf95ec0a",
+      "contentVersion": "1.5.0"
     },
     {
       "path": "writing/manage-dir",
       "bundle": "writing",
       "installScope": "project",
-      "contentHash": "89fa0c98f2ed7ded",
-      "contentVersion": "1.0.0"
+      "contentHash": "7128e228c9df8f13",
+      "contentVersion": "1.0.1"
     },
     {
       "path": "writing/migrate-spec",
       "bundle": "writing",
       "installScope": "project",
-      "contentHash": "596bfcc1ef5a2db6",
-      "contentVersion": "1.0.0"
+      "contentHash": "0a833b71007148ad",
+      "contentVersion": "1.1.0"
     },
     {
       "path": "design/scout-brand",
       "bundle": "design",
       "installScope": "project",
-      "contentHash": "135c0970bce0e998",
-      "contentVersion": "2.1.0"
+      "contentHash": "69dfa054c71f8df6",
+      "contentVersion": "2.2.0"
     },
     {
       "path": "design/build-style",
       "bundle": "design",
       "installScope": "project",
-      "contentHash": "f687f0aac9cfc722",
-      "contentVersion": "1.4.0"
+      "contentHash": "6828f9938517c707",
+      "contentVersion": "1.5.0"
     },
     {
       "path": "design/sync-design",
       "bundle": "design",
       "installScope": "project",
-      "contentHash": "aaf5794eff6cf793",
-      "contentVersion": "5.0.0"
+      "contentHash": "ba5ea653fb0e8037",
+      "contentVersion": "5.1.0"
     },
     {
       "path": "mint/init-skill",
       "bundle": "mint",
       "installScope": "project",
-      "contentHash": "1ec3c99ce4e6a73b",
-      "contentVersion": "1.3.0"
+      "contentHash": "906eb897be6649bf",
+      "contentVersion": "1.4.0"
     },
     {
       "path": "mint/publish-skill",
       "bundle": "mint",
       "installScope": "project",
-      "contentHash": "43e882684507de03",
-      "contentVersion": "1.6.1"
+      "contentHash": "57a34d3ffa05d6b1",
+      "contentVersion": "1.7.0"
     },
     {
       "path": "mint/archive-skill",
       "bundle": "mint",
       "installScope": "project",
-      "contentHash": "2f028d12b2285128",
-      "contentVersion": "1.2.0"
+      "contentHash": "0b6dfaaad6c1d34c",
+      "contentVersion": "1.3.0"
     },
     {
       "path": "mint/dedup-skill",
       "bundle": "mint",
       "installScope": "project",
-      "contentHash": "6ebfca98f37241d0",
-      "contentVersion": "1.0.0"
+      "contentHash": "4f3524ebf14c6383",
+      "contentVersion": "1.0.2"
+    },
+    {
+      "path": "mint/simplify-skill",
+      "bundle": "mint",
+      "installScope": "project",
+      "contentHash": "dfec116761a89cfd",
+      "contentVersion": "0.1.4"
     },
     {
       "path": "mint/contribute-skill",
       "bundle": "mint",
       "installScope": "project",
-      "contentHash": "f48338e6d5267a28",
-      "contentVersion": "1.1.0"
+      "contentHash": "93c3b52f2f47620d",
+      "contentVersion": "1.3.0"
     },
     {
       "path": "mint/fix-skill",
       "bundle": "mint",
       "installScope": "global",
-      "contentHash": "e0aafcea982eab9c",
-      "contentVersion": "2.1.0"
+      "contentHash": "45cb2b976069fcb2",
+      "contentVersion": "2.1.1"
     },
     {
       "path": "mint/runby-opencode",
@@ -309,8 +317,8 @@
       "path": "mint/scout-philosophy",
       "bundle": "mint",
       "installScope": "project",
-      "contentHash": "5c3b14c8dfa460b9",
-      "contentVersion": "1.0.1"
+      "contentHash": "7a6896491f39b96c",
+      "contentVersion": "1.0.2"
     },
     {
       "path": "meta/clean-git",
@@ -344,8 +352,8 @@
       "path": "coding/handoff",
       "bundle": "coding",
       "installScope": "project",
-      "contentHash": "d1eb122aceebb9e9",
-      "contentVersion": "1.13.0"
+      "contentHash": "7d5ce820e850319f",
+      "contentVersion": "1.15.0"
     },
     {
       "path": "coding/fork-topic",
@@ -355,67 +363,102 @@
       "contentVersion": "1.0.0"
     },
     {
+      "path": "coding/full-recap",
+      "bundle": "coding",
+      "installScope": "global",
+      "contentHash": "0b0091e61f3410e9",
+      "contentVersion": "1.0.0"
+    },
+    {
       "path": "feed/manage-creators",
       "bundle": "feed",
       "installScope": "project",
-      "contentHash": "7db2fbcbf26017d9",
-      "contentVersion": "0.3.1"
+      "contentHash": "9223f347f35b52f8",
+      "contentVersion": "0.3.2"
     },
     {
       "path": "feed/capture-opinion",
       "bundle": "feed",
       "installScope": "project",
-      "contentHash": "27a9cb1a55b0036a",
-      "contentVersion": "0.2.0"
+      "contentHash": "3ce558dc5fd6ea78",
+      "contentVersion": "0.2.1"
     },
     {
       "path": "agent-canvas/agent-canvas-control",
       "bundle": "agent-canvas",
-      "contentHash": "b433a18e7ba11957",
-      "contentVersion": "1.3.0"
+      "installScope": "global",
+      "contentHash": "d171163b793d279e",
+      "contentVersion": "1.3.1"
     },
     {
       "path": "agent-canvas/describe-node",
       "bundle": "agent-canvas",
-      "contentHash": "1d9c8d0fc69ee45a",
-      "contentVersion": "1.1.1"
+      "installScope": "project",
+      "contentHash": "78daf08f2c54e3f1",
+      "contentVersion": "2.0.0"
     },
     {
       "path": "agent-canvas/relate-node",
       "bundle": "agent-canvas",
-      "contentHash": "395d08fedfa3a113",
-      "contentVersion": "1.0.2"
+      "installScope": "project",
+      "contentHash": "1181492c24b6ca28",
+      "contentVersion": "1.0.3"
     },
     {
       "path": "agent-canvas/capture-requirement",
       "bundle": "agent-canvas",
-      "contentHash": "cfdfa7b2f15a099c",
-      "contentVersion": "1.0.2"
+      "installScope": "project",
+      "contentHash": "82481c8bd14f608c",
+      "contentVersion": "2.0.0"
+    },
+    {
+      "path": "agent-canvas/capture-intent",
+      "bundle": "agent-canvas",
+      "installScope": "project",
+      "contentHash": "c2de8ce9da81d437",
+      "contentVersion": "1.0.0"
     },
     {
       "path": "agent-canvas/relation-review",
       "bundle": "agent-canvas",
-      "contentHash": "614a78797797ca60",
-      "contentVersion": "1.1.0"
+      "installScope": "project",
+      "contentHash": "8d5888629b9721fb",
+      "contentVersion": "1.1.1"
     },
     {
       "path": "agent-canvas/close-node",
       "bundle": "agent-canvas",
-      "contentHash": "3b8a6620dc32429c",
-      "contentVersion": "1.0.6"
+      "installScope": "project",
+      "contentHash": "9bad73adb309bbe0",
+      "contentVersion": "1.0.7"
     },
     {
       "path": "agent-canvas/judge-release",
       "bundle": "agent-canvas",
-      "contentHash": "123535281ac30a2f",
-      "contentVersion": "1.0.1"
+      "installScope": "project",
+      "contentHash": "549a45c8dee95eb2",
+      "contentVersion": "1.0.2"
     },
     {
       "path": "coding/analyze-claudemd",
       "bundle": "coding",
       "installScope": "global",
-      "contentHash": "8dafe21cdfff97e6",
-      "contentVersion": "1.0.0"
+      "contentHash": "f769534f93aa5e0b",
+      "contentVersion": "1.1.0"
+    },
+    {
+      "path": "superpowers-rewrite/init-spec",
+      "bundle": "superpowers-rewrite",
+      "installScope": "global",
+      "contentHash": "bf0bbfedaf36ea0a",
+      "contentVersion": "0.2.0"
+    },
+    {
+      "path": "superpowers-rewrite/develop-plan",
+      "bundle": "superpowers-rewrite",
+      "installScope": "global",
+      "contentHash": "2a2bf576985743f9",
+      "contentVersion": "0.2.0"
     }
   ],
   "hooks": [
@@ -542,6 +585,10 @@
     {
       "from": "domain-vocab",
       "to": "capture-vocab"
+    },
+    {
+      "from": "brainstorming-zh",
+      "to": "init-spec"
     }
   ],
   "archived": {

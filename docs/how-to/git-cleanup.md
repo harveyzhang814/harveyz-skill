@@ -17,7 +17,7 @@ branch cleanup
 
 ## 执行流程（用户视角）
 
-1. **读取规则** — 读取 `.claude/branch-cleanup.md`（不存在则用内置默认规则）
+1. **读取规则** — 读取 `.hskill/clean-git/branch-cleanup.md`（不存在则用内置默认规则）
 2. **收集分支数据** — 运行 `git branch` 和 `git branch --merged staging`
 3. **分类** — 未合并分支全部保留；已合并分支按规则和 LLM 分析分组
 4. **逐组确认** — 分三组展示，每组独立询问是否删除：
@@ -31,7 +31,7 @@ branch cleanup
 
 ## 配置文件（可选）
 
-在项目根目录创建 `.claude/branch-cleanup.md`，自定义保留 / 删除规则：
+在项目根目录创建 `.hskill/clean-git/branch-cleanup.md`，自定义保留 / 删除规则：
 
 ```markdown
 # Branch Cleanup Rules

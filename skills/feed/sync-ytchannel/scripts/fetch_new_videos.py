@@ -12,6 +12,10 @@ archive_videos.py — the last stage — writes it only after the digest and
 the archive are both on disk. So a crash anywhere in the run means "this
 round never happened": the next run re-fetches the same batch.
 
+It also does not filter against the archive: with the cursor deferred, that
+filter would empty out a re-fetched batch, which would then land in the
+archive but never in any digest.
+
 Usage: python3 fetch_new_videos.py [chrome_profile] [--handle H [--handle H2 ...]]
 """
 import argparse

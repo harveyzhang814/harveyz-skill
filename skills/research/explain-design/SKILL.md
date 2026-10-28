@@ -3,13 +3,13 @@ name: explain-design
 description: "Explain an architecture design, spec, or product proposal as one offline HTML document: chapters by angle (structure, sequence, state, data flow, dedicated mechanism chapters, boundaries), with diagrams rendered deterministically by archify from typed JSON and tables where diagrams do not fit. Manual invocation only: '/explain-design <path or topic>'. Not for a single diagram (use archify), text-only restatement (explain-pm), Mermaid (draw-diagram), or understanding a skill (learn-skill)."
 disable-model-invocation: true
 user_invocable: true
-version: "1.2.1"
+version: "1.2.4"
 model: sonnet
 ---
 
 # 图解方案
 
-把一份架构设计、spec 或产品方案讲清楚，交付**一个离线可看的 HTML**：按角度分章，能用图的用图（archify 从 JSON 确定性渲染，靠程序校验而非看图验收），不适合画图的用表。要求准确、完整、结构清晰。
+把一份架构设计、spec 或产品方案讲清楚，交付**一个离线可看的 HTML**：按角度分章，能用图的用图（archify 从 JSON 确定性渲染，靠程序校验而非看图验收），不适合画图的用表。
 
 ## 触发条件
 
@@ -118,6 +118,14 @@ python3 "$SKILL_DIR/scripts/assemble.py" "$OUT/content.html" "$OUT/<slug>.html" 
 脚本把占位替换为内联的图（archify 嵌入模式），生成带目录的单个离线 HTML；占位找不到对应图时报错退出，此时修正占位或补图后重跑。
 
 脚本同时检查锚点区之外的噪音（文件名、`路径:行号`、spec 条款编号、`<code>` 片段、"读到"标签），逐条输出 `⚠️ <类型>: <上下文>`。只改被列出的位置后重跑，不通读重写；确需保留的（例如产品里的命令名）在交付报告里说明。
+
+最后一次组装成功后，删掉渲染中间产物（图已内联进 HTML，每张约 760KB，另有 archify 的校验报告）：
+
+```bash
+rm -rf "${OUT:?}/diagrams"
+```
+
+只在正常走完时删；中途失败或停止则保留，供排查。`skeleton.md`、`specs/`、`content.html` 保留；事后改图或改正文，先用 `render.sh` 重新生成 `diagrams/` 再组装。
 
 交付报告：
 
