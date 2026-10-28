@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.42.0] - 2026-10-28
+
 ### Added
 - `capture-intent`：1.0.0，新 skill。把随口提出、以后要做的需求立成 Agent Canvas 需求节点（取代 capture-todo 在画布项目里的角色）：2-3 轮澄清 → 定目标画布（默认当前画布，点名别的项目时写到它已打开的画布，没开就停止）→ 运行时用 `describe-action` 读需求节点 schema，skill 里只写字段语义、不写死字段名和枚举 → `search-nodes` 查重 → 确认 → 写入。不连关系边、不放上画布。需配合内置 skill 清单已登记 capture-intent 的 Agent Canvas 应用；在那之前不要发布 capture-todo 4.6.0 的收窄，否则画布项目里随口记需求两个 skill 都不会触发
 - `full-recap` 1.0.0：在当前对话里产出一份全局回顾，人先读、新 session 的 agent 后用——倒金字塔七节（一句话 → 当前状态与下一步 → 已定结论 → 未决问题 → 背景 → 线索 → 核实冲突），用不上的节省略；第 2 节只写现状不写经过，第 3 节每条一行「结论 + 核心理由」、完整理由指向文档；写进报告前轻量核实路径/分支是否存在，不符处单列、只列事实不裁决；推出来的标「（推断）」，来自压缩摘要的标「（未核实）」，agent 自己做、用户没表态的决定标「（agent 定）」；线索写成「路径 — 为什么看」，不抄内容；直接输出 Markdown，不落文件、不建分支、不验收
