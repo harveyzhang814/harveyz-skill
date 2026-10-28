@@ -75,6 +75,7 @@
     "skills/agent-canvas/relation-review/",
     "skills/agent-canvas/close-node/",
     "skills/agent-canvas/judge-release/",
+    "skills/agent-canvas/external-closeout/",
     "skills/coding/analyze-claudemd/",
     "skills/superpowers-rewrite/init-spec/",
     "skills/superpowers-rewrite/develop-plan/",
