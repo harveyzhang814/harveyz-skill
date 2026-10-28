@@ -1,6 +1,6 @@
 {
   "name": "harveyz-skill",
-  "version": "0.42.0",
+  "version": "0.42.1",
   "description": "Skill manager for Claude Code, Cursor, Codex, OpenClaw, Hermes, OpenCode, and Pi",
   "type": "module",
   "bin": {
@@ -75,6 +75,7 @@
     "skills/agent-canvas/relation-review/",
     "skills/agent-canvas/close-node/",
     "skills/agent-canvas/judge-release/",
+    "skills/agent-canvas/external-closeout/",
     "skills/coding/analyze-claudemd/",
     "skills/superpowers-rewrite/init-spec/",
     "skills/superpowers-rewrite/develop-plan/",
