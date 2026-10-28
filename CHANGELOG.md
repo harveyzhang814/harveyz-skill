@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.42.1] - 2026-10-28
+
+### Added
+- `external-closeout` 1.0.0：从外部会话获取只读判定，经用户确认后执行 Agent Canvas 节点收尾。
+
 ## [0.42.0] - 2026-10-28
 
 ### Added
