@@ -8,10 +8,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- `capture-intent`：1.0.0，新 skill。把随口提出、以后要做的需求立成 Agent Canvas 需求节点（取代 capture-todo 在画布项目里的角色）：2-3 轮澄清 → 定目标画布（默认当前画布，点名别的项目时写到它已打开的画布，没开就停止）→ 运行时用 `describe-action` 读需求节点 schema，skill 里只写字段语义、不写死字段名和枚举 → `search-nodes` 查重 → 确认 → 写入。不连关系边、不放上画布。需配合内置 skill 清单已登记 capture-intent 的 Agent Canvas 应用；在那之前不要发布 capture-todo 4.6.0 的收窄，否则画布项目里随口记需求两个 skill 都不会触发
 - `full-recap` 1.0.0：在当前对话里产出一份全局回顾，人先读、新 session 的 agent 后用——倒金字塔七节（一句话 → 当前状态与下一步 → 已定结论 → 未决问题 → 背景 → 线索 → 核实冲突），用不上的节省略；第 2 节只写现状不写经过，第 3 节每条一行「结论 + 核心理由」、完整理由指向文档；写进报告前轻量核实路径/分支是否存在，不符处单列、只列事实不裁决；推出来的标「（推断）」，来自压缩摘要的标「（未核实）」，agent 自己做、用户没表态的决定标「（agent 定）」；线索写成「路径 — 为什么看」，不抄内容；直接输出 Markdown，不落文件、不建分支、不验收
 
 ### Changed
+- `describe-node`：升至 2.0.0（不兼容旧做法）。Claude 节点改为不传 `--spec`，由 App 自己认 spec：先从本会话和画布收集证据，必要时在后台交给模型裁判挑一份。回执新增 `specStatus`（`given` / `resolved` / `pending` / `none`）；`pending` 时回执里 `specUsed` 为 null 属正常，不要重跑，最终结果看 `get-node` 的 `backgroundJob.specUsed`。回执里没有 `specStatus` 说明 App 是旧版，按旧规则显式传 `--spec`。Codex、pi 节点照旧一律显式传。需配合 Agent Canvas 8.5.1 之后的版本
+- `capture-requirement`：升至 2.0.0，说明 Claude 节点不传 `--spec` 时 `draft-requirement` 也会走证据加裁判，但立项仍应显式传 `--spec`：验收 spec 选错的代价比标题高
 - `handoff`：升至 1.14.0，accept 阶段（Phase 3）在「跑最小验收锚点」之后新增「回归面核对」：用 `git diff $(git merge-base <集成分支> HEAD)..HEAD --name-only` 取实际改动面（不用 `<集成分支>..HEAD`，集成分支前进后会混入别人合入的改动），找被波及组件现有的回归测试、锚点没点名的也跑；红了先在分叉点上跑同一条命令归因——本次改动引入的按回归打回，既有的红在验收记录里写明；锚点遗漏记入验收记录，算写交接/验收一方的疏漏、不算接手方的。同时说明「唯一固定依据」指事先约定的判据，回归红是产品真的坏了，不算临时加判据。起因：agent-canvas 统一 PTY 注入那次，交接只点名新功能的 E2E，author 与 accept 都只跑点名项，原有回归合入后才被追问补测
+- `capture-todo`：升至 4.6.0，改为只能人工调用（Claude 侧 `disable-model-invocation: true`，Codex 侧 `agents/openai.yaml` 关闭隐式调用），随口触发词移交 capture-intent。正文不变，后续走 archive-skill 退役
 
 ## [0.41.1] - 2026-10-14
 
