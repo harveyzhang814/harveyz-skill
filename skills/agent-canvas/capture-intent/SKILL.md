@@ -2,7 +2,7 @@
 name: capture-intent
 description: "Capture a need the user mentions for later as an Agent Canvas requirement node. Triggers on casual phrasing like 'we should do X later', 'note this requirement', 'add this to the backlog', 'remember to build X'. Writes to the current canvas by default, or to another project's running canvas when the user names it. Not for the requirement the current session is implementing (use capture-requirement)."
 user_invocable: true
-version: "1.0.0"
+version: "1.0.1"
 ---
 
 # 记录意图（capture-intent）
@@ -25,26 +25,17 @@ version: "1.0.0"
 
 ## 2. 确定目标画布
 
-- 用户没点名别的项目 → 当前画布，后面的命令不带 `--canvas`。
-- 用户点名了别的项目：
-  1. 跑 `agent-canvas-ctl --canvas /nonexistent resolve-canvas`。它必然以退出码 1 失败，stderr 逐行列出当前可用画布的绑定路径。
-  2. 按项目名匹配其中一条路径；有多条候选就让用户选。
-  3. 跑 `agent-canvas-ctl --canvas <路径> resolve-canvas`，退出码为 0 才算定下来。之后每条命令都在子命令**之前**带同一个 `--canvas <路径>`。
-- 清单里没有该项目 → 报告「<项目> 的画布没开，记不进去」，然后停止。不改写到别的画布，不直接改 `~/.agent-canvas/` 下的文件，也不改写 TODO.md 或回退到 capture-todo。
+- 用户没点名别的项目 → 当前画布，命令不带 `--canvas`。
+- 点名了别的项目 → 按 agent-canvas-control「寻址」一节定位：`--canvas <路径> resolve-canvas` 退出码为 0 才算定下，有多条候选就让用户选；之后每条命令都在子命令之前带同一个 `--canvas`。
+- 可用画布清单里没有该项目 → 报告「<项目> 的画布没开，记不进去」并停止。不改写到别的画布，不碰 `~/.agent-canvas/`，也不回退到 TODO.md 或 capture-todo。
 
 ## 3. 查 schema
 
-每次都查，不凭记忆：
+每次都跑 `agent-canvas-ctl help create-requirement-node`，不凭记忆。本 skill 不写字段名和取值，只在下一节写语义；按参数表的字段与说明把语义对到 flag 上：
 
-```bash
-agent-canvas-ctl describe-action create_requirement_node
-```
-
-从 `inputSchema` 取字段、类型、枚举和必填项；从 `bindings` 里 `surface` 为 `cli` 的那条取 `usage` 和 `args.flags`。本 skill 不写字段名和取值，只在下一节写各字段的语义；按 schema 里的字段名和 `description` 把语义对到字段上。
-
-- 某条语义对不上任何字段 → 跳过它，在最终报告里说明。
-- schema 有必填字段，而下一节没有对应的语义 → 停止，报告这个字段，不去猜。
-- 枚举档数和下一节描述的不一样 → 按相对位置映射，在确认摘要里标出来。
+- 语义对不上任何字段 → 跳过，在最终报告里说明。
+- 有必填字段而下一节没有对应语义 → 停止，报告该字段，不去猜。
+- 枚举档数与下一节不一致 → 按相对位置映射，在确认摘要里标出。
 
 ## 4. 各字段的写法
 
@@ -78,7 +69,7 @@ agent-canvas-ctl [--canvas <路径>] search-nodes <需求关键词> --limit 20
 
 ## 7. 写入与报告
 
-按第 3 步取到的 `usage` 拼出 `create-requirement-node` 命令，只传第 4 步对得上的字段；点名了别的项目时，`--canvas <路径>` 放在子命令之前。
+按第 3 步取到的用法拼出 `create-requirement-node` 命令，只传第 4 步对得上的字段。
 
 - 成功：报告需求编号（返回里的 `requirementId`，形如 YYMMDD-XX）和标题。
 - 失败：把 stderr 原样报出，不重试，也不改参数重跑。
