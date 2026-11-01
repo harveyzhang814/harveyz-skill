@@ -2,7 +2,7 @@
 name: question-me
 description: "Pre-task clarification skill — clarifies ambiguous or complex tasks before execution through structured Q&A with a live decision tree. One question at a time, each with at least 3 options + custom, in decision-dependency order. Triggers: '/question-me', 'help me clarify this', 'question me before starting', 'let's define this first'. The current agent may propose it for ambiguous or complex requests (multiple conflicting goals, vague keywords like 'optimize/refactor/clean up', missing success criteria, unstated context assumptions), then wait for user confirmation."
 user_invocable: true
-version: "3.0.2"
+version: "3.1.0"
 ---
 
 # question-me — 执行前指令澄清
@@ -50,6 +50,21 @@ version: "3.0.2"
 
 ---
 
+## 提问格式
+
+每问只问一个节点，附至少 3 个互相排他、覆盖常见分支的选项 + 自定义，推荐项标 `← 推荐`：
+
+```
+[问题]？
+
+A. [选项1]  ← 推荐
+B. [选项2]
+C. [选项3]
+D. 自定义...
+```
+
+---
+
 ## 流程（STRICT）
 
 ### 阶段 1 — 意图校准（固定 3 问）
@@ -60,36 +75,16 @@ version: "3.0.2"
 **Q2 — 成功标准：** 怎么判断做对了？（可测量的验收条件）
 **Q3 — 范围边界：** 明确不做什么，或哪些东西不能动？
 
-**每问的格式（至少 3 个选项 + 自定义）：**
-
-```
-[问题]？
-
-A. [选项1]  ← 推荐
-B. [选项2]
-C. [选项3]
-D. 自定义...
-
-选项须互相排他、覆盖常见分支
-```
-
 **每问的处理流程：**
 
 ```
-问 Qn（附至少 3 个选项 + 自定义，推荐选项标 ← 推荐）→ 等用户回答
-  → [必须] 子节点评估：这个答案是否引出需要追问的不确定性？
-      是 → 生成子节点追加到树（BFS：一次生成所有潜在子节点）
-      否 → 不生成（Qn 为叶子节点）
-  → 渲染树（首次调用加 --open）
+按「提问格式」问 Qn → 等用户回答
+  → [必须] 子节点评估（见「决策树格式」）
+  → 渲染树（见「决策树格式」）
   → 问 Q(n+1)
 ```
 
 Q3 答完并评估子节点后，进入阶段 2。
-
-**首次渲染（Q1 答完后）：**
-```bash
-echo '<当前树文本>' | python3 SKILL_DIR/scripts/render_tree.py /tmp/question-me-tree.html --open
-```
 
 ---
 
@@ -99,20 +94,9 @@ echo '<当前树文本>' | python3 SKILL_DIR/scripts/render_tree.py /tmp/questio
 
 ```
 1. 选影响面最大的 open 节点
-2. 提问（附至少 3 个选项 + 自定义）：
-   [当前节点文本]？
-
-   A. [选项1]  ← 推荐
-   B. [选项2]
-   C. [选项3]
-   D. 自定义...
-
+2. 按「提问格式」提问当前节点
 3. 等用户回答 → 标记为 done
-4. [必须] 子节点评估：
-     这个答案下有需要追问的不确定性且影响执行方向？
-       是 → 一次生成所有潜在子节点（dep 指向当前节点）
-       否 → 不生成（当前节点为叶子）
-     子问题当前 agent 可合理默认的 → 标 infer，填入假设，不追问
+4. [必须] 子节点评估（见「决策树格式」）
 5. [必须] 兄弟扫描：
      此答案是否让同级兄弟节点变无关或矛盾？
        是 → 标 skip
@@ -120,8 +104,6 @@ echo '<当前树文本>' | python3 SKILL_DIR/scripts/render_tree.py /tmp/questio
 6. 更新树文本 → 重新渲染
 7. 还有 open 节点？→ 是：回到 1 / 否：进入阶段 3
 ```
-
-**分支切换是自动的。** 某分支 open 节点耗尽后，选题逻辑自动切到影响面最大的其他 open 节点。
 
 **重大方向修正（例外情况）：** 若用户答案与已答祖先节点根本矛盾，不走兄弟扫描，而是：
 1. 显式指出冲突
@@ -154,8 +136,6 @@ echo '<当前树文本>' | python3 SKILL_DIR/scripts/render_tree.py /tmp/questio
 
 ## 决策树格式（按需查阅）
 
-> 在阶段 1 / 阶段 2 中构建或更新决策树时查阅本节。
-
 **内部格式（每节点一行，平铺列出）：**
 
 ```
@@ -173,7 +153,7 @@ echo '<当前树文本>' | python3 SKILL_DIR/scripts/render_tree.py /tmp/questio
 字段规则：
 - `label`: 节点短标识，**与 `id` 保持一致**（如 `Q1`、`Q2a`）；`[label:status]` 两者之间用冒号分隔，不可省略 label
 - `status`: `done` / `open` / `infer` / `skip`
-- `id`: 全树唯一短 ID（2–3 字母），更新时引用稳定
+- `id`: 全树唯一短 ID，更新时引用稳定
 - `dep=YY`: 可选，指向另一节点 id，表示"YY 答完后此节点才可问"；渲染器用它重建树结构
 - 无 `dep` 的节点为根节点
 
@@ -191,24 +171,18 @@ echo '<当前树文本>' | python3 SKILL_DIR/scripts/render_tree.py /tmp/questio
 **更新规则：**
 - 每次用户回答后，只修改变化的行，不重写全树
 - 新生成的子节点追加在父节点行之后
-- `infer` 节点直接填入推断内容，不追问用户
+
+**子节点评估（每答完一问必做）：** 答案引出了影响执行方向、需要追问的不确定性 → 一次生成所有潜在子节点（dep 指向当前节点）追加到树；否则不生成（当前节点为叶子）。子问题当前 agent 可合理默认的 → 标 `infer`，填入假设，不追问。
 
 **选题逻辑（阶段 2 每轮使用）：**
 > 从所有 `dep` 已满足（或无 `dep`）的 `open` 节点中，选被其他节点依赖次数最多的（影响面最大）；并列时按树中出现顺序选最早的
 
-**每次树更新后**立即重新渲染（不加 `--open`）：
+dep 已满足的 `open` 节点必须问答或当场评估 infer，不能以「其他节点的答案已覆盖」为由跳过。
+
+**每次树更新后**立即重新渲染；首次渲染（Q1 答完后）加 `--open`：
 ```bash
-echo '<更新后的决策树文本>' | python3 SKILL_DIR/scripts/render_tree.py /tmp/question-me-tree.html
+echo '<决策树文本>' | python3 SKILL_DIR/scripts/render_tree.py /tmp/question-me-tree.html [--open]
 ```
 
----
+`SKILL_DIR` 是本 SKILL.md 所在的目录。
 
-## 反模式
-
-| 错误行为 | 正确做法 |
-|----------|----------|
-| 顺序操纵：先问节点 Y，再以"Y 的答案已覆盖 X"为由跳过 X | 节点 X 的 dep 已满足且处于 open，必须问答或当场评估 infer |
-| 阶段 3 摘要输出后直接执行 | 必须等用户明确确认后才开始执行 |
-| 一次提多个问题 | 严格一次一问，一轮只问一个节点 |
-| 提前生成孙节点 | 子节点只在父节点答完后评估，不预生成 |
-| 把 infer 节点假设对用户隐藏 | infer 节点的假设必须在阶段 3 摘要中透明列出 |

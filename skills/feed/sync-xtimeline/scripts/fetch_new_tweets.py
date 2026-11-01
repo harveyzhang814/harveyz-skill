@@ -13,6 +13,10 @@ re-fetches the same batch. The cost is redoing one round's fetch and
 translation; what it buys is that no interruption can leave the cursor
 parked past a batch nobody ever reported.
 
+It also does not filter against the archive: with the cursor deferred, that
+filter would empty out a re-fetched batch, which would then land in the
+archive but never in any digest.
+
 Usage: python3 fetch_new_tweets.py [chrome_profile] [--handle H [--handle H2 ...]]
 """
 import argparse

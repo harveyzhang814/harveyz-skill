@@ -20,13 +20,13 @@ def _run(args: list[str], data_dir: Path) -> subprocess.CompletedProcess:
     )
 
 
-def test_get_reports_not_configured_initially(tmp_path):
+def test_get_reports_not_configured_initially(tmp_path, require_browser_fetch_cli):
     result = _run(["get"], tmp_path / "data")
     assert result.returncode == 0, result.stderr
     assert "NOT_CONFIGURED" in result.stdout
 
 
-def test_set_then_get_reports_configured(tmp_path):
+def test_set_then_get_reports_configured(tmp_path, require_browser_fetch_cli):
     data_dir = tmp_path / "data"
     profile_dir = tmp_path / "SomeProfile"
     profile_dir.mkdir()

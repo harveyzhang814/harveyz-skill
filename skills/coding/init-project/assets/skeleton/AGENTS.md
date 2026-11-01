@@ -12,6 +12,6 @@
 
 ## 约定
 
-- 分支命名与合并流程：见 `docs/git-workflow.md`（由 `/init-workflow` 生成）
+- 分支命名与合并流程：见 `docs/reference/git-workflow.md`（由 `/init-workflow` 生成）
 - 领域术语：见 `.hskill/capture-vocab/vocab.md`（由 `/capture-vocab` 维护）
 - 需求与任务：见 `TODO.md`（由 `/capture-todo` 维护）

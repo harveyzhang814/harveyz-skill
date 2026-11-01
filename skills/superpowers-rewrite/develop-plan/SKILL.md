@@ -1,8 +1,8 @@
 ---
 name: develop-plan
-description: Use after init-spec approves a software Spec, or when other clear requirements need a multi-step implementation plan before coding
+description: "Turn an approved Spec or clear requirements into a multi-step implementation plan with exact files, interfaces, tests, and task dependencies, before coding. Use after init-spec approves a software Spec. Triggers: 'write an implementation plan', 'break this into tasks', 'make a plan for this spec'."
 user_invocable: true
-version: 0.1.11
+version: "0.2.0"
 ---
 
 # 制定实施计划
@@ -10,6 +10,14 @@ version: 0.1.11
 ## 作用（说明）
 
 将已批准的 Spec 或明确需求转为实施计划，供不熟悉代码库的工程师执行。
+
+## 触发条件
+
+`init-spec` 批准 Spec 后，或已有明确需求、需要在编码前拆成多步实施计划时使用，例如“写实施计划”“拆成任务”“出个 plan”。
+
+不触发：
+- 需求未定或关键方案待选 → `init-spec`
+- 计划已写好、要开始实施 → `superpowers:subagent-driven-development` 或 `superpowers:executing-plans`
 
 ## 指令
 
@@ -45,9 +53,9 @@ version: 0.1.11
 
 ### 3. 编写计划
 
-**保存位置：**
-- 接续 `init-spec`：与 Spec 同目录；默认路径为 `.hskill/spec/YYYY-MM-DD-<topic>/YYYY-MM-DD-<topic>-plan.md`，日期、topic 及同名序号沿用 Spec，修订沿用原路径。用户另有命名约定时遵循其约定。
-- 独立调用：直接保存到项目根目录下的 `.hskill/spec/YYYY-MM-DD-<topic>/YYYY-MM-DD-<topic>-plan.md`；日期取首次建档日，topic 根据任务命名，独立任务同名时加序号，修订沿用原路径。
+**保存位置：**默认 `.hskill/spec/YYYY-MM-DD-<topic>/YYYY-MM-DD-<topic>-plan.md`（项目根目录下），修订沿用原路径。
+- 接续 `init-spec`：与 Spec 同目录，日期、topic 和同名序号沿用 Spec；用户另有命名约定时遵循其约定。
+- 独立调用：日期取首次建档日，topic 按任务命名，同名时加序号。
 
 #### 文档开头
 
@@ -56,7 +64,7 @@ version: 0.1.11
 ```markdown
 # [功能名称] 实施计划
 
-> **For agentic workers:** REQUIRED SUB-SKILL: 使用 superpowers:subagent-driven-development（推荐）或 superpowers:executing-plans 逐项实施；用 `- [ ]` 跟踪步骤。
+> **For agentic workers:** REQUIRED SUB-SKILL: 使用 [执行交接时选定的执行技能] 逐项实施；用 `- [ ]` 跟踪步骤。
 
 **Goal:** [用一句话描述将构建什么]
 
@@ -138,7 +146,7 @@ git commit -m "feat: add specific feature"
 - **验证：**写明命令和预期输出。
 - **任务引用：**通过“接口”区块引用，不重复代码；只将确实阻止开工的任务列为前置任务。
 
-删除未作决定的占位语，如“TBD”“处理边界情况”；用签名和测试代替可由实施者写出的函数体。
+删除未作决定的占位语，如“TBD”“处理边界情况”。
 
 ### 4. 自查
 
@@ -146,13 +154,13 @@ git commit -m "feat: add specific feature"
 
 **1. 需求覆盖：**每项要求是否有对应任务？补齐缺口。
 
-**2. 步骤：**每步是否只有一个明确动作和可检查结果？删除空话及不必要的函数体。
+**2. 步骤：**每步是否只有一个明确动作和可检查结果？删除空话。
 
 **3. 接口一致性：**跨任务使用的类型、签名和属性名是否一致？
 
 **4. 任务依赖：**前置任务是否存在且确实阻塞开工？是否有环？可同时开工的任务是否争用文件或未定接口？调整冲突任务的边界或顺序；无需强制并行。
 
-**5. 审查重点：**所列风险是否各有归属任务和测试？没有遗漏时明确写“无”，并检查新增行为是否越过决定边界。
+**5. 审查重点：**所列风险是否各有归属任务和测试？`## Review Focus` 没有可列项时，该节写“无”；新增的预期行为越过决定边界时，按第 1 步处理。
 
 **6. 篇幅：**计划是否主要由代码块组成？接续 `init-spec` 时，是否比 Spec 长数倍？用签名、测试名称和断言替代实现代码。
 
@@ -163,4 +171,4 @@ git commit -m "feat: add specific feature"
 - **子代理驱动（Subagent-driven）**——每项任务由新子代理实施并独立审查，最后审查整个分支；审查更密集，上下文成本更高。
 - **原生执行（Native）**——当前会话逐项实施，最后独立审查整个分支；上下文成本更低。
 
-确认后，子代理驱动使用 `superpowers:subagent-driven-development`；原生执行使用 `superpowers:executing-plans`。
+确认后，子代理驱动使用 `superpowers:subagent-driven-development`；原生执行使用 `superpowers:executing-plans`。将选定的技能写入计划开头的 `REQUIRED SUB-SKILL`，再调用它。

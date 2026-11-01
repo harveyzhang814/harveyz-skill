@@ -2,7 +2,7 @@
 name: relate-node
 description: Work out the current node's semantic relations to other Agent Canvas nodes (depends-on/hands-off-to/implements/produces or references docs) — use after Gate 2 is finalized and before the closing report, when deciding whether to link an existing node; only usable inside an Agent Canvas node.
 user_invocable: true
-version: "1.0.2"
+version: "1.0.3"
 ---
 
 # 梳理节点关系（relate-node）
@@ -30,8 +30,8 @@ version: "1.0.2"
 3. 对通过判据的每一条，调 `agent-canvas-ctl link-nodes --from <id> --to <id> --type <t> [--label <s>]`。
    传矩阵外的组合会报错并回传该端点对的合法 type 列表。**如果连报错列出的合法 type 都没有
    一个装得下**（不是"选一个将就"，是确实没有语义相符的），改用
-   `agent-canvas-ctl link-nodes --from <id> --to <id> --reading "<谓语读法>" --why "<原因>" [--despite <已排除的type>,...]`
-   逃逸阀记下来，不要放弃这条主张也不要硬套一个不准确的现有 type。
+   `agent-canvas-ctl link-nodes --from <id> --to <id> --reading "<谓语读法>" --why "<原因>" --despite <报错列出的全部合法 type，逗号分隔>`
+   逃逸阀记下来，不要放弃这条主张也不要硬套一个不准确的现有 type。`--despite` 必须逐个列全，漏一个即拒。
 4. 简短报告建了哪些关系、跳过了哪些候选及原因。
 
 ## 两次调用（对齐 describe-node 的两个时机，可紧挨着调）
@@ -60,5 +60,4 @@ version: "1.0.2"
 ## 什么时候不要调
 
 - 会话刚开始、还没有任何候选对象（需求/文档/上游节点）时。
-- `context.existingRelations` 里已经有语义相同的关系时——不要重复主张。
 - 矩阵里没有对应格子的端点对（比如两个 group 节点之间）——这是显式的空格子，不是遗漏。

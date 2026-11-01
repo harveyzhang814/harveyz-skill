@@ -144,5 +144,5 @@ pre-commit    直接提交到 main（应拒绝）                FAIL ❌
 ❌ 验收未通过（M/N 失败）。是否仍继续 Step 7？[y/N]
 ```
 
-用户选 **N** → 提示重新检查配置后重跑 `/git-workflow-init`，停止。
+用户选 **N** → 提示重新检查配置后重跑 `/init-workflow`，停止。
 用户选 **Y** → 继续 Step 7。

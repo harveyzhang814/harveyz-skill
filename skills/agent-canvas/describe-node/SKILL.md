@@ -2,7 +2,7 @@
 name: describe-node
 description: Auto-generate a title and description for the Agent Canvas node you are running in — use it to summarize what the session is doing, name the node, or update its title/description; only usable inside an Agent Canvas node.
 user_invocable: true
-version: "1.1.1"
+version: "2.0.0"
 ---
 
 # 为当前节点生成标题与描述（describe-node）
@@ -18,16 +18,24 @@ agent-canvas-ctl summarize-self [--spec <规格文档绝对路径>]
 
 **不需要传节点 id**——它按祖先进程链反查你所在的节点，"谁调用就摘要谁"。
 
-- `--spec` 指定据以撰写的规格文档，**必须是绝对路径**。相对路径不报错、退出码照样是
-  0，只是读不到文件，`specUsed` 静默返回 null——和"没找到"长得一模一样。它是在主进程
-  里按主进程的 cwd 解析的，不是你会话的当前目录，所以"从我这儿看是对的"不作数。
-- **有 spec 时一律显式传 `--spec`，包括第一次调用，不要依赖自动发现。** 不传时会从本会话
-  记录里自动发现你写过或读过的 `docs/superpowers/specs/*.md`，按 Write > Edit > Read
-  取最后一次；**只有 Read 命中、且读过不止一份不同的 spec 时，自动发现会直接放弃**
-  （归属不明，它不猜）。实测在 worktree 里刚 Write 完 spec 不传也落空过，落空后标题会
-  编成与本会话无关的内容。
-- 调完看返回的 `specUsed`：为 null 就表示没用上，补传 `--spec` 重跑。
-- **命令受理即返回**：stdout 返回 `{nodeId, status: "submitted", specUsed}`，退出码 0，
+- `--spec` 指定据以撰写的规格文档，**必须是绝对路径**：相对路径不报错、退出码照样是 0，
+  只是 `specUsed` 静默返回 null，和"没找到"长得一模一样。
+- **Claude 节点不传 `--spec`**，第一次调用也一样：App 会自己根据本会话记录认 spec（先收集
+  证据，必要时交给后台模型裁判挑选）。需要 App 版本高于 8.5.1（8.5.1 之后发布的第一个版本起）。
+- **回执里有 `specStatus` 说明 App 已支持上面这套；回执里没有 `specStatus` 说明 App 是旧版，
+  按旧规则**：有 spec 时显式传 `--spec`（绝对路径），包括第一次调用，不要依赖自动发现——旧版
+  自动发现会落空，落空后标题会编成与本会话无关的内容。
+- **Codex、pi 节点照旧一律显式传 `--spec`**（有 spec 时，包括第一次调用）：新的认 spec 流程
+  只对 Claude 节点生效，这两类节点的 `specStatus` 只会是 `given`、`resolved`、`none`。
+- 调完看返回的 `specStatus`：
+  - `given`：你传了 `--spec`，用的就是它。
+  - `resolved`：没传，App 已经认出了 spec，`specUsed` 就是它。
+  - `pending`：没传，App 正在后台让模型裁判挑 spec。**此时回执里 `specUsed` 为 null 是正常
+    的，不要重跑**；需要确认最终用了哪份时，等 `backgroundJob.status` 变成 `succeeded` 或
+    `failed` 后查 `get-node` 的 `backgroundJob.specUsed`（见下节）。
+  - `none`：没找到 spec，`specUsed` 为 null。有 spec 就补传 `--spec` 重跑。
+- 旧版 App 的回执没有 `specStatus`：此时 `specUsed` 为 null 就表示没用上，补传 `--spec` 重跑。
+- **命令受理即返回**：stdout 返回 `{nodeId, status: "submitted", specUsed, specStatus}`，退出码 0，
   表示**已受理**，不是已写回。模型调用（通常 5–15 秒，上限约 90 秒）和写回在主进程后台
   完成，**不要等它**，接着做别的事。返回里不再有 `title` / `description`。
   受理阶段的前置失败（节点没有会话、没配置摘要模型、上一次还在进行中等）仍然同步报错：
@@ -51,6 +59,9 @@ agent-canvas-ctl get-node <nodeId>      # nodeId 取自上面返回的 nodeId
 | `succeeded` | 已写回，节点当前的 `title` / `description` 就是结果 | 完成 |
 | `failed` | 没写成，`error` 写明原因 | 如实汇报，不要静默重试 |
 
+- `backgroundJob.specUsed` 是这次最终用的 spec 绝对路径，只在 `status` 为 `succeeded` 或
+  `failed` 后有意义。**只有 Claude 节点没传 `--spec`（走了 App 自己的认 spec 流程）时才有这个
+  字段**；传了 `--spec` 或 Codex、pi 节点，字段不存在。字段存在但为 null，表示没找到 spec。
 - `error` 以「摘要失败：」开头表示模型调用或校验失败；以「写回…失败（已写回：…）：」开头
   表示写回中途失败，括号里是已经写进去的部分（比如标题已改、描述没改）。失败时用户的
   通知中心也会出现一条 error 通知。

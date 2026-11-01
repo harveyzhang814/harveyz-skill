@@ -73,16 +73,16 @@ flowchart TD
     UP -->|"卖铲子"| MID
     MID -->|"挖金子"| DOWN
 
-    style UP   fill:#00205B,color:#fff,stroke:#1E4A9A
-    style MID  fill:#003E96,color:#fff,stroke:#1A6AC4
-    style DOWN fill:#1E5C9E,color:#fff,stroke:#3A8ACC
-    style U1 fill:#0A2E7A,color:#fff,stroke:#1E4A9A
-    style U2 fill:#0A2E7A,color:#fff,stroke:#1E4A9A
-    style U3 fill:#0A2E7A,color:#fff,stroke:#1E4A9A
-    style U4 fill:#0A2E7A,color:#fff,stroke:#1E4A9A
-    style M1 fill:#0050B8,color:#fff,stroke:#1A6AC4
-    style M2 fill:#0050B8,color:#fff,stroke:#1A6AC4
-    style D1 fill:#2A6EAE,color:#fff,stroke:#3A8ACC
-    style D2 fill:#2A6EAE,color:#fff,stroke:#3A8ACC
-    style D3 fill:#2A6EAE,color:#fff,stroke:#3A8ACC
+    style UP   fill:#E8E8E8,color:#212427,stroke:#C8C8C8
+    style MID  fill:#F0F0F0,color:#212427,stroke:#D0D0D0
+    style DOWN fill:#F5F5F5,color:#212427,stroke:#D8D8D8
+    style U1 fill:#FFFFFF,color:#212427,stroke:#BBBBBB
+    style U2 fill:#FFFFFF,color:#212427,stroke:#BBBBBB
+    style U3 fill:#FFFFFF,color:#212427,stroke:#BBBBBB
+    style U4 fill:#FFFFFF,color:#212427,stroke:#BBBBBB
+    style M1 fill:#FFFFFF,color:#212427,stroke:#BBBBBB
+    style M2 fill:#FFFFFF,color:#212427,stroke:#BBBBBB
+    style D1 fill:#FFFFFF,color:#212427,stroke:#BBBBBB
+    style D2 fill:#FFFFFF,color:#212427,stroke:#BBBBBB
+    style D3 fill:#FFFFFF,color:#212427,stroke:#BBBBBB
 ```

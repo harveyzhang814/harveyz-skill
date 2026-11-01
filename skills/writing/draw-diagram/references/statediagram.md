@@ -29,9 +29,9 @@ stateDiagram-v2
 ```mermaid
 stateDiagram-v2
     direction TB
-    classDef opportunity fill:#1A5E3A,stroke:#2A7E50,color:#fff
-    classDef hold        fill:#003E96,stroke:#1A6AC4,color:#fff
-    classDef danger      fill:#7B1010,stroke:#B52020,color:#fff
+    classDef opportunity fill:#E87722,stroke:#BA5F1B,color:#fff
+    classDef hold        fill:#666666,stroke:#525252,color:#fff
+    classDef danger      fill:#CC0000,stroke:#A30000,color:#fff
 
     state "买入区" as S1
     state "持有区" as S2

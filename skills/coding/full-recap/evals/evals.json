@@ -1,0 +1,53 @@
+{
+  "skill_name": "full-recap",
+  "evals": [
+    {
+      "id": 0,
+      "name": "recap-long-discussion",
+      "prompt": "我们这个对话聊了很久，我有点乱了。回顾一下：一开始要给博客加评论功能。先讨论了存储，定了用 SQLite，否决了 Postgres——单机部署，多一个服务不值。然后讨论审核，我说过不接受接第三方审核服务。中途我们把『先审后发』叫作 B 方案，最后选了 B 方案。设计文档写在 docs/specs/comments-design.md，实现在 feature/comments 分支上，已经写完了存储层，审核队列还没开始写。还没定的是：评论要不要支持 Markdown。下一步是写审核队列。帮我 full recap 一下，我准备开个新 session 接着做。",
+      "expected_output": "直接输出 Markdown（不包代码块），不写文件。第 1 节一句话同时说清在做什么（博客评论功能）和到哪了（存储层完成、审核队列未开始）；按倒金字塔顺序：当前状态与下一步 → 已定结论 → 未决问题 → 背景 → 线索 → 核实冲突。Postgres 否决带理由；『B 方案』被展开为先审后发；docs/specs/comments-design.md 与 feature/comments 以『路径 — 为什么看』出现且不摘要内容；两者在当前环境不存在，记入核实冲突。",
+      "files": [],
+      "assertions": [
+        { "id": "no-files-written", "source": "transcript", "text": "整个过程没有创建或修改任何文件" },
+        { "id": "not-in-code-block", "source": "reply", "text": "回顾正文直接以 Markdown 输出，没有整体包在代码块里" },
+        { "id": "first-line-decidable", "source": "reply", "text": "第一节是一句话，同时说出在做什么（博客评论功能）和进度（存储层完成、审核队列未开始）" },
+        { "id": "inverted-pyramid-order", "source": "reply", "text": "章节顺序为：一句话 → 当前状态与下一步 → 已定结论 → 未决问题 → 背景 → 线索 → 核实冲突（省略的节除外）" },
+        { "id": "rejected-with-reason", "source": "reply", "text": "写出 Postgres 被否决及理由（单机部署 / 多一个服务）" },
+        { "id": "codename-expanded", "source": "reply", "text": "『B 方案』被展开为先审后发，或首次出现时附一句说明；不出现无解释的『B 方案』" },
+        { "id": "open-question", "source": "reply", "text": "未决问题列出『评论是否支持 Markdown』" },
+        { "id": "pointer-format", "source": "reply", "text": "docs/specs/comments-design.md 与 feature/comments 以『路径 — 为什么看』的一行线索出现，没有对其内容的摘要或推测" },
+        { "id": "verified-existence", "source": "transcript", "text": "输出前检查过上述路径或分支是否存在（如 ls / test -e / git branch 一类命令）" },
+        { "id": "conflict-reported", "source": "reply", "text": "核实冲突一节指出对话提到的文件或分支在当前环境不存在或无法确认存在，且不替用户判断哪边对" },
+        { "id": "tier-markers", "source": "reply", "text": "推出来的条目标「（推断）」、未核实的标「（未核实）」；对话里明确定下的条目（如 SQLite、B 方案）不带这类标注" },
+        { "id": "no-extrapolation", "source": "reply", "text": "没有对话里不存在的结论、约束，也没有未标注「（推断）」的推论" },
+        { "id": "no-handoff-artifacts", "source": "reply", "text": "输出中没有交接文档字段（如 status 字段）、验收锚点、交回要求、worktree 一类交接元素" }
+      ]
+    },
+    {
+      "id": 1,
+      "name": "recap-short-omit-empty",
+      "prompt": "我们刚才只聊了一件事：把 README 的安装说明改成先写 npm 方式，再写手动方式，已经改完了，没有别的待办。给我 recap 一下全貌。",
+      "expected_output": "直接输出 Markdown，篇幅短。只出现用得上的章节（一句话、当前状态），没有空标题或『无』占位的章节；不写文件。",
+      "files": [],
+      "assertions": [
+        { "id": "no-files-written", "source": "transcript", "text": "整个过程没有创建或修改任何文件" },
+        { "id": "no-empty-sections", "source": "reply", "text": "没有内容为空、『无』或『暂无』的章节标题" },
+        { "id": "first-line-decidable", "source": "reply", "text": "第一节一句话说出做了什么（README 安装说明调整顺序）且已完成" },
+        { "id": "no-extrapolation", "source": "reply", "text": "没有对话里不存在的结论、待办或建议，也没有未标注「（推断）」的推论" }
+      ]
+    },
+    {
+      "id": 2,
+      "name": "recap-not-handoff",
+      "prompt": "我们讨论了日志采集方案：定了用 Vector 做采集，否决 Fluentd（插件生态用 Ruby，团队不熟）。还没定的是日志保留多少天。帮我回顾一下全貌，我想先自己理一理。",
+      "expected_output": "直接输出 Markdown 回顾。不写文件、不建分支或 worktree；不出现 status、验收锚点、交回要求等交接元素；Fluentd 否决带理由；未决问题含保留天数。",
+      "files": [],
+      "assertions": [
+        { "id": "no-files-written", "source": "transcript", "text": "整个过程没有创建或修改任何文件，没有建分支或 worktree" },
+        { "id": "no-handoff-artifacts", "source": "reply", "text": "输出中没有交接文档字段（如 status 字段）、验收锚点、交回要求、worktree 一类交接元素" },
+        { "id": "rejected-with-reason", "source": "reply", "text": "写出 Fluentd 被否决及理由（插件生态用 Ruby / 团队不熟）" },
+        { "id": "open-question", "source": "reply", "text": "未决问题列出日志保留天数" }
+      ]
+    }
+  ]
+}

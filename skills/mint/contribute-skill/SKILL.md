@@ -2,7 +2,7 @@
 name: contribute-skill
 description: "Contribute, import, sync, or register a skill directory from another project into the harveyz-skill repo — auto-normalizes SKILL.md format, registers in skills-index.json, and performs bidirectional directory sync. Triggers whenever the user wants to add, contribute, push, migrate, import, or sync an existing skill into harvey-skill or harveyz-skill. Note: flow is from other projects into harveyz-skill; installing or copying an existing skill out to a local project does NOT trigger this skill."
 user_invocable: true
-version: "1.1.0"
+version: "1.3.0"
 ---
 <!-- platform-standard-sha256: ad3d2f32f40cc282ef20bd3a19631a16f079839cc3e086a09b99011cc201fa2a -->
 
@@ -113,6 +113,8 @@ version: "1.1.0"
 
 目录名确认后，将 `<bundle-category>` 定为该值，用于构建目标路径 `skills/<bundle-category>/<name>/`。注意目录名与 bundle 名可以不同（如目录名 `superpowers-fork` 对应 bundle `brainstorming`）。
 
+再让用户选推荐级别 `installScope`：`essential`（所有安装场景默认包含）／`global`（推荐安装，跨项目通用）／`project`（按项目需要安装）／跳过；跳过则注册时不写该字段。
+
 ---
 
 ### Step 5 — 确认摘要
@@ -122,13 +124,17 @@ version: "1.1.0"
 ```
 即将执行以下操作：
 
+[工作区]
+  从 staging 新建分支 feature/contribute-<name>，工作区 <harveyzSkillPath>/.claude/worktrees/feature+contribute-<name>
+  （分支已存在时改为询问是否在该分支继续）
+
 [复制]
   源：`${source_skill_dir}/`
       （列出目录中所有文件）
-  目标：<harveyzSkillPath>/skills/<bundle-category>/<name>/
+  目标：<WT>/skills/<bundle-category>/<name>/
 
 [注册]
-  skills-index.json 新增：{"path": "<bundle-category>/<name>", "bundle": "<bundle>"}
+  skills-index.json 新增：{"path": "<bundle-category>/<name>", "bundle": "<bundle>", "installScope": "<scope>"}（跳过则无 installScope）
   （若新建 bundle）bundleMeta 新增：{"<bundle>": "<description>"}
 
 [平台适配评估]
@@ -159,10 +165,7 @@ version: "1.1.0"
 | `user_invocable` | 显式声明 `true` 或 `false` | 自动补填 `true`，无需确认 |
 | frontmatter 包裹 | 标准 `---` YAML 块 | 自动修正格式，无需确认 |
 
-**修复策略：**
-- 可自动确定的字段（`name`、`version`、`user_invocable`、frontmatter 格式）：直接修复，无需用户确认
-- 涉及内容重写的字段（`description`）：以 diff 形式展示修改前后，等用户确认后再应用
-- Step 1a 的平台适配修改：仅应用 Step 5 已展示且获确认的逐文件 diff；新适配文件随目标目录复制并在共享入口写明读取点，不修改未确认的源文件
+**修复策略：** Step 1a 的平台适配修改：仅应用 Step 5 已展示且获确认的逐文件 diff；新适配文件随目标目录复制并在共享入口写明读取点，不修改未确认的源文件
 
 **若 `SKILL.md` 格式严重损坏**（无法解析 frontmatter）：停止执行，报告具体问题，让用户手动修复后重试。
 
@@ -170,23 +173,44 @@ version: "1.1.0"
 
 ### Step 6b — 执行复制与注册
 
-按序执行以下操作：
+按序执行以下操作。全部写入都在独立工作区 `<WT>` 里进行，不在 `<harveyzSkillPath>` 当前 checkout 写入（它可能停在别的分支上）。
+
+**前置：建立隔离工作区**
+
+`staging` 必须可解析为提交（`git -C <harveyzSkillPath> rev-parse --verify 'staging^{commit}'`），否则停止。然后运行 `git -C <harveyzSkillPath> show-ref --quiet refs/heads/feature/contribute-<name>`：
+- 分支不存在 → `git -C <harveyzSkillPath> worktree add "<WT>" -b feature/contribute-<name> staging`，其中 `<WT>` 为 `<harveyzSkillPath>/.claude/worktrees/feature+contribute-<name>`
+- 分支已存在 → 问用户「分支 feature/contribute-<name> 已存在，是否在该分支继续？(y/n)」。n 则中止；y 则用 `git -C <harveyzSkillPath> worktree list` 找到它所在的工作区作为 `<WT>`，没有则 `git -C <harveyzSkillPath> worktree add "<WT>" feature/contribute-<name>`
+
+建好后运行 `git -C "<WT>" config core.hooksPath .githooks` 与 `git -C "<WT>" config merge.ff false`。任一命令失败即停止并保留现场。
+
+**0. 复制前检查目标路径**
+
+`<WT>/skills/<bundle-category>/<name>/` 已存在时，先让用户选择，再继续：
+```
+目标路径已存在：skills/<bundle-category>/<name>/
+选择操作：
+  1. 覆盖（替换已有 skill）
+  2. 重命名（输入新目录名）
+  3. 中止
+```
 
 **1. 复制 skill 目录**
 ```bash
 # 将源目录完整复制为目标路径
-cp -r "${source_skill_dir}/" <harveyzSkillPath>/skills/<bundle-category>/<name>/
+cp -r "${source_skill_dir}/" <WT>/skills/<bundle-category>/<name>/
 ```
 
 **2. 用格式化后的 SKILL.md 覆盖目标目录中的 SKILL.md**
 （将 Step 6a 规范化后的内容写入目标路径）
 
-**3. 更新 `<harveyzSkillPath>/skills-index.json`**
+**3. 更新 `<WT>/skills-index.json`**
 
 在 `skills[]` 数组末尾新增：
 ```json
-{ "path": "<bundle-category>/<name>", "bundle": "<bundle>" }
+{ "path": "<bundle-category>/<name>", "bundle": "<bundle>", "installScope": "<scope>" }
 ```
+
+用户在 Step 4 跳过 installScope 时省略该字段。
 
 若新建 bundle，在 `bundleMeta` 中新增：
 ```json
@@ -195,21 +219,12 @@ cp -r "${source_skill_dir}/" <harveyzSkillPath>/skills/<bundle-category>/<name>/
 
 **4. 运行生成脚本**
 ```bash
-cd <harveyzSkillPath> && node scripts/generate-npmignore.js
+cd <WT> && node scripts/generate-npmignore.js
 ```
 
 > `generate-npmignore.js` 会更新 `package.json` 的 `files[]` 字段和 `.npmignore`，将新注册的 skill 路径加入分发列表。
 
 若脚本执行失败：报告错误，**不执行 git commit**，保留已复制文件供用户检查。
-
-**边界情况：目标路径已存在同名 skill**
-```
-目标路径已存在：skills/<bundle-category>/<name>/
-选择操作：
-  1. 覆盖（替换已有 skill）
-  2. 重命名（输入新目录名）
-  3. 中止
-```
 
 ---
 
@@ -230,14 +245,14 @@ cd <harveyzSkillPath> && node scripts/generate-npmignore.js
 
 ```bash
 # 检测差异
-diff -rq <harveyzSkillPath>/skills/<bundle-category>/<name>/ "${source_skill_dir}/"
+diff -rq <WT>/skills/<bundle-category>/<name>/ "${source_skill_dir}/"
 ```
 
 - **若无差异**：跳过，不产生 commit，提示用户"源目录内容已是最新，无需同步"
 - **若有差异**：
   ```bash
   # 复制目录内容（不含目录本身）到源目录，覆盖同名文件
-  cp -r <harveyzSkillPath>/skills/<bundle-category>/<name>/. "${source_skill_dir}/"
+  cp -r <WT>/skills/<bundle-category>/<name>/. "${source_skill_dir}/"
   ```
   若为 Git 源，再在**源项目**当前分支执行：
   ```bash
@@ -248,21 +263,13 @@ diff -rq <harveyzSkillPath>/skills/<bundle-category>/<name>/ "${source_skill_dir
 
 ---
 
-### Step 8 — 在 harveyz-skill 创建分支并 commit
+### Step 8 — 在 harveyz-skill 工作区 commit
+
+在 Step 6b 建立的工作区里暂存并提交：
 
 ```bash
-cd <harveyzSkillPath>
+cd <WT>
 
-# 创建 feature 分支（处理分支已存在的情况）
-if git show-ref --quiet refs/heads/feature/contribute-<name>; then
-  echo "分支 feature/contribute-<name> 已存在，是否切换到该分支继续？(y/n)"
-  # 若用户确认 → git checkout feature/contribute-<name>
-  # 若用户拒绝 → 中止操作
-else
-  git checkout -b feature/contribute-<name>
-fi
-
-# 暂存所有变更
 git add skills/<bundle-category>/<name>/
 git add skills-index.json
 git add package.json
@@ -282,8 +289,9 @@ git commit -m "feat: contribute <name> from <source-project-name>"
 ✓ harveyz-skill
   - 新增 skill：skills/<bundle-category>/<name>/
   - 已注册到 bundle：<bundle>
-  - 分支：feature/contribute-<name>
-  - 下一步：git push origin feature/contribute-<name>，然后创建 PR → staging
+  - 分支：feature/contribute-<name>（基于 staging）
+  - 工作区：<WT>
+  - 下一步：确认后在 <WT> 运行 scripts/merge-to-staging.sh 合并进 staging
 
 ✓ 源项目（<project-name>）
   - 已同步格式化内容：`${source_skill_dir}/`

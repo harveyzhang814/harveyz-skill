@@ -1,6 +1,6 @@
 ---
 name: init-goal
-version: "1.3.1"
+version: "1.4.0"
 description: "Generate a structured continuous-execution Goal Prompt through guided dialogue. Parses the user's initial message to auto-fill known fields and match the best template, then clarifies only what is missing (depth-first, one question at a time). Outputs the Goal Prompt as text — the skill writes no files; the executing agent persists prompt.md/log.md/summary.md during execution per the embedded rules. Triggers: user says /init-goal, 'initialize a continuous goal', 'set up a GOal', or describes a repetitive autonomous task they want an agent to continue."
 user_invocable: true
 ---
@@ -10,11 +10,6 @@ user_invocable: true
 对话式向导，帮助用户为**持续执行**生成一段结构化的 **Goal Prompt 文本**。
 
 **这个 skill 的唯一产物就是这段 Goal Prompt 文本。** 它内含「执行期间维护文档」的规则——这些规则是写给持续执行的 agent 的指令，由那个 agent 在持续执行时落盘三个文件。**init-goal 自己不创建任何目录、不写任何文件。**
-
-执行期间由持续执行 agent 生成的文件（slug 取自 GOAL）：
-- `~/.hskill/init-goal/<goal-slug>/prompt.md`（agent 首轮存档，静态不变）
-- `~/.hskill/init-goal/<goal-slug>/log.md`（agent 每轮追加）
-- `~/.hskill/init-goal/<goal-slug>/summary.md`（agent 退出时生成）
 
 **规则：每次只发一条消息，等用户回复后再继续。**
 
@@ -48,18 +43,18 @@ user_invocable: true
 | 探索 / 代码库 / 结构 / map / 未知领域 | Explore & Map |
 | 无明显匹配 | 从零开始（所有字段留空） |
 
-置信度高时直接套用，不问用户确认模版名称。
+置信度高时直接套用，不问用户确认模版名称。置信度低（多个信号都沾边，或都不强）时，把候选模版（最多 3 个）加「从零开始」作为选项问用户一次，算作 0c 的第一问。
 
 匹配后，读取 `references/templates.md` 中对应模版的字段值，填入用户未提供的字段。
 
 ### 0c: 深度优先澄清
 
-按以下优先级，逐一澄清**缺失或不够具体**的字段。每次只问一个，等回复后再判断是否还需要继续问。
+按以下优先级，逐一澄清**缺失或不够具体**的字段。每次只问一个。
 
 **优先级（从高到低）：**
 
-1. **GOAL** — 如果目标不够具体（缺少成功标准、范围不清楚），先把这个搞清楚。其他一切从 GOAL 派生。
-2. **EXIT_EXPLICIT** — 如果用户没有明确说"达到什么状态停止"，问这个。这是持续执行的终点，必须清晰。
+1. **GOAL** — 如果目标不够具体（缺少成功标准、范围不清楚），先把这个搞清楚。
+2. **EXIT_EXPLICIT** — 如果用户没有明确说"达到什么状态停止"，问这个。
 3. **CONSTRAINTS** — 如果用户提到了限制但不完整（比如"不能改某些文件"但没说具体哪些），确认一下。
 4. **EXECUTION** — 如果模版默认步骤明显不适用当前场景，才问。通常不需要问。
 5. **EVAL / EXIT_FALLBACK** — 几乎不需要问；模版默认值在绝大多数情况下够用。
@@ -95,7 +90,7 @@ user_invocable: true
 
 ---
 
-询问：「确认后直接生成文件，或告诉我需要调整哪个字段。」
+询问：「确认后生成 Goal Prompt，或告诉我需要调整哪个字段。」
 
 若用户要调整，只修改被指出的字段，重新展示摘要。直到用户确认。
 
@@ -103,7 +98,7 @@ user_invocable: true
 
 ## Step 2 — 生成并输出 Goal Prompt 文本
 
-这一步**不写任何文件**。init-goal 的产物就是下面这段文本——把它生成出来，直接展示给用户，交给宿主的持续执行设施或执行 agent。文本里的 `## 文档维护` 段是写给持续执行 agent 的指令，三个文档由那个 agent 在执行时落盘。
+这一步**不写任何文件**：生成下面这段文本，直接展示给用户，交给宿主的持续执行设施或执行 agent。
 
 **先生成 goal-slug：**
 若 GOAL 是英文，转为 kebab-case（小写 + 连字符），截取前 40 字符。
@@ -146,6 +141,6 @@ user_invocable: true
 ---
 Goal Prompt 已生成（如上）。复制整段，按当前宿主的持续执行适配器启动；宿主没有此设施时，交给同一执行 agent **顺序执行**：每次完成一轮后读取评估和 `log.md`，由用户或控制器明确继续下一轮，直到退出条件满足。
 
-首轮运行时，持续执行 agent 会按 `## 文档维护` 的指令把它存为 `~/.hskill/init-goal/[goal-slug]/prompt.md`，每轮追加 `log.md`，结束时写 `summary.md`。平台专用启动方式只在 `platforms/` 适配器中说明。
+平台专用启动方式见 `platforms/` 适配器。
 
 ---
