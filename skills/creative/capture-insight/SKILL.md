@@ -1,6 +1,6 @@
 ---
 name: capture-insight
-version: "2.0.0"
+version: "2.0.2"
 user_invocable: true
 description: "Capture and record a fleeting insight or observation. Triggers immediately when the user expresses an observation, judgment, or idea — phrases like 'I noticed', 'just an observation', 'record this', 'insight', 'I have a judgment', or tossing out an opinionated thought. Distinct from 'I have an idea to execute' (that's a task). Clarifies the core with 2-3 quick Q&As, then saves to the Writing Agent project's insights/ folder. Trigger early — insights are fragile."
 ---
@@ -11,25 +11,9 @@ description: "Capture and record a fleeting insight or observation. Triggers imm
 
 ## 核心原则
 
-灵感是易碎的。目标不是"完整分析"，而是**快速固定核心**，让用户三个月后翻到这条记录时还能立刻找回当时的思路。
+目标是**快速固定核心**，不是完整分析：让用户三个月后翻到这条记录，还能找回当时的思路。
 
-**一次只问一个问题。** 不要用列表轰炸用户，不要问"你能说说背景、动机和应用场景吗"。按顺序问，等用户回答后再问下一个。
-
----
-
-## 设计要点（为什么这么设计）
-
-**为什么一次只问一个问题？**
-列表提问会让用户切换到"汇报模式"——开始整理、补充、让答案看起来完整。灵感的价值在于原始状态，整理会破坏直觉的颗粒度。一个问题一个问题来，是为了让用户保持表达状态，而不是总结状态。
-
-**为什么先复述确认再问问题？**
-如果对用户说的核心理解错了，后续问题全跑偏。复述是一次低成本的校准——如果方向错了，作者会立刻纠正，后续的澄清才能问到点上。
-
-**为什么保留"也许"、"似乎"等不确定性，不升格为确定性判断？**
-不确定性本身是信号——它说明作者对这个判断的边界感知。三个月后翻到"感觉 X 可能是个趋势"和"X 是重要趋势"，给出的是完全不同的行动信号。代替作者升格判断，等于删掉了有价值的元信息。
-
-**为什么 insight 文件有固定的五段结构？**
-每个字段捕捉不同时态的信息：触发（当时发生了什么）、核心观察（我注意到什么）、为什么有意思（张力在哪里）、潜在方向（可能往哪里走）、关键词（搜索锚点）。如果只保存"我的判断"，三个月后找不回触发点，很难复现当时的思路。
+**一次只问一个问题**，等用户回答完再问下一个。不要用列表提问（比如"你能说说背景、动机和应用场景吗"）。
 
 ---
 
@@ -48,15 +32,7 @@ description: "Capture and record a fleeting insight or observation. Triggers imm
 { "writing_agent_path": "/path/to/writing-agent" }
 ```
 
-**若配置文件不存在：**
-
-> "没找到 Writing Agent 项目配置。请确认项目路径（默认：`/Users/harveyzhang96/Projects/writing-agent`）？"
-
-用户确认后，创建目录并写入配置：
-```bash
-mkdir -p ~/.hskill/capture-insight
-echo '{"writing_agent_path": "/Users/harveyzhang96/Projects/writing-agent"}' > ~/.hskill/capture-insight/config.json
-```
+**若配置文件不存在：** 询问 Writing Agent 项目路径（默认 `/Users/harveyzhang96/Projects/writing-agent`），把**用户确认的路径**写进 `~/.hskill/capture-insight/config.json` 的 `writing_agent_path` 字段（目录不存在就先 `mkdir -p ~/.hskill/capture-insight`）。
 
 配置确认后，将 `writing_agent_path` 记为 `{project_path}`，insight 写入目标为 `{project_path}/insights/`。
 
@@ -64,14 +40,14 @@ echo '{"writing_agent_path": "/Users/harveyzhang96/Projects/writing-agent"}' > ~
 
 ### 第一步：捕捉原始 insight
 
-用户说出 insight 后，**先用一句话复述你理解的核心**，让用户确认或纠正方向。这一步不算"问问题"，是对齐认知用的。
+用户说出 insight 后，**先用一句话复述你理解的核心**，让用户确认或纠正方向（不计入澄清问题）。
 
 示例：
 > 你说的核心是：[你对 insight 的提炼]，对吗？
 
 ### 第二步：2-3 个澄清问题
 
-按优先级依次问，每次只问一个：
+按优先级依次问：
 
 1. **触发**：这个 insight 是被什么触发的？（某个产品/对话/现象）
 2. **张力**：为什么这个观察有意思？哪里跟直觉相悖，或者跟常识不一样？
@@ -84,7 +60,7 @@ echo '{"writing_agent_path": "/Users/harveyzhang96/Projects/writing-agent"}' > ~
 澄清完成后：
 
 1. 给出一段 **insight 摘要**（3-5 句话），让用户确认是否准确捕捉到了核心
-2. 用户确认后，生成文件名，按以下步骤写入 `{project_path}/insights/`
+2. 用户确认后，生成文件名，按「写入 & Git 操作」依次执行：切到 `chore/insight` → 写文件 → 提交并合并 → 切回原分支。
 
 ---
 
@@ -139,7 +115,8 @@ if git show-ref --verify --quiet refs/heads/staging; then
   BASE_BRANCH=staging
 else
   BASE_BRANCH=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null \
-                | sed 's@^refs/remotes/origin/@@' || echo "main")
+                | sed 's@^refs/remotes/origin/@@')
+  BASE_BRANCH=${BASE_BRANCH:-main}
 fi
 
 # 3. 切换到 chore/insight（不存在则从 BASE_BRANCH 创建）
@@ -177,10 +154,8 @@ git checkout "$ORIGINAL_BRANCH"
 
 ## 注意事项
 
-- **不要代替用户形成判断**。如果用户说"我觉得 XX 可能是个趋势"，摘要里写"你观察到 XX 可能是个趋势"，而不是"XX 是个重要趋势"。
-- **保留用户的语气和颗粒度**。用户用的是模糊语言（"感觉"、"好像"、"也许"），保存时也保留这种不确定性，不要帮他们"升级"成确定性判断。
-- **简洁优先**。insight 文件不是分析报告，核心价值是"快速找回当时的思路"，不是写详尽。
-- **无论从哪个项目触发，始终写入 Writing Agent 项目**。`{project_path}` 来自配置，不受当前工作目录影响。
+- 不替用户升格判断：保留"感觉/好像/也许"这类不确定的措辞（摘要写"你观察到 XX 可能是个趋势"，不写"XX 是个重要趋势"）。
+- 始终写入配置里的 `{project_path}`，不受当前工作目录影响。
 
 ---
 
@@ -189,6 +164,4 @@ git checkout "$ORIGINAL_BRANCH"
 ```
 ✓ 已保存到 {project_path}/insights/YYYY-MM-DD-<slug>.md
   提交到 chore/insight，合并到 {BASE_BRANCH}，当前回到 {ORIGINAL_BRANCH}。
-
-[如果发现这个 insight 与现有文章方向相关，可以顺带一提，但不要主动推销"你可以写篇文章"]
 ```

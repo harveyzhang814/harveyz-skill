@@ -2,20 +2,12 @@
 name: clean-git
 description: "Tidy and clean up local git branches using rule matching and LLM semantic analysis, then batch-delete stale branches after grouped confirmation. Triggers: clean up branches, branch cleanup, tidy branches, delete old branches, organize branches."
 user_invocable: true
-version: "1.0.0"
+version: "1.0.1"
 ---
 
-# SKILL.md — git-cleanup
+# clean-git
 
-> **版本：** v1.0.0
-> **定位：** 周期性梳理本地 git 分支，识别可安全删除的废弃分支
-
----
-
-## 触发条件
-
-- "清理分支" / "整理分支" / "梳理分支"
-- "branch cleanup" / "删除旧分支"
+周期性梳理本地 git 分支，识别可安全删除的废弃分支。
 
 ---
 
@@ -28,7 +20,7 @@ version: "1.0.0"
 - `## Always Keep` 段：每行 `` `pattern` `` 为必留 glob 规则
 - `## LLM 判断上下文` 段：整段文本作为 LLM 分析的 context
 
-**不存在** → 使用内置默认规则，执行完毕后提示生成配置文件：
+**不存在** → 使用内置默认规则：
 - Always Delete：`chore/bump-*`、`chore/sync-*`、`chore/fix-*`
 - Always Keep：`test/*`
 - LLM context：「通用项目。保留标准：功能仍在迭代的分支、测试框架。删除标准：一次性任务、已完成的独立功能。」
@@ -45,15 +37,11 @@ git branch                         # 所有本地分支列表
 git branch --merged staging        # 已合并进 staging 的子集
 ```
 
-**跳过列表（不参与任何分析）：** `main`、`staging`、当前分支名
-
 ---
 
 ## Step 3：分类
 
-对每条本地分支（不在跳过列表中），按以下优先级归类：
-
-**预处理：** 先排除跳过列表（main、staging、当前分支名），剩余分支参与以下分类。
+排除 `main`、`staging`、当前分支后，每条分支按以下顺序归类，命中第一条即停：
 
 1. **未合并进 staging** → 直接归入 `GROUP_KEEP`，标注 `[未合并]`
 2. **已合并 + 命中 Always Keep** → 归入 `GROUP_KEEP`，标注 `[规则保留: <pattern>]`
@@ -61,16 +49,11 @@ git branch --merged staging        # 已合并进 staging 的子集
 4. **已合并 + 未命中任何规则** → 归入 `GROUP_AMBIGUOUS`，待 LLM 分析
 
 **glob 匹配规则：** `*` 匹配任意字符（不含 `/`）。`chore/bump-*` 匹配 `chore/bump-0.3.0`，不匹配 `feature/bump-test`。
-
-⚠️ **优先级冲突：** 若同一分支同时命中 Always Keep 和 Always Delete，**Always Keep 优先**（保留）。
-
 ---
 
 ## Step 4：LLM 分析 GROUP_AMBIGUOUS
 
-若 `GROUP_AMBIGUOUS` 为空，跳过 Step 4，直接进入 Step 5。
-
-若 `GROUP_AMBIGUOUS` 非空，执行以下步骤：
+`GROUP_AMBIGUOUS` 为空则跳过本步。
 
 **4a. 收集每条分支的最近 commit message：**
 
@@ -101,7 +84,7 @@ git log -1 --format="%s" <branch>
 
 ## Step 5：分组展示 + 逐组确认
 
-**边界情况：** 若三个分组均为空（仓库只有主干分支或当前 repo 无需清理），打印「✅ 所有分支已整理，无需清理」，跳到 Step 7。
+**边界情况：** 若组 A、B、C 全空（排除跳过列表后没有任何分支），打印「✅ 所有分支已整理，无需清理」，跳到 Step 7。
 
 ### 组 A — 明显可删（规则命中）
 
@@ -140,7 +123,7 @@ git log -1 --format="%s" <branch>
 
 ## Step 6：执行删除
 
-对用户确认的分组，逐条执行：
+对用户确认删除的组 A / 组 B，逐条执行：
 
 ```bash
 git branch -d <branch>

@@ -3,7 +3,7 @@ name: close-node
 description: Wrap up the current canvas node when a round of work is done — advance requirement status, verify handoff closure, merge the branch, stop the process, and hide the node from the canvas; only usable inside an Agent Canvas node.
 disable-model-invocation: true
 user_invocable: true
-version: "1.0.6"
+version: "1.0.7"
 ---
 
 # 节点收尾（close-node）
@@ -11,7 +11,7 @@ version: "1.0.6"
 如果当前不在 Agent Canvas 的画布节点里（即环境变量 `AGENT_CANVAS_MCP_URL` 未设置，
 或 `agent-canvas-ctl` 命令不存在），这个 skill 不适用，直接跳过，不要尝试执行下面的命令。
 
-**人工触发**，不自动触发。Codex 通过 `agents/openai.yaml` 禁止隐式调用；用户必须以 `$close-node` 显式调用。触发时机：你这一轮工作已经做完、已经汇报过、确认不再有后续动作。
+**人工触发**，不自动触发；用户必须以 `$close-node` 显式调用。触发时机：你这一轮工作已经做完、已经汇报过、确认不再有后续动作。
 
 ## 步骤
 
@@ -55,9 +55,9 @@ agent-canvas-ctl submit-requirement <需求节点id> --commit <分支 HEAD>
   靠它找回验收标准。收尾方是实现方：送审之后需求就停在 `in_acceptance`，不要继续往 `done`
   推，那一步不归实现方。
 - 这条需求要搁置（`deferred` 与 `status` 正交，不是它的取值）→ `defer-requirement <需求节点id>`
-- 想要的命令不在 `availableActions` 里，就**如实报告**"需求状态维持 X，因为 Y"（Y 取
-  `unavailableActions` 给的原因），不要硬凑、不要绕路调别的命令。
-- **拿不准就别改**，如实报告"需求状态维持 X，因为 Y"。改错了比不改更难发现。
+- 想要的命令不在 `availableActions` 里，或者**拿不准**该推到哪一步：不改、不绕路调别的命令，
+  如实报告"需求状态维持 X，因为 Y"（Y 取 `unavailableActions` 给的原因，或者你的疑点）。
+  改错了比不改更难发现。
 
 没有 `implements` 边 → 跳过这一步，不要顺手立项一个需求。
 
@@ -68,9 +68,9 @@ agent-canvas-ctl submit-requirement <需求节点id> --commit <分支 HEAD>
 **接手方**：
 - 核对交接文档 frontmatter 的 `status` 是否已置 `待验收`，没置就置上。
 - 核对 `hands-off-to` 边两端是否都齐、`target_node` 是否已回填自己的 nodeId。
-- **不合并、不 `git worktree remove`。** 先检查当前宿主是否提供且可核对为“保留 worktree 并离开/解除当前会话绑定”的可靠能力。
-- Claude Code 适配示例：使用 `ExitWorktree(action: "keep")`；它必须保留 worktree，不是合并或清理动作。其他宿主只使用实际提供且已核对语义的能力，不杜撰 API。
-- 若无安全解除绑定能力，报告 `nodeId`、分支、worktree 绝对路径与需人工解除绑定的事实，停在第 4 步。单次 shell `cd` 不能解除会话绑定；不得继续执行 `hide` 或 `stop-node`，也不得进入第 6/7 步。
+- **不合并、不 `git worktree remove`。**
+- 用宿主提供的“保留 worktree 并离开”能力解除会话绑定：Claude Code 用 `ExitWorktree(action: "keep")`；其他宿主只用实际提供且已核对语义的能力，不杜撰 API。
+- 无安全解除绑定能力时（单次 shell `cd` 不算）：报告 `nodeId`、分支、worktree 绝对路径，说明需人工解除绑定；停在第 4 步，不得继续执行 `hide`/`stop-node`，不进第 6/7 步。
 
 **交出方**：
 - 核对交接文档 `status` 是否已到 `已验收`。
@@ -113,8 +113,7 @@ git show-ref --verify --quiet refs/heads/staging
   scripts/merge-to-staging.sh
   ```
 
-  **合并失败就停在这里报告，不要进第 7 步。** 把没合并的分支连同节点一起关掉，等于把工作
-  弄丢了。
+  **合并失败就停在这里报告，不要进第 7 步。**
 
 已确认合并，或脚本合并成功后，才可以考虑清理当前工作区。先确认它真的是 linked
 worktree：
@@ -149,8 +148,7 @@ agent-canvas-ctl stop-node <自己的 nodeId>
 
 ## 边界
 
-- **不代跑 `describe-node`、`relate-node`。** 那两个的第二次调用仍按 CLAUDE.md 由你自己
-  在收尾前调，本 skill 与它们**并列**，不是它们的编排器。调本 skill 之前先把它们调完。
+- **不代跑 `describe-node`、`relate-node`。** 那两个的第二次调用由你自己在收尾前调，本 skill 与它们**并列**，不是它们的编排器。调本 skill 之前先把它们调完。
 - **不调 `capture-requirement`。** 需求立项只在闸门 2 发生一次，收尾不重复立项。
 - 不动 `implements` 边——只通过语义 action 推进需求节点的生命周期。
 - `stop-node` 不走 UI 那套阻断策略（busy / 有活跃 subagent / 绑着 worktree）。

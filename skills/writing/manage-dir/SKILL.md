@@ -1,13 +1,13 @@
 ---
 name: manage-dir
-version: "1.0.0"
+version: "1.0.1"
 user_invocable: true
 description: Use when creating, modifying, or deleting files in any directory that is governed by an explicit organization methodology. Triggers when the user mentions managing files in a directory, adding a document, reorganizing content, or when a target directory contains a DIR_METHOD.md file. Also use when the user asks to "set up a methodology" for a directory or migrate existing files to a new structure.
 ---
 
 # 目录管理（方法论无关）
 
-本 skill 按目标目录声明的方法论管理其中的文件，操作范围与 diataxis-docs 一致：新建、修改、删除文档，以及维护索引。
+本 skill 按目标目录声明的方法论管理其中的文件：新建、修改、删除文档，以及维护索引。
 
 ---
 
@@ -95,19 +95,10 @@ description: Use when creating, modifying, or deleting files in any directory th
 
 ---
 
-## 内置方法论
-
-| 文件 | 方法论 | 适用场景 |
-|------|--------|---------|
-| `references/built-in/diataxis.md` | Diátaxis | 软件项目的技术文档（tutorials/how-to/reference/explanation） |
-| `references/built-in/role-based.md` | 角色分类法 | 知识型项目（研究/写作/竞赛），按 source/analysis/output/working 组织 |
-
----
-
 ## 参考文件（按需读取）
 
 | 文件 | 何时读 |
 |------|--------|
 | `references/methodology-spec.md` | 需要为目录新建或定义 `DIR_METHOD.md` 时 |
-| `references/built-in/diataxis.md` | 目标目录使用 Diátaxis 方法论时 |
-| `references/built-in/role-based.md` | 目标目录使用角色分类法时 |
+| `references/built-in/diataxis.md` | `methodology: diataxis`；适合软件项目技术文档（tutorials/how-to/reference/explanation） |
+| `references/built-in/role-based.md` | `methodology: role-based`；适合知识型项目（研究/写作/竞赛），按 source/analysis/output/working 组织 |

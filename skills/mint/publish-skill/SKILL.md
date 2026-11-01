@@ -2,7 +2,7 @@
 name: publish-skill
 description: "Validate and publish a skill to the harveyz-skill repository. Checks SKILL.md format compliance (frontmatter fields, semver version, name-directory match, verb-noun or single-verb naming convention) and registration in skills-index.json. Rules defined in docs/reference/skill-spec.md. Triggers: publish skill, register skill, validate skill format, check skill, add skill to index, is skill ready to publish."
 user_invocable: true
-version: "1.6.1"
+version: "1.7.0"
 ---
 
 # skill-publish
@@ -59,13 +59,13 @@ cat /tmp/sv-unregistered.txt
 | F4 | `version` 字段 | 非空，格式为 `X.Y.Z`（semver） |
 | F5 | `user_invocable` 字段 | 显式声明 `true` 或 `false` |
 | F6 | 正文语言 | frontmatter 结束后的正文内容应为中文（含中文字符即视为合规） |
-| F7 | 目录命名规范（建议，不阻断） | skill 目录名建议为 `<动词>-<名词>`（2 段）或单独 `<动词>`（1 段）格式，连字符分隔，全小写；第一段建议语义上是动词，名词（若存在）不建议为工具/平台专有名；不符合时仅作警告，不阻止发布；`archived/` 下的 skill 跳过此检查 |
-| F8 | 内容 hash | 若 `skills-index.json` 中有 `contentHash` 记录：hash 不同且 version 未变 → 报错；hash 不同且 version 已递增 → 通过，Step 7 更新；无记录 → 首次初始化，Step 7 写入 |
+| F7 | 目录命名规范（建议，不阻断） | 目录名为 `<动词>-<名词>` 或单段 `<动词>`，判定见下方「F7 命名规范检测方法」；警告不阻断；`archived/` 下跳过 |
+| F8 | 内容 hash | 见下方「F8 hash 计算方法」 |
 | F9 | 动词覆盖建议（警告，不阻断） | 目录名中的动词语义上合理但未命中规范词表时触发，建议评估是否补充进词表 |
 
 **F3 英文检测方法：** 提取 `description` 字段值，检查是否包含中文字符（`一-鿿` 范围）。有则报错。
 
-**F6 中文检测方法：** 提取 frontmatter 结束后的正文，检查是否包含至少一个中文字符。若正文全为英文或为空则报错。（纯英文 skill 如从其他项目贡献的可跳过此项，需用户确认。）
+**F6 中文检测方法：** 提取 frontmatter 结束后的正文，检查是否包含至少一个中文字符。若正文全为英文或为空则报错。正文无中文时，在输出报告前问用户该 skill 是否为外部贡献的纯英文 skill；是则不报 F6。
 
 **F7 命名规范检测方法：**
 
@@ -74,16 +74,7 @@ cat /tmp/sv-unregistered.txt
 3. 若 2 段：第一段为动词，第二段为名词；名词不得为工具/平台专有名（youtube、npm、diataxis 等）
 4. 若 1 段：整个目录名须是动词，不允许是单独名词（如 `diagram`、`config`）
 5. 动词判定（无论 1 段还是 2 段的第一段）：
-   a. 先在规范词表中查找：
-
-   ```
-   fetch    extract  learn    forge    draw     manage   migrate
-   scout    build    sync     publish  archive  contribute  analyze
-   clean    release  validate init     dispatch close    setup
-   capture  clip     runby    dedup    fork
-   ```
-
-   命中 → 直接合规。
+   a. 读取 `${REPO_ROOT}/docs/reference/skill-spec.md`「动词判定」下的词表；命中 → 直接合规。
    b. 未命中 → 按语义判断该词是否为合理动词（而非名词/专有名词/工具名）。若是合理动词 → 合规，但记为 **F9 警告**（建议评估是否补充进词表）；若明显不是动词 → 记为 **F7 警告**（建议重命名，不阻止发布）。
 
 特殊模式：若目录名以 `runby-` 开头，直接视为合规（无需检查名词部分，也不参与动词判定）。
@@ -132,13 +123,15 @@ _fm() {
 | R1 | `skills[]` 中有对应条目 | `path` 值 == `category/name` |
 | R2 | 对应条目有 `bundle` 字段且非空 | 必须指定归属 bundle |
 | R3 | `bundle` 值存在于 `bundleMeta` | bundle key 必须已声明 |
-| R4 | `installScope` 字段存在且值合法 | 值须为 `essential`/`global`/`project` 之一；缺失或值非法时报**警告**（不阻止通过） |
+| R4 | `installScope` 字段存在且值合法 | 合法值：`essential`（所有安装场景默认包含）／`global`（推荐安装，跨项目通用）／`project`（按项目需要安装）；缺失或值非法时报**警告**（不阻止通过） |
 
 ### Step 4a — 平台标准副本的分发核对（检查相关消费者时）
 
 若检查范围包含 `mint/init-skill` 或 `mint/contribute-skill`，运行只读的 `node scripts/sync-skill-platform-standard.mjs --check`，确认权威标准、两个随包副本及消费者 `SKILL.md` 的摘要标识没有漂移。然后运行 `npm pack --dry-run --ignore-scripts --json`，从输出的 `files[].path` 核对包内确有 `skills/mint/init-skill/references/platform-adaptation.md` 和 `skills/mint/contribute-skill/references/platform-adaptation.md`；缺失或命令失败列为分发问题，不把文件在工作树中存在等同于已打包。
 
-继续按 F8 与 Step 7 核对 `SKILL.md` 版本、索引的 `contentVersion` 和 `contentHash`；副本变化引起摘要标识变化时仍须按版本规则处理。此步骤仅核对同步、打包和元数据，不判定语义兼容。宿主适配器未实测时报告“未验证”，不宣称语义兼容或端到端通过。
+继续按 F8 与 Step 7 核对 `SKILL.md` 版本、索引的 `contentVersion` 和 `contentHash`；副本变化引起摘要标识变化时仍须按版本规则处理。
+
+宿主适配器未实测时报告“未验证”。本步骤只核对同步、打包和元数据，不判定、不宣称语义兼容或端到端通过。
 
 ### Step 5 — 输出报告
 
@@ -194,111 +187,17 @@ skill-publish 检查结果
 共发现 3 个问题（2 个格式，1 个注册），4 个警告
 ```
 
-若全部通过（含警告）：
-
-```
-skill-publish 检查结果
-========================
-所有 N 个 skill 格式与注册均符合规范。✓（1 个 F7 警告，1 个 F9 警告，1 个 R4 警告，建议评估重命名 / 补充词表 / 填写 installScope）
-```
-
-若完全无问题无警告：
-
-```
-skill-publish 检查结果
-========================
-所有 N 个 skill 格式、注册与推荐级别均符合规范。✓
-```
+全部通过时，报告头（`skill-publish 检查结果` 及分隔线）后只输出一行：
+- 有警告：`所有 N 个 skill 格式与注册均符合规范。✓（1 个 F7 警告，1 个 F9 警告，1 个 R4 警告，建议评估重命名 / 补充词表 / 填写 installScope）`
+- 无警告：`所有 N 个 skill 格式、注册与推荐级别均符合规范。✓`
 
 ### Step 6 — 修复引导（按需）
 
-若发现问题，询问用户是否要逐项修复：
-
-**格式问题** — 展示 diff，用户确认后直接编辑 `SKILL.md`：
-```
-修复 F2（name 字段）：
-  - name: my_skill
-  + name: my-skill
-应用此修复？(y/n)
-```
-
-**格式警告（F7）** — 命名不符合规范建议时，提示新名，跳过不影响发布：
-```
-F7 警告：目录名 'skill-analyzer' 不符合命名规范建议（'skill' 是名词而非动词）。
-建议改为：analyze-skill（动词 analyze 在词表中，名词 skill）
-是否重命名？(y/n/跳过)
-```
-选 `y` 则执行 `git mv` 重命名目录，并更新 `skills-index.json` 中对应的 `path` 值，最后运行 `node scripts/generate-npmignore.js`；选 `n`/跳过则保留警告，不做修改，不影响发布。
-
-**格式警告（F9）** — 动词未命中词表但语义合理，不阻止发布，仅询问是否顺带补充词表：
-```
-F9 警告：动词 'probe' 未命中规范词表（语义合理）。
-是否将 'probe' 加入 docs/reference/skill-spec.md 的规范动词词表？(y/n/跳过)
-```
-选 `y` 则用 Edit 工具在 `docs/reference/skill-spec.md` 的词表中追加该动词及含义（需用户补充一句含义描述），并同步追加到本文件 Step 3 的词表副本；选 `n`/跳过则保留警告，不做修改。
-
-**格式问题（F8）** — 询问 bump 类型后自动更新版本号，随即执行 Step 7：
-```
-修复 F8（内容 hash 不匹配）：
-  skill 内容自 v1.0.0 起已变更，但 version 仍为 1.0.0。
-  请选择升级类型：
-    [1] patch → 1.0.1（bugfix / 措辞调整）
-    [2] minor → 1.1.0（新增步骤 / 行为变更）
-    [3] major → 2.0.0（Breaking Change）
-```
-用户选择后，用 Edit 工具将 SKILL.md frontmatter 中的 `version:` 行更新为新版本号，然后直接进入 Step 7（hash 不同 + version 已递增，满足更新条件）。
-
-**注册问题（R1）** — 交互引导补注册：
-```
-'meta/my-skill' 未注册。
-现有 bundle：
-  1. analysis — ...
-  2. meta     — ...
-  N. [新建 bundle]
-选择目标 bundle：
-```
-
-选定 bundle 后，继续询问推荐级别：
-```
-选择推荐级别（installScope）：
-  1. essential — 所有安装场景默认包含
-  2. global    — 推荐安装，跨项目通用
-  3. project   — 按项目需要安装
-  4. （不设置，跳过）
-```
-
-根据选择，在 `skills[]` 末尾追加（选 4 则省略 installScope 字段）：
-```json
-{ "path": "meta/my-skill", "bundle": "meta", "installScope": "global" }
-```
-
-若新建 bundle，在 `bundleMeta` 中同步添加。
-
-完成注册后运行：
-```bash
-cd "${REPO_ROOT}" && node scripts/generate-npmignore.js
-```
-
-**注册警告（R4）** — 为已注册但缺少 installScope 的 skill 补充推荐级别：
-```
-修复 R4（installScope 未设置）— skills/coding/setup-debug：
-  选择推荐级别：
-    1. essential — 所有安装场景默认包含
-    2. global    — 推荐安装，跨项目通用
-    3. project   — 按项目需要安装
-    4. （跳过，保持不设置）
-```
-
-用户选择后，用 Edit 工具在 `skills-index.json` 对应条目中添加 `installScope` 字段，再暂存：
-```bash
-git add skills-index.json
-```
+若发现问题，询问用户是否要逐项修复；同意则读取 `references/fix-guide.md` 按项执行。
 
 ### Step 7 — 更新 contentHash
 
-在以下两种情况下执行，其余情况跳过：
-- **首次初始化**：index 中无 `contentHash` 字段
-- **F8 通过路径**：hash 不同 + version 已递增
+仅在 F8 判定表结论为「Step 7 写入／更新」时执行，其余情况跳过。
 
 **操作方式：直接读写 `skills-index.json`，不使用 shell 脚本。**
 

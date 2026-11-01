@@ -2,10 +2,10 @@
 name: migrate-spec
 description: "Processes unprocessed design spec files into formal Diataxis documentation. Locates the superpowers/specs/ directory, scans for spec files whose YAML frontmatter lacks a 'migrated:' field, reads them all, does a cross-spec horizontal comparison to identify the latest authoritative content per topic, plans a document set from the topic matrix, cross-checks against INDEX.md, then writes or updates formal docs. Finishes by annotating each spec's frontmatter with migration metadata. Triggers: 'migrate specs', 'process spec files', 'spec migration to docs', 'process unprocessed specs'."
 user_invocable: true
-version: "1.0.0"
+version: "1.1.0"
 ---
 
-# migrate-specs
+# migrate-spec
 
 将原始设计 spec 整理成正式 Diataxis 文档的完整流程。核心原则：spec 往往成批写出、相互重叠、状态滞后，因此必须先读完所有内容、横向对比，再动手写文档。
 
@@ -13,13 +13,7 @@ version: "1.0.0"
 
 ## Step 1 — 定位 specs 目录，扫描未处理的 spec
 
-首先找到 `superpowers/specs/` 目录，通常在 `docs/` 下，但先用搜索确认：
-
-```bash
-find . -type d -name "specs" | grep superpowers
-```
-
-找到后记住这个路径，本次 session 后续所有步骤都用它，不再重复搜索。
+用 `find . -type d -name specs | grep superpowers` 定位 specs 目录，后续步骤复用这个路径。找到多个时列出来让用户选。
 
 逐个读取该目录下的 `.md` 文件头部（约 15 行），检查是否有 `migrated:` 字段。
 
@@ -39,8 +33,6 @@ find . -type d -name "specs" | grep superpowers
 
 ## Step 3 — 横向对比（不可跳过）
 
-这是最重要的一步。spec 之间经常重叠——两个 spec 可能覆盖同一主题，较新的那个会覆盖较旧的。逐个迁移会产生冗余或矛盾的文档。
-
 ### 3a. 构建主题矩阵
 
 对跨 spec 发现的每个主题、设计决策或接口，记录哪些 spec 涉及它：
@@ -53,12 +45,12 @@ tool 安装版本感知              | installer-cli, tool-upgrade   | tool-upgr
 branch-cleanup 配置格式       | git-cleanup-design            | git-cleanup ✅
 ```
 
-"最新"通常是日期更晚的 spec。同一天的两个 spec，优先选明确引用并扩展另一个的那个。
+"最新"按文件名的 `YYYY-MM-DD` 前缀判断；没有前缀的取 git 首次提交日期（`git log --diff-filter=A --format=%as -- <file>`）。同一天的两个 spec，优先选明确引用并扩展另一个的那个。
 
 ### 3b. 核实实现状态
 
 对每个 spec，确认其描述的功能是否已实现。查看：
-- `skills/` 下是否有对应的 skill 目录
+- `skills/` 下是否有对应目录（`find skills/ -type d -name "<feature-name>"`）
 - spec 自身的 `状态:` / `status:` 字段
 - 必要时查 git 历史：`git log --oneline -- skills/`
 
@@ -165,20 +157,3 @@ implemented_in:                        # 仅当设计内容嵌在 skill 或代�
 ## 仅标注模式
 
 若用户只要求"补标注"而不重新写文档，跳过 Step 4 和 5，只执行 Step 1–3（确定每个 spec 对应什么）和 Step 6。
-
----
-
-## 常用命令
-
-```bash
-# 找 specs 目录
-find . -type d -name "specs" | grep superpowers
-
-# 列出未处理的 spec（frontmatter 中没有 migrated:）
-grep -rL "^migrated:" <specs-dir>/
-
-# 检查功能是否已实现
-find skills/ -type d -name "<feature-name>"
-```
-
-frontmatter 完全缺失的文件也算未处理。

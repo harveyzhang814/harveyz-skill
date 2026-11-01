@@ -79,7 +79,7 @@ HOTFIXES.md 的条目是结构化的（7 个字段），而不是自由文本 ch
 
 只扫描 HOTFIXES.md 会静默放过这些差异，直到某次重装后用户才发现功能消失。
 
-所以 sync-hotfix 引入了 **Step 5 安全网**：处理完所有 HOTFIXES.md 条目后，无论有无条目，都执行安装版与源仓库的全文件 diff。
+所以 sync-hotfix 引入了 **Step 4 安全网**：处理完所有 HOTFIXES.md 条目后，无论有无条目，都执行安装版与源仓库的全文件 diff。
 
 ### 差异分类系统
 
@@ -145,9 +145,9 @@ sync-hotfix 需要知道源仓库在哪里、skill 属于哪个 category。这�
 用户调用 sync-hotfix <skill_name>
   ├── 初始化 config（首次运行）
   ├── Step 1：扫描 HOTFIXES.md → 筛出 merged_back: false 条目
-  ├── Step 2-3：逐条处理（应用/跳过/作废）→ 标记 merged_back: true
-  ├── Step 4：输出摘要，提示 git commit
-  └── Step 5：全文件 diff 安全网
+  ├── Step 2：逐条处理（应用/跳过/作废）→ 标记 merged_back: true
+  ├── Step 3：输出摘要，提示 git commit
+  └── Step 4：全文件 diff 安全网
         ├── 收集共同文件、仅安装版、仅源仓库
         ├── 逐文件 diff → 分类 [UNLOGGED/PLATFORM/SRC_AHEAD/CONFLICT]
         ├── 按类型引导用户决策

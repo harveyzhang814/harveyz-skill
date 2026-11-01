@@ -2,7 +2,7 @@
 name: agent-canvas-control
 description: Control Agent Canvas node entities and layout from claude-code/codex/pi nodes — create, query, update, delete nodes, put or hide them on the canvas, and send messages or slash commands to other claude-code/codex nodes (dispatch work to a new node, or to one already running) and get their replies back; also usable from shell/hermes-tui nodes or terminals outside the canvas via `--canvas`/`resolve-canvas`/`resolve`.
 user_invocable: true
-version: "1.3.0"
+version: "1.3.1"
 ---
 
 # 操控节点与画布（agent-canvas-control）
@@ -60,6 +60,8 @@ stderr、退出码 1。它和其他命令走同一套优先级，所以**探测�
 - 没有指定项目、只想知道「当前有没有画布可连」：`agent-canvas-ctl resolve-canvas`。解析不到
   说明当前不适用，跳过即可，不要反复重试。
 
+画布外的进程不是任何画布节点，「按调用者反查自己所在节点」的命令（如 `whoami`）在这里没有节点可反查。
+
 ## 审批：哪些调用会弹确认卡片
 
 下面五个命令经 CLI 调用时**每次**都要人工在画布上批准：`delete-node`、`purge-node`、
@@ -99,7 +101,9 @@ stderr、退出码 1。它和其他命令走同一套优先级，所以**探测�
 
 `send` 把一段文字（或 `--command` 的斜杠命令）写进另一个 claude-code / codex 节点的会话。
 你不直接碰对方的终端：消息先进 Agent Canvas 的收件箱，由它判断对方**真的空闲**（上一轮已结束、
-没有弹窗、输入框是空的）才写入；对方忙时就排队，多条排队的文字会合并成一次写入。
+没有弹窗、输入框是空的）才写入；对方忙时就排队，多条排队的文字会合并成一次写入。发之前先看
+`get-node` 的 `actions[]` 里 `send_message` 是否 `available: true`（只有 claude-code / codex 且进程
+在跑才行）。
 
 - **立即返回，不等送达**：返回 `messageId`、`chainId`、`status`（`queued` 或 `held`）。之后用
   `get-message <messageId>` 看回执轨迹：`queued → delivered → received`。`received` 表示对方会话
@@ -108,10 +112,10 @@ stderr、退出码 1。它和其他命令走同一套优先级，所以**探测�
   `[agent-canvas 消息 msg_… · 来自「<你的节点标题>」(<你的节点 id>) · 消息链 ch_…]`，发件方由
   Agent Canvas 按身份盖章，不能伪造；斜杠命令原样写入、没有信封。
 - **要结果就加 `--expect-reply`**：不加时对方处理完不会把结果发回给你。怎么拿回复见下方「要对方回复」。
-- **不重发**：`failed`（写入后没确认收到）和 `interrupted`（对方进程退出或 App 重启）都不会自动重发。
-  `failed` 时文字可能已经写进去了——先看对方节点再决定，不要盲目再发一遍。
-- **`held` 不要重试**：两个节点短时间内往返太多，消息被暂停，等用户在节点上的卡片里放行或终止。
-  agent 解不了 held，告诉用户即可。
+- **都不自动重发，也不要自行重试**：`failed`（写入后没确认收到）时文字可能已经写进去了，先看对方
+  节点再决定；`interrupted`（对方进程退出或 App 重启）和 `closed-without-reply`（见下方「回执」）
+  告诉用户，要不要再发由用户决定；`held`（两个节点短时间内往返太多，见下方「往返上限」）等用户在
+  节点上的卡片里放行或终止，agent 解不了。
 - **直接拒绝（退出码 1）**：每分钟超过 30 条、对方待投超过 50 条、正文超过 32KB。正文长就写进文件，
   用 `send <nodeId> --file <路径>`（或 `--file -` 读 stdin），也顺带避开 shell 转义。
 - **撤回**：`cancel-message <messageId>`，只能撤回自己发的、还没写入对方会话的消息。
@@ -141,31 +145,21 @@ stderr、退出码 1。它和其他命令走同一套优先级，所以**探测�
   很快就能答完时用；要对方做一段较长的工作，走默认做法，**不要用 `wait-reply` 干等，也不要调大
   `--timeout` 去等长任务**。
 
-`wait-reply <messageId>[,<messageId>…] [--all | --any] [--timeout <秒>]`：
-
-- 只能等你自己发出、带了 `--expect-reply` 的消息；默认 `--all` 等全部，`--any` 任一到达即返回。
-- 只能**前台阻塞**调用：不要包 sleep、不要放后台。claude-code / codex 调用方此刻没有正在进行的
-  一轮时会被拒绝。
-- 默认最多等 100 秒，正好在 claude 的 Bash 工具默认 120 秒超时之内，不用改工具超时。codex 的命令
-  工具会在命令结束前先返回 session id：继续轮询**同一个会话**直到出现退出码，不要重新发起命令。
-- 退出码 0：stdout 是 `{timedOut: false, results: [{messageId, status, reply?: {messageId, body, from}}]}`。
-  `status` 是 `replied` 却没有 `reply`，表示回复被 held 或已撤回，不是空回复。
-- 退出码 2：超时，还没等到。agent 调用方**不要接着再等一次**——结束本轮，回复之后会按默认做法推回来；
-  shell 调用方可以稍后再 `wait-reply` 领取。退出码 1：失败。
-- 被等的消息被拒、失败、中断、撤回或无回复关闭时，立即返回该状态，不会白等到超时。
+`wait-reply` 的参数、返回结构和退出码见 `agent-canvas-ctl help wait-reply`。必须遵守：只能**前台阻塞**
+调用（不包 sleep、不放后台；codex 继续轮询**同一个会话**直到出现退出码，不重新发起命令）；退出码 2
+（超时）时，agent 调用方结束本轮、**不要接着再等一次**，shell 调用方稍后再 `wait-reply` 领取。
 
 **回执**：要求回复的消息止于 `replied` 才算完成（`queued → delivered → received → replied`）。
 没等到回复就结束的记 `closed-without-reply`，原因有三种：用户在对方终端里接管了这一轮
 （`user-takeover`）、对方这一轮被打断（`turn-aborted`）、用户在暂停卡片上终止了这条消息链
-（`terminated`）。都不会自动重发——告诉用户，要不要再发由用户决定。
+（`terminated`）。
 
 **收到要求回复的消息时**：信封末尾多两行「需要回复」。做完直接结束本轮即可，**把结论写在本轮最后
 一条回复里**，它会被原样发回。要给更精确的结论（比如只回一段结构化结果），在这一轮结束前用
 `agent-canvas-ctl reply <messageId> <内容>`（或 `--file`）显式回复，回复过就不再自动回传。只有收件方
 能回复；`reply --expect-reply` 让对方再回你，对方不是 claude-code / codex 节点时不可用。
 
-**往返上限**：同一条消息链里要求回复的消息累计到 20 条会被暂停（`held`），防止两个 agent 无限往返；
-等用户放行或终止，不要重试。
+**往返上限**：同一条消息链里要求回复的消息累计到 20 条会被暂停（`held`），防止两个 agent 无限往返。
 
 ## 输出与退出码
 
@@ -185,19 +179,7 @@ agent-canvas-arrange put <nodeId>
 第一条返回 `{nodeId}`。`put` 不带 `--position` 时用自动布局位；要精确定位写
 `agent-canvas-arrange put <nodeId> --position 400,200`（只能对单个 id）。
 
-**2. 不确定有没有某个能力：先查目录，再看这个节点此刻能不能调，再调**
-
-```
-agent-canvas-ctl list-actions
-agent-canvas-ctl describe-action stop_node
-agent-canvas-ctl get-node <nodeId>
-agent-canvas-ctl stop-node <nodeId>
-```
-
-`get-node` 的 `actions[]` 里 `stop_node` 为 `available: false` 时，`reason` 说明为什么（比如进程
-已经停了），这时不要硬调；它的 `bindings` 告诉你该用哪个命令名。
-
-**3. 建分组并把节点放进去**
+**2. 建分组并把节点放进去**
 
 ```
 agent-canvas-ctl create-group --title 认证改造
@@ -208,7 +190,7 @@ agent-canvas-arrange group-color <groupId> blue
 
 分组必须先放上画布才能加成员——没放上时 `group-add` 会响亮报错，不是静默失败。
 
-**4. 在画布外操作某个项目的画布**
+**3. 在画布外操作某个项目的画布**
 
 ```
 agent-canvas-ctl --canvas <项目路径> resolve-canvas
@@ -216,11 +198,7 @@ agent-canvas-ctl --canvas <项目路径> list-nodes
 agent-canvas-arrange --canvas <项目路径> list --off-canvas
 ```
 
-`--canvas` 每条都要写（包括第一条探测）、都写在子命令之前；第一条退出码 1 时按上面「寻址」一节
-看 stderr 的可用画布清单。画布外的进程不是任何画布节点，「按调用者反查自己所在
-节点」的命令（如 `whoami`）在这里没有节点可反查。
-
-**5. 派活：建一个新的 agent 节点并把任务发给它**
+**4. 派活：建一个新的 agent 节点并把任务发给它**
 
 ```
 agent-canvas-ctl create-pty-node --node-type claude-code --title 修登录500 --cwd <项目路径> --message '修复登录页的 500 错误，改完跑 npm test'
@@ -233,18 +211,7 @@ agent-canvas-ctl get-message <messageId>
 **已经或可能已经建出来**、但消息没发成——先 `list-nodes` / `get-node` 核对，别再建一个。任务说明
 很长时，去掉 `--message`，建完再 `send <nodeId> --file <路径>`。
 
-**6. 给已经在运行的节点发消息或斜杠命令**
-
-```
-agent-canvas-ctl get-node <nodeId>
-agent-canvas-ctl send <nodeId> --file task.md
-agent-canvas-ctl send <nodeId> --command /compact
-```
-
-先看 `get-node` 的 `actions[]` 里 `send_message` 是否 `available: true`（只有 claude-code / codex
-且进程在跑才行）。对方不是你的子节点时会弹审批卡片，按上面「审批」一节处理。
-
-**7. 派两个活，拿回两份结果**
+**5. 派两个活，拿回两份结果**
 
 ```
 agent-canvas-ctl create-pty-node --node-type claude-code --title 查前端 --cwd <项目路径> --message '列出登录页调用的所有接口' --expect-reply

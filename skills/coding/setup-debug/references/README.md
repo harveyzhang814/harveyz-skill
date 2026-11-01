@@ -1,6 +1,6 @@
 # References — 技术栈日志最佳实践
 
-本目录按技术栈积累日志捕获的最佳实践。执行第三阶段（环境搭建）时，**先查这里**，找到对应技术栈后直接参照执行；没有找到再自行设计，设计完后把结论补充进来。
+本目录按技术栈积累日志捕获的最佳实践。执行步骤 3（环境搭建）时，**先查这里**，找到对应技术栈后直接参照执行；没有找到再自行设计，设计完后把结论补充进来。
 
 ## 当前收录
 
@@ -12,6 +12,8 @@
 | `tech-stacks/electron.md` | Electron（主进程 + preload + renderer） |
 | `tech-stacks/docker-compose.md` | Docker Compose 多容器应用 |
 | `tech-stacks/browser-spa.md` | 浏览器 SPA（React、Vue、Angular、Svelte 等） |
+
+示例里的 `/tmp/myproject-logs` 只是占位，实际用步骤 1 确认的日志目录（默认 `<project-root>/tmp/logs/`）。
 
 ## 如何添加新条目
 

@@ -105,10 +105,6 @@ sequenceDiagram 天然横向排列，参与者越多越宽：
 ## 禁止事项
 
 ```
-❌ 消息文本内换行（\n / <br/>）    → sequenceDiagram 消息只支持单行
-❌ activate 未配对 deactivate      → 会产生叠加激活框 bug
-❌ 中文/空格参与者名不加处理        → 用 alias 或引号
-❌ 禁用字符（· → — "" emoji）     → 同其他图类型规则
 ❌ 自定义颜色（style/classDef）    → sequenceDiagram 不支持节点着色
 ```
 

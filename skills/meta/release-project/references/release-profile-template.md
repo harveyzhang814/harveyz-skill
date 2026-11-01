@@ -1,5 +1,5 @@
 # Release Profile
-<!-- 由 project-release skill Init 阶段生成，可随时手动编辑 -->
+<!-- 由 release-project skill Init 阶段生成，可随时手动编辑 -->
 <!-- 生成时间：{YYYY-MM-DD} -->
 
 ## 分支模型

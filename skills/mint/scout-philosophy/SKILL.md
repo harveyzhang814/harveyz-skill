@@ -2,7 +2,7 @@
 name: scout-philosophy
 description: Scout a skill design philosophy principle. Use when the user proposes a new principle about how skills should be authored or should behave, and wants to ground it in existing practices from skill ecosystems (G stack, Superpowers, MSkill).
 user_invocable: true
-version: "1.0.1"
+version: "1.0.2"
 ---
 
 将一个抽象的 Skill 设计哲学命题，通过在三个 Skill 生态中寻找同类研究对象、深度解析、提炼多种设计思路，转化为有研究支撑的设计指南。
@@ -39,7 +39,7 @@ version: "1.0.1"
 - **核心设计疑问**：用户已经意识到、需要研究来回答的子问题列表（澄清得到的）
 - **研究目标**：本次研究希望产出什么——是选一种方案、还是理解各方取舍、还是找到共识
 
-这个文件在研究完成前不应修改——它是"出发时的地图"，不是"走完后的总结"。
+研究完成前不修改此文件。
 
 ---
 
@@ -119,8 +119,6 @@ version: "1.0.1"
 
 从 `research.md` 的结论中提炼出独立可引用的操作规范，写入 `standard.md`。
 
-`standard.md` 的定位：**直接用，不需要读推导过程**。适合在创建新 Skill 或 Review 现有 Skill 时作为 checklist 引用。
-
 `standard.md` 必须包含：
 - **核心原则**：一句话说清楚这个规范的底层逻辑
 - **正向规范**：创建时应该怎么做（可以是模板、决策树、或检查问题）
@@ -134,6 +132,6 @@ version: "1.0.1"
 
 ## 输出说明
 
-全程使用中文。文件顺序：先写 `direction.md`，再写 `principle.md`，再写 `research.md`，最后写 `standard.md`。
+全程使用中文。
 
 `research.md` 开头用 `> 关联文档：[[principle]]` 标注关联，并注明示例场景。示例写法统一用同一个场景，方便对比。

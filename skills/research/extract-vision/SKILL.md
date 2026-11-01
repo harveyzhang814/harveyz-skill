@@ -1,7 +1,7 @@
 ---
 name: extract-vision
 description: "Use when the user shares an image (screenshot, photo, receipt, invoice, menu, or any picture containing text) and wants to extract specific information from it — such as prices, dates, names, totals, or any structured data. Trigger this skill whenever the user says things like 'find X in this image', 'extract the total from this receipt', 'pull out all the items from this menu', or shares an image file and asks for specific fields or values. Use even if the user doesn't mention OCR — if they share a picture and want data out of it, this skill applies."
-version: 1.2.1
+version: 1.2.2
 user_invocable: true
 author: Hermes Agent
 license: MIT
@@ -60,12 +60,10 @@ python <skill_dir>/scripts/ocr_extract.py <图像路径> [--lang ch|en|latin|kor
 - 只返回过滤后的结果，不要描述图像或做任何总结
 ```
 
-## OCR 为空或原图小字模糊
+## OCR 为空或原图小字模糊（小于约 10px 的文字准确率低）
 
 OCR 返回空、或小字模糊导致文本不可靠时，检查当前 agent 或可用委派目标能否查看原图。能查看则直接进行视觉提取；无原图视觉能力则停止，并向用户报告“当前会话无法可靠读取原图，不能判断图片是否含目标文字”。不得把 OCR 空结果说成图片没有内容。
 
 ## 常见问题
 
 - **首次运行慢**：PaddleOCR 首次会下载推理模型（约 300MB），缓存在 `~/.paddlex/`
-- **小字模糊**：小于约 10px 的文字准确率低，按上方能力检查决定视觉提取或安全停止
-- **OCR 返回空**：退出码为 2，按上方能力检查决定视觉提取或安全停止

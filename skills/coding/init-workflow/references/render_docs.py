@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-git-workflow-init Step 7 渲染器
+init-workflow Step 7 渲染器
 从 workflow-config.yml 动态生成 docs/reference/git-workflow.md
 """
 import sys, re, os

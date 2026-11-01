@@ -1,6 +1,6 @@
 ---
 name: init-project
-version: "0.1.3"
+version: "0.1.5"
 description: Bootstrap a new project repository around the harveyz-skill toolchain, or audit an existing repo for what it is missing. Builds the repo skeleton, resolves and installs the skills the project type needs, and runs the initialization phases that can be triggered standalone. Invoke with /init-project [path] to set up, or /init-project check [path] for a read-only report of what is missing. Triggers: 'initialize a new project', 'set up a new repo', 'bootstrap this project', 'what is this repo missing'.
 user_invocable: true
 ---
@@ -16,13 +16,10 @@ user_invocable: true
 
 路径省略则用当前工作目录。
 
-**这个 skill 不写任何 `.hskill/<skill>/` 配置**——那些归各 skill 自己，它们都内建了
-「配置不存在就问用户并写下来」的分支。本 skill 只做编排。
-
 ## 边界：明确不做的五件事
 
 1. **不生成语言脚手架**，只打印 `language_hints` 里的命令
-2. **不写任何 `.hskill/<skill>/` 配置**
+2. **不写任何 `.hskill/<skill>/` 配置**——归各 skill 自己（配置缺失时它们会问用户）
 3. **不升级已装的 skill**——升级全局 skill 会波及所有项目，不该由初始化某个项目顺手触发
 4. **不碰远程仓库**（`git remote add` / `gh repo create`），只在收尾清单里给出命令
 5. **不装 shell tool**（`hskill install --tool` 是全局动作，不属于初始化某个项目）
@@ -80,7 +77,7 @@ cwd 错了它会静默去查/写别的目录，不报错。每条命令都写成
 `AGENTS.md`——它看不出「同一件事换了个名字」。已有文件一律按 `on_exists` 处理，
 绝不把既有项目里的其他指导文件重命名为 `AGENTS.md`。
 
-→ 回到 Step 2。
+→ 进入 Step 2。
 
 ## Step 2 — 差量安装 skill
 
@@ -92,7 +89,7 @@ cd <PROJECT> && hskill install --skill <a> --skill <b> --scope project --target 
 
 清单为空则跳过，记「全部已有」。
 
-→ 回到 Step 3。
+→ 进入 Step 3。
 
 ## Step 3 — 初始化相位编排
 
@@ -104,12 +101,10 @@ cd <PROJECT> && hskill install --skill <a> --skill <b> --scope project --target 
 
 **每调用完一条，立刻回到本 Step 处理下一条；全部处理完回到 Step 4。**
 `invoke` 会把控制权交给另一个 skill（`/init-workflow` 有它自己的多步流程），
-不显式写回跳点就会在那里结束，Step 4、5 再没人执行。用 todo 逐条核对。
+用 todo 逐条核对，别停在子 skill 里。
 
-单条失败**不中断主流程**——例如用户拒绝 `git init` 导致 `init-workflow` 优雅停止，
+单条失败**不中断主流程**——例如用户拒绝 `git init` 导致 `init-workflow` 停止，
 记为「跳过」并写下原因，继续下一条。
-
-→ 全部处理完，回到 Step 4。
 
 ## Step 4 — 登记
 
@@ -121,7 +116,7 @@ hub projects add <目录名> --path <绝对路径> --desc <一句话描述>
 
 这条是「注册或更新」，重复调用安全。`hub` 不在 PATH → 跳过，把命令写进收尾清单。
 
-→ 回到 Step 5。
+→ 进入 Step 5。
 
 ## Step 5 — 收尾清单
 
@@ -130,14 +125,14 @@ hub projects add <目录名> --path <绝对路径> --desc <一句话描述>
 1. **已建** — 新建的文件与目录 / 已跳过的（因已存在）/ `.gitignore` 实际追加的行
 2. **已装** — 装到项目级的 skill / 跳过的（因全局已有，注明版本状态）
 3. **已初始化** — 跑完的相位 / 跳过的及原因
-4. **待办** — `language_hints` 全部命令、下表里首次使用时会问你配置的 skill、
+4. **待办** — `language_hints` 全部命令、下表里配置懒创建的 skill、
    需要时的 `hskill outdated`、以及 `git remote add origin <url>`
 5. **请自行核对** — 本次新建的文件清单，提示用户确认有没有和仓库既有约定重复
    （只在确实新建了文件时输出）
 
 第 4 段里那批 skill 的配置是懒创建的，本 skill 不代写：
 
-| skill | 首次使用时会问 |
+| skill | 首次使用时 |
 |---|---|
 | `handoff` | 本项目的交接约定（输出路径、分支工作流、验证工具） |
 | `capture-vocab` | 无需配置，首次 `add` 时自动建 `vocab.md` |
@@ -150,10 +145,8 @@ hub projects add <目录名> --path <绝对路径> --desc <一句话描述>
 
 | 情况 | 处理 |
 |---|---|
-| 目标目录已是 git 仓库 | `git_init` 跳过，其余照常 |
 | `hskill` 不在 PATH | Step 2、3 整体降级为「打印待办」（skill 装不上，相位也调不起来），Step 1/4/5 照常走完 |
 | 模板 YAML 解析失败或顶层字段缺失 | 硬停，指出缺哪个字段 |
-| 用户拒绝 `git init` | Step 1 其余照常；Step 3 里依赖 git 的相位记「跳过」 |
 
 ## 参考
 
