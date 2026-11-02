@@ -1,19 +1,19 @@
 ---
 name: question-me
-description: "Pre-task clarification skill — clarifies ambiguous or complex tasks before execution through structured Q&A with a live decision tree. One question at a time, each with at least 3 options + custom, in decision-dependency order. Triggers: '/question-me', 'help me clarify this', 'question me before starting', 'let's define this first'. The current agent may propose it for ambiguous or complex requests (multiple conflicting goals, vague keywords like 'optimize/refactor/clean up', missing success criteria, unstated context assumptions), then wait for user confirmation."
+description: "Pre-task requirement clarification — clarifies what the user wants before execution through one-question-at-a-time Q&A with a live decision tree, switching between exploring and defining modes, and ends with a self-contained summary for the user to confirm. After confirmation: execute a small task, propose handing off to init-spec when a written Spec is needed, or stop. Triggers: '/question-me', 'help me clarify this', 'question me before starting', 'let's define this first', '理清需求', '帮我想想这个'. The current agent may propose it for ambiguous or complex requests (multiple conflicting goals, vague keywords like 'optimize/refactor/clean up', missing success criteria, unstated context assumptions), then wait for user confirmation."
 user_invocable: true
-version: "3.1.0"
+version: "4.0.0"
 ---
 
-# question-me — 执行前指令澄清
+# question-me — 执行前需求澄清
 
-在开始执行前，通过结构化问答帮助用户澄清指令、对齐预期。一次一问、每问附至少 3 个选项 + 自定义、按决策依赖顺序推进。
+在开始执行前，通过一次一问的问答和实时决策树，帮用户弄清要什么、对齐预期，最后输出一份自足的摘要请用户确认。
 
 ---
 
 ## 触发条件
 
-**主动调用：** 用户输入 `/question-me [任务描述]`，直接进入流程。
+**主动调用：** 用户输入 `/question-me [任务描述]`，或说“理清需求”“帮我想想这个”，直接进入流程。
 
 **自动提议（等用户确认 y/n）：**
 - 请求涉及多个可能互相矛盾的目标
@@ -21,13 +21,19 @@ version: "3.1.0"
 - 缺少明确的成功标准或截止范围
 - 任务依赖未指明的上下文假设
 
+**被 init-spec 发起：** init-spec 按名调用本技能并告知由它发起。判定发起方只凭当前会话中 init-spec 是否发起了本次调用，不读文件、不靠外部标记。
+
 **不触发：** 简单明确的指令（"运行测试"、"读这个文件"、"git status"）。
 
+**发散型请求：** 有多个候选方向尚未选定，或还在寻找方向时，说明“这还在发散阶段”后停下，不建决策树。只有一个方向的，即使用户还没决定做不做，也按探索模式继续澄清，由“结束”出口承接“想清楚了不做”。
+
 **不在范围内（边界）：**
+- 需要成文 Spec → 提议转 init-spec，等用户同意，不自动交棒
+- 发散型请求 → 停下（见上）
+- 方案层面的比较（架构、核心机制）不在此做
 - 跨会话保存问答历史（每次会话独立）
 - 强制跑完全部 open 节点（用户可随时打断）
 - 问答结果写入文件（只在会话内输出摘要）
-- 自动交棒特定 skill（执行方式由当前 agent 自行判断）
 - 子节点超过 1 层的预生成（孙节点等父节点答完再评估）
 - 跨分支远端节点的自动扫描（只扫同级兄弟）
 
@@ -39,6 +45,7 @@ version: "3.1.0"
 1. 读取任务中提到的文件/目录，推断上下文
 2. 查 `git status`、近期 commit，了解当前进展
 3. 对能从代码/文档直接确认的问题，自行解答——不占用用户的问答配额
+4. 查看当前项目以外的个人文件、数据或网络之前，说明范围并由用户决定
 
 自查结束后简短说明：
 
@@ -50,51 +57,39 @@ version: "3.1.0"
 
 ---
 
-## 提问格式
+## 提问模式
 
-每问只问一个节点，附至少 3 个互相排他、覆盖常见分支的选项 + 自定义，推荐项标 `← 推荐`：
+依据任务定位判断模式，不看描述长短，也不问用户属于哪类；用户意图变化时切换模式。
+
+**探索模式**（用户还说不清要什么）：
+- 用具体场景的开放问题，引出情境、动机或期望，不给选项
+- 用户卡住时给几个方向；用户要建议时，给一个可纠正的具体方案
+- 自己的解释标为待确认推断
+- **阶段性复述：** 每弄清一部分，用约 200–300 词复述，标明哪些是用户所述、哪些是用户的选择、哪些是推断，以一个纠错问题收尾。阶段性复述只用于探索模式
+
+**定义模式**（目标已定，只差缺口）：
+- 选项互斥、覆盖主要方向、不凑数，附自定义入口、推荐及依据（推荐项标 `← 推荐`）
+- 方案层面的选择（架构、核心机制）不在这里问；被 init-spec 发起时，这类问题留给方案审查
 
 ```
 [问题]？
 
-A. [选项1]  ← 推荐
-B. [选项2]
-C. [选项3]
-D. 自定义...
+A. [选项]  ← 推荐（依据：...）
+B. [选项]
+C. 自定义...
 ```
+
+**两种模式共用：** 每轮只问一个问题；沿用用户的词汇；不用流程术语。
 
 ---
 
 ## 流程（STRICT）
 
-### 阶段 1 — 意图校准（固定 3 问）
-
-三个固定问题按顺序问，**每答完一问立即评估子节点**，不等三问全部答完。
-
-**Q1 — 目标：** 这件事做完，最核心的变化是什么？
-**Q2 — 成功标准：** 怎么判断做对了？（可测量的验收条件）
-**Q3 — 范围边界：** 明确不做什么，或哪些东西不能动？
-
-**每问的处理流程：**
+每轮处理流程（选题逻辑见「决策树格式」查阅区）：
 
 ```
-按「提问格式」问 Qn → 等用户回答
-  → [必须] 子节点评估（见「决策树格式」）
-  → 渲染树（见「决策树格式」）
-  → 问 Q(n+1)
-```
-
-Q3 答完并评估子节点后，进入阶段 2。
-
----
-
-### 阶段 2 — 动态深挖
-
-按选题逻辑逐一追问（选题逻辑见「决策树格式」查阅区），每轮处理流程：
-
-```
-1. 选影响面最大的 open 节点
-2. 按「提问格式」提问当前节点
+1. 选影响面最大的 open 节点（第一问由任务描述中最影响方向的不确定处生成）
+2. 按当前提问模式提问当前节点
 3. 等用户回答 → 标记为 done
 4. [必须] 子节点评估（见「决策树格式」）
 5. [必须] 兄弟扫描：
@@ -102,7 +97,7 @@ Q3 答完并评估子节点后，进入阶段 2。
        是 → 标 skip
        否 → 继续
 6. 更新树文本 → 重新渲染
-7. 还有 open 节点？→ 是：回到 1 / 否：进入阶段 3
+7. 达到结束判据？→ 否：回到 1 / 是：输出结束摘要
 ```
 
 **重大方向修正（例外情况）：** 若用户答案与已答祖先节点根本矛盾，不走兄弟扫描，而是：
@@ -110,27 +105,58 @@ Q3 答完并评估子节点后，进入阶段 2。
 2. 询问用户是否需要修改已答节点
 3. 用户确认后重标受影响节点为 `open`，重新提问
 
+---
+
+## 结束判据
+
+以下六项是判断“问到什么程度算完”的标准，**不是逐条提问的清单**。适用时逐项标为已明确、待确认或不适用（附原因）；非开发类任务只看适用项。
+
+- 目标用户、使用场景、问题及解决时机
+- 新增或改变的能力与关键流程
+- 成功标准、范围边界及不可破坏的现有行为
+- 现有产品、代码、接口、数据、依赖及已做尝试
+- 参考产品或功能，以及希望借鉴或避免的做法
+- 影响方案的质量要求与技术约束
+
 **停止条件：**
-- 所有 `open` 节点已变为 `done` / `infer` / `skip`
-- 用户说"够了"、"开始"、"可以了"、"stop"等打断信号
+- 所有 `open` 节点已变为 `done`、`infer` 或 `skip`
+- 或用户表示不想再被问（"够了"、"开始"、"可以了"、"stop"等）。此时把剩余空缺写成假设清单，随摘要一次确认
 
 ---
 
-### 阶段 3 — 输出精炼指令摘要
+## 结束摘要
+
+摘要必须**自足**：不引用对话历史，不写“如上所述”这类回指，脱离对话单独读也能用。两个入口输出同一格式，七个字段：
 
 ```
-## 任务摘要
+## 需求摘要
 
-**目标：** ...
-**成功标准：** ...
-**范围：** 包含 ... / 不包含 ...
-**关键决策：** ...
-**假设：** （infer 节点的默认处理，透明列出）
+**用户原始需求：** 用户最初的请求原话，以及用户不在回答问题时主动提出的要求或修正（各附原话）
+**任务定位：** 探索 / 定义；建议出口：执行 / 转 init-spec / 结束（被 init-spec 发起时固定为交回）
+**澄清标准：** 六项各自的状态（已明确 / 待确认 / 不适用 + 原因）
+**决定：** 每条一项——节点 id、问题、提供过的选项、用户答复（保留原话）、来源；来源为 Agent 推断时附依据
+**已查明事实：** 自查得到、构成决定依据的事实，附出处（路径或命令）
+**假设：** 未核实、由当前 agent 默认的前提
+**未决：** 用户明确留待以后的事项
 
-确认后开始执行。
+[确认请求]
 ```
 
-等用户确认，然后执行任务。
+来源对应关系：
+- 用户最初请求，以及用户不在回答问题时主动提出的要求或修正 → **用户原始需求**
+- `done` 节点 → **用户选择**
+- `infer` 节点 → **Agent 推断**
+
+摘要后以一句确认请求收尾；被 init-spec 发起时，写明确认后交回 init-spec。用户对摘要提出修改 → 继续澄清、更新摘要再请确认。
+
+### 确认后的出口
+
+**被 init-spec 发起：** 确认后**不执行任务**，把摘要交回 init-spec。
+
+**独立使用**（三选一）：
+- **小任务：** 直接执行
+- **是要做的功能、需要成文 Spec：** 提议转 init-spec，等用户同意；同意后 init-spec 直接使用这份已确认的摘要
+- **用户想清楚了不做：** 结束
 
 ---
 
@@ -145,17 +171,17 @@ Q3 答完并评估子节点后，进入阶段 2。
 具体例子：
 
 ```
-[Q1:done]  id=Q1  目标：把 insight 写成一篇文章
-[Q1a:open]  id=Q1a dep=Q1  文章完成到哪个阶段？
-[Q2:open]  id=Q2  成功标准：怎么判断做对了？
+[G1:done]  id=G1  要解决的问题：把 insight 写成一篇文章
+[G1a:open]  id=G1a dep=G1  文章完成到哪个阶段？
+[S1:open]  id=S1  怎么判断做对了？
 ```
 
 字段规则：
-- `label`: 节点短标识，**与 `id` 保持一致**（如 `Q1`、`Q2a`）；`[label:status]` 两者之间用冒号分隔，不可省略 label
+- `label`: 节点短标识，**与 `id` 保持一致**（如 `G1`、`G1a`）；`[label:status]` 两者之间用冒号分隔，不可省略 label
 - `status`: `done` / `open` / `infer` / `skip`
 - `id`: 全树唯一短 ID，更新时引用稳定
 - `dep=YY`: 可选，指向另一节点 id，表示"YY 答完后此节点才可问"；渲染器用它重建树结构
-- 无 `dep` 的节点为根节点
+- 无 `dep` 的节点为根节点；节点由第一问起动态生成，没有固定根节点
 
 状态含义：
 
@@ -174,15 +200,14 @@ Q3 答完并评估子节点后，进入阶段 2。
 
 **子节点评估（每答完一问必做）：** 答案引出了影响执行方向、需要追问的不确定性 → 一次生成所有潜在子节点（dep 指向当前节点）追加到树；否则不生成（当前节点为叶子）。子问题当前 agent 可合理默认的 → 标 `infer`，填入假设，不追问。
 
-**选题逻辑（阶段 2 每轮使用）：**
+**选题逻辑（每轮使用）：**
 > 从所有 `dep` 已满足（或无 `dep`）的 `open` 节点中，选被其他节点依赖次数最多的（影响面最大）；并列时按树中出现顺序选最早的
 
 dep 已满足的 `open` 节点必须问答或当场评估 infer，不能以「其他节点的答案已覆盖」为由跳过。
 
-**每次树更新后**立即重新渲染；首次渲染（Q1 答完后）加 `--open`：
+**每次树更新后**立即重新渲染；首次渲染（第一问答完后）加 `--open`：
 ```bash
 echo '<决策树文本>' | python3 SKILL_DIR/scripts/render_tree.py /tmp/question-me-tree.html [--open]
 ```
 
 `SKILL_DIR` 是本 SKILL.md 所在的目录。
-
