@@ -1,13 +1,13 @@
 ---
 name: handoff
 description: Use when handing a task across sessions — writing a self-contained handoff doc for a fresh session to pick up (author), sanity-checking an inbound handoff before starting (verify), self-testing against the agreed criteria before reporting the work done or re-submitting after a rejection (self-test), or accepting completed work against the criteria agreed at handoff time (accept). Triggers on phrases like "write a handoff", "hand this off", "pick up this task", "sign off on this work". Not for carrying discussion conclusions into a new topic with no acceptance — use fork-topic for that. Generic skill — project-specific conventions are read from .hskill/handoff/config.md.
-version: "1.15.0"
+version: "1.16.0"
 user_invocable: true
 ---
 
 # 跨 session 任务交接（handoff）
 
-产出并驱动一份自包含交接文档：接手 session 只读它即可续做，完成后由原 session 按约定判据验收。另交付一段可粘贴的接手指令，只含寻址信息（工作区路径、分支、文档路径），不含文档内容摘要，避免形成两个真相源。章节按本次交接目的取舍：缺了会让接手方出问题的才写。
+产出并驱动一份自包含交接文档：接手 session 只读它即可续做，完成后由原 session 按约定判据验收。默认在 Agent Canvas 画布节点里运行：author 直接建出执行节点、发消息让它先跑 verify，之后各方的往返都走画布消息（见「画布通信」）；不在画布里时，改为交付一段可粘贴的接手指令。消息和指令都只含寻址信息（工作区路径、分支、文档路径），不含文档内容摘要，避免形成两个真相源。章节按本次交接目的取舍：缺了会让接手方出问题的才写。
 
 ## Phase 触发判定（先做这一步）
 
@@ -15,6 +15,9 @@ user_invocable: true
    用 `/handoff accept <file>`，Codex 用 `$handoff accept <file>`；没有 skill 调用语法的宿主直接执行
    对应 phase。调用接口只负责选 phase，不属于流程本身。
 2. 文本未指明 → 看上下文：刚做完规划 → author；拿到别人的交接文档准备开工 → verify；接手方回报完成、要核收 → accept。
+   输入以 `[agent-canvas 消息 …]` 开头时，它是另一个节点按「画布通信」发来的，按其中的事件选：
+   派发 → verify；verify 缺口 → 回 author 补文档；待验收 → accept；打回 → 复修（Phase 2.5 复修轮）；
+   已验收 → 接手方停手。
 3. 仍不确定 → **问用户，不猜**。
 
 **Phase 2.5（自测）没有调用命令**：接手方把 `status` 推到「待验收」之前执行，被打回、复修完再执行一遍。
@@ -50,18 +53,30 @@ user_invocable: true
    - **同一时刻只有一方在这个工作区里动手**：你写完交接就停手，接手方做完停手，再轮到你验收。
      两个 session 同时在一个工作区里跑 git 会互踩暂存区。
 5. **起草**：读 `assets/handoff-template.md`，按其中的候选内容清单逐类过必要性测试——"不写这条信息，接手方会不会出问题"，答案是"会"才写出对应章节，答案是"不会"整节跳过，不留空标题。**交接目的**和**最小验收锚点**这两项任何情况下都必须写。指针式引用权威依据，只内联接手方开工必需的硬核，不重抄 spec 全文。写到**第 4 步那个工作区**里的 `<output_dir>/YYYY-MM-DD-<topic>-handoff.md`，按模板填 frontmatter（`status: 待执行`、`date` 与文件名日期段一致、`acceptance` 按最小验收锚点是硬判据还是软判据填 `hard`/`soft`；跨工作区时 `workspace_mode`/`branch`/`worktree` 第 4 步已填）。
-6. **画布节点登记**（仅当 `agent-canvas-ctl` 命令存在时做；不在 Agent Canvas 画布节点里就整步跳过，不报错）：
-   - 跑 `agent-canvas-ctl whoami` 取自己的节点 id，填进 frontmatter 的 `source_node`（接手方只能
-     靠它找回你的节点）。不在画布节点里就整个字段删掉，别留空值。
-   - 若这次交接**你已经能指认接手节点**（例如接手用的 PTY 节点是你亲手创建的）→ 当场建关系
-     `agent-canvas-ctl link-nodes --from <自己的 nodeId> --to <接手节点 nodeId> --type hands-off-to`，
-     并把接手节点 id 填进 `target_node`，接手方只核对、不重复建。
-   - 指认不到接手节点（常态：接手方是还不存在的下一个 session）→ 只填 `source_node`，`target_node`
-     留空给接手方在 verify 阶段回填。归属规则是**谁先能同时指认两端谁建**，另一方只核对。
+6. **建执行节点**（仅当 `agent-canvas-ctl whoami` 能取到自己的节点 id 时做；不在 Agent Canvas
+   画布节点里就整步跳过，不报错，第 9 步改走可粘贴指令，`source_node`/`target_node` 两个字段删掉）。
+   命令用法以 `agent-canvas-ctl help <命令>` 为准：
+   - `whoami` 取到的自己的节点 id 填进 frontmatter 的 `source_node`。
+   - 建接手节点：`agent-canvas-ctl create-pty-node --node-type claude-code --title "接手：<任务一句话>"
+     --cwd <工作区绝对路径> --task-type execute`。类型默认 `claude-code`，用户点名了别的 agent（如
+     `codex`）就用那个。`--cwd` 填第 4 步的 worktree；就地续做填当前工作目录。**这里不带
+     `--message`**：文档还没过门禁、没提交，派发消息留到第 9 步发。
+   - `agent-canvas-arrange put <接手节点 id>` 放上画布（建出来默认不在画布上）。
+   - 建关系 `agent-canvas-ctl link-nodes --from <自己的 nodeId> --to <接手节点 id> --type hands-off-to`，
+     把接手节点 id 填进 `target_node`。接手方在 verify 只核对、不重复建。
+   - 建节点失败 → 把报错告诉用户，`target_node` 留空，第 9 步退回可粘贴指令，由接手方在 verify
+     回填。**不要换个参数再建一个**；退出码 2 先 `get-node` / `list-nodes` 核对是不是已经建出来了。
 7. **跑完整性门禁**（见下），不过不放行。
 8. **落库**：把交接文档 commit 进这条分支（没提交的文档接手方看不到）。同目录同分支续做、或把
    文档整份贴给对方时，此步可省。
-9. **交付**：给用户输出一段**可粘贴的接手指令**，只放寻址信息，不放文档内容摘要。形如：
+9. **派发**：第 6 步建出了接手节点 → 把下面这段接手指令写进临时文件，追加一行
+   「你由节点 <source_node> 派来；verify 有缺口、自测后推「待验收」，都按 handoff skill 的「画布通信」
+   用 `agent-canvas-ctl send <source_node>` 回报」，然后 `agent-canvas-ctl send <target_node> --file <临时文件>`
+   发出去（不加 `--expect-reply`）。告诉用户派给了哪个节点、`messageId` 是什么，**结束本轮**；
+   不 sleep、不轮询、不 `wait-reply`，接手方的回报会作为新的一轮到达。
+   不在画布里，或第 6 步没建成 → 给用户输出这段**可粘贴的接手指令**。
+
+   两种情况都只放寻址信息，不放文档内容摘要。形如：
 
    ```
    接手任务。工作区已建好，不要自己建：
@@ -77,7 +92,7 @@ user_invocable: true
    ```
 
    **同一段指令换个动词就是验收指令**（Claude Code 用 `/handoff accept <文档路径>`，Codex
-   用 `$handoff accept <文档路径>`）——一并给用户，
+   用 `$handoff accept <文档路径>`）——两种情况都一并给用户，
    将来验收若换了新 session，它靠这段就能回到正确的工作区。用户把这段弄丢了也不致命：
    `git worktree list` 能查回分支与工作区的对应关系，只是要多问一步。
 
@@ -104,8 +119,8 @@ user_invocable: true
     阶段按这个字段分叉，填反了验收方式就跑偏）
 - 接手方要在**另一条分支**上开工 → `branch` 与 `worktree` 都填了吗？（脚本查不出漏填；漏了
   接手方不知道去哪开工，你验收时也找不回它改过的文档）
-- 你**在画布节点里**（`agent-canvas-ctl` 存在）→ frontmatter 的 `source_node` 填了吗？（同样
-  查不出漏填；缺了就建不出 `hands-off-to`）
+- 你**在画布节点里**（`agent-canvas-ctl` 存在）→ frontmatter 的 `source_node` 填了吗？第 6 步建成了
+  接手节点时 `target_node` 也填了吗？（同样查不出漏填；缺了往返消息找不到收件方）
 - **反向检查**：有没有哪类内容被必要性测试判定为"不需要"，但其实接手方会因此卡住、走错方向、或推翻已定方案？（防止必要性判断本身错判）
 
 任一项答不上 → 补文档、重跑门禁。核对结论可选择性附在文档末尾。
@@ -116,7 +131,8 @@ user_invocable: true
   说明这份文档本身不合规（字段缺失/枚举非法/`branch` 在本仓库不存在），直接打回原 session，
   不要自己猜着补。WARN（引用路径指不到文件）不阻断，但要当作可疑点带进下面的怀疑视角核对。
 - 读交接文档，以**怀疑视角**核对可执行性，逐项列出缺口/断链/歧义（复用上面的冷读测试项，只核对文档里实际出现的章节）。
-- 有缺口 → 打回原 session 补，别硬开工。
+- 有缺口 → 打回原 session 补，别硬开工。画布内按「画布通信」把缺口清单 `send` 给 `source_node`，
+  然后结束本轮等它补完再发回来。
 - **建 `hands-off-to` 关系**（仅当 `agent-canvas-ctl` 存在、且 frontmatter 有 `source_node` 时做；
   任一条件不满足就整步跳过，不报错）：
   1. `agent-canvas-ctl whoami` 取自己的节点 id。
@@ -124,7 +140,7 @@ user_invocable: true
      已经有一条来自交接源节点的边（author 那边建过）就跳过，不重复主张。
   3. 没有 → `agent-canvas-ctl link-nodes --from <source_node> --to <自己的 nodeId> --type hands-off-to`。
   4. 把自己的节点 id 填进 frontmatter 的 `target_node`——两端都填齐，这次交接在画布上才是闭环的，
-     accept 时一眼看得出关系建没建。
+     accept 时一眼看得出关系建没建。author 已经填了却不是你的 id → 打回确认，不要自己改。
 
   **只建这一条边。**不要顺带把自己挂到交接源节点实现的需求上（不建 `implements`），也不要调
   `capture-requirement` 另立需求——需求已经挂在交接源节点上，接手节点该不该关联需求是另一个
@@ -158,6 +174,8 @@ user_invocable: true
    - 或者认为那条红不构成未达成（例如它在你动手之前就红），**在自测记录里那一条旁边写出
      归因证据**（比如在分叉点上跑同一条命令的结果），并显式声明「带着这条红送验」。
      **不许沉默推上来。**
+
+四件都做完、`status` 置「待验收」后，画布内按「画布通信」通知 `source_node` 来验收，然后停手。
 
 自测不替代 accept：accept 方仍逐条自己重跑（Phase 3）。
 
@@ -217,6 +235,7 @@ user_invocable: true
    **哪几条未达成**、**为什么**（判据原文 vs 实跑结果）、以及
    **复修后要重跑的范围**（默认全集；认为可以只跑子集就在这里点名）。
 7. **达成才算真正完成**（硬判据要求逐条全绿且无本次引入的回归；软判据按其描述定性判断是否达成）。
+   画布内写完 `status` 后按「画布通信」通知 `target_node`：打回 → 让它复修；已验收 → 让它停手。
 8. 若第 1 步通过宿主能力进入了工作区，按文末对应宿主的方式离开并**保留**工作区；使用显式路径
    兜底时无需切换会话状态，停止操作即可。任何情况下都不 remove，合并与清理由 author 后续处理。
 
@@ -237,6 +256,32 @@ user_invocable: true
 
 脚本不校验值由谁写入，只在 `status: 待验收` 且正文没有标题含「自测」的小节时 exit 1；自测结论的
 真假靠 accept 方逐条重跑兜底。接手方若自填 `已验收`/`打回`，accept 方**按未验收处理**，照常重跑。
+
+## 画布通信（往返消息）
+
+frontmatter 的 `source_node` 和 `target_node` 都填了、且你在画布节点里时，交接双方的往返一律用
+`agent-canvas-ctl send <对方 nodeId> <正文>`（长正文用 `--file`）。收件方只取 frontmatter 的这两个
+字段，不从信封头或节点标题去猜。任一条件不满足 → 不发消息，告诉用户由用户转达。
+
+| 事件 | 方向 | 正文（文档路径 + 一句结论） |
+|---|---|---|
+| 派发 | author → 接手方 | author 第 9 步的接手指令 |
+| verify 有缺口 | 接手方 → author | 缺口清单，`status` 不动 |
+| 补完文档 | author → 接手方 | 补了哪几处，请重新 verify |
+| 自测通过 | 接手方 → author | 已置「待验收」，请 accept |
+| 打回 | author → 接手方 | 已打回，见文档里的打回记录 |
+| 已验收 | author → 接手方 | 已验收，停手 |
+
+- **消息只寻址，不搬内容**：缺口、自测结果、打回理由先写进工作区里那份文档，消息里只给文档路径和
+  一句结论。文档是唯一真相源。
+- **发消息就是交出工作区**：发之前把自己的改动写完；发完就停手，不再碰这个工作区。
+- **不加 `--expect-reply`，发完结束本轮**：不 sleep、不轮询 `get-message`、不 `wait-reply`。对方回报
+  靠它自己 `send` 过来，会作为你的新一轮到达。执行常常跨多轮，等「这一轮结束自动回复」会提前拿到
+  半截结果。
+- **发之前看对方还在不在**：`agent-canvas-ctl get-node <对方 nodeId>` 的 `actions[]` 里 `send_message`
+  不是 `available: true`（进程已退出等）→ 不发，告诉用户，由用户重启节点或转达，不改发给别的节点。
+- **审批与失败不重试**：接手方 → author 这个方向，对方不是你建的节点，首次会弹审批卡，等用户在画布
+  上批。被拒绝、超时、`held`、`failed`、`interrupted` 都告诉用户，由用户决定，不要重发。
 
 ## 平台适配（怎么进出交接工作区）
 
