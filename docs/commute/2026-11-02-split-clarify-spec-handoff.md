@@ -1,5 +1,5 @@
 ---
-status: 执行中
+status: 待验收
 date: 2026-11-02
 author_model: claude-opus-5-5
 acceptance: hard
@@ -122,3 +122,60 @@ Spec 第 9 节的两条“未核实前提”不需要你去解决。工作中若
 9. `node bin/cli.js list --json` 输出中，question-me 的 `bundle` 为 `superpowers-rewrite`。
 10. `skills-index.json` 中 question-me 的 `contentVersion` 为 `4.0.0`、init-spec 的为 `0.3.0`，两者的 `contentHash` 都与按上述算法算出的值一致。
 11. 实施计划文件已提交到本分支。
+
+## 接手方自测记录（2026-11-02）
+
+在 HEAD `d053875` 上逐条实跑，锚点全集 1–11。判成败的命令都没接管道。下文 `Q` 指 `skills/superpowers-rewrite/question-me/SKILL.md`，`I` 指 `skills/superpowers-rewrite/init-spec/SKILL.md`。
+
+| # | 结果 | 实跑命令 / 依据 |
+|---|---|---|
+| 1 | pass | `npm test` → exit 0：bats 全过，custom skill tests 14/14，node 356 pass / 0 fail / 7 skip |
+| 2 | pass | `python3 skills/superpowers-rewrite/question-me/scripts/test_render_tree.py` → exit 0，9 passed |
+| 3 | pass | `test -e skills/coding/question-me` 为假。`git grep -n "coding/question-me"` 只命中允许范围：`.hskill/spec/2026-11-02-split-clarify-spec/` 下 3 个文件，`docs/commute/`、`docs/reports/`、`docs/superpowers/` 下的文件。`CHANGELOG.md` 无命中 |
+| 4 | pass | `Q` 中 `grep -nE "Q1\|Q2\|Q3\|至少 3 个\|at least 3 options"` 无命中 |
+| 5 | pass | `I` 中 `grep -nE "共同澄清范围\|探索性对话\|定义性对话\|阶段性复述\|探索性试做"` 无命中；`I` 第二阶段含「**试做。**」条目。`Q` 含「探索模式」「阶段性复述」及 Spec 5.4 六项原文，不含「试做」 |
+| 6 | pass | `I` 的 description 不含 “clarify requirements”；`Q` 边界含「需要成文 Spec → 提议转 init-spec，等用户同意，不自动交棒」 |
+| 7 | pass | `Q` 摘要模板七个字段齐全，来源三类对应关系写明（`done` 节点 → 用户选择，`infer` 节点 → Agent 推断，主动提出 → 用户原始需求）。`I` 第一阶段「按摘要建档」对用户原始需求、决定、已查明事实、假设、未决五个字段各有建档规则 |
+| 8 | pass | 走读三条路径，见下 |
+| 9 | pass | `node bin/cli.js list --json` → question-me 为 `{"path":"superpowers-rewrite/question-me","bundle":"superpowers-rewrite"}` |
+| 10 | pass | 按交接文档的算法重算 hash，与 `skills-index.json` 一致。question-me：`contentVersion` 4.0.0，`contentHash` `33c8695fdd9fa2d6`。init-spec：`contentVersion` 0.3.0，`contentHash` `b60024f9874bd4af` |
+| 11 | pass | `git log -- .hskill/spec/2026-11-02-split-clarify-spec/2026-11-02-split-clarify-spec-plan.md` → `c59d6aa` |
+
+锚点 4–7 和 10 另用一段 node 脚本逐条断言，30/30 PASS。这段脚本是临时文件，没有入库。
+
+**锚点 8 走读**
+
+- **入口 A，正常路径：**
+  1. `I` 第 28 行：简单任务直接完成。
+  2. `I` 第 29 行：会话内已确认的摘要直接用；否则按名调用 question-me，并告知由 init-spec 发起。
+  3. `Q` 第 24 行：只凭当前会话判定发起方。
+  4. `Q` 第 151 行：摘要的确认句写明「确认后交回 init-spec」。
+  5. `Q` 第 155 行：确认后不执行任务，交回。
+  6. `I` 第 31 行：只依据摘要建档；用户的确认即为需求批准，进入第二阶段。
+
+  整条路径里，「直接执行」只出现在 `Q` 第 157–158 行「独立使用」那一支，入口 A 走不到。
+- **入口 A，非正常出口：**
+  - 用户修改摘要：`Q` 第 151 行继续澄清，更新摘要后再请确认；与 `I` 第 33 行起的「非正常出口」一致。
+  - 发散型请求，或用户决定不做：`Q` 第 155 行停下并告知 init-spec，不输出待确认的摘要；`I` 的「非正常出口」随之结束，不建记录。
+- **贴入摘要路径：**
+  1. `I` 第 29 行：贴入的摘要不视为已批准，交给 question-me，按七个字段补问。
+  2. `Q` 初始化第 5 条：已覆盖的不再问，只补缺口，随新摘要一起确认。
+  3. 之后同入口 A 第 4–6 步。
+- **入口 B 三个出口：** `Q` 第 158–160 行：小任务直接执行；需要成文 Spec 的提议转 init-spec，用户同意后 init-spec 用这份摘要；用户决定不做的结束。
+
+**工作中查明 / 需要原 session 知道的事**
+
+- **全分支独立审查：** 由 Opus 子代理执行。没有 Critical，2 条 Important 已在 `d053875` 修复：
+  - question-me 一侧缺「已知信息 / 贴入摘要」的处理规则；
+  - 被 init-spec 发起时，question-me 缺「不做 / 发散」的退出规则。
+- **超出 Spec 原文字面的两处：**
+  - 上述两条修复补的是 Spec 第 4 节要求、而原先只在 init-spec 一侧兜底的行为，没有新增行为。
+  - init-spec description 删掉了 “brainstorm a feature”，理由是它是被删的「帮我想想这个功能」对应的英文。
+- **延后的 Minor：**
+  - 试做在第二阶段单列为一段，没有并进「方案形成标准」段内；
+  - 入口 B 没写「按名调用 init-spec」；
+  - 结束判据还有「待确认」项、但节点已全部结案时，怎么处理 Spec 5.4 本身没写；
+  - Spec 第 6 节「假设」条目建档后的批准状态措辞有歧义，按 Spec 原文照搬。
+- **Spec 第 9 节两条未核实前提：** 未处理，Spec 也没要求处理。
+- **`package.json` 的 `files`：** `node scripts/generate-npmignore.js` 的生成结果只改了 question-me 那一行，没有无关差异。
+- **偶发红：** 一次 `npm test` 中 `tools/browser-fetch` 的 `test_download_images_real_network` 因网络失败。单独重跑通过，与本次改动无关，最终那次完整运行是全绿的。
