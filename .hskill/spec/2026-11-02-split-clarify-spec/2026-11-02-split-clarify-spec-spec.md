@@ -17,7 +17,7 @@
 **包含：**
 
 - question-me 目录从 `skills/coding/question-me` 迁到 `skills/superpowers-rewrite/question-me`，改归 `superpowers-rewrite` bundle（D12）。
-- 重写 question-me 的 `SKILL.md`（D2、D4–D9、D11）。
+- 重写 question-me 的 `SKILL.md`（D2、D4–D8、D11、D17）。
 - 修改 init-spec 的 `SKILL.md`（D5、D10、D11）。
 - 同步登记与打包：`skills-index.json`、`package.json` 的 `files`、`tests/skill-portability.test.mjs`、`docs/product/PRD.md`、`CHANGELOG.md`。
 
@@ -29,7 +29,7 @@
 - 不清理 `~/.claude/skills/brainstorming` 旧装机副本。
 - 不同步 `~/.claude/skills/` 装机副本；合并后由用户决定是否同步。
 - `docs/superpowers/` 下涉及 question-me 的历史 spec 与 plan 不改。
-- 不新建发散类 skill（D9）。
+- 不新建发散类 skill（D17）。
 
 ## 3. 必须保持的既有行为
 
@@ -37,7 +37,7 @@
 - question-me 仍不写任何文件（D4）。
 - question-me 保留决策树：节点格式、四种状态、子节点评估、兄弟扫描、选题逻辑、重大方向修正、每次更新后渲染（D8）。
 - question-me 正文保留字符串 `自动提议（等用户确认 y/n）` 与 `当前 agent`，正文不出现 `Claude`。这三条由 `tests/skill-portability.test.mjs` 断言。
-- init-spec 的“记录决定”规则、第二阶段方案审查、第三阶段 Spec 编写、HARD-GATE 保持不变（D10），只有下文第 6 节点名的改动例外。
+- init-spec 的“记录决定”规则、第二阶段方案审查、第三阶段 Spec 编写、HARD-GATE 保持不变（D10），只有下文第 6 节点名的改动例外（含 HARD-GATE 中试做例外的措辞，D18）。
 - skill 名不变，`skills-index.json` 不加 `renames` 条目。`init-project` 的 code 模板按 skill 名安装（`skills/coding/init-project/SKILL.md:87`），不受影响。
 
 ## 4. 两个入口的流程（D3、D5、D6）
@@ -61,7 +61,7 @@ question-me 澄清并经用户确认摘要后，三选一（D6）：
 - **是要做的功能、需要成文 Spec：** 提议转 init-spec，等用户同意；同意后按入口 A 第 2 步使用现有摘要。这次确认同样视为需求批准（D5）。
 - **用户想清楚了不做：** 结束。
 
-**发散型请求（D9）：** 方向还没收敛（要不要做、做哪个、有哪些可能都没定），question-me 说明“这还在发散阶段”后停下，不建决策树。
+**发散型请求（D17）：** 有多个候选方向尚未选定，或还在寻找方向时，question-me 说明“这还在发散阶段”后停下，不建决策树。只有一个方向的，即使用户还没决定做不做，也走探索模式继续澄清，由“结束”出口承接“想清楚了不做”。
 
 **判定发起方：** question-me 只凭当前会话中 init-spec 是否发起了本次调用来判断入口，不读文件、不靠外部标记。
 
@@ -146,7 +146,7 @@ question-me 澄清并经用户确认摘要后，三选一（D6）：
   - 写明结束时可提议转 init-spec。
 - **边界：**
   - 需要成文 Spec → 提议转 init-spec，等用户同意，不自动交棒。
-  - 发散型请求 → 停下（D9）。
+  - 发散型请求 → 停下（D17）。
   - 问答结果不写文件（保留）。
   - 方案层面的比较不在此做。
 
@@ -167,7 +167,9 @@ question-me 澄清并经用户确认摘要后，三选一（D6）：
   - 方案审查或核查中出现影响需求的新问题时，init-spec 自行补充提问，更新决定记录并重新送审。
   - 本节其余内容不变。
 - **第二、三阶段中的“重新澄清”“返回相应的澄清”（D16）：** 统一改为由 init-spec 自行补充提问并按“记录决定”规则更新、送审，不重新调用 question-me。涉及：第二阶段“方案形成标准”中“影响方案的新需求须重新澄清并通过人工闸门”，第三阶段构建者检查“必须由用户决定”一条。
-- **第三阶段与 HARD-GATE：** 不改。
+- **试做（D18）：** 原探索性对话中的试做随第一阶段删除，改放第二阶段“方案形成标准”：对方案可行性拿不准时，经用户同意可做用后即弃、无需完整测试和规划的试做，发现写回决定记录。question-me 不做试做。
+- **HARD-GATE：** 只改试做例外一句：“经他们同意的探索性试做可以构建”改为“经他们同意、在方案审查中做的试做可以构建”，其余不改。
+- **第三阶段：** 除 D16 所列一处外不改。
 - **开头介绍段：** 改为说明本技能依据 question-me 澄清的需求形成方案并写 Spec。
 
 ## 7. 登记与打包
@@ -195,7 +197,7 @@ question-me 澄清并经用户确认摘要后，三选一（D6）：
 2. `python3 skills/superpowers-rewrite/question-me/scripts/test_render_tree.py` 通过。该测试不在 `npm test` 内。
 3. `skills/coding/question-me` 不存在；`git grep -n "coding/question-me"` 只命中 `docs/superpowers/`、`docs/reports/`、`docs/commute/` 下的历史文档和 `CHANGELOG.md` 的既有条目。
 4. question-me `SKILL.md` 中不再出现 “Q1”“Q2”“Q3”、“至少 3 个”或“at least 3 options”。
-5. init-spec `SKILL.md` 中不再出现“共同澄清范围”“探索性对话”“定义性对话”“阶段性复述”；question-me `SKILL.md` 中出现“探索模式”“阶段性复述”与第 5.4 节六项标准。
+5. init-spec `SKILL.md` 中不再出现“共同澄清范围”“探索性对话”“定义性对话”“阶段性复述”“探索性试做”，第二阶段含试做条目；question-me `SKILL.md` 中不出现“试做”；question-me `SKILL.md` 中出现“探索模式”“阶段性复述”与第 5.4 节六项标准。
 6. init-spec 的 description 不含 “clarify requirements”；question-me 的边界含转 init-spec 的条目。
 7. 按第 5.6 节逐字段检查 question-me 的摘要模板：七个字段齐全，来源三类与节点状态的对应关系写明；init-spec 第一阶段对七个字段中“用户原始需求”“决定”“已查明事实”“假设”“未决”五个字段各有建档规则。
 8. 走读一遍入口 A：从 init-spec 第一阶段读到调用 question-me，再读到 question-me 交回，确认每一步都有明确去向，不存在“确认后直接执行”的路径。入口 A 的非正常出口、贴入摘要路径、入口 B 的三个出口同样走读一遍。
