@@ -77,9 +77,12 @@
 - **来源：** Agent 推断
 - **依据：** 两个 skill 现在都以“澄清”为触发词，同一句话选哪个不确定。
 
-## 待定
+### D12 question-me 迁入 superpowers-rewrite bundle
 
-- **跨 bundle 依赖：** question-me 在 `coding` bundle，init-spec 在 `superpowers-rewrite` bundle；`lib/bundles.js` 与 `bin/cli.js` 无 bundle 依赖机制（`installScope` 只影响显示与安装位置）。`docs/product/PRD.md` 写明 init-spec“作为独立 superpowers-rewrite bundle 登记并打包”。待用户决定处理方式。
+- **决定：** 将 question-me 从 `coding` bundle 迁入 `superpowers-rewrite` bundle（目录 `skills/coding/question-me` → `skills/superpowers-rewrite/question-me`），使 init-spec 的依赖在同一 bundle 内满足；superpowers-rewrite 仍作为独立 bundle 打包。
+- **状态：** 已提出
+- **来源：** 用户选择——问题：“init-spec 依赖 question-me 后，两者不在同一 bundle 怎么办？”选项：A 直接依赖并提示安装 coding（推荐）/ B init-spec 保留精简兜底 / C 迁入 superpowers-rewrite / D 自定义。答复：“C”。
+- **依据：** hskill 无 bundle 依赖机制；`bin/cli.js` 按目录名推导 bundle 显示，目录须一并迁移。代价：只装 `coding` 的用户不再获得 question-me。`init-project` 的 code 模板按 skill 名安装（`skills/coding/init-project/SKILL.md:87`），不受迁移影响；skill 名不变，无需 `renames` 条目。
 
 ## 范围外
 
