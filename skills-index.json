@@ -177,7 +177,7 @@
       "path": "superpowers-rewrite/question-me",
       "bundle": "superpowers-rewrite",
       "installScope": "global",
-      "contentHash": "080681a3d025c13e",
+      "contentHash": "ed740baf4820a6f6",
       "contentVersion": "4.0.0"
     },
     {
@@ -457,7 +457,7 @@
       "path": "superpowers-rewrite/init-spec",
       "bundle": "superpowers-rewrite",
       "installScope": "global",
-      "contentHash": "b60024f9874bd4af",
+      "contentHash": "2a9c5e6d24429bf2",
       "contentVersion": "0.3.0"
     },
     {
