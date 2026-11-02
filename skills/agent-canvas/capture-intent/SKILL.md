@@ -2,7 +2,7 @@
 name: capture-intent
 description: "Capture a need the user mentions for later as an Agent Canvas requirement node. Triggers on casual phrasing like 'we should do X later', 'note this requirement', 'add this to the backlog', 'remember to build X'. Writes to the current canvas by default, or to another project's running canvas when the user names it. Not for the requirement the current session is implementing (use capture-requirement)."
 user_invocable: true
-version: "1.1.0"
+version: "1.2.0"
 ---
 
 # 记录意图（capture-intent）
@@ -21,7 +21,7 @@ version: "1.1.0"
 2. **紧急程度**——默认不问；用户暗示紧急或不重要时据此定档。
 3. **背景**——为什么现在提出来（可选）。
 
-不主动问验收。用户描述里已经带了完成标准（"做完应该能……"），拆出来留作验收文字。
+不主动问验收。用户描述里已经带了完成标准（"做完应该能……"），拆出来并入需求正文（description），需求节点没有独立的验收字段。
 
 ## 2. 确定目标画布
 
@@ -84,11 +84,10 @@ version: "<本 skill 的版本号>"
   - 对象：受影响的 skill、模块或子系统名。
   - 类型：feat / fix / refactor / docs / chore。
   - 描述：写出关键区分点，不用「优化」「修复」这类泛词，也不堆细节。
-- **需求正文**：写做什么、为什么。**不写怎么做**。篇幅以说清楚为准。
+- **需求正文**：写做什么、为什么。**不写怎么做**。篇幅以说清楚为准。第 1 步拆出了完成标准时，照用户原意并入正文末尾，不替用户补全；没有独立的验收字段可填。
 - **优先级**：默认取中间档；用户表示紧急取最高档，表示不重要取最低档。
-- **验收文字**：只在第 1 步拆出了完成标准时才填，照用户原意写，不替用户补全。
 - **状态**：传「新建、未开始」那一档，不依赖缺省值。
-- **验收依据文件**：不传（没有 spec）。
+- **验收条目 / spec**：不传（没有 spec，也就没有验收条目）。
 
 ## 5. 查重
 
