@@ -352,8 +352,8 @@
       "path": "coding/handoff",
       "bundle": "coding",
       "installScope": "project",
-      "contentHash": "7d5ce820e850319f",
-      "contentVersion": "1.15.0"
+      "contentHash": "a101b961ea10fd59",
+      "contentVersion": "1.17.0"
     },
     {
       "path": "coding/fork-topic",
@@ -414,9 +414,9 @@
     {
       "path": "agent-canvas/capture-intent",
       "bundle": "agent-canvas",
-      "installScope": "project",
-      "contentHash": "2e753e4b26c2fe1a",
-      "contentVersion": "1.0.1"
+      "installScope": "global",
+      "contentHash": "eb56f12e5b9482bd",
+      "contentVersion": "1.1.0"
     },
     {
       "path": "agent-canvas/relation-review",

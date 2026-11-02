@@ -5,7 +5,7 @@
       "id": 0,
       "name": "author-high-to-low-model",
       "prompt": "我刚把一个功能模块的重构方案定完了，设计规格已经写好放在仓库里。想把具体实现交给另一个能力较弱的模型 session 去做，帮我写一份交接文档，让它只读这一份就能照着实现，别自由发挥。",
-      "expected_output": "在 config 输出目录（默认 docs/commute/）下生成 YYYY-MM-DD-*-handoff.md；frontmatter 含 status/date/acceptance 字段 + 正文含交接目的（判断为'接手方续做同一实现任务'一类描述）+ 接手方须知。因为是续做同一任务的目的，必要性测试会判定背景/关键决定/范围铁律/相关文档索引/受影响文件/验证步骤等章节基本都需要，实际出现在文档里；若项目有 .hskill/handoff/config.md 则注入其工作流/验证约定；最小验收锚点是可证伪的硬判据；author 收尾跑完整性门禁（先跑 scripts/validate-handoff.sh，再做冷读测试）。",
+      "expected_output": "在 config 输出目录（默认 docs/commute/）下生成 YYYY-MM-DD-*-handoff.md；frontmatter 含 status/date/acceptance 字段 + 正文含交接目的（判断为'接手方续做同一实现任务'一类描述）。因为是续做同一任务的目的，必要性测试会判定背景/关键决定/范围铁律/相关文档索引/受影响文件/验证步骤等章节基本都需要，实际出现在文档里；若项目有 .hskill/handoff/config.md 则注入其工作流/验证约定；最小验收锚点是可证伪的硬判据；author 收尾跑完整性门禁（先跑 scripts/validate-handoff.sh，再做冷读测试）。",
       "files": [],
       "frozen": "2026-08-17",
       "assertions": [
