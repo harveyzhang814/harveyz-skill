@@ -457,8 +457,8 @@
       "path": "superpowers-rewrite/init-spec",
       "bundle": "superpowers-rewrite",
       "installScope": "global",
-      "contentHash": "bf0bbfedaf36ea0a",
-      "contentVersion": "0.2.0"
+      "contentHash": "0c9c21928904210c",
+      "contentVersion": "0.3.0"
     },
     {
       "path": "superpowers-rewrite/develop-plan",
