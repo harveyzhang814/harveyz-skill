@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- `question-me`：升至 4.0.0（不兼容旧做法），成为执行前需求澄清的唯一入口。目录从 `coding` 迁入 `superpowers-rewrite` bundle（与 init-spec、develop-plan 同 bundle）；移除固定三问与“每问至少 3 个选项”，改为探索模式（开放问题 + 阶段性复述）与定义模式（互斥选项 + 推荐依据），以六项结束判据决定何时停问；结束时输出七字段自足摘要（用户原始需求、任务定位、澄清标准、决定、已查明事实、假设、未决）。确认后独立使用三选一：小任务直接执行、需要成文 Spec 时提议转 init-spec、结束；被 init-spec 发起时不执行、把摘要交回。发散型请求（多个候选方向未选）说明后停下
+- `init-spec`：升至 0.3.0，第一阶段的自带澄清规则整体移除，改为取得 question-me 摘要后按字段建决定记录；用户对摘要的确认即为需求批准，不再重复提交需求条目审查；用户贴入的摘要须经 question-me 补问并重新确认。后续阶段遇到影响需求的新问题由 init-spec 自行补问、不回调 question-me；试做移到第二阶段方案审查中
+
 ## [0.42.1] - 2026-10-28
 
 ### Added
