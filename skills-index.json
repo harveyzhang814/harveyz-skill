@@ -352,8 +352,8 @@
       "path": "coding/handoff",
       "bundle": "coding",
       "installScope": "project",
-      "contentHash": "a101b961ea10fd59",
-      "contentVersion": "1.17.0"
+      "contentHash": "9f044fd5eb4a0bfd",
+      "contentVersion": "1.17.1"
     },
     {
       "path": "coding/fork-topic",
@@ -387,8 +387,8 @@
       "path": "agent-canvas/agent-canvas-control",
       "bundle": "agent-canvas",
       "installScope": "global",
-      "contentHash": "d171163b793d279e",
-      "contentVersion": "1.3.1"
+      "contentHash": "5ea7175930c96895",
+      "contentVersion": "1.3.2"
     },
     {
       "path": "agent-canvas/describe-node",
@@ -415,8 +415,8 @@
       "path": "agent-canvas/capture-intent",
       "bundle": "agent-canvas",
       "installScope": "global",
-      "contentHash": "eb56f12e5b9482bd",
-      "contentVersion": "1.1.0"
+      "contentHash": "97594926385230c4",
+      "contentVersion": "1.1.1"
     },
     {
       "path": "agent-canvas/relation-review",

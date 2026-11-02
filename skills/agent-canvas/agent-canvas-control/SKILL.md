@@ -2,7 +2,7 @@
 name: agent-canvas-control
 description: Control Agent Canvas node entities and layout from claude-code/codex/pi nodes — create, query, update, delete nodes, put or hide them on the canvas, and send messages or slash commands to other claude-code/codex nodes (dispatch work to a new node, or to one already running) and get their replies back; also usable from shell/hermes-tui nodes or terminals outside the canvas via `--canvas`/`resolve-canvas`/`resolve`.
 user_invocable: true
-version: "1.3.1"
+version: "1.3.2"
 ---
 
 # 操控节点与画布（agent-canvas-control）
@@ -44,7 +44,7 @@ version: "1.3.1"
 按以下优先级自动定位目标画布：
 
 1. `--canvas <项目路径>`——全局选项，**必须写在子命令之前**：
-   `agent-canvas-ctl --canvas <项目路径> list-nodes`。写在子命令之后会被拒，报错里会给出挪到前面
+   `agent-canvas-ctl --canvas <项目路径> search-nodes <关键词>`。写在子命令之后会被拒，报错里会给出挪到前面
    的正确写法。
 2. 环境变量 `AGENT_CANVAS_MCP_URL`——画布节点里自带，所以**在画布节点内什么都不用写**。
 3. 当前工作目录向上匹配某个正在运行的画布的绑定路径。
@@ -167,6 +167,21 @@ stderr、退出码 1。它和其他命令走同一套优先级，所以**探测�
 放上/收起多个 id）**部分生效时退出码 2**：有效项已经照常生效，结果仍在 stdout——读逐项结果
 看清哪些成了，不要把 2 当成整条没做而重试整个列表。
 
+## 搜索：找节点用搜索，结果有上限
+
+找节点用 `search-nodes`（arrange 上是 `search`，查摆放），已知 id 用 `get-node`。没有列出全部节点
+的命令。新版 App 上的搜索约束：
+
+- 每次最多返回 30 条，`--limit` 不写时 10 条。
+- 可用 `--kind <kind>`（如 `pty`、`requirement`）、`--state <state>` 过滤；关键词和过滤条件至少给一个，
+  关键词至少 2 个字符。
+- 结果是 `{results, truncated, totalMatches}`：`truncated: true` 说明还有更多命中（共 `totalMatches`
+  条），加过滤条件或换更具体的关键词收窄，不要指望翻页拿全。
+
+旧版 App 只认 `search-nodes <关键词> [--limit <n>]`，结果是顶层数组。两版都要读时，顶层是数组就直接用，
+是对象就读 `.results`（jq：`if type=="array" then . else .results end`）。用法以
+`agent-canvas-ctl help search-nodes` 为准。
+
 ## 常见工作流（完整示例）
 
 **1. 建一个文档节点并放上画布**
@@ -194,8 +209,8 @@ agent-canvas-arrange group-color <groupId> blue
 
 ```
 agent-canvas-ctl --canvas <项目路径> resolve-canvas
-agent-canvas-ctl --canvas <项目路径> list-nodes
-agent-canvas-arrange --canvas <项目路径> list --off-canvas
+agent-canvas-ctl --canvas <项目路径> search-nodes <关键词>
+agent-canvas-arrange --canvas <项目路径> search <关键词>
 ```
 
 **4. 派活：建一个新的 agent 节点并把任务发给它**
@@ -208,7 +223,8 @@ agent-canvas-ctl get-message <messageId>
 
 第一条返回 `{"node": {nodeId…}, "message": {messageId, status…}}`。新节点是你的子节点，所以不弹
 审批；消息会等新会话启动完成才写入（启动期的信任/更新对话框期间一直排队）。退出码 2 表示节点
-**已经或可能已经建出来**、但消息没发成——先 `list-nodes` / `get-node` 核对，别再建一个。任务说明
+**已经或可能已经建出来**、但消息没发成——先 `search-nodes <标题关键词> --kind pty` 核对（旧版 App
+不认 `--kind` 时去掉它），别再建一个。任务说明
 很长时，去掉 `--message`，建完再 `send <nodeId> --file <路径>`。
 
 **5. 派两个活，拿回两份结果**
