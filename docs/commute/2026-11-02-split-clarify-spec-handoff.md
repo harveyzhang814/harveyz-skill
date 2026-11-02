@@ -209,3 +209,5 @@ Spec 第 9 节的两条“未核实前提”不需要你去解决。工作中若
 - 第三阶段构建者检查保留了「方案问题返回方案审查」。D16 约束的是“重新澄清需求”，方案问题回到方案审查不属于澄清，与 D16 不冲突。
 
 **结论：** 达成。
+
+**验收后补充（2026-11-02，publish-skill 检查）：** question-me 的 description 中有两个中文触发词，违反 F3「description 须为英文」。现已改为英文 `'clarify the requirements'`、`'help me think this through'`，正文第 16 行的中文触发词保留。版本仍为 4.0.0（该版本尚未发布），`contentHash` 更新为 `080681a3d025c13e`，上表第 10 条中的旧 hash 作废。修改后重跑 `npm test`，exit 0（356 pass / 0 fail）。
