@@ -408,15 +408,15 @@
       "path": "agent-canvas/capture-requirement",
       "bundle": "agent-canvas",
       "installScope": "project",
-      "contentHash": "82481c8bd14f608c",
-      "contentVersion": "2.0.0"
+      "contentHash": "6625c665318b723d",
+      "contentVersion": "2.1.0"
     },
     {
       "path": "agent-canvas/capture-intent",
       "bundle": "agent-canvas",
       "installScope": "global",
-      "contentHash": "eb56f12e5b9482bd",
-      "contentVersion": "1.1.0"
+      "contentHash": "1b1c87525bb529f2",
+      "contentVersion": "1.2.0"
     },
     {
       "path": "agent-canvas/relation-review",
@@ -429,15 +429,15 @@
       "path": "agent-canvas/close-node",
       "bundle": "agent-canvas",
       "installScope": "project",
-      "contentHash": "9bad73adb309bbe0",
-      "contentVersion": "1.0.7"
+      "contentHash": "4052d68e885146f9",
+      "contentVersion": "1.0.8"
     },
     {
       "path": "agent-canvas/judge-release",
       "bundle": "agent-canvas",
       "installScope": "project",
-      "contentHash": "549a45c8dee95eb2",
-      "contentVersion": "1.0.2"
+      "contentHash": "f77c808cfabf232c",
+      "contentVersion": "1.1.0"
     },
     {
       "path": "agent-canvas/external-closeout",
