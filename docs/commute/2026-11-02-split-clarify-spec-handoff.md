@@ -213,3 +213,5 @@ Spec 第 9 节的两条“未核实前提”不需要你去解决。工作中若
 **验收后补充（2026-11-02，publish-skill 检查）：** question-me 的 description 中有两个中文触发词，违反 F3「description 须为英文」。现已改为英文 `'clarify the requirements'`、`'help me think this through'`，正文第 16 行的中文触发词保留。版本仍为 4.0.0（该版本尚未发布），`contentHash` 更新为 `080681a3d025c13e`，上表第 10 条中的旧 hash 作废。修改后重跑 `npm test`，exit 0（356 pass / 0 fail）。
 
 **验收后补充（2026-11-02，simplify-skill 精简）：** 经用户批准，删除两个 skill 内的重复表述（question-me 4 处、init-spec 3 处），行为不变。版本号不变，`contentHash` 更新为 question-me `ed740baf4820a6f6`、init-spec `2a9c5e6d24429bf2`，此前记录的 hash 作废。验收第 4–7 条的字样检查已复跑，结果不变；`npm test` exit 0（356 pass / 0 fail）。
+
+**验收后补充（2026-11-02，D19）：** 经用户选择，question-me 的停止条件改为：决策树问完后对照六项结束判据，影响方案的待确认项继续问，其余写入假设。Spec 升为 v1.2，修订 5.4；决定记录新增 D19；CHANGELOG 同步。question-me 版本仍为 4.0.0，`contentHash` 改为 `16c8a93ee25c6af5`。`npm test` exit 0（356 pass / 0 fail）；验收第 4–7 条的字样检查已复跑，通过。
