@@ -8,7 +8,7 @@ branch: feature/split-clarify-spec
 worktree: /Users/harveyzhang96/Projects/harveyz-skill/.claude/worktrees/feature+split-clarify-spec
 base_commit: de37def7e7e9b3df64a5dbda4e8388a78834cb31
 source_node: 1966b96f-98dd-42cd-a253-e8ff5e46da16
-target_node:
+target_node: 4f479d60-23d1-48d5-93ff-7d0ea3b4fdb8
 ---
 
 # 交接：按获批 Spec 实施 question-me / init-spec 分工改造
