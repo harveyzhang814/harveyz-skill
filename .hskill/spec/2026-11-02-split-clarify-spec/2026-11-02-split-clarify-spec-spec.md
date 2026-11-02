@@ -1,9 +1,9 @@
 # Spec：question-me 管需求澄清，init-spec 管方案与 Spec
 
-- **版本：** v1
-- **审查状态：** 已批准（用户 2026-11-02 答复“可以”）
+- **版本：** v1.1（v1 勘误：第 8 节第 3 条允许列表补入本任务 Spec 目录与 CHANGELOG 新条目；头部引用编号范围更正。需求、方案与其余验收不变）
+- **审查状态：** v1 已批准（用户 2026-11-02 答复“可以”）；v1.1 勘误待用户确认
 - **已批准范围：** 全文；未决事项见第 9 节“未核实前提”
-- **决定记录：** `2026-11-02-split-clarify-spec-record.md`（同目录），引用编号 D1–D12
+- **决定记录：** `2026-11-02-split-clarify-spec-record.md`（同目录），引用编号 D1–D18（D9 已失效）
 - **分支：** `feature/split-clarify-spec`
 
 ## 1. 意图与目标
@@ -195,7 +195,7 @@ question-me 澄清并经用户确认摘要后，三选一（D6）：
 
 1. `npm test` 全绿。基线已验证：本分支改动前在 `feature/split-clarify-spec` 上全绿。
 2. `python3 skills/superpowers-rewrite/question-me/scripts/test_render_tree.py` 通过。该测试不在 `npm test` 内。
-3. `skills/coding/question-me` 不存在；`git grep -n "coding/question-me"` 只命中 `docs/superpowers/`、`docs/reports/`、`docs/commute/` 下的历史文档和 `CHANGELOG.md` 的既有条目。
+3. `skills/coding/question-me` 不存在；`git grep -n "coding/question-me"` 只命中 `docs/superpowers/`、`docs/reports/`、`docs/commute/`、`.hskill/spec/2026-11-02-split-clarify-spec/` 下的文件和 `CHANGELOG.md`。
 4. question-me `SKILL.md` 中不再出现 “Q1”“Q2”“Q3”、“至少 3 个”或“at least 3 options”。
 5. init-spec `SKILL.md` 中不再出现“共同澄清范围”“探索性对话”“定义性对话”“阶段性复述”“探索性试做”，第二阶段含试做条目；question-me `SKILL.md` 中不出现“试做”；question-me `SKILL.md` 中出现“探索模式”“阶段性复述”与第 5.4 节六项标准。
 6. init-spec 的 description 不含 “clarify requirements”；question-me 的边界含转 init-spec 的条目。

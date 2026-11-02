@@ -65,7 +65,7 @@ Spec 第 9 节的两条“未核实前提”不需要你去解决。工作中若
 
 ## 相关文档索引
 
-- **Spec（权威）：** `.hskill/spec/2026-11-02-split-clarify-spec/2026-11-02-split-clarify-spec-spec.md` v1。实现所需的决定都在里面。
+- **Spec（权威）：** `.hskill/spec/2026-11-02-split-clarify-spec/2026-11-02-split-clarify-spec-spec.md` v1.1（v1 的勘误版，只改了验收第 3 条的允许列表和引用编号范围）。实现所需的决定都在里面。
 - **决定记录：** 同目录 `2026-11-02-split-clarify-spec-record.md`，用来追溯 D1–D18 的来源与理由。
 - **现有 skill：**
   - `skills/coding/question-me/SKILL.md`（迁移前路径）
@@ -97,7 +97,7 @@ Spec 第 9 节的两条“未核实前提”不需要你去解决。工作中若
    ```
    不建 worktree、不建分支。离开时用 `ExitWorktree(action: "keep")`，绝不 remove。
 2. **拆计划用 develop-plan，不用 writing-plans。**
-   - develop-plan 和 init-spec 都**没有装机副本**（`~/.claude/skills/` 下没有），Skill 工具调不到。直接读本工作区里的 `skills/superpowers-rewrite/develop-plan/SKILL.md`（0.2.0），照着执行；输入为已批准的 Spec 路径、版本 `v1`、范围“全文”。
+   - develop-plan 和 init-spec 都**没有装机副本**（`~/.claude/skills/` 下没有），Skill 工具调不到。直接读本工作区里的 `skills/superpowers-rewrite/develop-plan/SKILL.md`（0.2.0），照着执行；输入为已批准的 Spec 路径、版本 `v1.1`、范围“全文”。
    - 计划写到上面那个 plan 文件路径，并提交。
    - `.hskill/handoff/config.md` 写的 `superpowers:writing-plans` 是旧约定；本任务的 Spec 出自 init-spec，按其流程衔接 develop-plan，这一点原 session 已与用户确认。
 3. **执行计划**：可用 `superpowers:executing-plans` 或 `superpowers:subagent-driven-development`。**跳过它们要求的 `using-git-worktrees` 步骤**，工作区已经建好。
@@ -110,7 +110,7 @@ Spec 第 9 节的两条“未核实前提”不需要你去解决。工作中若
 
 1. `npm test` exit 0。
 2. `python3 skills/superpowers-rewrite/question-me/scripts/test_render_tree.py` exit 0。
-3. `skills/coding/question-me` 不存在；`git grep -n "coding/question-me"` 只命中 `docs/superpowers/`、`docs/reports/`、`docs/commute/` 下的文件和 `CHANGELOG.md` 的既有条目。
+3. `skills/coding/question-me` 不存在；`git grep -n "coding/question-me"` 只命中 `docs/superpowers/`、`docs/reports/`、`docs/commute/`、`.hskill/spec/2026-11-02-split-clarify-spec/` 下的文件和 `CHANGELOG.md`（本任务的 Spec、记录、计划和 CHANGELOG 新条目会合法地提到旧路径）。
 4. question-me 的 `SKILL.md` 中 `grep -nE "Q1|Q2|Q3|至少 3 个|at least 3 options"` 无命中。
 5. init-spec 的 `SKILL.md` 中 `grep -nE "共同澄清范围|探索性对话|定义性对话|阶段性复述|探索性试做"` 无命中，且第二阶段含试做条目。question-me 的 `SKILL.md` 含“探索模式”“阶段性复述”及 Spec 5.4 的六项标准，不含“试做”。
 6. init-spec 的 description 不含 “clarify requirements”；question-me 的边界含“需要成文 Spec → 提议转 init-spec”的条目。
