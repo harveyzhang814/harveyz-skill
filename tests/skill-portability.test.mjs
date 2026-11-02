@@ -74,7 +74,7 @@ for (const name of ['sync-xtimeline', 'sync-ytchannel', 'sync-website']) {
 }
 
 test('question-me: current agent proposes clarification without promising host auto-trigger', async () => {
-  const body = await readFile(resolve(root, 'skills/coding/question-me/SKILL.md'), 'utf8')
+  const body = await readFile(resolve(root, 'skills/superpowers-rewrite/question-me/SKILL.md'), 'utf8')
   assert.doesNotMatch(body, /Claude/)
   assert.match(body, /自动提议（等用户确认 y\/n）/)
   assert.match(body, /当前 agent/)
@@ -102,7 +102,7 @@ test('B portability release versions and index hashes match published SKILL.md c
     ['feed/sync-xtimeline', '0.8.5'],
     ['feed/sync-ytchannel', '0.7.5'],
     ['feed/sync-website', '0.2.4'],
-    ['coding/question-me', '3.1.0'],
+    ['superpowers-rewrite/question-me', '3.1.0'],
     ['coding/rephrase', '1.0.2'],
     ['coding/init-project', '0.1.5'],
     ['mint/runby-opencode', '1.1.1'],
