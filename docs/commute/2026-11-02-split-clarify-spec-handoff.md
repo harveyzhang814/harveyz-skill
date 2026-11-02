@@ -1,5 +1,5 @@
 ---
-status: 待验收
+status: 已验收
 date: 2026-11-02
 author_model: claude-opus-5-5
 acceptance: hard
@@ -179,3 +179,33 @@ Spec 第 9 节的两条“未核实前提”不需要你去解决。工作中若
 - **Spec 第 9 节两条未核实前提：** 未处理，Spec 也没要求处理。
 - **`package.json` 的 `files`：** `node scripts/generate-npmignore.js` 的生成结果只改了 question-me 那一行，没有无关差异。
 - **偶发红：** 一次 `npm test` 中 `tools/browser-fetch` 的 `test_download_images_real_network` 因网络失败。单独重跑通过，与本次改动无关，最终那次完整运行是全绿的。
+
+## 原 session 验收记录（2026-11-02）
+
+在交接工作区 HEAD `f84aca0`（分支 `feature/split-clarify-spec`）上逐条自己重跑，不采信自测结论。机器校验 `validate-handoff.sh` 通过。
+
+| # | 结果 | 实跑命令 / 依据 |
+|---|---|---|
+| 1 | pass | `npm test` exit 0：custom skill tests 14/14，node 356 pass / 0 fail |
+| 2 | pass | `python3 skills/superpowers-rewrite/question-me/scripts/test_render_tree.py` exit 0，9 passed |
+| 3 | pass | `test -e skills/coding/question-me` 为假；`git grep -n "coding/question-me"` 命中 10 个文件，全在 `.hskill/spec/2026-11-02-split-clarify-spec/`、`docs/commute/`、`docs/reports/`、`docs/superpowers/` 下 |
+| 4 | pass | question-me SKILL.md 中 `grep -nE "Q1\|Q2\|Q3\|至少 3 个\|at least 3 options"` rc=1 |
+| 5 | pass | init-spec SKILL.md 中禁用词 grep rc=1；第二阶段含「**试做。**」（第 59 行），HARD-GATE 试做例外改为「在方案审查中做的试做」（第 99 行）。question-me 含「探索模式」「阶段性复述」与六项结束判据（第 113–120 行），`grep -n 试做` rc=1 |
+| 6 | pass | init-spec SKILL.md 中 `grep -n "clarify requirements"` rc=1；question-me 第 31 行「需要成文 Spec → 提议转 init-spec，等用户同意，不自动交棒」 |
+| 7 | pass | question-me 第 132–149 行七字段与三类来源对应齐全；init-spec 第 37 行对五个字段各有建档规则 |
+| 8 | pass | 读原文核对：入口 A 为 I28 → I29 → Q24 → Q151 → Q155（不执行、交回）→ I31；非正常出口为 I33–35 与 Q151、Q155；贴入摘要为 I29 → Q49；入口 B 为 Q157–160。「直接执行」只在 Q158 的独立使用分支 |
+| 9 | pass | `node bin/cli.js list --json` 中 question-me 与 init-spec 的 bundle 都是 `superpowers-rewrite` |
+| 10 | pass | node 按算法重算：question-me 4.0.0 / `33c8695fdd9fa2d6`，init-spec 0.3.0 / `b60024f9874bd4af`，与索引一致 |
+| 11 | pass | `git log -- …-plan.md` 得到 `c59d6aa` |
+
+**回归面核对：**
+- 改动面取自 `git diff --name-only $(git merge-base staging HEAD)..HEAD`，分叉点为 `de37def`，共 14 个文件。
+- 被波及的组件有三个：skill 格式校验（`tests/skills.bats`）、打包与安装（`tests/install.bats`、`package.json`）、可移植性断言（`tests/skill-portability.test.mjs`）。三者都在第 1 条的 `npm test` 内，全绿。
+- `package.json`、PRD、CHANGELOG 的 diff 已逐行读过，没有无关改动。
+- 另想在临时 HOME 里实装 superpowers-rewrite bundle，核对 question-me 的 `scripts/` 是否一并装上。这条命令被权限拒绝，未执行；它不在锚点之内，记为未覆盖项。
+
+**偏离 Spec 字面的两处，判定不构成未达成：**
+- init-spec 的 description 删掉了 “brainstorm a feature”。Spec 第 6 节的保留清单里本来就没有这一项。
+- 第三阶段构建者检查保留了「方案问题返回方案审查」。D16 约束的是“重新澄清需求”，方案问题回到方案审查不属于澄清，与 D16 不冲突。
+
+**结论：** 达成。
