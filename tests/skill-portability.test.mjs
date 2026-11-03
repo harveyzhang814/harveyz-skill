@@ -48,10 +48,10 @@ test('extract-vision: delegation and vision have safe fallbacks', async () => {
   assert.match(body, /无原图视觉能力则停止/)
 })
 
-test('close-node: receiver has a safe no-detach stop', async () => {
+test('close-node: no safe unbind capability stops before hide/stop-node', async () => {
   const body = await readFile(resolve(root, 'skills/agent-canvas/close-node/SKILL.md'), 'utf8')
   assert.match(body, /Claude.*ExitWorktree\(action: "keep"\)/)
-  assert.match(body, /无安全解除绑定能力.*停在第 4 步/)
+  assert.match(body, /无安全解除绑定能力.*停在第 2 步/)
   assert.match(body, /不得继续.*(?:hide|stop-node)/)
 })
 
