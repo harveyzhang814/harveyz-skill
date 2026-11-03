@@ -2,7 +2,7 @@
 name: develop-plan
 description: "Turn an approved Spec or clear requirements into a multi-step implementation plan with exact files, interfaces, tests, and task dependencies, before coding. Use after init-spec approves a software Spec. Triggers: 'write an implementation plan', 'break this into tasks', 'make a plan for this spec'."
 user_invocable: true
-version: "0.2.0"
+version: "0.3.0"
 ---
 
 # 制定实施计划
@@ -166,7 +166,7 @@ git commit -m "feat: add specific feature"
 
 ### 5. 执行交接
 
-保存并自查后，提供计划链接，请用户确认计划符合意图，并在审阅完成前等待实施。若尚未指定执行方式，说明两种选择，结合任务依赖、数量和出错代价推荐其一，请用户决定；已有选择则沿用。
+保存并自查后，提供计划链接，请用户确认计划符合意图，并在审阅完成前等待实施。若尚未指定执行方式，说明两种选择，默认推荐子代理驱动，请用户决定；用户要求时改用原生执行，已有选择则沿用。
 
 - **子代理驱动（Subagent-driven）**——每项任务由新子代理实施并独立审查，最后审查整个分支；审查更密集，上下文成本更高。
 - **原生执行（Native）**——当前会话逐项实施，最后独立审查整个分支；上下文成本更低。

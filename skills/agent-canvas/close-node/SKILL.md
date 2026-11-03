@@ -3,7 +3,7 @@ name: close-node
 description: Wrap up the current canvas node when a round of work is done — advance requirement status, verify handoff closure, merge the branch, stop the process, and hide the node from the canvas; only usable inside an Agent Canvas node.
 disable-model-invocation: true
 user_invocable: true
-version: "1.0.7"
+version: "1.0.8"
 ---
 
 # 节点收尾（close-node）
@@ -37,7 +37,8 @@ agent-canvas-ctl node-relations <自己的 nodeId>  → implements 边 / hands-o
 
 ### 3. 推进需求状态
 
-沿 `implements` 边找到需求节点。判断它现在该是什么状态。状态不能跳级，重复调用也会被拒，
+沿 `implements` 边找到需求节点。判断它现在该是什么状态（需求节点上 `progress` 是进度，
+`disposition` 是去向，两个字段各管一件事）。进度不能跳级，重复调用也会被拒，
 所以**先读 `availableActions`**，再据此选命令：
 
 ```
@@ -50,11 +51,13 @@ agent-canvas-ctl get-node <需求节点id>     → availableActions / unavailabl
 agent-canvas-ctl submit-requirement <需求节点id> --commit <分支 HEAD>
 ```
 
-- 活干完了、还没人验收 → `submit-requirement`（进入 `in_acceptance`）。`--commit` 传本分支
+- 活干完了、还没人验收 → `submit-requirement`（`progress` 进入 `in_acceptance`；送审会清空
+  `releasedIn`，旧的发布记录作废，要等下一次版本验收重新写）。`--commit` 传本分支
   HEAD 的完整 40 位 sha（`git rev-parse HEAD` 的输出），它是这次交付的提交，之后的版本验收
   靠它找回验收标准。收尾方是实现方：送审之后需求就停在 `in_acceptance`，不要继续往 `done`
   推，那一步不归实现方。
-- 这条需求要搁置（`deferred` 与 `status` 正交，不是它的取值）→ `defer-requirement <需求节点id>`
+- 这条需求要搁置（`disposition` 置 `deferred`，与 `progress` 正交，不是 `progress` 的取值）→
+  `defer-requirement <需求节点id>`
 - 想要的命令不在 `availableActions` 里，或者**拿不准**该推到哪一步：不改、不绕路调别的命令，
   如实报告"需求状态维持 X，因为 Y"（Y 取 `unavailableActions` 给的原因，或者你的疑点）。
   改错了比不改更难发现。

@@ -13,7 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `capture-intent`：升至 1.1.0，需求节点 schema 改为本机缓存，不再每次临场对字段。`~/.hskill/capture-intent/` 存上次写入成功时的 schema 快照（`describe-action` 输出经 `jq -S` 归一化）和语义映射表；每次写入前逐字节比对快照、并核对映射表记录的 skill 版本：都对上就照表写，不读 schema；skill 版本变了整张重做；只有 schema 变了就看 diff，只重做受影响的行。映射新建或改过都附在确认摘要里交用户审，写入成功后才落盘。状态改为显式传「新建、未开始」那一档，不再依赖缺省值（缺省值写在说明文字里，快照覆盖不到）。新增 `jq` 依赖，没装时退回到每次读 `help` 当场映射。`installScope` 由 `project` 改为 `global`，与 Agent Canvas 以 user scope 安装内置 skill 的实际做法一致
 - `agent-canvas-control`：升至 1.3.2，配合 Agent Canvas 撤掉全量列表命令（`list-nodes`、`list-relations`、`list-archived-nodes`、arrange `list`）。寻址与画布外操作示例改用 `search-nodes` / arrange `search`；退出码 2 改为 `search-nodes <标题关键词> --kind pty` 核对；新增搜索约束一节（上限 30、默认 10，`--kind`/`--state` 过滤，`{results, truncated, totalMatches}` 结果形态，旧版 App 的顶层数组形态同样可读）
 - `handoff`：升至 1.17.1，建接手节点退出码 2 的核对改用 `search-nodes <标题关键词> --kind pty`，不再提 `list-nodes`
-- `capture-intent`：升至 1.1.1，查重的 `search-nodes` 结果用 jq `if type=="array" then . else .results end` 同时兼容旧版 App（顶层数组）与新版 App（`{results}`）。版本号变化会让本机映射缓存按「version: diff」整张重做一次
+- `capture-intent`：升至 1.3.1，查重的 `search-nodes` 结果用 jq `if type=="array" then . else .results end` 同时兼容旧版 App（顶层数组）与新版 App（`{results}`）。版本号变化会让本机映射缓存按「version: diff」整张重做一次
 
 ## [0.42.1] - 2026-10-28
 
