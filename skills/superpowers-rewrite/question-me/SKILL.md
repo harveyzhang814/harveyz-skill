@@ -1,8 +1,8 @@
 ---
 name: question-me
-description: "Pre-task requirement clarification — clarifies what the user wants before execution through one-question-at-a-time Q&A with a live decision tree, switching between exploring and defining modes, and ends with a self-contained summary for the user to confirm. After confirmation: execute a small task, propose handing off to init-spec when a written Spec is needed, or stop. Triggers: '/question-me', 'help me clarify this', 'question me before starting', 'let's define this first', 'clarify the requirements', 'help me think this through'. The current agent may propose it for ambiguous or complex requests (multiple conflicting goals, vague keywords like 'optimize/refactor/clean up', missing success criteria, unstated context assumptions), then wait for user confirmation."
+description: "Pre-task requirement clarification — clarifies what the user wants before execution through one-question-at-a-time Q&A with a live decision tree, switching between exploring and defining modes, and ends with a self-contained summary for the user to confirm. After confirmation, routes the task by explicit criteria: stop, execute directly (no behavior change), execute test-first (small behavior change), or propose handing off to init-spec. Triggers: '/question-me', 'help me clarify this', 'question me before starting', 'let's define this first', 'clarify the requirements', 'help me think this through'. The current agent may propose it for ambiguous or complex requests (multiple conflicting goals, vague keywords like 'optimize/refactor/clean up', missing success criteria, unstated context assumptions), then wait for user confirmation."
 user_invocable: true
-version: "4.0.0"
+version: "4.1.0"
 ---
 
 # question-me — 执行前需求澄清
@@ -25,10 +25,10 @@ version: "4.0.0"
 
 **不触发：** 简单明确的指令（"运行测试"、"读这个文件"、"git status"）。
 
-**发散型请求：** 有多个候选方向尚未选定，或还在寻找方向时，说明“这还在发散阶段”后停下，不建决策树。只有一个方向的，即使用户还没决定做不做，也按探索模式继续澄清，由“结束”出口承接“想清楚了不做”。
+**发散型请求：** 有多个候选方向尚未选定，或还在寻找方向时，说明“这还在发散阶段”后停下，不建决策树。只有一个方向的，即使用户还没决定做不做，也按探索模式继续澄清，由“结束”路由承接“想清楚了不做”。
 
 **不在范围内（边界）：**
-- 需要成文 Spec → 提议转 init-spec，等用户同意，不自动交棒
+- 超出小改动判据的任务 → 按「确认后的路由」提议转 init-spec，等用户同意，不自动交棒
 - 方案层面的比较（架构、核心机制）不在此做；被 init-spec 发起时留给其方案审查
 - 跨会话保存问答历史（每次会话独立）
 - 强制跑完全部 open 节点（用户可随时打断）
@@ -131,7 +131,7 @@ C. 自定义...
 ## 需求摘要
 
 **用户原始需求：** 用户最初的请求原话，以及用户不在回答问题时主动提出的要求或修正（各附原话）
-**任务定位：** 探索 / 定义；建议出口：执行 / 转 init-spec / 结束（被 init-spec 发起时固定为交回）
+**任务定位：** 探索 / 定义；路由：结束 / 直接执行 / TDD 执行 / 转 init-spec，附命中的判据（被 init-spec 发起时固定为交回）
 **澄清标准：** 六项各自的状态（已明确 / 待确认 / 不适用 + 原因）
 **决定：** 每条一项——节点 id、问题、提供过的选项、用户答复（保留原话）、来源；来源为 Agent 推断时附依据
 **已查明事实：** 自查得到、构成决定依据的事实，附出处（路径或命令）
@@ -148,14 +148,33 @@ C. 自定义...
 
 摘要后以一句确认请求收尾；被 init-spec 发起时，写明确认后交回 init-spec。用户对摘要提出修改 → 继续澄清、更新摘要再请确认。
 
-### 确认后的出口
+### 确认后的路由
 
 **被 init-spec 发起：** 确认后**不执行任务**，把摘要交回 init-spec。若判定为发散型，或用户在澄清中决定不做，就停下并告知 init-spec，不输出待确认的摘要。
 
-**独立使用**（三选一）：
-- **小任务：** 直接执行
-- **是要做的功能、需要成文 Spec：** 提议转 init-spec，等用户同意；同意后 init-spec 直接使用这份已确认的摘要
-- **用户想清楚了不做：** 结束
+**独立使用：** 按顺序判断，命中第一条即走该路由。在摘要「任务定位」中写明路由与命中的判据；用户确认摘要即确认路由，也可以改选。判不准时，按后一条更重的路由处理。
+
+| 顺序 | 判据 | 路由 |
+|---|---|---|
+| 1 | 用户决定不做 | 结束 |
+| 2 | 不改变程序行为：文案、配置取值、文档、执行命令、查询信息 | 直接执行 |
+| 3 | 改变程序行为，且同时满足：澄清中没有出现需要在多个方案间取舍的分歧；改动在同一模块内、预计不超过 3 个文件；不改对外接口、数据格式或持久化结构 | TDD 执行 |
+| 4 | 其余 | 转 init-spec |
+
+**各路由的后续流程：**
+
+- **结束：** 说明结论，不建文件。
+- **直接执行：** 执行 → 用命令输出或回读改动验证 → 汇报改了什么，附验证证据。
+- **TDD 执行：**
+  1. 先写覆盖新行为的测试
+  2. 运行它，确认它因预期原因失败（不是拼写或环境错误）
+  3. 写让它通过的最少实现
+  4. 运行相关测试，确认全部通过
+  5. 按项目 Git 规则提交
+  6. 汇报，附测试命令及失败、通过两次的输出
+
+  只保护不变行为的回归测试不要求先失败，汇报时注明。项目没有测试设施时，不为此搭建框架；先说明验证方式，经用户同意后执行。执行中发现超出判据（需要方案取舍、波及其他模块、要改接口）时停下，提议转 init-spec，沿用已确认的摘要。
+- **转 init-spec：** 提议并等用户同意；同意后 init-spec 直接使用这份已确认的摘要。
 
 ---
 
