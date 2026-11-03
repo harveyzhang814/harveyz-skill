@@ -2,7 +2,7 @@
 name: capture-intent
 description: "Capture a need the user mentions for later as an Agent Canvas requirement node. Triggers on casual phrasing like 'we should do X later', 'note this requirement', 'add this to the backlog', 'remember to build X'. Writes to the current canvas by default, or to another project's running canvas when the user names it. Not for the requirement the current session is implementing (use capture-requirement)."
 user_invocable: true
-version: "1.2.0"
+version: "1.3.0"
 ---
 
 # 记录意图（capture-intent）
@@ -21,7 +21,7 @@ version: "1.2.0"
 2. **紧急程度**——默认不问；用户暗示紧急或不重要时据此定档。
 3. **背景**——为什么现在提出来（可选）。
 
-不主动问验收。用户描述里已经带了完成标准（"做完应该能……"），拆出来并入需求正文（description），需求节点没有独立的验收字段。
+不主动问验收。用户描述里已经带了完成标准（"做完应该能……"），逐条拆出来，第 7 步写成验收条目；不并入需求正文。
 
 ## 2. 确定目标画布
 
@@ -84,10 +84,11 @@ version: "<本 skill 的版本号>"
   - 对象：受影响的 skill、模块或子系统名。
   - 类型：feat / fix / refactor / docs / chore。
   - 描述：写出关键区分点，不用「优化」「修复」这类泛词，也不堆细节。
-- **需求正文**：写做什么、为什么。**不写怎么做**。篇幅以说清楚为准。第 1 步拆出了完成标准时，照用户原意并入正文末尾，不替用户补全；没有独立的验收字段可填。
+- **需求正文**：写做什么、为什么。**不写怎么做**，也不写完成标准。篇幅以说清楚为准。
 - **优先级**：默认取中间档；用户表示紧急取最高档，表示不重要取最低档。
 - **状态**：传「新建、未开始」那一档，不依赖缺省值。
-- **验收条目 / spec**：不传（没有 spec，也就没有验收条目）。
+- **验收条目**：创建命令不收条目。第 1 步拆出了完成标准时，第 7 步在创建成功后另写；没有就不写，不替用户补全。每条一句话（不超过 60 字），照用户原意；类别和验证方式按 `agent-canvas-ctl describe-action set_requirement_acceptance` 里 items 的取值选最贴近的一档，拿不准时验证方式取人工裁决；编号从 V1 起顺排。
+- **spec**：不传（没有 spec）。
 
 ## 5. 查重
 
@@ -112,4 +113,5 @@ agent-canvas-ctl [--canvas <路径>] search-nodes <需求关键词> --limit 20
 按映射表拼出 `create-requirement-node` 命令，只传表里有 flag 的语义。
 
 - 成功：报告需求编号（返回里的 `requirementId`，形如 YYMMDD-XX）和标题。第 3 步不是两项都 same 时把缓存落盘：`mv "$d/schema.new.json" "$d/schema.json"`；映射新建或改过，把用户审过的表写进 `mapping.md`。
+- 有完成标准时，接着写条目：`agent-canvas-ctl [--canvas <路径>] set-requirement-acceptance <返回的 nodeId> --items '<条目 JSON 数组>'`。失败时把 stderr 原样报出，说明「需求已建、条目未写」并给出 nodeId，不重试；用户可以在需求面板的验收区补写。
 - 失败：把 stderr 原样报出，不重试，也不改参数重跑；缓存不落盘。
