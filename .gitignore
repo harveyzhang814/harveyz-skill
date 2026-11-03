@@ -78,6 +78,12 @@ node_modules/
 __pycache__/
 *.log
 
+# 排除 Python 虚拟环境
+# 注：本文件用白名单（先 * 再 ! 逐项放行），.venv 会被上面的
+# `!tools/**/*` 重新纳入，因此排除规则必须写在其后才会生效。
+.venv/
+**/.venv/
+
 # 保留 .hskill 项目本地数据目录
 !.hskill/
 !.hskill/**/

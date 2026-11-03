@@ -1,9 +1,9 @@
 ---
 name: close-node
-description: Wrap up the current canvas node when a round of work is done — advance requirement status, verify handoff closure, merge the branch, stop the process, and hide the node from the canvas; only usable inside an Agent Canvas node.
+description: Wrap up the current canvas node when a round of work is done — release the session's worktree binding so a Claude session stays resumable, then hide the node and stop its process; only usable inside an Agent Canvas node. Lifecycle only: it does not submit requirements, merge, or clean up worktrees.
 disable-model-invocation: true
 user_invocable: true
-version: "1.0.7"
+version: "2.0.0"
 ---
 
 # 节点收尾（close-node）
@@ -13,127 +13,37 @@ version: "1.0.7"
 
 **人工触发**，不自动触发；用户必须以 `$close-node` 显式调用。触发时机：你这一轮工作已经做完、已经汇报过、确认不再有后续动作。
 
+> 本 skill 只管**节点生命周期**：解除 worktree 绑定、隐藏、停止进程。送审、合并、描述刷新、关系梳理、
+> 交接状态、worktree 清理这些质量动作**不在这里做，也不检查它们做没做**；它们由开发流程（Agent Canvas
+> 仓库 `AGENTS.md` 的 Step 4–8）在收尾之前完成。
+
 ## 步骤
 
 ### 1. 认清自己
 
 ```
 agent-canvas-ctl whoami                       → 自己的 nodeId
-agent-canvas-ctl node-relations <自己的 nodeId>  → implements 边 / hands-off-to 边
 ```
 
-### 2. 判角色
+### 2. 解除 worktree 绑定
 
-在 `docs/commute/` 下找 frontmatter 的 `source_node` 或 `target_node` 等于自己 nodeId
-的交接文档：
+保留 worktree 并离开，让会话回到原目录，保证它之后可恢复。
+Claude Code 用 `ExitWorktree(action: "keep")`。
 
-| 角色 | 判据 |
-|---|---|
-| **独立节点** | 没有 `hands-off-to` 边，也没有一份交接文档点名自己 |
-| **交出方** | 自己的 nodeId == 某份交接文档的 `source_node` |
-| **接手方** | 自己的 nodeId == 某份交接文档的 `target_node` |
+- 不论角色、不论分支是否合并，一律只“保留并离开”：**不 `remove`、不 `git worktree remove`**。
+- 若该动作表明当前会话本来就不在 worktree 里（没有可离开的绑定），无需处理，进下一步。
+- 其他宿主只用实际提供且已核对语义的等价能力，不杜撰 API。
+- 无安全解除绑定能力时（单次 shell `cd` 不算）：报告 `nodeId`、分支、worktree 绝对路径，说明需人工解除绑定；停在第 2 步，不得继续执行 `hide`/`stop-node`，不进第 3/4 步。
+- 必须放在 `stop-node` 之前：进程一停，本节点自己就没法再动会话了。目标会话不宜再唤醒时，会话
+  迁回由外部收尾（`external-closeout`）在停止之后完成，不在本 skill 里。
 
-"验证方"不是第四类——`/handoff` 的 accept 阶段（属于验证，不是版本验收）由原 session 做，验证方就是交出方本人。
-
-### 3. 推进需求状态
-
-沿 `implements` 边找到需求节点。判断它现在该是什么状态。状态不能跳级，重复调用也会被拒，
-所以**先读 `availableActions`**，再据此选命令：
-
-```
-agent-canvas-ctl get-node <需求节点id>     → availableActions / unavailableActions（附原因）
-```
-
-只从 `availableActions` 里选，然后执行：
-
-```
-agent-canvas-ctl submit-requirement <需求节点id> --commit <分支 HEAD>
-```
-
-- 活干完了、还没人验收 → `submit-requirement`（进入 `in_acceptance`）。`--commit` 传本分支
-  HEAD 的完整 40 位 sha（`git rev-parse HEAD` 的输出），它是这次交付的提交，之后的版本验收
-  靠它找回验收标准。收尾方是实现方：送审之后需求就停在 `in_acceptance`，不要继续往 `done`
-  推，那一步不归实现方。
-- 这条需求要搁置（`deferred` 与 `status` 正交，不是它的取值）→ `defer-requirement <需求节点id>`
-- 想要的命令不在 `availableActions` 里，或者**拿不准**该推到哪一步：不改、不绕路调别的命令，
-  如实报告"需求状态维持 X，因为 Y"（Y 取 `unavailableActions` 给的原因，或者你的疑点）。
-  改错了比不改更难发现。
-
-没有 `implements` 边 → 跳过这一步，不要顺手立项一个需求。
-
-### 4. handoff 收口
-
-**独立节点**：跳过，直接进第 5 步。
-
-**接手方**：
-- 核对交接文档 frontmatter 的 `status` 是否已置 `待验收`，没置就置上。
-- 核对 `hands-off-to` 边两端是否都齐、`target_node` 是否已回填自己的 nodeId。
-- **不合并、不 `git worktree remove`。**
-- 用宿主提供的“保留 worktree 并离开”能力解除会话绑定：Claude Code 用 `ExitWorktree(action: "keep")`；其他宿主只用实际提供且已核对语义的能力，不杜撰 API。
-- 无安全解除绑定能力时（单次 shell `cd` 不算）：报告 `nodeId`、分支、worktree 绝对路径，说明需人工解除绑定；停在第 4 步，不得继续执行 `hide`/`stop-node`，不进第 6/7 步。
-
-**交出方**：
-- 核对交接文档 `status` 是否已到 `已验收`。
-- **没到 `已验收` 就停在这里报告，不要继续往下走。** 收尾不等于验收通过。
-- 到了 `已验收` 之后，再核对本分支是否已经合并进 staging
-  （`git merge-base --is-ancestor HEAD staging` 成功即已合并）。
-  **未合并就停在这里报告，不要进第 7 步。** 合并是 `/handoff` accept 阶段由你自己跑
-  `scripts/merge-to-staging.sh` 的动作，本 skill 不代跑；把没合并的分支连同节点一起
-  关掉，等于把工作弄丢了。
-
-> **只有交出方能合并、能 `git worktree remove`。** 这是硬约束，不是建议。
-
-### 5. 合并或确认已合并（仅独立节点）
-
-合并是待确认的状态转换，不是必经动作。先进入仓库根目录，确认当前分支与本地 `staging`
-都可识别：
-
-```
-repo_root="$(git rev-parse --show-toplevel)"
-cd "$repo_root"
-current_branch="$(git branch --show-current)"
-git show-ref --verify --quiet refs/heads/staging
-```
-
-- 本地没有 `staging`、`current_branch` 为空（detached HEAD），或当前是 `main`：**停下报告，
-  不执行 merge、不清理 worktree、不要进第 7 步。** 这些状态都不能推断为"已经合并"。
-- 当前是 `staging`：已经在目标分支。**跳过 merge，也跳过 worktree 清理**，直接进第 6 步。
-  不要运行 `scripts/merge-to-staging.sh`，它会拒绝这个分支。
-- 其他分支先检查是否已进入 `staging`：
-
-  ```
-  git merge-base --is-ancestor HEAD staging
-  ```
-
-  成功表示该分支提交已合并，跳过 merge；失败才进入下一条的合并路径。
-- 尚未合并时，先确认 `scripts/merge-to-staging.sh` 存在、且当前仓库确实采用本 skill 描述的
-  流程。不存在就**停下报告，不要自行换用别的合并手法**；存在才运行：
-
-  ```
-  scripts/merge-to-staging.sh
-  ```
-
-  **合并失败就停在这里报告，不要进第 7 步。**
-
-已确认合并，或脚本合并成功后，才可以考虑清理当前工作区。先确认它真的是 linked
-worktree：
-
-```
-git_dir="$(cd "$(git rev-parse --git-dir)" && pwd -P)"
-git_common_dir="$(cd "$(git rev-parse --git-common-dir)" && pwd -P)"
-```
-
-- 只有 `git_dir` 与 `git_common_dir` 不同，才运行 `git worktree remove "$repo_root"`。
-- 两者相同代表主工作树：跳过清理并在第 6 步说明原因，**不要删除它**。
-- 若 `git worktree remove` 提示有未提交改动，**停下报告，不要加 `--force`**。
-
-### 6. 汇报
+### 3. 汇报
 
 把上面每一步做了什么、跳过了什么、为什么，一次说完。
 
-> **第 7 步一执行就没有输出了。所有要给人看的东西必须在这里说完。**
+> **第 4 步一执行就没有输出了。所有要给人看的东西必须在这里说完。**
 
-### 7. 关闭自己
+### 4. 关闭自己
 
 先自查：有没有 subagent 还在后台跑？有就等它们完成，不要现在关。
 
@@ -148,9 +58,13 @@ agent-canvas-ctl stop-node <自己的 nodeId>
 
 ## 边界
 
-- **不代跑 `describe-node`、`relate-node`。** 那两个的第二次调用由你自己在收尾前调，本 skill 与它们**并列**，不是它们的编排器。调本 skill 之前先把它们调完。
+- **质量动作一律不属于本 skill**：不送审（`submit-requirement`）、不合并（`scripts/merge-to-staging.sh`）、
+  不改交接文档状态、不清理 worktree，也不检查是否已合并、已验收、有无未提交改动。这些没做完就关闭，
+  工作可能丢失——那是流程的责任，不是本 skill 能兜住的；触发前自己确认。
+- **不代跑 `describe-node`、`relate-node`。** 那两个的第二次调用由你自己在收尾前调，本 skill 与它们**并列**，不是它们的编排器。
 - **不调 `capture-requirement`。** 需求立项只在闸门 2 发生一次，收尾不重复立项。
-- 不动 `implements` 边——只通过语义 action 推进需求节点的生命周期。
+- 不动 `implements` 边，也不推进需求节点的状态。
 - `stop-node` 不走 UI 那套阻断策略（busy / 有活跃 subagent / 绑着 worktree）。
   那三条是防人手滑的护栏，你显式调用是有意图的动作。**代价是这个工具很锋利**——
-  第 7 步的自查是唯一的缓解，机制不会替你挡。
+  第 4 步的自查是唯一的缓解，机制不会替你挡。
+- 目标会话不宜再唤醒时，由外部会话用 `external-closeout`；它与本 skill 一样只管生命周期。

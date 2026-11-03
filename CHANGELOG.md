@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.43.0] - 2026-11-03
+
+### Changed
+- `question-me`：升至 4.0.0（不兼容旧做法），成为执行前需求澄清的唯一入口。目录从 `coding` 迁入 `superpowers-rewrite` bundle（与 init-spec、develop-plan 同 bundle）；移除固定三问与“每问至少 3 个选项”，改为探索模式（开放问题 + 阶段性复述）与定义模式（互斥选项 + 推荐依据），决策树问完后对照六项结束判据，影响方案的待确认项继续问、其余写入假设；结束时输出七字段自足摘要（用户原始需求、任务定位、澄清标准、决定、已查明事实、假设、未决）。确认后独立使用三选一：小任务直接执行、需要成文 Spec 时提议转 init-spec、结束；被 init-spec 发起时不执行、把摘要交回。发散型请求（多个候选方向未选）说明后停下
+- `init-spec`：升至 0.3.0，第一阶段的自带澄清规则整体移除，改为取得 question-me 摘要后按字段建决定记录；用户对摘要的确认即为需求批准，不再重复提交需求条目审查；用户贴入的摘要须经 question-me 补问并重新确认。后续阶段遇到影响需求的新问题由 init-spec 自行补问、不回调 question-me；试做移到第二阶段方案审查中
+- `capture-intent`：升至 1.1.0，需求节点 schema 改为本机缓存，不再每次临场对字段。`~/.hskill/capture-intent/` 存上次写入成功时的 schema 快照（`describe-action` 输出经 `jq -S` 归一化）和语义映射表；每次写入前逐字节比对快照、并核对映射表记录的 skill 版本：都对上就照表写，不读 schema；skill 版本变了整张重做；只有 schema 变了就看 diff，只重做受影响的行。映射新建或改过都附在确认摘要里交用户审，写入成功后才落盘。状态改为显式传「新建、未开始」那一档，不再依赖缺省值（缺省值写在说明文字里，快照覆盖不到）。新增 `jq` 依赖，没装时退回到每次读 `help` 当场映射。`installScope` 由 `project` 改为 `global`，与 Agent Canvas 以 user scope 安装内置 skill 的实际做法一致
+- `agent-canvas-control`：升至 1.3.2，配合 Agent Canvas 撤掉全量列表命令（`list-nodes`、`list-relations`、`list-archived-nodes`、arrange `list`）。寻址与画布外操作示例改用 `search-nodes` / arrange `search`；退出码 2 改为 `search-nodes <标题关键词> --kind pty` 核对；新增搜索约束一节（上限 30、默认 10，`--kind`/`--state` 过滤，`{results, truncated, totalMatches}` 结果形态，旧版 App 的顶层数组形态同样可读）
+- `handoff`：升至 1.17.1，建接手节点退出码 2 的核对改用 `search-nodes <标题关键词> --kind pty`，不再提 `list-nodes`
+- `capture-intent`：升至 1.3.1，查重的 `search-nodes` 结果用 jq `if type=="array" then . else .results end` 同时兼容旧版 App（顶层数组）与新版 App（`{results}`）。版本号变化会让本机映射缓存按「version: diff」整张重做一次
+
+- `close-node`：升至 2.0.0（不兼容旧做法），只管节点生命周期。删除判角色、推进需求状态（送审）、handoff 收口、合并与清理 worktree；保留认自己、汇报、隐藏并停止进程，新增停止之前的“解除 worktree 绑定”（Claude Code 用 `ExitWorktree(action: "keep")`，不论角色一律只保留并离开）。送审等质量动作改由开发流程（Agent Canvas 仓库 `AGENTS.md` Step 8）完成，收尾既不检查也不代做
+- `external-closeout`：升至 2.0.0（不兼容旧做法），配合应用侧外部收尾精简为只管生命周期。命令只剩 `get-closeout-verdict <nodeId>`、`run-closeout <nodeId> [--wait]`、`wait-closeout-run`，删除“三项约定”与 `--integration-branch`、`--merge-script`、`--handoff-dir`、`--spec`、`--remove-worktree`、`--skip-steps`、`link-nodes`；执行固定为复查、停止、迁回会话、隐藏四步，没有审批卡；失败处置改为迁回失败表
+
 ## [0.42.1] - 2026-10-28
 
 ### Added
