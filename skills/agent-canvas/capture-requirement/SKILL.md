@@ -2,7 +2,7 @@
 name: capture-requirement
 description: File the requirement the current session is implementing as a standalone requirement node and link an implements relation to it — call once after Gate 2 is finalized; only usable inside an Agent Canvas node.
 user_invocable: true
-version: "2.1.0"
+version: "2.1.1"
 ---
 
 # 需求立项（capture-requirement）
@@ -50,8 +50,12 @@ version: "2.1.0"
   ```
 
   这时仍要继续做第 3 步关联（用这个 nodeId），再提示用户条目还没写好。
-- 退出码 1 且 stdout 没有 `create.nodeId`（stderr 没有「需求已建」）：创建本身失败，没有任何
-  节点产生，把错误原样报出。不准去掉 `--acceptance-spec` 重试。
+- 退出码 1、stderr 含「创建结果未知」：创建请求已发出但结果不明，**需求节点可能已经建出来了**
+  （stdout 里没有 `create.nodeId` 不代表没建）。先用 `agent-canvas-ctl list-nodes` 或
+  `agent-canvas-ctl search-nodes <标题>` 核对：已建出就把它当第 2 步的结果（用它的 nodeId 补
+  `set-requirement-acceptance` 并继续第 3 步），确认没建出才重跑第 2 步。
+- 退出码 1、stdout 没有 `create.nodeId`、stderr 既没有「需求已建」也没有「创建结果未知」：创建
+  本身被拒，没有节点产生，把错误原样报出。不准去掉 `--acceptance-spec` 重试。
 
 ## 孤儿处置
 
