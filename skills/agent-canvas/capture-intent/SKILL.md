@@ -2,7 +2,7 @@
 name: capture-intent
 description: "Capture a need the user mentions for later as an Agent Canvas requirement node. Triggers on casual phrasing like 'we should do X later', 'note this requirement', 'add this to the backlog', 'remember to build X'. Writes to the current canvas by default, or to another project's running canvas when the user names it. Not for the requirement the current session is implementing (use capture-requirement)."
 user_invocable: true
-version: "1.3.0"
+version: "1.3.1"
 ---
 
 # 记录意图（capture-intent）
@@ -93,10 +93,12 @@ version: "<本 skill 的版本号>"
 ## 5. 查重
 
 ```bash
-agent-canvas-ctl [--canvas <路径>] search-nodes <需求关键词> --limit 20
+agent-canvas-ctl [--canvas <路径>] search-nodes <需求关键词> --limit 20 \
+  | jq '(if type=="array" then . else .results end) | map(select(.kind == "requirement"))'
 ```
 
-只看结果里 `kind` 为 requirement 的节点。有语义重叠时问：
+结果有两种形态：旧版 App 返回顶层数组，直接用；新版 App 返回 `{results, truncated, totalMatches}`，读
+`.results`。上面的 jq 两种都认，只留 `kind` 为 requirement 的节点。没有 `jq` 时照同样规则读原始输出。有语义重叠时问：
 
 > 发现可能重叠的需求 **[标题]**，跳过还是仍然新建？
 

@@ -1,7 +1,7 @@
 ---
 name: handoff
 description: Use when handing a task across sessions — writing a self-contained handoff doc for a fresh session to pick up (author), sanity-checking an inbound handoff before starting (verify), self-testing against the agreed criteria before reporting the work done or re-submitting after a rejection (self-test), or accepting completed work against the criteria agreed at handoff time (accept). Triggers on phrases like "write a handoff", "hand this off", "pick up this task", "sign off on this work". Not for carrying discussion conclusions into a new topic with no acceptance — use fork-topic for that. Generic skill — project-specific conventions are read from .hskill/handoff/config.md.
-version: "1.17.0"
+version: "1.17.1"
 user_invocable: true
 ---
 
@@ -61,7 +61,8 @@ user_invocable: true
    - 建关系 `agent-canvas-ctl link-nodes --from <自己的 nodeId> --to <接手节点 id> --type hands-off-to`，
      把接手节点 id 填进 `target_node`。接手方在 verify 只核对、不重复建。
    - 建节点失败 → 把报错告诉用户，`target_node` 留空，第 9 步退回可粘贴指令，由接手方在 verify
-     回填。**不要换个参数再建一个**；退出码 2 先 `get-node` / `list-nodes` 核对是不是已经建出来了。
+     回填。**不要换个参数再建一个**；退出码 2 先 `agent-canvas-ctl search-nodes <标题关键词> --kind pty`
+     核对是不是已经建出来了（旧版 App 不认 `--kind` 时去掉它；结果是顶层数组或 `{results}` 里的数组）。
 7. **跑完整性门禁**（见下），不过不放行。
 8. **落库**：把交接文档 commit 进这条分支（没提交的文档接手方看不到）。同目录同分支续做、或把
    文档整份贴给对方时，此步可省。
