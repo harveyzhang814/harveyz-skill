@@ -177,8 +177,8 @@
       "path": "superpowers-rewrite/question-me",
       "bundle": "superpowers-rewrite",
       "installScope": "global",
-      "contentHash": "2e58433f1b81e216",
-      "contentVersion": "4.1.0"
+      "contentHash": "7d015af976efc015",
+      "contentVersion": "4.1.1"
     },
     {
       "path": "coding/capture-vocab",
@@ -464,8 +464,8 @@
       "path": "superpowers-rewrite/develop-plan",
       "bundle": "superpowers-rewrite",
       "installScope": "global",
-      "contentHash": "8bdda3f3d3c48d88",
-      "contentVersion": "0.3.0"
+      "contentHash": "893edf779a9df423",
+      "contentVersion": "0.4.0"
     }
   ],
   "hooks": [

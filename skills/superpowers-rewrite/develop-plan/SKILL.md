@@ -2,7 +2,7 @@
 name: develop-plan
 description: "Turn an approved Spec or clear requirements into a multi-step implementation plan with exact files, interfaces, tests, and task dependencies, before coding. Use after init-spec approves a software Spec. Triggers: 'write an implementation plan', 'break this into tasks', 'make a plan for this spec'."
 user_invocable: true
-version: "0.3.0"
+version: "0.4.0"
 ---
 
 # 制定实施计划
@@ -64,7 +64,7 @@ version: "0.3.0"
 ```markdown
 # [功能名称] 实施计划
 
-> **For agentic workers:** REQUIRED SUB-SKILL: 使用 [执行交接时选定的执行技能] 逐项实施；用 `- [ ]` 跟踪步骤。
+> **For agentic workers:** REQUIRED SUB-SKILL: 使用 [执行交接时确定的执行技能] 逐项实施；用 `- [ ]` 跟踪步骤。
 
 **Goal:** [用一句话描述将构建什么]
 
@@ -166,9 +166,4 @@ git commit -m "feat: add specific feature"
 
 ### 5. 执行交接
 
-保存并自查后，提供计划链接，请用户确认计划符合意图，并在审阅完成前等待实施。若尚未指定执行方式，说明两种选择，默认推荐子代理驱动，请用户决定；用户要求时改用原生执行，已有选择则沿用。
-
-- **子代理驱动（Subagent-driven）**——每项任务由新子代理实施并独立审查，最后审查整个分支；审查更密集，上下文成本更高。
-- **原生执行（Native）**——当前会话逐项实施，最后独立审查整个分支；上下文成本更低。
-
-确认后，子代理驱动使用 `superpowers:subagent-driven-development`；原生执行使用 `superpowers:executing-plans`。将选定的技能写入计划开头的 `REQUIRED SUB-SKILL`，再调用它。
+保存并自查后，提供计划链接，请用户确认计划符合意图，并在审阅完成前等待实施。确认后直接使用 `superpowers:subagent-driven-development` 执行，不询问执行方式；仅当用户显式要求原生执行时，改用 `superpowers:executing-plans`。将所用技能写入计划开头的 `REQUIRED SUB-SKILL`，再调用它。

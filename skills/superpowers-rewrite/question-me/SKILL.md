@@ -2,7 +2,7 @@
 name: question-me
 description: "Pre-task requirement clarification — clarifies what the user wants before execution through one-question-at-a-time Q&A with a live decision tree, switching between exploring and defining modes, and ends with a self-contained summary for the user to confirm. After confirmation, routes the task by explicit criteria: stop, execute directly (no behavior change), execute test-first (small behavior change), or propose handing off to init-spec. Triggers: '/question-me', 'help me clarify this', 'question me before starting', 'let's define this first', 'clarify the requirements', 'help me think this through'. The current agent may propose it for ambiguous or complex requests (multiple conflicting goals, vague keywords like 'optimize/refactor/clean up', missing success criteria, unstated context assumptions), then wait for user confirmation."
 user_invocable: true
-version: "4.1.0"
+version: "4.1.1"
 ---
 
 # question-me — 执行前需求澄清
@@ -157,7 +157,7 @@ C. 自定义...
 | 顺序 | 判据 | 路由 |
 |---|---|---|
 | 1 | 用户决定不做 | 结束 |
-| 2 | 不改变程序行为：文案、配置取值、文档、执行命令、查询信息 | 直接执行 |
+| 2 | 不改变程序行为：文案、文档、执行命令、查询信息 | 直接执行 |
 | 3 | 改变程序行为，且同时满足：澄清中没有出现需要在多个方案间取舍的分歧；改动在同一模块内、预计不超过 3 个文件；不改对外接口、数据格式或持久化结构 | TDD 执行 |
 | 4 | 其余 | 转 init-spec |
 
