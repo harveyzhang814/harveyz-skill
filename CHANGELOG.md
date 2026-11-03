@@ -15,6 +15,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `handoff`：升至 1.17.1，建接手节点退出码 2 的核对改用 `search-nodes <标题关键词> --kind pty`，不再提 `list-nodes`
 - `capture-intent`：升至 1.3.1，查重的 `search-nodes` 结果用 jq `if type=="array" then . else .results end` 同时兼容旧版 App（顶层数组）与新版 App（`{results}`）。版本号变化会让本机映射缓存按「version: diff」整张重做一次
 
+- `close-node`：升至 2.0.0（不兼容旧做法），只管节点生命周期。删除判角色、推进需求状态（送审）、handoff 收口、合并与清理 worktree；保留认自己、汇报、隐藏并停止进程，新增停止之前的“解除 worktree 绑定”（Claude Code 用 `ExitWorktree(action: "keep")`，不论角色一律只保留并离开）。送审等质量动作改由开发流程（Agent Canvas 仓库 `AGENTS.md` Step 8）完成，收尾既不检查也不代做
+- `external-closeout`：升至 2.0.0（不兼容旧做法），配合应用侧外部收尾精简为只管生命周期。命令只剩 `get-closeout-verdict <nodeId>`、`run-closeout <nodeId> [--wait]`、`wait-closeout-run`，删除“三项约定”与 `--integration-branch`、`--merge-script`、`--handoff-dir`、`--spec`、`--remove-worktree`、`--skip-steps`、`link-nodes`；执行固定为复查、停止、迁回会话、隐藏四步，没有审批卡；失败处置改为迁回失败表
+
 ## [0.42.1] - 2026-10-28
 
 ### Added

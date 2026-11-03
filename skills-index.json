@@ -429,8 +429,8 @@
       "path": "agent-canvas/close-node",
       "bundle": "agent-canvas",
       "installScope": "project",
-      "contentHash": "4052d68e885146f9",
-      "contentVersion": "1.0.8"
+      "contentHash": "64af91872750b941",
+      "contentVersion": "2.0.0"
     },
     {
       "path": "agent-canvas/judge-release",
@@ -443,8 +443,8 @@
       "path": "agent-canvas/external-closeout",
       "bundle": "agent-canvas",
       "installScope": "project",
-      "contentHash": "958b749aefad0c84",
-      "contentVersion": "1.0.0"
+      "contentHash": "ef7f1426cd45e4d0",
+      "contentVersion": "2.0.0"
     },
     {
       "path": "coding/analyze-claudemd",
