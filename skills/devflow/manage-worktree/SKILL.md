@@ -2,7 +2,7 @@
 name: manage-worktree
 description: "Prepare, enter, inspect, or leave the git worktree a task works in — reuse the task's existing worktree or create one from an explicit, rule-derived base after one user confirmation, bind the session to it on Claude Code, Codex, or any other host, and check it is a linked worktree on a named non-integration branch. Called by init-spec, develop-plan, and handoff; never merges, removes worktrees, or deletes branches. Triggers: 'prepare a worktree', 'enter this worktree', 'check my worktree'."
 user_invocable: true
-version: "0.1.1"
+version: "0.1.2"
 ---
 
 # 管理 worktree
@@ -129,6 +129,7 @@ bash <skill 目录>/scripts/inspect-worktree.sh [--path <目录>] [--type <分�
 - 工具尚未出现在可用工具中时，先用 ToolSearch 找到 `EnterWorktree` / `ExitWorktree`，不要降级成 `cd`。只有 `path` 被拒绝（例如跨仓库）或工具确实不可用时才走通用兜底。
 - **只用 `path` 模式，绝不用 `name`**：`name` 会自建分支（`worktree-<name 把 / 换成 +>`，常过不了分支命名规则），基线默认取 `origin/<默认分支>`。分支名和基线必须由本技能按规则定，所以只能先 `git worktree add` 建、再用 `path` 进。
 - `path` 只认当前仓库（或嵌套在其中的仓库）登记过的工作区，跨仓库直接拒绝，此时按通用兜底办。
+- **会话已经在某个 worktree 里时，只能直接切进 `.claude/worktrees/` 下的工作区**；目标在 `.worktrees/` 等其他位置会被拒，报 “Switching from this session is limited to worktrees managed by Claude Code”。此时先 `ExitWorktree(action: "keep")` 回到启动目录，再 `EnterWorktree(path:)`。从启动目录首次进入不受这条限制。
 - 必须由当前会话直接调用，不能交给 fork 或 subagent 代调。
 - 离开一律 `action: "keep"`，绝不 `remove`。
 
