@@ -378,6 +378,7 @@ branch: $BRANCH"
 workspace_mode: shared-worktree
 branch: feat/shared
 worktree: $wt"
+  git add "$DOC" && git commit -qm doc
   run bash "$VALIDATOR" "$DOC"
   [ "$status" -eq 0 ]
   [[ "$output" != *ERROR* ]]
@@ -408,8 +409,91 @@ worktree: $wt"
   commit="$(git rev-parse HEAD)"
   write_doc "$VALID_FM
 workspace_mode: same-workspace
+branch: $BRANCH
+worktree: $TMP
 base_commit: $commit"
+  git add "$DOC" && git commit -qm doc
   run bash "$VALIDATOR" "$DOC"
   [ "$status" -eq 0 ]
   [[ "$output" != *ERROR* ]]
+}
+
+# ── 「待执行」文档的已提交与工作区检查（含 workspace_mode 时生效）────────────
+commit_doc() { git add "$DOC" && git commit -qm doc; }
+SAME_WS() { printf '%s\nworkspace_mode: same-workspace\nbranch: %s\nworktree: %s' "$VALID_FM" "$BRANCH" "$TMP"; }
+
+@test "41 same-workspace pending doc without worktree -> exit 1" {
+  write_doc "$VALID_FM
+workspace_mode: same-workspace
+branch: $BRANCH"
+  commit_doc
+  run bash "$VALIDATOR" "$DOC"
+  [ "$status" -eq 1 ]; [[ "$output" == *worktree* ]]
+}
+
+@test "42 pending doc not tracked -> exit 1" {
+  write_doc "$(SAME_WS)"
+  run bash "$VALIDATOR" "$DOC"
+  [ "$status" -eq 1 ]; [[ "$output" == *交接文档未提交* ]]
+}
+
+@test "43 pending doc tracked but modified -> exit 1" {
+  write_doc "$(SAME_WS)"; commit_doc; echo "extra" >> "$DOC"
+  run bash "$VALIDATOR" "$DOC"
+  [ "$status" -eq 1 ]; [[ "$output" == *交接文档未提交* ]]
+}
+
+@test "44 link to an existing untracked file -> exit 1" {
+  echo plan > plan.md
+  write_doc "$(SAME_WS)" "$(printf '# 交接：示例\n\n**交接目的**：x\n\n见 [计划](plan.md)。\n\n## 最小验收锚点\n- x\n')"
+  commit_doc
+  run bash "$VALIDATOR" "$DOC"
+  [ "$status" -eq 1 ]; [[ "$output" == *引用文件未提交* ]]; [[ "$output" == *plan.md* ]]
+}
+
+@test "45 link to a tracked but modified file -> exit 1" {
+  echo plan > plan.md && git add plan.md && git commit -qm plan && echo more >> plan.md
+  write_doc "$(SAME_WS)" "$(printf '# 交接：示例\n\n**交接目的**：x\n\n见 [计划](plan.md)。\n\n## 最小验收锚点\n- x\n')"
+  commit_doc
+  run bash "$VALIDATOR" "$DOC"
+  [ "$status" -eq 1 ]; [[ "$output" == *引用文件未提交* ]]
+}
+
+@test "46 fully committed pending doc with committed links -> exit 0" {
+  echo plan > plan.md && git add plan.md && git commit -qm plan
+  write_doc "$(SAME_WS)" "$(printf '# 交接：示例\n\n**交接目的**：x\n\n见 [计划](plan.md)。\n\n## 最小验收锚点\n- x\n')"
+  commit_doc
+  run bash "$VALIDATOR" "$DOC"
+  [ "$status" -eq 0 ]; [[ "$output" != *ERROR* ]]
+}
+
+@test "47 in-progress doc left uncommitted keeps old result" {
+  write_doc "status: 执行中
+date: 2026-09-06
+author_model: opus-5
+acceptance: hard
+workspace_mode: same-workspace
+branch: $BRANCH
+worktree: $TMP"
+  run bash "$VALIDATOR" "$DOC"
+  [ "$status" -eq 0 ]; [[ "$output" != *未提交* ]]
+}
+
+@test "48 pending-accept doc with self-test left uncommitted keeps old result" {
+  write_doc "status: 待验收
+date: 2026-09-06
+author_model: opus-5
+acceptance: hard
+workspace_mode: same-workspace
+branch: $BRANCH
+worktree: $TMP" "$(printf '# 交接：示例\n\n**交接目的**：x\n\n## 最小验收锚点\n- x\n\n## 接手方自测记录（2026-09-07）\n- pass\n')"
+  run bash "$VALIDATOR" "$DOC"
+  [ "$status" -eq 0 ]; [[ "$output" != *未提交* ]]
+}
+
+@test "49 doc without workspace_mode is unaffected by the new checks" {
+  echo plan > plan.md
+  write_doc "$VALID_FM" "$(printf '# 交接：示例\n\n**交接目的**：x\n\n见 [计划](plan.md)。\n\n## 最小验收锚点\n- x\n')"
+  run bash "$VALIDATOR" "$DOC"
+  [ "$status" -eq 0 ]; [[ "$output" != *未提交* ]]
 }
