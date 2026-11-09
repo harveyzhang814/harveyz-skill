@@ -79,6 +79,7 @@
     "skills/coding/analyze-claudemd/",
     "skills/devflow/init-spec/",
     "skills/devflow/develop-plan/",
+    "skills/devflow/manage-worktree/",
     "tools/hub/",
     "tools/sync-agent/",
     "tools/browser-fetch/",
