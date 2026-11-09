@@ -2,7 +2,7 @@
 name: develop-plan
 description: "Turn an approved Spec or clear requirements into a multi-step implementation plan with exact files, interfaces, tests, and task dependencies, before coding. Use after init-spec approves a software Spec. Triggers: 'write an implementation plan', 'break this into tasks', 'make a plan for this spec'."
 user_invocable: true
-version: "0.4.0"
+version: "0.5.0"
 ---
 
 # 制定实施计划
@@ -31,7 +31,7 @@ version: "0.4.0"
 
 **决定边界：**自行确定不改变已定结果的文件拆分、接口和测试；若输入缺口或冲突的不同答案会改变需求、验收结果或关键方案，说明影响：接续 `init-spec` 时返回其审查阶段，独立调用时请用户澄清，待确定后继续。
 
-**工作区：**遵循项目的 Git 规则，沿用并核对已有工作树；需要新建时按项目规则准备，没有专门规则时在实施前使用 `superpowers:using-git-worktrees`。
+**工作区：**调用 `manage-worktree` 的「准备」：接续 `init-spec` 时把已批准 Spec 的路径作为锚点传入，沿用 Spec 所在的工作区；独立调用时按它的规则复用或新建。`manage-worktree` 不可用时停下，告诉用户需要安装 `devflow` bundle 中的 manage-worktree。
 
 **范围：**输入包含多个独立子系统时，每个子系统编写一份能独立产出可运行、可测试软件的计划；若拆分改变已定范围，按决定边界处理。
 
@@ -166,4 +166,4 @@ git commit -m "feat: add specific feature"
 
 ### 5. 执行交接
 
-保存并自查后，提供计划链接，请用户确认计划符合意图，并在审阅完成前等待实施。确认后直接使用 `superpowers:subagent-driven-development` 执行，不询问执行方式；仅当用户显式要求原生执行时，改用 `superpowers:executing-plans`。将所用技能写入计划开头的 `REQUIRED SUB-SKILL`，再调用它。
+保存并自查后，提供计划链接，请用户确认计划符合意图，并在审阅完成前等待实施。确认后，项目指令对计划确认后的执行方式另有规定时按项目指令，否则直接使用 `superpowers:subagent-driven-development` 执行；仅当用户显式要求原生执行时，改用 `superpowers:executing-plans`。将所用技能写入计划开头的 `REQUIRED SUB-SKILL`，再调用它。
