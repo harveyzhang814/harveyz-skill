@@ -12,9 +12,9 @@ status: 待执行            # 待执行|执行中|待验收|已验收|打回
 date: <YYYY-MM-DD>        # 须与文件名的日期段一致
 author_model: <model>
 acceptance: hard          # hard|soft，决定 accept 阶段逐条实跑还是定性判断
-workspace_mode: shared-worktree # same-workspace|shared-worktree；旧文档可省略并由 branch/worktree 推断
-branch: <分支名>          # 可选：接手方要在另一条分支上开工时，由 author 建好后填
-worktree: <绝对路径>      # 与 branch 成对：author 建好的交接工作区，接手方与 accept 方都进这里
+workspace_mode: <same-workspace|shared-worktree> # 二选一：same-workspace（复用交出方当前工作区）|shared-worktree（新建交接工作区）；占位不替换会被校验拦下
+branch: <分支名>          # workspace_mode 存在时必填
+worktree: <绝对路径>      # workspace_mode 存在时必填
 base_commit: <40位提交>   # 可选：分叉基线，不是文档/最终改动的“当前提交”
 source_node: <uuid>       # 可选：author 在 Agent Canvas 画布节点里时才写
 target_node: <uuid>       # author 建出接手节点时填；没建成就留空，接手方在 verify 建完 hands-off-to 后回填

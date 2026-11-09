@@ -94,13 +94,13 @@ console.log(JSON.stringify(readSource()))
 @test "update --local and --npm together errors" {
   run env HSKILL_GLOBAL_ROOT="${GLOBAL_ROOT}" node "${CLI}" update --local /tmp/does-not-matter --npm
   [ "$status" -eq 1 ]
-  [[ "$output" == *"mutually exclusive"* ]]
+  [[ "$output" == *"mutually exclusive"* ]] || false
 }
 
 @test "update --local without a path errors" {
   run env HSKILL_GLOBAL_ROOT="${GLOBAL_ROOT}" node "${CLI}" update --local
   [ "$status" -eq 1 ]
-  [[ "$output" == *"requires a path"* ]]
+  [[ "$output" == *"requires a path"* ]] || false
 }
 
 # ── repo.info invalidated ─────────────────────────────────────────────────────
@@ -109,7 +109,7 @@ console.log(JSON.stringify(readSource()))
   run env HSKILL_GLOBAL_ROOT="${GLOBAL_ROOT}" HSKILL_TEST_NPM_LOG="${NPM_LOG}" PATH="${MOCK_BIN}:${PATH}" \
     node "${CLI}" update --local "${TEST_DIR}/does-not-exist"
   [ "$status" -eq 1 ]
-  [[ "$output" == *"不存在"* ]]
+  [[ "$output" == *"不存在"* ]] || false
   [ ! -f "${NPM_LOG}" ]
 }
 
@@ -139,7 +139,7 @@ console.log(compareVersions('0.33.0+local', '0.32.0') > 0)
 
   run env HSKILL_GLOBAL_ROOT="${GLOBAL_ROOT}" node "${CLI}" version --check
   [ "$status" -eq 0 ]
-  [[ "$output" == *"up to date"* ]]
+  [[ "$output" == *"up to date"* ]] || false
 }
 
 @test "version --check: local source, new commits reports outdated" {
@@ -152,7 +152,7 @@ console.log(compareVersions('0.33.0+local', '0.32.0') > 0)
 
   run env HSKILL_GLOBAL_ROOT="${GLOBAL_ROOT}" node "${CLI}" version --check
   [ "$status" -eq 0 ]
-  [[ "$output" == *"new commits"* ]]
+  [[ "$output" == *"new commits"* ]] || false
 }
 
 @test "version --check: local source, same commit but dirty reports uncommitted changes" {
@@ -165,7 +165,7 @@ console.log(compareVersions('0.33.0+local', '0.32.0') > 0)
 
   run env HSKILL_GLOBAL_ROOT="${GLOBAL_ROOT}" node "${CLI}" version --check
   [ "$status" -eq 0 ]
-  [[ "$output" == *"uncommitted changes"* ]]
+  [[ "$output" == *"uncommitted changes"* ]] || false
 }
 
 # ── version output: npm source unchanged ──────────────────────────────────────

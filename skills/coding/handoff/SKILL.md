@@ -1,7 +1,7 @@
 ---
 name: handoff
 description: Use when handing a task across sessions — writing a self-contained handoff doc for a fresh session to pick up (author), sanity-checking an inbound handoff before starting (verify), self-testing against the agreed criteria before reporting the work done or re-submitting after a rejection (self-test), or accepting completed work against the criteria agreed at handoff time (accept). Triggers on phrases like "write a handoff", "hand this off", "pick up this task", "sign off on this work". Not for carrying discussion conclusions into a new topic with no acceptance — use fork-topic for that. Generic skill — project-specific conventions are read from .hskill/handoff/config.md.
-version: "1.17.1"
+version: "1.18.1"
 user_invocable: true
 ---
 
@@ -12,8 +12,8 @@ user_invocable: true
 ## Phase 触发判定（先做这一步）
 
 1. 解析 handoff 调用后的文本：`author` / `verify` / `accept`。调用语法按宿主选择：Claude Code
-   用 `/handoff accept <file>`，Codex 用 `$handoff accept <file>`；没有 skill 调用语法的宿主直接执行
-   对应 phase。
+   用 `/handoff accept <file>`，Codex 用 `$handoff accept <file>`（`/skills` 是选择器，`$handoff`
+   不是 native slash command）；没有 skill 调用语法的宿主直接执行对应 phase。
 2. 文本未指明 → 看上下文：刚做完规划 → author；拿到别人的交接文档准备开工 → verify；接手方回报完成、要核收 → accept。
    输入以 `[agent-canvas 消息 …]` 开头时，它是另一个节点按「画布通信」发来的，按其中的事件选：
    派发 → verify；verify 缺口 → 回 author 补文档；待验收 → accept；打回 → 复修（Phase 2.5 复修轮）；
@@ -31,41 +31,38 @@ user_invocable: true
      - 无 → 用通用默认（`output_dir=docs/commute/`），以后不再问。
 2. **判断目的**：用一句话写出这次交接为了什么（如"接手方续做同一个实现任务"），作为文档的「交接目的」。只带讨论结论开新话题、不需要回来验收的，改用 fork-topic。
 3. **汇集上下文**：以**当前对话**为真相源，现状以 git/仓库为准。涉及代码时读 `git status` / `git diff` 核对现状和受影响文件（纯规划交接可跳过）；spec/plan 只给指针。**不引用 memory**（可能陈旧，接手方也读不到）：必要的背景核实后内联写进文档，不留 `[[memory]]` 链接。
-4. **备好交接工作区**（接手方会在**另一条分支**上开工时才做；就地同分支续做则整步跳过）：
-   分支和 worktree 都由**你**建好，不留给接手方建。
-   - 已经在一条 feature worktree 里干活 → 就用它，别新建。
-     但如果它是宿主临时创建的 detached/disposable worktree（Codex managed worktree 是典型），
-     不要直接把它交给 fresh session：先把工作落到命名分支与可持续存在的共享 worktree。Codex App
-     的同一 chat Handoff 不是这里说的 fresh-session 交接。
-   - 否则 `git worktree add <路径> -b <分支名> <基线分支>`；路径按 `.hskill/handoff/config.md`
-     的 workflow 段给的习惯，没给就用 `.claude/worktrees/<分支名把 / 换成 +>`。
-     **基线分支必须显式写出来**（通常是 `staging`）：不写就从主工作树当前 HEAD 拉分支，可能
-     静默夹带别的 session 没合并的提交，merge 也不报错。
-   - **建完立刻进去**（见文末「平台适配」，进不去时按其「通用兜底」）。不进去，后面不带限定的
-     git 命令都作用在**主工作树**上。
-   - **建完不要 `git worktree remove`**：它要一直留到验收通过。同一时刻只有一方在里面动手（你写完
-     交接就停手），否则会互踩暂存区。
-   - 把 `workspace_mode` 填成 `shared-worktree`，分支名填进 `branch`、工作区**绝对路径**填进
+4. **备好交接工作区**（接手方是另一个会话、需要被指到一个确定的工作区时做——计划后交接、换模型或换框架执行都属于这种情况）：
+   分支和工作区都由**你**备好，不留给接手方建。
+   - 调用 `manage-worktree` 的「准备」，有计划或 Spec 时把它的路径作为锚点传入：已在命名分支的
+     链接 worktree 里就复用它，否则按 manage-worktree 的规则新建（基线、分支名和路径由它推断并
+     向用户确认一次）。它负责进入并检测这个工作区；返回“不适用”（当前目录不在 git 仓库内）时
+     整步跳过，三个字段都不填。「准备」检测不通过先修好（例如补上 `core.hooksPath`）再写文档。
+   - `manage-worktree` 不可用 → 停下，告诉用户需要安装 `devflow` bundle 中的 manage-worktree，
+     不自行建 worktree。
+   - 复用当前工作区时 `workspace_mode` 填 `same-workspace`，新建交接工作区时填 `shared-worktree`。
+     **两种模式都必须填 `branch` 与 `worktree`**：分支名填进 `branch`、工作区**绝对路径**填进
      `worktree`。若需要记录分叉依据，可把完整 40 位提交写进 `base_commit`；它只是基线锚点，
-     不代表文档或最终改动所在的提交。就地续做填 `same-workspace`，也可为了兼容旧文档省略该字段。
-5. **起草**：读 `assets/handoff-template.md`，按其中的候选内容清单逐类过必要性测试——"不写这条信息，接手方会不会出问题"，答案是"会"才写出对应章节，答案是"不会"整节跳过，不留空标题。**交接目的**和**最小验收锚点**这两项任何情况下都必须写。指针式引用权威依据，只内联接手方开工必需的硬核，不重抄 spec 全文。写到**第 4 步那个工作区**里的 `<output_dir>/YYYY-MM-DD-<topic>-handoff.md`，按模板填 frontmatter（`status: 待执行`、`date` 与文件名日期段一致、`acceptance` 按最小验收锚点是硬判据还是软判据填 `hard`/`soft`；跨工作区时 `workspace_mode`/`branch`/`worktree` 第 4 步已填）。
+     不代表文档或最终改动所在的提交。
+   - **不要 `git worktree remove`**：它要一直留到验收通过。同一时刻只有一方在里面动手（你写完
+     交接就停手），否则会互踩暂存区。
+5. **起草**：读 `assets/handoff-template.md`，按其中的候选内容清单逐类过必要性测试——"不写这条信息，接手方会不会出问题"，答案是"会"才写出对应章节，答案是"不会"整节跳过，不留空标题。**交接目的**和**最小验收锚点**这两项任何情况下都必须写。指针式引用权威依据，只内联接手方开工必需的硬核，不重抄 spec 全文。写到**第 4 步那个工作区**里的 `<output_dir>/YYYY-MM-DD-<topic>-handoff.md`，按模板填 frontmatter（`status: 待执行`、`date` 与文件名日期段一致、`acceptance` 按最小验收锚点是硬判据还是软判据填 `hard`/`soft`；第 4 步做了时 `workspace_mode`/`branch`/`worktree` 已在那里定好）。
 6. **建执行节点**（仅当 `agent-canvas-ctl whoami` 能取到自己的节点 id 时做；不在 Agent Canvas
    画布节点里就整步跳过，不报错，第 9 步改走可粘贴指令，`source_node`/`target_node` 两个字段删掉）。
    命令用法以 `agent-canvas-ctl help <命令>` 为准：
    - `whoami` 取到的自己的节点 id 填进 frontmatter 的 `source_node`。
    - 建接手节点：`agent-canvas-ctl create-pty-node --node-type claude-code --title "接手：<任务一句话>"
      --cwd <工作区绝对路径> --task-type execute`。类型默认 `claude-code`，用户点名了别的 agent（如
-     `codex`）就用那个。`--cwd` 填第 4 步的 worktree；就地续做填当前工作目录。**这里不带
-     `--message`**：文档还没过门禁、没提交，派发消息留到第 9 步发。
+     `codex`）就用那个。`--cwd` 填第 4 步的 worktree；第 4 步跳过时填当前工作目录。**这里不带
+     `--message`**：文档还没提交、没过门禁，派发消息留到第 9 步发。
    - `agent-canvas-arrange put <接手节点 id>` 放上画布（建出来默认不在画布上）。
    - 建关系 `agent-canvas-ctl link-nodes --from <自己的 nodeId> --to <接手节点 id> --type hands-off-to`，
      把接手节点 id 填进 `target_node`。接手方在 verify 只核对、不重复建。
    - 建节点失败 → 把报错告诉用户，`target_node` 留空，第 9 步退回可粘贴指令，由接手方在 verify
      回填。**不要换个参数再建一个**；退出码 2 先 `agent-canvas-ctl search-nodes <标题关键词> --kind pty`
      核对是不是已经建出来了（旧版 App 不认 `--kind` 时去掉它；结果是顶层数组或 `{results}` 里的数组）。
-7. **跑完整性门禁**（见下），不过不放行。
-8. **落库**：把交接文档 commit 进这条分支（没提交的文档接手方看不到）。同目录同分支续做、或把
-   文档整份贴给对方时，此步可省。
+7. **落库**：把交接文档以及本次产生、被它引用的产物都 commit 进这条分支（没提交的内容接手方
+   看不到；第 8 步的门禁会检查它们已提交）。
+8. **跑完整性门禁**（见下）：不过就修改、重新提交、重跑，不过不放行。
 9. **派发**：第 6 步建出了接手节点 → 把下面这段接手指令写进临时文件，追加一行
    「你由节点 <source_node> 派来；verify 有缺口、自测后推「待验收」，都按 handoff skill 的「画布通信」
    用 `agent-canvas-ctl send <source_node>` 回报」，然后 `agent-canvas-ctl send <target_node> --file <临时文件>`
@@ -78,8 +75,7 @@ user_invocable: true
    ```
    接手任务。工作区已建好，不要自己建：
      <worktree 绝对路径>
-   按你所在平台的方式进入它（Claude Code 用 EnterWorktree(path: "<路径>")；
-   Codex 从该路径启动/绑定 workspace，或把每次操作显式限定到该绝对路径；别靠跨调用的裸 cd）。
+   调用 `manage-worktree` 的「进入」进入它（未安装时停下，告诉用户需要安装 `devflow` bundle 中的 manage-worktree）。
    分支 <branch>，已被这个工作区 checkout（git worktree add 会失败，属正常）。
    <若 config.md 的 workflow 段有开工前置命令，原样列在这里>
    交接文档：<相对于工作区的文档路径>
@@ -93,13 +89,14 @@ user_invocable: true
    将来验收若换了新 session，它靠这段就能回到正确的工作区。用户把这段弄丢了也不致命：
    `git worktree list` 能查回分支与工作区的对应关系，只是要多问一步。
 
-## 完整性门禁（author 收尾硬动作）
+## 完整性门禁（author 第 8 步，落库之后跑）
 
 **第一道，机器校验**：`bash <skill 目录>/scripts/validate-handoff.sh <文档路径>`。
 它查 frontmatter 字段齐不齐/枚举值合不合法、`date` 与文件名对不对得上、`branch` 在本仓库
 存不存在、`source_node`/`target_node` 是不是合法 uuid、正文有没有「交接目的」与
-「最小验收锚点」，并对指不到文件的引用路径给 WARN。**exit 非 0 不放行**；WARN 逐条判断
-是笔误还是指向本次待创建的产物。
+「最小验收锚点」，并对指不到文件的引用路径给 WARN。`status` 为「待执行」且含 `workspace_mode`
+时，还查 `branch` 与 `worktree` 都已填写、交接文档及其引用的已存在文件都已提交——所以要先落库
+再跑。**exit 非 0 不放行**；WARN 逐条判断是笔误还是指向本次待创建的产物。
 
 **第二道，冷读测试**（查脚本查不了的够不够、对不对）：假装自己是零上下文的接手方，只有这份文档，逐项自问——
 
@@ -112,13 +109,13 @@ user_invocable: true
   - 最小验收锚点若是硬判据 → **可证伪**吗？（有明确对/错判定，不是"让它工作"这种软标准）
     并与 frontmatter 的 `acceptance` 对得上吗？（硬判据填 `hard`，软判据填 `soft`——accept
     阶段按这个字段分叉，填反了验收方式就跑偏）
-- 接手方要在**另一条分支**上开工 → `branch` 与 `worktree` 都填了吗？（脚本查不出漏填；漏了
-  接手方不知道去哪开工，你验收时也找不回它改过的文档）
+- 第 4 步做了 → `workspace_mode` 填了吗？（脚本只在它存在时才查 `branch` 与 `worktree`；漏了
+  它，两个字段漏填也查不出，接手方不知道去哪开工，你验收时也找不回它改过的文档）
 - 你**在画布节点里**（`agent-canvas-ctl` 存在）→ frontmatter 的 `source_node` 填了吗？第 6 步建成了
   接手节点时 `target_node` 也填了吗？（同样查不出漏填；缺了往返消息找不到收件方）
 - **反向检查**：有没有哪类内容被必要性测试判定为"不需要"，但其实接手方会因此卡住、走错方向、或推翻已定方案？（防止必要性判断本身错判）
 
-任一项答不上 → 补文档、重跑门禁。核对结论可选择性附在文档末尾。
+任一项答不上 → 补文档、重新提交、重跑门禁。核对结论可选择性附在文档末尾，附上的话一并提交，并重跑机器校验。
 
 ## Phase 2 — verify（接手方开工前）
 
@@ -140,9 +137,9 @@ user_invocable: true
   **只建这一条边。**不要顺带把自己挂到交接源节点实现的需求上（不建 `implements`），也不要调
   `capture-requirement` 另立需求——需求已经挂在交接源节点上，接手节点该不该关联需求是另一个
   问题，不在这次交接的范围内。
-- **进 author 备好的工作区开工**（frontmatter 的 `workspace_mode` 是 `shared-worktree`，或旧文档
-  有 `worktree` 时）：按文末「平台适配」进去，然后核对 `git branch --show-current` 与 `branch`
-  一致且不为空，就在这里干活。
+- **进 author 备好的工作区开工**（frontmatter 填了 `worktree` 时；新文档两种 `workspace_mode`
+  都会填）：调用 `manage-worktree` 的「进入」，传入 frontmatter 的 `worktree` 与 `branch`；检测不通过就打回原 session，不自行开工。
+  通过了就在这里干活。
   - **绝不要销毁这个工作区**（`git worktree remove`，或平台的"退出并删除"）——验收还要用。
   - **不要自己 `git worktree add`。** 那条分支已经被这个工作区 checkout 了，再建会直接失败；
     而且你另建一个，原 session 验收时会回到它自己建的那个，看不到你的改动。
@@ -191,9 +188,10 @@ user_invocable: true
 **先到位，再验收**：验收命令在**被验代码所在的工作区**跑，不在主工作树或 staging/main/master
 上。那里没有接手方的改动，跑出来的绿是**别的代码的绿**。
 
-1. **回到交接工作区**：按文末「平台适配」进 author 阶段第 4 步建的那个 worktree。
-   路径取自你自己的上下文、author 第 9 步的验收指令，或 frontmatter 的 `worktree`；都没有就用
-   `git worktree list` 按分支名查。只有同目录同分支续做才跳过本步。
+1. **回到交接工作区**：调用 `manage-worktree` 的「进入」，进 author 阶段第 4 步备好的那个
+   worktree（传入它的路径与 `branch`）。路径取自你自己的上下文、author 第 9 步的验收指令，或
+   frontmatter 的 `worktree`；都没有就用 `git worktree list` 按分支名查。只有 author 第 4 步
+   整步跳过（文档没有 `worktree`）时才跳过本步。
    - **在那里重读一遍交接文档。** 你手上这份可能是 author 时写的旧版；接手方的自测记录、
      `status`、以及被修正过的字段，全都只存在于那个工作区里的那一份。
    - 后面**每一条**验收命令都在这个工作区里跑。
@@ -227,8 +225,8 @@ user_invocable: true
    **哪几条未达成**、**为什么**（判据原文 vs 实跑结果）、以及
    **复修后要重跑的范围**（默认全集；认为可以只跑子集就在这里点名）。
 7. 画布内写完 `status` 后按「画布通信」通知 `target_node`：打回 → 让它复修；已验收 → 让它停手。
-8. 若第 1 步通过宿主能力进入了工作区，按文末对应宿主的方式离开并**保留**工作区；使用显式路径
-   兜底时无需切换会话状态，停止操作即可。任何情况下都不 remove，合并与清理由 author 后续处理。
+8. 若第 1 步进入了工作区，调用 `manage-worktree` 的「离开」，**保留**工作区。任何情况下都不
+   remove，合并与清理由 author 后续处理。
 
 ## 状态生命周期
 
@@ -275,52 +273,6 @@ frontmatter 的 `source_node` 和 `target_node` 都填了、且你在画布节�
 
 ## 平台适配（怎么进出交接工作区）
 
-各 phase 说的「进入工作区」按宿主执行下面对应小节；宿主不在表里、对应能力不可用/被拒绝、或该
-小节明确列出的例外，才按「通用兜底」办。**已知宿主不得因兜底也能完成命令就跳过原生进入/离开动作。**
-判据：**后续命令的工作目录是不是那个工作区**。
-
-### Claude Code
-
-| 动作 | 手段 |
-|---|---|
-| 进入 | `EnterWorktree(path: "<工作区绝对路径>")` |
-| 离开 | `ExitWorktree(action: "keep")` |
-
-同仓库 worktree 必须走上表：若工具尚未出现在可用工具中，先用 ToolSearch 找到
-`EnterWorktree` / `ExitWorktree`，不要直接降级成 `cd`。只有 `path` 被拒绝（例如跨仓库）或工具
-确实不可用时才走通用兜底。
-
-- **只用 `path` 模式，绝不用 `name`**：`name` 会自建分支（`worktree-<name 把 / 换成 +>`，常过不了
-  分支命名 hook），基线默认取 `origin/<默认分支>`。分支名和基线必须由 author 定，所以只能
-  **先 `git worktree add` 建、再 `path` 进**。
-- `path` 只认**当前仓库**（或嵌套在其中的仓库）注册过的工作区，跨仓库直接拒绝。
-  交接双方在同一仓库时不是问题；跨仓库按「通用兜底」办。
-- 必须由当前会话**直接调**，不能交给 fork/subagent 代调。
-- 离开一律 `action: "keep"`，交接期间绝不 `remove`。
-
-### Codex
-
-Codex 没有 `EnterWorktree` / `ExitWorktree` 工具。fresh session 接手 author 已建好的共享工作区时，
-选择一种能让**该 session 的 workspace 根就是 frontmatter `worktree`** 的启动方式：
-
-- CLI：从该目录启动，或用 `codex -C <worktree>` / `codex exec -C <worktree> ...`。
-- Codex App：打开该持久 worktree 作为 workspace，再开始新的接手 chat。
-- 宿主无法重新绑定 workspace：按下面「通用兜底」逐条使用绝对路径与显式 working directory。
-
-Codex 的 `--worktree` 会创建**新的 managed worktree**，不是进入 author 已建的路径；verify / accept
-阶段不要用它，也不要让接手 session 创建替代 worktree。App 的 **Handoff** 是同一 chat 在 Local 与
-Worktree 之间移动，适合延续同一 chat，但不替代这里由独立接手者执行、再由 accept 方复核的流程。
-
-Codex 调用本 skill 用 `$handoff <phase> <文档路径>`；`/skills` 是选择器，不要把 `$handoff`
-写成一个不存在的 native slash command。
-
-### 通用兜底（无此类能力，或跨仓库）
-
-每条命令自带限定，**不要靠裸 `cd`**（多数 harness 里它只在单条命令内有效）。
-
-- git：`git -C <工作区> <命令>`
-- 其他 shell 命令：`cd <工作区> && <命令>` 写在**同一条**命令里
-- **读写文件一律用绝对路径**：`git -C` 管不住 Read / Edit / Write / Grep / Glob，相对路径按会话
-  当前目录解析，改到另一份同名文件也**照样成功**。
-
-人类接手时同理：`cd <工作区>` 之后不要再切回去。
+进出交接工作区一律调用 `manage-worktree` 的「进入」与「离开」：「进入」按宿主进入并检测，「离开」
+保留工作区，交接期间绝不 remove。各宿主（Claude Code、Codex 及其他）的具体做法与通用兜底只在
+manage-worktree 里维护，这里不重复。

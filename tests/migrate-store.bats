@@ -66,8 +66,8 @@ CFG
 
   run bash "$SCRIPT"
   [ "$status" -eq 0 ]
-  [[ "$output" == *"将复制：deadbeef"* ]]
-  [[ "$output" == *"跳过：我的笔记"* ]]
+  [[ "$output" == *"将复制：deadbeef"* ]] || false
+  [[ "$output" == *"跳过：我的笔记"* ]] || false
 }
 
 @test "dry-run: produces no filesystem side effects" {
@@ -134,7 +134,7 @@ CFG
 
   HOME="${TEST_DIR}" run bash "$SCRIPT"
   [ "$status" -eq 0 ]
-  [[ "$output" != *'~'* ]]
+  [[ "$output" != *'~'* ]] || false
 }
 
 @test "dry-run: hash8 dir missing meta.json is skipped, hash8 dir with meta.json is copied" {
@@ -146,8 +146,8 @@ CFG
 
   run bash "$SCRIPT"
   [ "$status" -eq 0 ]
-  [[ "$output" == *"将复制：deadbeef"* ]]
-  [[ "$output" == *"跳过：abcdef12"* ]]
+  [[ "$output" == *"将复制：deadbeef"* ]] || false
+  [[ "$output" == *"跳过：abcdef12"* ]] || false
 }
 
 @test "--apply: pre-existing destination is left untouched, source left in place" {
@@ -159,7 +159,7 @@ CFG
 
   run bash "$SCRIPT" --apply
   [ "$status" -eq 0 ]
-  [[ "$output" == *"跳过：deadbeef（目标已存在：${ROOT}/articles/deadbeef）"* ]]
+  [[ "$output" == *"跳过：deadbeef（目标已存在：${ROOT}/articles/deadbeef）"* ]] || false
   [ -d "${VAULT}/deadbeef" ]
   [ -f "${VAULT}/deadbeef/meta.json" ]
   grep -q "source-new" "${VAULT}/deadbeef/meta.json"
@@ -198,7 +198,7 @@ CFG
   bash "$SCRIPT" --apply
   run bash "$SCRIPT" --verify
   [ "$status" -eq 0 ]
-  [[ "$output" == *"全部通过"* ]]
+  [[ "$output" == *"全部通过"* ]] || false
 }
 
 @test "--verify: writes nothing" {
@@ -220,7 +220,7 @@ CFG
 
   run bash "$SCRIPT" --verify
   [ "$status" -ne 0 ]
-  [[ "$output" == *"比源还小"* ]]
+  [[ "$output" == *"比源还小"* ]] || false
 }
 
 @test "--verify: a target that grew past its source passes" {
@@ -235,7 +235,7 @@ CFG
 
   run bash "$SCRIPT" --verify
   [ "$status" -eq 0 ]
-  [[ "$output" == *"已比源更大"* ]]
+  [[ "$output" == *"已比源更大"* ]] || false
 }
 
 @test "unknown flag exits 2" {
@@ -259,7 +259,7 @@ CFG
 
   run bash "$SCRIPT" --apply
   [ "$status" -eq 0 ]
-  [[ "$output" == *"${LEGACY_DATA}"* ]]
+  [[ "$output" == *"${LEGACY_DATA}"* ]] || false
   [ -f "${ROOT}/feeds/tweets/digest/20260822T064553--digest.md" ]
   [ -f "${ROOT}/feeds/tweets/creators/trq212.json" ]
   [ -f "${LEGACY_DATA}/digests/20260822T064553--digest.md" ]
@@ -296,5 +296,5 @@ assert 'focus' not in m, m
 print('MERGED')
 "
   [ "$status" -eq 0 ]
-  [[ "$output" == *"MERGED"* ]]
+  [[ "$output" == *"MERGED"* ]] || false
 }

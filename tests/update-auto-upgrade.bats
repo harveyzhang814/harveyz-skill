@@ -69,8 +69,8 @@ _install_old_version() {
   installed_ver="$(_skill_version "${MOCK_HOME}/.claude/skills/${AUTO_SKILL}/SKILL.md")"
   available_ver="$(_skill_version "${AUTO_SKILL_SRC}/SKILL.md")"
   [ "${installed_ver}" = "${available_ver}" ]
-  [[ "$output" == *"Auto-updated"* ]]
-  [[ "$output" == *"${AUTO_SKILL}"* ]]
+  [[ "$output" == *"Auto-updated"* ]] || false
+  [[ "$output" == *"${AUTO_SKILL}"* ]] || false
 }
 
 @test "update: leaves an outdated skill without autoUpdate untouched" {
@@ -86,6 +86,6 @@ _install_old_version() {
 @test "update: skips auto-upgrade entirely when the flagged skill isn't installed" {
   run _update
   [ "$status" -eq 0 ]
-  [[ "$output" != *"Auto-updated"* ]]
+  [[ "$output" != *"Auto-updated"* ]] || false
   [ ! -d "${MOCK_HOME}/.claude/skills/${AUTO_SKILL}" ]
 }

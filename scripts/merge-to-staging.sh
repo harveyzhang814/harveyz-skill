@@ -180,7 +180,29 @@ _sync_staging_worktree_locked() {
     # 于是之后每一次同步都会走进同一条死路，且提示的补救手法（git reset --hard）
     # 根本不碰这个标记文件，照着做也好不了。解析不出来就退化到兜底值，跟"还没有
     # 标记文件"走同一条自愈路径，下一次同步就能自行接上。
-    if [ -f "$baseline_file" ] && detach_base=$(git -C "$staging_wt" rev-parse -q --verify "$(cat "$baseline_file")^{commit}" 2>/dev/null); then
+    #
+    # 但标记会过期：staging 被移动时 hub 不在场（发版流程在 hub 上切到 release 分支、
+    # 在那里跑本脚本合回 staging，此时没有 worktree checkout 着 staging，同步被跳过），
+    # hub 随后切回 staging，标记仍停在发版前。拿过期标记 detach，会把发版改动误当成 hub
+    # 的在制品 stash 起来，pop 到新提交时与同一行的后续改动凭空冲突（e2e 场景 I）。
+    # 所以优先读 hub 自己 HEAD reflog 的最新一条：用户在 hub 上 checkout / reset / commit
+    # 都会记一条，记录里的提交就是 hub 索引与工作树所在的提交；别的 worktree 用 update-ref
+    # 移动 refs/heads/staging 不写 hub 的 HEAD reflog。本脚本自己的 symbolic-ref 接回也会
+    # 记一条，但记下的是接回那一刻的分支尖端——并发时它可能已被别的合并推过 hub 实际
+    # reset 到的提交（e2e 场景 G）。所以本脚本移动 hub 的 HEAD 时一律带上消息
+    # "merge-to-staging: at <hub 真实所在提交>"，读到这种消息就取消息里的提交。
+    # reflog 被关闭或清空、读不出时，才退回标记，再退回兜底值。
+    local reflog_line reflog_base=""
+    reflog_line=$(git -C "$staging_wt" reflog show --format='%H %gs' -n 1 HEAD 2>/dev/null || true)
+    if [ -n "$reflog_line" ]; then
+        case "${reflog_line#* }" in
+            "merge-to-staging: at "*) reflog_base="${reflog_line#* merge-to-staging: at }" ;;
+            *) reflog_base="${reflog_line%% *}" ;;
+        esac
+    fi
+    if [ -n "$reflog_base" ] && detach_base=$(git -C "$staging_wt" rev-parse -q --verify "${reflog_base}^{commit}" 2>/dev/null); then
+        :
+    elif [ -f "$baseline_file" ] && detach_base=$(git -C "$staging_wt" rev-parse -q --verify "$(cat "$baseline_file")^{commit}" 2>/dev/null); then
         :
     else
         detach_base="$fallback_baseline"
@@ -191,7 +213,7 @@ _sync_staging_worktree_locked() {
     # 分支的 symref，不先对齐的话，任何时候读 status 都会把"符号引用已经跟着分支
     # 挪走、但索引/工作树还没动"误判成一堆假象改动。纯指针操作，--no-deref 不碰
     # refs/heads/staging 也不碰索引/工作树。
-    if ! git -C "$staging_wt" update-ref --no-deref HEAD "$detach_base" 2>/dev/null; then
+    if ! git -C "$staging_wt" update-ref --no-deref -m "merge-to-staging: at $detach_base" HEAD "$detach_base" 2>/dev/null; then
         echo "⚠️ ${TARGET_BRANCH} 所在 worktree（${staging_wt}）无法固定同步基准，未自动同步；" >&2
         echo "   处理完手头的改动后，请在那个 worktree 里执行： git reset --hard" >&2
         return 0
@@ -199,7 +221,7 @@ _sync_staging_worktree_locked() {
 
     local hub_status
     if ! hub_status=$(git -C "$staging_wt" status --porcelain 2>/dev/null); then
-        git -C "$staging_wt" symbolic-ref HEAD "refs/heads/${TARGET_BRANCH}"
+        git -C "$staging_wt" symbolic-ref -m "merge-to-staging: at $detach_base" HEAD "refs/heads/${TARGET_BRANCH}"
         echo "⚠️ ${TARGET_BRANCH} 所在 worktree（${staging_wt}）无法读取状态，未自动同步；" >&2
         echo "   处理完手头的改动后，请在那个 worktree 里执行： git reset --hard" >&2
         return 0
@@ -213,12 +235,12 @@ _sync_staging_worktree_locked() {
         local current_target
         current_target=$(git rev-parse "$TARGET_REF")
         if ! git -C "$staging_wt" reset --hard -q "$current_target"; then
-            git -C "$staging_wt" symbolic-ref HEAD "refs/heads/${TARGET_BRANCH}"
+            git -C "$staging_wt" symbolic-ref -m "merge-to-staging: at $detach_base" HEAD "refs/heads/${TARGET_BRANCH}"
             echo "⚠️ ${TARGET_BRANCH} 所在 worktree（${staging_wt}）reset 失败，未自动同步；" >&2
             echo "   处理完手头的改动后，请在那个 worktree 里执行： git reset --hard" >&2
             return 0
         fi
-        git -C "$staging_wt" symbolic-ref HEAD "refs/heads/${TARGET_BRANCH}"
+        git -C "$staging_wt" symbolic-ref -m "merge-to-staging: at $current_target" HEAD "refs/heads/${TARGET_BRANCH}"
         write_synced_baseline "$baseline_file" "$current_target"
         return 0
     fi
@@ -235,7 +257,7 @@ _sync_staging_worktree_locked() {
     stash_before=$(git -C "$staging_wt" rev-parse -q --verify refs/stash 2>/dev/null || true)
 
     if ! git -C "$staging_wt" stash push -u -q -m "merge-to-staging.sh auto-stash"; then
-        git -C "$staging_wt" symbolic-ref HEAD "refs/heads/${TARGET_BRANCH}"
+        git -C "$staging_wt" symbolic-ref -m "merge-to-staging: at $detach_base" HEAD "refs/heads/${TARGET_BRANCH}"
         echo "⚠️ ${TARGET_BRANCH} 所在 worktree（${staging_wt}）的未提交改动无法自动 stash，未自动同步；" >&2
         echo "   它的 git status 现在会显示误导性的改动，此时在那里直接 commit 会把本次合并反转掉。" >&2
         echo "   处理完手头的改动后，请在那个 worktree 里执行： git reset --hard" >&2
@@ -245,12 +267,12 @@ _sync_staging_worktree_locked() {
     stash_after=$(git -C "$staging_wt" rev-parse -q --verify refs/stash 2>/dev/null || true)
 
     if ! git -C "$staging_wt" reset --hard -q "$current_target"; then
-        git -C "$staging_wt" symbolic-ref HEAD "refs/heads/${TARGET_BRANCH}"
+        git -C "$staging_wt" symbolic-ref -m "merge-to-staging: at $detach_base" HEAD "refs/heads/${TARGET_BRANCH}"
         echo "⚠️ ${TARGET_BRANCH} 所在 worktree（${staging_wt}）reset 失败，未自动同步；原始改动仍保留在 stash 里兜底。" >&2
         echo "   处理完手头的改动后，请在那个 worktree 里执行： git reset --hard" >&2
         return 0
     fi
-    git -C "$staging_wt" symbolic-ref HEAD "refs/heads/${TARGET_BRANCH}"
+    git -C "$staging_wt" symbolic-ref -m "merge-to-staging: at $current_target" HEAD "refs/heads/${TARGET_BRANCH}"
     write_synced_baseline "$baseline_file" "$current_target"
 
     if [ "$stash_before" = "$stash_after" ]; then

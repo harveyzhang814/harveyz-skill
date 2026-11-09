@@ -37,14 +37,14 @@ acceptance: hard'
   write_doc "$VALID_FM"
   run bash "$VALIDATOR" "$DOC"
   [ "$status" -eq 0 ]
-  [[ "$output" != *ERROR* ]]
+  [[ "$output" != *ERROR* ]] || false
 }
 
 @test "02 missing frontmatter -> exit 1" {
   printf '# 交接：示例\n\n**交接目的**：x\n\n## 最小验收锚点\n- x\n' > "$DOC"
   run bash "$VALIDATOR" "$DOC"
   [ "$status" -eq 1 ]
-  [[ "$output" == *frontmatter* ]]
+  [[ "$output" == *frontmatter* ]] || false
 }
 
 @test "03 status not in enum -> exit 1 and lists legal values" {
@@ -53,8 +53,8 @@ date: 2026-09-06
 acceptance: hard'
   run bash "$VALIDATOR" "$DOC"
   [ "$status" -eq 1 ]
-  [[ "$output" == *status* ]]
-  [[ "$output" == *待验收* ]]
+  [[ "$output" == *status* ]] || false
+  [[ "$output" == *待验收* ]] || false
 }
 
 @test "04 status absent -> exit 1" {
@@ -62,7 +62,7 @@ acceptance: hard'
 acceptance: hard'
   run bash "$VALIDATOR" "$DOC"
   [ "$status" -eq 1 ]
-  [[ "$output" == *status* ]]
+  [[ "$output" == *status* ]] || false
 }
 
 @test "05 acceptance not hard/soft -> exit 1" {
@@ -71,7 +71,7 @@ date: 2026-09-06
 acceptance: maybe'
   run bash "$VALIDATOR" "$DOC"
   [ "$status" -eq 1 ]
-  [[ "$output" == *acceptance* ]]
+  [[ "$output" == *acceptance* ]] || false
 }
 
 @test "06 date mismatches filename -> exit 1" {
@@ -80,7 +80,7 @@ date: 2026-09-05
 acceptance: hard'
   run bash "$VALIDATOR" "$DOC"
   [ "$status" -eq 1 ]
-  [[ "$output" == *date* ]]
+  [[ "$output" == *date* ]] || false
 }
 
 @test "07 branch does not exist -> exit 1" {
@@ -88,7 +88,7 @@ acceptance: hard'
 branch: feature/nope-does-not-exist"
   run bash "$VALIDATOR" "$DOC"
   [ "$status" -eq 1 ]
-  [[ "$output" == *branch* ]]
+  [[ "$output" == *branch* ]] || false
 }
 
 @test "08 branch field absent -> exit 0 (optional)" {
@@ -102,29 +102,29 @@ branch: feature/nope-does-not-exist"
 source_node: not-a-uuid"
   run bash "$VALIDATOR" "$DOC"
   [ "$status" -eq 1 ]
-  [[ "$output" == *source_node* ]]
+  [[ "$output" == *source_node* ]] || false
 }
 
 @test "10 body missing acceptance-anchor section -> exit 1" {
   write_doc "$VALID_FM" "$(printf '# 交接：示例\n\n**交接目的**：x\n')"
   run bash "$VALIDATOR" "$DOC"
   [ "$status" -eq 1 ]
-  [[ "$output" == *最小验收锚点* ]]
+  [[ "$output" == *最小验收锚点* ]] || false
 }
 
 @test "11 body missing handoff-purpose line -> exit 1" {
   write_doc "$VALID_FM" "$(printf '# 交接：示例\n\n## 最小验收锚点\n- x\n')"
   run bash "$VALIDATOR" "$DOC"
   [ "$status" -eq 1 ]
-  [[ "$output" == *交接目的* ]]
+  [[ "$output" == *交接目的* ]] || false
 }
 
 @test "12 body links to missing path -> exit 0 with WARN" {
   write_doc "$VALID_FM" "$(printf '# 交接：示例\n\n**交接目的**：x\n\n见 [规格](docs/specs/nope.md)。\n\n## 最小验收锚点\n- x\n')"
   run bash "$VALIDATOR" "$DOC"
   [ "$status" -eq 0 ]
-  [[ "$output" == *WARN* ]]
-  [[ "$output" == *nope.md* ]]
+  [[ "$output" == *WARN* ]] || false
+  [[ "$output" == *nope.md* ]] || false
 }
 
 @test "13 three errors at once -> all reported in one run" {
@@ -139,7 +139,7 @@ acceptance: maybe'
 @test "14 no arg or missing file -> exit 2 + usage" {
   run bash "$VALIDATOR"
   [ "$status" -eq 2 ]
-  [[ "$output" == *用法* ]]
+  [[ "$output" == *用法* ]] || false
   run bash "$VALIDATOR" "$TMP/nope.md"
   [ "$status" -eq 2 ]
 }
@@ -149,7 +149,7 @@ acceptance: maybe'
 branch: $BRANCH"
   run bash "$VALIDATOR" "$DOC"
   [ "$status" -eq 0 ]
-  [[ "$output" != *ERROR* ]]
+  [[ "$output" != *ERROR* ]] || false
 }
 
 @test "16 positive control: link target exists -> no WARN" {
@@ -157,7 +157,7 @@ branch: $BRANCH"
   write_doc "$VALID_FM" "$(printf '# 交接：示例\n\n**交接目的**：x\n\n见 [规格](docs/real.md)。\n\n## 最小验收锚点\n- x\n')"
   run bash "$VALIDATOR" "$DOC"
   [ "$status" -eq 0 ]
-  [[ "$output" != *WARN* ]]
+  [[ "$output" != *WARN* ]] || false
 }
 
 @test "17 target_node left empty for receiver to fill -> exit 0" {
@@ -165,7 +165,7 @@ branch: $BRANCH"
 target_node:"
   run bash "$VALIDATOR" "$DOC"
   [ "$status" -eq 0 ]
-  [[ "$output" != *ERROR* ]]
+  [[ "$output" != *ERROR* ]] || false
 }
 
 @test "18 source_node present but empty -> exit 0" {
@@ -190,7 +190,7 @@ make_worktree() {
   write_doc "$VALID_FM"
   run bash "$VALIDATOR" "$DOC"
   [ "$status" -eq 0 ]
-  [[ "$output" != *worktree* ]]
+  [[ "$output" != *worktree* ]] || false
 }
 
 @test "20 worktree present but empty -> exit 0" {
@@ -198,7 +198,7 @@ make_worktree() {
 worktree:"
   run bash "$VALIDATOR" "$DOC"
   [ "$status" -eq 0 ]
-  [[ "$output" != *ERROR* ]]
+  [[ "$output" != *ERROR* ]] || false
 }
 
 @test "21 worktree relative path -> exit 1" {
@@ -206,7 +206,7 @@ worktree:"
 worktree: ../relative/path"
   run bash "$VALIDATOR" "$DOC"
   [ "$status" -eq 1 ]
-  [[ "$output" == *绝对路径* ]]
+  [[ "$output" == *绝对路径* ]] || false
 }
 
 @test "22 worktree absolute but nonexistent -> exit 0 with WARN" {
@@ -214,8 +214,8 @@ worktree: ../relative/path"
 worktree: /nonexistent/abs/path"
   run bash "$VALIDATOR" "$DOC"
   [ "$status" -eq 0 ]
-  [[ "$output" == *WARN* ]]
-  [[ "$output" == */nonexistent/abs/path* ]]
+  [[ "$output" == *WARN* ]] || false
+  [[ "$output" == */nonexistent/abs/path* ]] || false
 }
 
 @test "23 worktree points at a dir that is not a worktree root -> exit 0 with WARN" {
@@ -224,8 +224,8 @@ worktree: /nonexistent/abs/path"
 worktree: $TMP/plain"
   run bash "$VALIDATOR" "$DOC"
   [ "$status" -eq 0 ]
-  [[ "$output" == *WARN* ]]
-  [[ "$output" == *plain* ]]
+  [[ "$output" == *WARN* ]] || false
+  [[ "$output" == *plain* ]] || false
 }
 
 # 正向对照：没有这条，22/23/25 的绿有可能来自「任何 worktree 值都 WARN」。
@@ -237,7 +237,7 @@ branch: feat/x
 worktree: $wt"
   run bash "$VALIDATOR" "$DOC"
   [ "$status" -eq 0 ]
-  [[ "$output" != *worktree* ]]
+  [[ "$output" != *worktree* ]] || false
 }
 
 @test "25 real worktree whose HEAD branch differs from branch field -> WARN naming both" {
@@ -247,9 +247,9 @@ branch: $BRANCH
 worktree: $wt"
   run bash "$VALIDATOR" "$DOC"
   [ "$status" -eq 0 ]
-  [[ "$output" == *WARN* ]]
-  [[ "$output" == *feat/x* ]]
-  [[ "$output" == *"$BRANCH"* ]]
+  [[ "$output" == *WARN* ]] || false
+  [[ "$output" == *feat/x* ]] || false
+  [[ "$output" == *"$BRANCH"* ]] || false
 }
 
 @test "26 worktree without branch fallback -> exit 0 with WARN" {
@@ -258,8 +258,8 @@ worktree: $wt"
 worktree: $wt"
   run bash "$VALIDATOR" "$DOC"
   [ "$status" -eq 0 ]
-  [[ "$output" == *WARN* ]]
-  [[ "$output" == *branch* ]]
+  [[ "$output" == *WARN* ]] || false
+  [[ "$output" == *branch* ]] || false
 }
 
 @test "27 worktree relative path alongside another ERROR -> both listed, exit 1" {
@@ -270,8 +270,8 @@ acceptance: hard
 worktree: ./rel"
   run bash "$VALIDATOR" "$DOC"
   [ "$status" -eq 1 ]
-  [[ "$output" == *"status 非法值"* ]]
-  [[ "$output" == *绝对路径* ]]
+  [[ "$output" == *"status 非法值"* ]] || false
+  [[ "$output" == *绝对路径* ]] || false
 }
 
 # branch 与 worktree 现在是成对的（author 建好工作区后同时填）。只填一半都要喊出来：
@@ -282,8 +282,8 @@ worktree: ./rel"
 branch: $BRANCH"
   run bash "$VALIDATOR" "$DOC"
   [ "$status" -eq 0 ]
-  [[ "$output" == *WARN* ]]
-  [[ "$output" == *worktree* ]]
+  [[ "$output" == *WARN* ]] || false
+  [[ "$output" == *worktree* ]] || false
 }
 
 # ── status=待验收 时必须有接手方自测小节 ───────────────────────────────────
@@ -299,7 +299,7 @@ author_model: opus-5
 acceptance: hard'
   run bash "$VALIDATOR" "$DOC"
   [ "$status" -eq 1 ]
-  [[ "$output" == *自测* ]]
+  [[ "$output" == *自测* ]] || false
 }
 
 @test "30 pending-accept status with self-test section -> exit 0" {
@@ -309,7 +309,7 @@ author_model: opus-5
 acceptance: hard' "$(printf '# 交接：示例\n\n**交接目的**：把实现交给下一个 session\n\n## 最小验收锚点\n- demo() 返回 1\n\n## 接手方自测记录（2026-09-06）\n- demo() 返回 1 → PASS\n')"
   run bash "$VALIDATOR" "$DOC"
   [ "$status" -eq 0 ]
-  [[ "$output" != *ERROR* ]]
+  [[ "$output" != *ERROR* ]] || false
 }
 
 @test "31 pending-accept with selftest word in prose only -> exit 1" {
@@ -319,14 +319,14 @@ author_model: opus-5
 acceptance: hard' "$(printf '# 交接：示例\n\n**交接目的**：把实现交给下一个 session\n\n我已经自测过了，没问题。\n\n## 最小验收锚点\n- demo() 返回 1\n')"
   run bash "$VALIDATOR" "$DOC"
   [ "$status" -eq 1 ]
-  [[ "$output" == *自测* ]]
+  [[ "$output" == *自测* ]] || false
 }
 
 @test "32 todo status without self-test section -> exit 0" {
   write_doc "$VALID_FM"
   run bash "$VALIDATOR" "$DOC"
   [ "$status" -eq 0 ]
-  [[ "$output" != *自测* ]]
+  [[ "$output" != *自测* ]] || false
 }
 
 @test "33 other statuses without self-test section -> exit 0" {
@@ -337,7 +337,7 @@ author_model: opus-5
 acceptance: hard"
     run bash "$VALIDATOR" "$DOC"
     [ "$status" -eq 0 ]
-    [[ "$output" != *自测* ]]
+    [[ "$output" != *自测* ]] || false
   done
 }
 
@@ -348,7 +348,7 @@ author_model: opus-5
 acceptance: hard' "$(printf '# 交接：示例\n\n**交接目的**：把实现交给下一个 session\n\n## 最小验收锚点\n- demo() 返回 1\n\n### 接手方复修自测记录（第 2 轮）\n- demo() 返回 1 → PASS\n')"
   run bash "$VALIDATOR" "$DOC"
   [ "$status" -eq 0 ]
-  [[ "$output" != *ERROR* ]]
+  [[ "$output" != *ERROR* ]] || false
 }
 
 # ── workspace_mode + base_commit 分叉锚点 ──────────────────────────────────
@@ -358,8 +358,8 @@ acceptance: hard' "$(printf '# 交接：示例\n\n**交接目的**：把实现�
 workspace_mode: teleport"
   run bash "$VALIDATOR" "$DOC"
   [ "$status" -eq 1 ]
-  [[ "$output" == *workspace_mode* ]]
-  [[ "$output" == *shared-worktree* ]]
+  [[ "$output" == *workspace_mode* ]] || false
+  [[ "$output" == *shared-worktree* ]] || false
 }
 
 @test "36 shared-worktree requires both branch and worktree" {
@@ -368,8 +368,8 @@ workspace_mode: shared-worktree
 branch: $BRANCH"
   run bash "$VALIDATOR" "$DOC"
   [ "$status" -eq 1 ]
-  [[ "$output" == *shared-worktree* ]]
-  [[ "$output" == *worktree* ]]
+  [[ "$output" == *shared-worktree* ]] || false
+  [[ "$output" == *worktree* ]] || false
 }
 
 @test "37 shared-worktree with matching branch and root -> exit 0" {
@@ -378,10 +378,11 @@ branch: $BRANCH"
 workspace_mode: shared-worktree
 branch: feat/shared
 worktree: $wt"
+  git add "$DOC" && git commit -qm doc
   run bash "$VALIDATOR" "$DOC"
   [ "$status" -eq 0 ]
-  [[ "$output" != *ERROR* ]]
-  [[ "$output" != *WARN* ]]
+  [[ "$output" != *ERROR* ]] || false
+  [[ "$output" != *WARN* ]] || false
 }
 
 @test "38 supplied base_commit must resolve in repository" {
@@ -390,7 +391,7 @@ workspace_mode: same-workspace
 base_commit: 0000000000000000000000000000000000000000"
   run bash "$VALIDATOR" "$DOC"
   [ "$status" -eq 1 ]
-  [[ "$output" == *base_commit* ]]
+  [[ "$output" == *base_commit* ]] || false
 }
 
 @test "39 shared-worktree rejects a detached worktree without a named branch" {
@@ -401,15 +402,108 @@ workspace_mode: shared-worktree
 worktree: $wt"
   run bash "$VALIDATOR" "$DOC"
   [ "$status" -eq 1 ]
-  [[ "$output" == *branch* ]]
+  [[ "$output" == *branch* ]] || false
 }
 
 @test "40 same-workspace accepts a resolvable base_commit" {
   commit="$(git rev-parse HEAD)"
   write_doc "$VALID_FM
 workspace_mode: same-workspace
+branch: $BRANCH
+worktree: $TMP
 base_commit: $commit"
+  git add "$DOC" && git commit -qm doc
   run bash "$VALIDATOR" "$DOC"
   [ "$status" -eq 0 ]
-  [[ "$output" != *ERROR* ]]
+  [[ "$output" != *ERROR* ]] || false
+}
+
+# ── 「待执行」文档的已提交与工作区检查（含 workspace_mode 时生效）────────────
+commit_doc() { git add "$DOC" && git commit -qm doc; }
+SAME_WS() { printf '%s\nworkspace_mode: same-workspace\nbranch: %s\nworktree: %s' "$VALID_FM" "$BRANCH" "$TMP"; }
+
+@test "41 same-workspace pending doc without worktree -> exit 1" {
+  write_doc "$VALID_FM
+workspace_mode: same-workspace
+branch: $BRANCH"
+  commit_doc
+  run bash "$VALIDATOR" "$DOC"
+  [ "$status" -eq 1 ]; [[ "$output" == *worktree* ]] || false
+}
+
+@test "42 pending doc not tracked -> exit 1" {
+  write_doc "$(SAME_WS)"
+  run bash "$VALIDATOR" "$DOC"
+  [ "$status" -eq 1 ]; [[ "$output" == *交接文档未提交* ]] || false
+}
+
+@test "43 pending doc tracked but modified -> exit 1" {
+  write_doc "$(SAME_WS)"; commit_doc; echo "extra" >> "$DOC"
+  run bash "$VALIDATOR" "$DOC"
+  [ "$status" -eq 1 ]; [[ "$output" == *交接文档未提交* ]] || false
+}
+
+@test "44 link to an existing untracked file -> exit 1" {
+  echo plan > plan.md
+  write_doc "$(SAME_WS)" "$(printf '# 交接：示例\n\n**交接目的**：x\n\n见 [计划](plan.md)。\n\n## 最小验收锚点\n- x\n')"
+  commit_doc
+  run bash "$VALIDATOR" "$DOC"
+  [ "$status" -eq 1 ]; [[ "$output" == *引用文件未提交* ]] || false; [[ "$output" == *plan.md* ]] || false
+}
+
+@test "45 link to a tracked but modified file -> exit 1" {
+  echo plan > plan.md && git add plan.md && git commit -qm plan && echo more >> plan.md
+  write_doc "$(SAME_WS)" "$(printf '# 交接：示例\n\n**交接目的**：x\n\n见 [计划](plan.md)。\n\n## 最小验收锚点\n- x\n')"
+  commit_doc
+  run bash "$VALIDATOR" "$DOC"
+  [ "$status" -eq 1 ]; [[ "$output" == *引用文件未提交* ]] || false
+}
+
+@test "46 fully committed pending doc with committed links -> exit 0" {
+  echo plan > plan.md && git add plan.md && git commit -qm plan
+  write_doc "$(SAME_WS)" "$(printf '# 交接：示例\n\n**交接目的**：x\n\n见 [计划](plan.md)。\n\n## 最小验收锚点\n- x\n')"
+  commit_doc
+  run bash "$VALIDATOR" "$DOC"
+  [ "$status" -eq 0 ]; [[ "$output" != *ERROR* ]] || false
+}
+
+@test "47 in-progress doc left uncommitted keeps old result" {
+  write_doc "status: 执行中
+date: 2026-09-06
+author_model: opus-5
+acceptance: hard
+workspace_mode: same-workspace
+branch: $BRANCH
+worktree: $TMP"
+  run bash "$VALIDATOR" "$DOC"
+  [ "$status" -eq 0 ]; [[ "$output" != *未提交* ]] || false
+}
+
+@test "48 pending-accept doc with self-test left uncommitted keeps old result" {
+  write_doc "status: 待验收
+date: 2026-09-06
+author_model: opus-5
+acceptance: hard
+workspace_mode: same-workspace
+branch: $BRANCH
+worktree: $TMP" "$(printf '# 交接：示例\n\n**交接目的**：x\n\n## 最小验收锚点\n- x\n\n## 接手方自测记录（2026-09-07）\n- pass\n')"
+  run bash "$VALIDATOR" "$DOC"
+  [ "$status" -eq 0 ]; [[ "$output" != *未提交* ]] || false
+}
+
+@test "49 doc without workspace_mode is unaffected by the new checks" {
+  echo plan > plan.md
+  write_doc "$VALID_FM" "$(printf '# 交接：示例\n\n**交接目的**：x\n\n见 [计划](plan.md)。\n\n## 最小验收锚点\n- x\n')"
+  run bash "$VALIDATOR" "$DOC"
+  [ "$status" -eq 0 ]; [[ "$output" != *未提交* ]] || false
+}
+
+@test "50 template placeholder for workspace_mode left unreplaced -> exit 1" {
+  write_doc "$VALID_FM
+workspace_mode: <same-workspace|shared-worktree>
+branch: $BRANCH
+worktree: $TMP"
+  commit_doc
+  run bash "$VALIDATOR" "$DOC"
+  [ "$status" -eq 1 ]; [[ "$output" == *workspace_mode* ]] || false
 }

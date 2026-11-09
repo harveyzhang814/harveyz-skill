@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.44.0] - 2026-11-09
+
+### Added
+- `manage-worktree` 0.1.4：新 skill（`devflow` bundle），统一「准备、进入、检测」任务所用的 git worktree。复用任务已有的 worktree，或在用户确认一次后从显式、由规则推出的基线分支新建；按宿主（Claude Code、Codex 及其他）绑定会话；检测当前是否为落在命名的非集成分支上的 linked worktree。只读检测脚本 `inspect-worktree.sh` 一次检查驱动所有动作，兼容各种 `core.hooksPath` 写法、忽略嵌套的 name 键；进入位于 `.claude/worktrees` 之外的 worktree 前先退出当前绑定；路径缺失时明确失败。不合并、不删 worktree、不删分支
+
+### Changed
+- `handoff`：升至 1.18.1。准备工作区与进入工作区都委托给 `manage-worktree`，frontmatter 必须显式写 `workspace_mode`；交接文档及其引用的文件必须先提交，未提交则拒绝交接；计划确认后可选择本会话执行或交接给其他执行方（交接时 `REQUIRED SUB-SKILL` 填 `superpowers:subagent-driven-development`）；`validate-handoff.sh` 与测试同步更新
+- `init-spec`：升至 0.4.0；`develop-plan`：升至 0.5.0。两者开工前改为通过 `manage-worktree` 准备 worktree
+- bundle `superpowers-rewrite` 更名为 `devflow`（`question-me`、`init-spec`、`develop-plan` 目录随之迁移，并新增 `manage-worktree`）。`skills-index.json` 与 `package.json` 的 `files` 已同步；已安装的旧路径需重装
+- `scripts/merge-to-staging.sh`：同步集线器时从其实际位置同步，不再依赖过期的标记
+- 仓库 `CLAUDE.md` / `AGENTS.md`：补充计划后交接给执行模型的规则，worktree 路径统一由 `manage-worktree` 管理
+
+### Fixed
+- 测试中的 bats `[[ ]]` 断言在 bash 3.2 下不生效（errexit 下不会中断），已改为有效断言并新增静态检查 `tests/bats-assertions.test.mjs`
+
 ## [0.43.0] - 2026-11-03
 
 ### Changed
