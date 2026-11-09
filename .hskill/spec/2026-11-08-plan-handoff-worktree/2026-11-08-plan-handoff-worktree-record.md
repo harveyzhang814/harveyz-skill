@@ -153,6 +153,13 @@
 - **状态：** 已批准（question-me 摘要确认）
 - **来源：** Agent 推断
 
+### D22 新增交接检查的生效范围：含 `workspace_mode` 且状态为「待执行」
+
+- **决定：** `validate-handoff.sh` 新增的“已提交”和“必须写明工作区”检查，只在文档含 `workspace_mode` 且 `status` 为「待执行」时生效；既有 bats 用例 37、40 只改 fixture（先提交文档），期望值不变。拟取代 D21 中“无 `workspace_mode` 的旧交接文档校验结果不变”一句的判定口径。
+- **状态：** 待审
+- **来源：** Agent 推断——构建者检查发现：`workspace_mode` 在 handoff 1.17.1 已存在，不能用来区分新旧文档；verify 与 accept 都重跑校验，接手方没有提交义务，不限定状态会让 accept 把已完成的工作误判打回。
+- **代价：** 正处于「待执行」、含 `workspace_mode` 但未提交的在途交接文档会新报 ERROR。
+
 ## 未决（用户留待以后）
 
 - init-skill、contribute-skill 迁到新 skill。
