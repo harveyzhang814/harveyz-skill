@@ -5,6 +5,8 @@
 
 **需求批准：** 用户 2026-11-08 确认 question-me 需求摘要（答复“确认，交回 init-spec”），批准 D1–D15。
 
+**Spec 批准：** `2026-11-08-plan-handoff-worktree-spec.md` v0.2 于 2026-11-08 获用户批准（答复“A，可以，继续develop-plan，然后准备handoff”），覆盖当前决定 D1–D20、D22、D23 及 Spec 第 8 节次要决定 S1–S13。
+
 ## 当前决定
 
 ### D1 目标：计划交给较弱的、可能跨厂商/跨框架的执行模型
@@ -147,16 +149,17 @@
 - **状态：** 已批准（question-me 摘要确认）
 - **来源：** Agent 推断——本仓库 `.claude/settings.json` 已关闭它；它从当前 HEAD 拉分支。
 
-### D21 版本、发布与验收
+### D23 版本、发布与验收（取代 D21）
 
-- **决定：** 改动的 skill 升版本并更新 `skills-index.json` 的 `contentHash`/`contentVersion`，本轮不发 npm。验收：`npm test` 通过；handoff 的 bats 测试为新增检测补无效输入用例；新 skill 登记并通过格式校验；无 `workspace_mode` 的旧交接文档校验结果不变；init-skill、contribute-skill 不改。
-- **状态：** 已批准（question-me 摘要确认）
-- **来源：** Agent 推断
+- **决定：** 改动的 skill 升版本并更新 `skills-index.json` 的 `contentHash`/`contentVersion`，本轮不发 npm。验收：`npm test` 通过；handoff 的 bats 测试为新增检测补无效输入用例；新 skill 登记并通过格式校验；新增交接检查的生效范围按 D22，范围外的交接文档校验结果不变；init-skill、contribute-skill 不改；端到端演练放在合并并从 `staging` 装机之后（Spec S12）。
+- **状态：** 已批准（Spec v0.2 获批）
+- **来源：** Agent 推断（沿用 D21，按 D22 修订旧文档口径）
 
 ### D22 新增交接检查的生效范围：含 `workspace_mode` 且状态为「待执行」
 
 - **决定：** `validate-handoff.sh` 新增的“已提交”和“必须写明工作区”检查，只在文档含 `workspace_mode` 且 `status` 为「待执行」时生效；既有 bats 用例 37、40 只改 fixture（先提交文档），期望值不变。拟取代 D21 中“无 `workspace_mode` 的旧交接文档校验结果不变”一句的判定口径。
-- **状态：** 待审
+- **状态：** 已批准
+- **批准依据：** 用户选择——选项：A 只在「待执行」时生效（推荐）/ B 新增格式标记字段；答复“A，可以”。
 - **来源：** Agent 推断——构建者检查发现：`workspace_mode` 在 handoff 1.17.1 已存在，不能用来区分新旧文档；verify 与 accept 都重跑校验，接手方没有提交义务，不限定状态会让 accept 把已完成的工作误判打回。
 - **代价：** 正处于「待执行」、含 `workspace_mode` 但未提交的在途交接文档会新报 ERROR。
 
@@ -168,4 +171,9 @@
 
 ## 已否定或失效
 
-（暂无）
+### D21 版本、发布与验收（已失效）
+
+- **旧表述：** 改动的 skill 升版本并更新 `contentHash`/`contentVersion`，本轮不发 npm；验收含“无 `workspace_mode` 的旧交接文档校验结果不变”等。
+- **来源：** Agent 推断
+- **失效原因：** `workspace_mode` 在 handoff 1.17.1 已存在，不能区分新旧文档；按 D22 修订判定口径。
+- **替代：** D23

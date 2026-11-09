@@ -1,6 +1,6 @@
 # Spec：计划后交接与统一 worktree 管理
 
-- **版本：** v0.2（送审稿，未批准；v0.1 经构建者检查后修订）
+- **版本：** v0.2，2026-11-08 获用户批准；批准范围为全文（第 2 节“本轮做”及第 8 节 S1–S13）
 - **决定记录：** `2026-11-08-plan-handoff-worktree-record.md`（下文以 D 编号引用）
 - **分支：** `feature/plan-handoff-worktree`
 - **未决事项：** 见第 9 节
@@ -31,7 +31,7 @@
 - 自动路由（D15，留待以后）。
 - 新的 git skill，以及把 init-workflow 的规则并入它（D17，留待以后）。
 - 计划详略标准、`REQUIRED SUB-SKILL` 写法、handoff 四阶段协议主体（D4、D8、D19）。
-- npm 发布（D21）。
+- npm 发布（D23）。
 
 ## 3. 不可接受的结果
 
@@ -39,7 +39,7 @@
 - 交接文档指向的 Spec 或计划没有提交到交接分支，接手方看不到（D8）。
 - 交接文档没有写明工作区路径，接手方要自己猜在哪开工（D8）。
 - 任何调用方在 manage-worktree 不可用时自行兜底建 worktree，导致写法再次分散（D18）。
-- 已验收、执行中、待验收等非「待执行」状态的交接文档，以及没有 `workspace_mode` 字段的文档，校验结果发生变化（D21，范围见 5.6）。
+- 已验收、执行中、待验收等非「待执行」状态的交接文档，以及没有 `workspace_mode` 字段的文档，校验结果发生变化（D22、D23，范围见 5.6）。
 - manage-worktree 删除任何 worktree 或分支（D12）。
 
 ## 4. 现状（实施前提）
@@ -194,7 +194,7 @@ subagent-driven-development       handoff author：用当前 worktree 作为交�
 
 ### 5.8 版本
 
-改动的 skill（manage-worktree 新建为 `0.1.0`；init-spec、develop-plan、handoff 升版本；question-me 只因目录迁移而变动）更新 `skills-index.json` 的 `contentHash` 与 `contentVersion`（D21）。
+改动的 skill（manage-worktree 新建为 `0.1.0`；init-spec、develop-plan、handoff 升版本；question-me 只因目录迁移而变动）更新 `skills-index.json` 的 `contentHash` 与 `contentVersion`（D23）。
 
 ## 6. 状态与异常路径
 
