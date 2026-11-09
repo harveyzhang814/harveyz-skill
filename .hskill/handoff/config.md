@@ -12,8 +12,8 @@ workflow: |
     feat | fix | chore | docs | refactor | test | style | perf
     （注意是 docs 不是 doc——doc(...) 会被 hook 拒绝。）
   - 规范全文：docs/reference/git-workflow.md（自动生成，勿手改）
-  工作区已经建好（frontmatter 的 workspace_mode=shared-worktree，worktree 给出绝对路径，
-  branch 给出分支名）。**不建 worktree、不建分支**，按 `manage-worktree` 的「进入」进入这个已有路径。
+  工作区已经建好（frontmatter 的 workspace_mode 为 shared-worktree 或 same-workspace，
+  两种模式都带 worktree 绝对路径与 branch 分支名）。**不建 worktree、不建分支**，按 `manage-worktree` 的「进入」进入这个已有路径。
   到位后核对：
     git branch --show-current             # 应非空且等于 frontmatter 的 branch
     git config core.hooksPath .githooks  # 不配，staging/main 直提保护失效

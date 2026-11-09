@@ -352,7 +352,7 @@
       "path": "coding/handoff",
       "bundle": "coding",
       "installScope": "project",
-      "contentHash": "86cdfa94414532ab",
+      "contentHash": "ddb0600e5a3171b6",
       "contentVersion": "1.18.0"
     },
     {
@@ -464,7 +464,7 @@
       "path": "devflow/develop-plan",
       "bundle": "devflow",
       "installScope": "global",
-      "contentHash": "e44b0e0eb753db9e",
+      "contentHash": "4876b45834f979d7",
       "contentVersion": "0.5.0"
     },
     {

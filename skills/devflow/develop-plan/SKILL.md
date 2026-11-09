@@ -31,7 +31,7 @@ version: "0.5.0"
 
 **决定边界：**自行确定不改变已定结果的文件拆分、接口和测试；若输入缺口或冲突的不同答案会改变需求、验收结果或关键方案，说明影响：接续 `init-spec` 时返回其审查阶段，独立调用时请用户澄清，待确定后继续。
 
-**工作区：**调用 `manage-worktree` 的「准备」：接续 `init-spec` 时把已批准 Spec 的路径作为锚点传入，沿用 Spec 所在的工作区；独立调用时按它的规则复用或新建。`manage-worktree` 不可用时停下，告诉用户需要安装 `devflow` bundle 中的 manage-worktree。
+**工作区：**调用 `manage-worktree` 的「准备」：接续 `init-spec` 时把已批准 Spec 的路径作为锚点传入，沿用 Spec 所在的工作区；独立调用时按它的规则复用或新建。`manage-worktree` 不可用时停下，告诉用户需要安装 `devflow` bundle 中的 manage-worktree；返回“不适用”时在当前目录继续。
 
 **范围：**输入包含多个独立子系统时，每个子系统编写一份能独立产出可运行、可测试软件的计划；若拆分改变已定范围，按决定边界处理。
 
@@ -53,7 +53,7 @@ version: "0.5.0"
 
 ### 3. 编写计划
 
-**保存位置：**默认 `.hskill/spec/YYYY-MM-DD-<topic>/YYYY-MM-DD-<topic>-plan.md`（项目根目录下），修订沿用原路径。
+**保存位置：**默认 `.hskill/spec/YYYY-MM-DD-<topic>/YYYY-MM-DD-<topic>-plan.md`（工作区根目录下），修订沿用原路径。
 - 接续 `init-spec`：与 Spec 同目录，日期、topic 和同名序号沿用 Spec；用户另有命名约定时遵循其约定。
 - 独立调用：日期取首次建档日，topic 按任务命名，同名时加序号。
 
