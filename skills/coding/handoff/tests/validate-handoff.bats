@@ -497,3 +497,13 @@ worktree: $TMP" "$(printf '# 交接：示例\n\n**交接目的**：x\n\n## 最�
   run bash "$VALIDATOR" "$DOC"
   [ "$status" -eq 0 ]; [[ "$output" != *未提交* ]] || false
 }
+
+@test "50 template placeholder for workspace_mode left unreplaced -> exit 1" {
+  write_doc "$VALID_FM
+workspace_mode: <same-workspace|shared-worktree>
+branch: $BRANCH
+worktree: $TMP"
+  commit_doc
+  run bash "$VALIDATOR" "$DOC"
+  [ "$status" -eq 1 ]; [[ "$output" == *workspace_mode* ]] || false
+}
