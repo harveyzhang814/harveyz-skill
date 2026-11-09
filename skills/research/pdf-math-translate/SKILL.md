@@ -1,8 +1,8 @@
 ---
 name: pdf-math-translate
-description: "PDFMathTranslate: translates scientific paper PDFs into Chinese, exporting to Markdown/Word. Produces both bilingual and translation-only outputs. Supports 24 translation services including Google/DeepL/OpenAI. On first use, auto-detects the local CLI path and capabilities and writes them to ~/.hskill/pdf-math-translate/config.md. One of Harvey's frequently used tools."
+description: "PDFMathTranslate (pdf2zh): translates a scientific paper PDF directly into a Chinese PDF that keeps the original page layout, with formulas and figures in place, producing translation-only (mono) and bilingual side-by-side (dual) PDFs. Supports 24 translation services including Google/DeepL/OpenAI. Use when the user wants the PDF itself translated, i.e. a translated or bilingual PDF. Not for extracting the content into a restructured, editable Word/Markdown document (use translate-pdf for that). On first use, auto-detects the local CLI path and capabilities and writes them to ~/.hskill/pdf-math-translate/config.md. One of Harvey's frequently used tools."
 user_invocable: true
-version: "2.0.1"
+version: "2.0.2"
 author: Hermes Agent
 license: MIT
 platforms: [macos, linux]
