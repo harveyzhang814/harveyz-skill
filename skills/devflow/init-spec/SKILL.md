@@ -2,7 +2,7 @@
 name: init-spec
 description: "Use when the user has decided to build something and it needs to become a reviewed spec before implementation. Builds a decision record from the requirement summary confirmed through question-me, presents major solution choices for user approval, and writes a standalone spec. Triggers: compare solution approaches, turn an idea into a spec, write a design spec, or build a new feature with unresolved requirements or key choices."
 user_invocable: true
-version: "0.3.0"
+version: "0.4.0"
 ---
 
 # 从初步想法到 Spec
@@ -33,6 +33,8 @@ version: "0.3.0"
 **非正常出口。**
 - question-me 判定为发散型并停下，或用户在澄清中决定不做：本技能随之结束，不建决定记录，告诉用户方向收敛后可重新发起。
 
+建档前调用 `manage-worktree` 的「准备」，在返回的工作区里写决定记录与 Spec，并按项目 Git 规则提交；`manage-worktree` 不可用时停下，告诉用户需要安装 `devflow` bundle 中的 manage-worktree；返回“不适用”时在当前目录继续。
+
 **按摘要建档。** “用户原始需求”字段中每项建一条来源为用户原始需求的决定；“决定”字段中每项建一条决定，来源沿用摘要标注；“已查明事实”只在构成决定依据时引用；“假设”中的项作为 Agent 推断建条目；“未决”中的项建为“已提出”状态的条目，在第二阶段处理。摘要已确认的条目标“已批准”，批准依据写“question-me 摘要确认”。
 
 ### 记录决定
@@ -47,7 +49,7 @@ version: "0.3.0"
 
 **随对话更新。** 决定形成、用户答复或核查结果出现时，更新条目及其“已提出、待审、已批准、已否定、已失效”状态，并关联批准依据；调查事实只在构成决定依据时引用，不另记调查流水。
 
-**保存位置。** 默认将决定记录保存到项目根目录下的 `.hskill/spec/YYYY-MM-DD-<topic>/YYYY-MM-DD-<topic>-record.md`；日期取首次建档日，同一任务修订沿用原目录及文件名，独立任务同名时在 topic 后加序号；用户指定位置优先。
+**保存位置。** 默认将决定记录保存到工作区根目录下的 `.hskill/spec/YYYY-MM-DD-<topic>/YYYY-MM-DD-<topic>-record.md`；日期取首次建档日，同一任务修订沿用原目录及文件名，独立任务同名时在 topic 后加序号；用户指定位置优先。
 
 ## 第二阶段：确认需求与方案
 
@@ -97,5 +99,5 @@ Spec 只保留影响实现或验收的细节，详略随任务复杂度调整，
 
 有两个例外。如果他们明确表示不要 Spec、要求直接构建，本技能即告结束，这道门槛也随之解除。经他们同意、在方案审查中做的试做可以构建；它始终标记为用后即弃，如果要保留试做成果，就属于新请求，必须重新经过这道门槛。
 
-项目文档获批后，下一步是制定计划。对于软件项目，调用本 `superpowers-rewrite` bundle 的 `develop-plan` 技能，传递已批准的 Spec 路径、版本和范围；计划与 Spec 放在同一目录。沿用默认命名时，计划文件名为 `YYYY-MM-DD-<topic>-plan.md`，其中日期和 topic 与 Spec 一致。此处不得调用其他技能。
+项目文档获批后，下一步是制定计划。对于软件项目，调用本 `devflow` bundle 的 `develop-plan` 技能，传递已批准的 Spec 路径、版本和范围；计划与 Spec 放在同一目录。沿用默认命名时，计划文件名为 `YYYY-MM-DD-<topic>-plan.md`，其中日期和 topic 与 Spec 一致。此处不得调用其他技能。
 </HARD-GATE>

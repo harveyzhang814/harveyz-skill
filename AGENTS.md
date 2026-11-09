@@ -30,17 +30,18 @@ rsync -a --exclude '.DS_Store' <temporary-directory>/skills/<category>/<skill>/ 
 
 ## Git 与工作区
 
-完整规则见 [Git 工作流规范](docs/reference/git-workflow.md)。每组相关改动使用一条 `feature/`、`fix/`、`chore/`、`doc/` 或 `release/` 分支，并从明确的 `staging` 基线创建分支和 worktree；不要隐式使用当前 checkout 作为基线。每个 worktree 都设置 `core.hooksPath=.githooks` 和 `merge.ff=false`。
+完整规则见 [Git 工作流规范](docs/reference/git-workflow.md)。每组相关改动使用一条 `feature/`、`fix/`、`chore/`、`doc/` 或 `release/` 分支，并从明确的 `staging` 基线创建分支和 worktree；不要隐式使用当前 checkout 作为基线。新建或复用 worktree 一律调用 `manage-worktree`（「准备」「进入」），由它完成建或复用、进入和检测；每个 worktree 都设置 `core.hooksPath=.githooks` 和 `merge.ff=false`。
+
+worktree 路径约定为 `.worktrees/<分支名，/ 换成 +>`（例如 `feature/foo` → `.worktrees/feature+foo`）。`.claude/worktrees/` 下已有的目录是历史遗留，不动。
 
 ```bash
-git worktree add <worktree-path> -b <type>/<slug> staging
 git -C <worktree-path> config core.hooksPath .githooks
 git -C <worktree-path> config merge.ff false
 ```
 
 合并前运行 `git rev-parse --abbrev-ref HEAD` 确认分支。只有用户明确要求“合并”或“完成”时，才从符合条件的工作分支 worktree 运行 `scripts/merge-to-staging.sh`。脚本以本地原子更新和重试方式合并到 `staging`，不会推送 `origin`。不要手动合并到 `main` 或 `staging`，也不要直接向这两个分支提交。
 
-优先使用宿主提供的 worktree 绑定方式；若无法绑定，每条 Git 命令都使用 `git -C <worktree-path>`，文件读写使用绝对路径。单独执行的 `cd` 不会影响后续命令。`.claude/worktrees/` 是本仓库现有的路径约定，包含历史目录，不是必需的宿主 API，也不是通用 worktree 路径。
+优先使用宿主提供的 worktree 绑定方式；若无法绑定，每条 Git 命令都使用 `git -C <worktree-path>`，文件读写使用绝对路径。单独执行的 `cd` 不会影响后续命令。
 
 ## 跨会话交接
 
@@ -54,3 +55,9 @@ git -C <worktree-path> config merge.ff false
 4. 验收通过后，仅交出方负责合并并移除交接 worktree。
 
 共享的交接 worktree 同一时间只允许一方操作。宿主无法直接进入时，使用上文的显式路径方式。
+
+### 计划后交接给执行模型
+
+1. develop-plan 的计划经用户确认后，先询问用户“本会话执行，还是交接给其他执行方”。
+2. 选择本会话执行：按计划开头的 `REQUIRED SUB-SKILL` 执行。选择交接：不调用执行技能；交出方先把计划开头的 `REQUIRED SUB-SKILL` 填为 `superpowers:subagent-driven-development` 并提交计划，再走 `handoff` 的 `author` 阶段。一份计划对应一次交接；交接文档把 Spec 与计划列为权威依据；最小验收锚点写成“各 Task 的测试与计划写定的断言一致，并全部通过”，再加上 Spec 的验收标准。
+3. 接手方按计划执行，可自行决定函数内部实现；不得修改接口签名、测试名称与断言、`Global Constraints`；计划与代码库现状冲突或无法照做时，停止并打回交出方。

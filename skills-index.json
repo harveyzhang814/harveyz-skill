@@ -37,7 +37,7 @@
     "mint": "Skill 生命周期工具（init-skill + publish-skill + archive-skill + dedup-skill + simplify-skill + contribute-skill + fix-skill + runby-opencode + scout-philosophy + learn-skill）",
     "devops": "项目运维工具（clean-git + release-project + sync-hotfix + sync-agent）",
     "agent-canvas": "Agent Canvas 内置 skill（agent-canvas-control — 节点与画布操控；describe-node/relate-node/capture-requirement/relation-review/close-node — 画布节点生命周期治理；capture-intent — 随口需求立成需求节点；judge-release — 对照验收标准逐条取证并写结论；external-closeout — 从外部会话不唤醒目标节点完成收尾）",
-    "superpowers-rewrite": "Superpowers 个人改写版（question-me — 执行前需求澄清；init-spec — 从初步想法到获批 Spec；develop-plan — 制定实施计划）"
+    "devflow": "开发流程（question-me — 执行前需求澄清；init-spec — 从初步想法到获批 Spec；develop-plan — 制定实施计划；manage-worktree — 建立或复用、进出与检测 worktree）"
   },
   "skills": [
     {
@@ -174,8 +174,8 @@
       "contentVersion": "1.4.0"
     },
     {
-      "path": "superpowers-rewrite/question-me",
-      "bundle": "superpowers-rewrite",
+      "path": "devflow/question-me",
+      "bundle": "devflow",
       "installScope": "global",
       "contentHash": "2fcce8b6b7c95753",
       "contentVersion": "4.1.2"
@@ -352,8 +352,8 @@
       "path": "coding/handoff",
       "bundle": "coding",
       "installScope": "project",
-      "contentHash": "9f044fd5eb4a0bfd",
-      "contentVersion": "1.17.1"
+      "contentHash": "ddb0600e5a3171b6",
+      "contentVersion": "1.18.0"
     },
     {
       "path": "coding/fork-topic",
@@ -454,18 +454,25 @@
       "contentVersion": "1.1.0"
     },
     {
-      "path": "superpowers-rewrite/init-spec",
-      "bundle": "superpowers-rewrite",
+      "path": "devflow/init-spec",
+      "bundle": "devflow",
       "installScope": "global",
-      "contentHash": "2a9c5e6d24429bf2",
-      "contentVersion": "0.3.0"
+      "contentHash": "43367ae726e13c20",
+      "contentVersion": "0.4.0"
     },
     {
-      "path": "superpowers-rewrite/develop-plan",
-      "bundle": "superpowers-rewrite",
+      "path": "devflow/develop-plan",
+      "bundle": "devflow",
       "installScope": "global",
-      "contentHash": "893edf779a9df423",
-      "contentVersion": "0.4.0"
+      "contentHash": "4876b45834f979d7",
+      "contentVersion": "0.5.0"
+    },
+    {
+      "path": "devflow/manage-worktree",
+      "bundle": "devflow",
+      "installScope": "global",
+      "contentHash": "e4ab1764599842d4",
+      "contentVersion": "0.1.0"
     }
   ],
   "hooks": [

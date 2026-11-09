@@ -19,6 +19,10 @@ REQUIRED_FIELDS=(status date acceptance)
 UUID_RE='^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$'
 COMMIT_RE='^[0-9a-fA-F]{40}$'
 
+# 「待执行」且带 workspace_mode 的文档才做已提交 / 工作区检查：这是交出方把活交出去的
+# 那一刻，接手方只能从分支上拿到已提交的内容。旧文档（无 workspace_mode）与其它状态不受影响。
+pending_ws=0
+
 errors=()
 warns=()
 err() { errors+=("ERROR: $1"); }
@@ -51,6 +55,18 @@ field() {
     | tr -d '"'"'"
 }
 join_by() { local IFS='|'; echo "$*"; }
+
+# 文件是否「已提交且无改动」：0 = 是；1 = 未跟踪 / 相对 HEAD 有改动（含仓库还没有任何提交）；
+# 2 = 文件不在任何 git 仓库里（调用方应跳过）。一律在文件自己所在的仓库里判断，
+# 并用 --literal-pathspecs 防止文件名里的 * ? [ 被当成通配符。
+committed_state() {
+  local d n
+  d="$(dirname "$1")"; n="$(basename "$1")"
+  git -C "$d" rev-parse --show-toplevel >/dev/null 2>&1 || return 2
+  git --literal-pathspecs -C "$d" ls-files --error-unmatch -- "$n" >/dev/null 2>&1 || return 1
+  git --literal-pathspecs -C "$d" diff --quiet HEAD -- "$n" >/dev/null 2>&1 || return 1
+  return 0
+}
 
 if [[ -z "$fm" ]]; then
   err "缺 frontmatter：文档首行须是 --- 开启的 YAML frontmatter 块"
@@ -101,6 +117,18 @@ else
     fi
     if ! has_field worktree || [[ -z "$(field worktree)" ]]; then
       err "workspace_mode=shared-worktree 时必须填写 worktree"
+    fi
+  fi
+
+  if has_field workspace_mode && has_field status && [[ "$(field status)" == "待执行" ]]; then
+    pending_ws=1
+    # shared-worktree 缺字段已由上面报过，这里只补其它模式，避免同一问题报两遍。
+    if [[ "$workspace_mode" != "shared-worktree" ]]; then
+      for f in branch worktree; do
+        if ! has_field "$f" || [[ -z "$(field "$f")" ]]; then
+          err "「待执行」的交接文档必须填写 branch 和 worktree（缺 ${f}）——接手方照这对字段进入交接工作区"
+        fi
+      done
     fi
   fi
 
@@ -196,18 +224,35 @@ if [[ -n "$fm" ]] && has_field status && [[ "$(field status)" == "待验收" ]];
     || err "status 是「待验收」却没有标题含「自测」的小节——接手方须先逐条实跑最小验收锚点、把结果写成独立小节，才能推到这个状态（复修轮同理，另起「接手方复修自测记录」一节）"
 fi
 
+# ── 「待执行」文档本身必须已提交 ─────────────────────────────────────────────
+if [[ $pending_ws -eq 1 ]]; then
+  committed_state "$file"
+  case $? in
+    1) err "交接文档未提交：${file} 未被 git 跟踪或相对 HEAD 有改动——接手方只能从分支上拿到已提交的内容，请先 commit" ;;
+    2) warn "文档不在 git 仓库里，跳过交接文档已提交检查：$file" ;;
+  esac
+fi
+
 # ── 引用路径（只警告，不阻断：可能指向本次待创建的产物）────────────────────
 while IFS= read -r link; do
   [[ -z "$link" ]] && continue
   [[ "$link" =~ ^(https?|mailto|ftp): ]] && continue
   [[ "$link" == \#* ]] && continue
+  orig="$link"
   link="${link%%#*}"
   [[ -z "$link" || "$link" == *"<"* || "$link" == *">"* ]] && continue
   found=0
+  resolved=""
   for cand in "$dir/$link" "$link" ${toplevel:+"$toplevel/$link"}; do
-    [[ -e "$cand" ]] && { found=1; break; }
+    [[ -e "$cand" ]] && { found=1; resolved="$cand"; break; }
   done
-  [[ $found -eq 0 ]] && warn "引用路径不存在：$link"
+  if [[ $found -eq 0 ]]; then
+    warn "引用路径不存在：$link"
+  elif [[ $pending_ws -eq 1 && -f "$resolved" ]]; then
+    # 已存在的被引用文件也得已提交；不在任何 git 仓库里的文件（状态 2）跳过。
+    committed_state "$resolved"
+    [[ $? -eq 1 ]] && err "引用文件未提交：${orig}（${resolved} 未被 git 跟踪或相对 HEAD 有改动，接手方在分支上看不到它）"
+  fi
 done < <(grep -oE '\]\([^)]+\)' "$file" | sed -E 's/^\]\(//; s/\)$//')
 
 # ── 报告 ───────────────────────────────────────────────────────────────────
