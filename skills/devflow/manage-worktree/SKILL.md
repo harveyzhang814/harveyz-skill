@@ -2,7 +2,7 @@
 name: manage-worktree
 description: "Prepare, enter, inspect, or leave the git worktree a task works in — reuse the task's existing worktree or create one from an explicit, rule-derived base after one user confirmation, bind the session to it on Claude Code, Codex, or any other host, and check it is a linked worktree on a named non-integration branch. Called by init-spec, develop-plan, and handoff; never merges, removes worktrees, or deletes branches. Triggers: 'prepare a worktree', 'enter this worktree', 'check my worktree'."
 user_invocable: true
-version: "0.1.0"
+version: "0.1.1"
 ---
 
 # 管理 worktree
