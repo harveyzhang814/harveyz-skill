@@ -108,10 +108,19 @@
 - **状态：** 已提出
 - **来源：** Agent 推断——D7 要求入口在 AGENTS.md 层，但 develop-plan 原文写“不询问执行方式”，且 Claude Code 读 CLAUDE.md、不读 AGENTS.md。
 
-### D17 新 skill 的名称、归属 bundle、默认路径与分支命名（待方案审查）
+### D17 新 skill 的名称、归属与规则来源
 
-- **状态：** 已提出
-- **来源：** Agent 推断（question-me 节点 G1c3 留方案审查）
+- **决定：**
+  - 名称 `manage-worktree`（Agent 推断：沿用仓库已有的 `manage-` 动词，符合动词-名词规范）。
+  - 归属：放进现 `superpowers-rewrite` bundle，该 bundle 改名为 `devflow`；handoff 仍留在 `coding`。
+  - 规则来源：暂时读取 init-workflow 生成的 `.claude/workflow-config.yml`（受保护分支即集成分支，`merge_from` 推断基线，`branch_naming` 给命名模式）；文件不存在时按 D14 默认。
+  - 默认路径：`.worktrees/<分支名，/ 换成 +>`；本仓库也改用 `.worktrees/`，更新 CLAUDE.md、AGENTS.md、`.hskill/handoff/config.md` 的路径说法，现有 `.claude/worktrees/` 下的目录不动、改称历史遗留。目录未被 git 忽略时，补写 `.gitignore` 的改动并入新建前的确认。
+- **状态：** 已批准
+- **来源：** 用户选择——
+  - 归属：选项 A 放 `coding`（推荐）/ B 放 `superpowers-rewrite`；答复“统一放到superpowers-rewrite，但重命名这个bundle”。追问范围：A 只放 manage-worktree / B 连 handoff 一起（推荐）；答复“A”。追问名称：A `devflow`（推荐）/ B `specflow` / 自定义；答复“A”。
+  - 规则来源：选项 A 读 init-workflow 配置（推荐）/ B 自有配置；答复“暂时读取这份规则，未来融合到新git skill里去”。
+  - 默认路径：选项 A `.claude/worktrees/`（推荐）/ B `.worktrees/`；答复“B”。追问本仓库冲突：A 本仓库也改用 `.worktrees/`（推荐）/ B 保留并加路径字段；答复“A”。
+- **代价：** handoff 与 manage-worktree 分属两个 bundle；改名牵动目录、`package.json`、`tests/skill-portability.test.mjs`、init-spec 正文与 PRD 中的 bundle 名；Claude Code 中启动时固定工作目录的 subagent 无法切进 `.worktrees/` 下的工作区。
 
 ### D18 检测项在新 skill 与 handoff 之间的分工（待方案审查）
 
@@ -139,6 +148,7 @@
 
 - init-skill、contribute-skill 迁到新 skill。
 - 本会话执行与交接之间的自动路由。
+- 新的 git skill，融合 init-workflow 的分支规则；届时 manage-worktree 改读它。
 
 ## 已否定或失效
 
