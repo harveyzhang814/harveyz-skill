@@ -100,13 +100,15 @@
       "path": "research/pdf-math-translate",
       "bundle": "research",
       "installScope": "project",
-      "contentHash": "25fab4891079b9e6",
-      "contentVersion": "2.0.1"
+      "contentHash": "1b2699d778c1ece1",
+      "contentVersion": "2.0.2"
     },
     {
       "path": "research/translate-pdf",
       "bundle": "research",
-      "installScope": "global"
+      "installScope": "global",
+      "contentHash": "a2b8f637a7f33dbb",
+      "contentVersion": "1.0.0"
     },
     {
       "path": "research/clip-url",
