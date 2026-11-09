@@ -1,5 +1,5 @@
 ---
-status: 执行中
+status: 待验收
 date: 2026-11-08
 author_model: claude-opus-5-5
 acceptance: hard
@@ -64,3 +64,43 @@ target_node: 5664a0e0-9e29-4b72-80a4-1294823b4c8e
 3. `npm test` 退出码为 0，不接管道。
 4. 改动范围：`git diff --name-only 0d5c82d09994e9ce167823056880125892dafe5b..HEAD` 列出的文件，必须都属于以下几类：计划各 Task `Files` 中的文件、Task 1 改名前后的 `skills/superpowers-rewrite/` 与 `skills/devflow/` 下的文件、`package.json`、本交接文档、`.hskill/spec/2026-11-08-plan-handoff-worktree/` 下的文件。
 5. 工作区里没有未提交的改动：`git status --porcelain` 输出为空。
+
+## 接手方自测记录（2026-11-08）
+
+自测基线：分支 `feature/plan-handoff-worktree`，代码提交 `ef64515`（自测记录本身在其后的一个仅改本文档的提交里）。逐条按最小验收锚点全集实跑，判成败的命令均未接管道。
+
+1. **锚点 1（各 Task 第 4 步 `Run`）— pass**
+   - T1 `node --test tests/devflow-bundle.test.mjs tests/skill-portability.test.mjs` → 18/18，exit 0；`bats tests/skills.bats` → 1..8，exit 0
+   - T2 `bats skills/devflow/manage-worktree/tests/inspect-worktree.bats` → 1..14，exit 0
+   - T3 `node --test tests/manage-worktree-skill.test.mjs` → 2/2，exit 0；`bats tests/skills.bats` → exit 0
+   - T4 `node --test tests/devflow-worktree-callers.test.mjs tests/devflow-bundle.test.mjs` → 5/5，exit 0；`bats tests/skills.bats` → exit 0
+   - T5 `bats skills/coding/handoff/tests/validate-handoff.bats` → 1..49，exit 0
+   - T6 `node --test tests/handoff-worktree.test.mjs` → 4/4，exit 0；`bats skills/coding/handoff/tests/validate-handoff.bats tests/skills.bats` → 1..57，exit 0
+   - T7 `node --test tests/repo-handoff-rules.test.mjs` → 4/4，exit 0
+2. **锚点 2（测试名称与断言和计划一致）— pass**
+   - 用脚本把计划 Step 1 的代码块与落盘文件逐字比对：`tests/devflow-bundle.test.mjs`、`tests/manage-worktree-skill.test.mjs`、`tests/devflow-worktree-callers.test.mjs`、`tests/handoff-worktree.test.mjs`、`tests/repo-handoff-rules.test.mjs`、`inspect-worktree.bats` 均 IDENTICAL。
+   - `validate-handoff.bats`：`git diff 0d5c82d..HEAD` 里没有任何被删除的行（只有新增）；用例 37、40 只多了计划指定的 `git add … && git commit`（以及 40 的 `branch`/`worktree` 两行）；用例 41–49 整块与计划逐字一致。
+3. **锚点 3（`npm test`）— pass**：`npm test`（不接管道）exit 0，378 条，371 通过，0 失败，7 跳过（需要真实宿主，改动前就跳过）。
+4. **锚点 4（改动范围）— pass**：`git diff --name-only 0d5c82d09994e9ce167823056880125892dafe5b..HEAD` 共 31 个文件，全部属于允许类别（计划各 Task 的 Files、`skills/superpowers-rewrite/`→`skills/devflow/` 的改名文件、`package.json`、本交接文档、`.hskill/spec/2026-11-08-plan-handoff-worktree/` 下三份文档）。
+5. **锚点 5（工作区干净）— pass**：自测记录提交后 `git status --porcelain` 输出为空。
+
+无红，不带任何红送验。
+
+### 过程与偏差（供验收参考）
+
+按 `superpowers:subagent-driven-development` 执行：每个 Task 由子 agent 实施并过一次 spec+质量 review，Task 3 经一轮修复，最后一次整分支 review 后做了一次修复波（`ef64515`）。逐条裁决（`Ruling:`）：
+
+- **Task 3 提交标题缩短**：计划里的标题 81 字符，被 commit-msg hook（上限 80）拒绝，改为 `add skill to prepare, enter and inspect worktrees`。无测试断言提交文案。
+- **Task 3 提交的 trailer 由 Opus 改成 Sonnet**：只 amend 了提交信息（`d494993`→`a9d5a49`），内容未变，与系统要求的署名一致。
+- **Task 6 把 `/skills` 选择器那句挪进 Phase 触发判定第 1 条**：删掉整节「平台适配」时保留与 worktree 无关的行为说明，超出简报，review 认可。错则删一个括号。
+- **Task 7 同时改了 CLAUDE.md 交接第 4、5 条**（`EnterWorktree`/`ExitWorktree` → `manage-worktree` 的「进入」）：简报未列，但不改会与同文件新规则自相矛盾，review 认可。错则还原这两条。
+- **整分支 review 后的修复波（`ef64515`，在计划 Files 内）**：交接 SKILL.md 里可选的“核对结论”附上后须一并提交并重跑校验（否则新增的“已提交”检查会把交接打回）；author 第 4 步补“准备检测不通过先修好”；`.hskill/handoff/config.md` 的 `workspace_mode` 措辞覆盖 `same-workspace`；develop-plan 保存位置改“工作区根目录下”并补“不适用”处理。
+
+### 未处理、留给交出方判断的遗留项（均未阻断验收）
+
+- `skills/devflow/manage-worktree/scripts/inspect-worktree.sh` 比较 `core.hooksPath` 是字面量：`./.githooks` 或主工作树的绝对路径会被误判 `hooks-missing`。本仓库配置为 `.githooks`，不受影响；脚本与测试被计划锁定，所以没改。
+- 同一脚本把 `protected` 条目下更深层的 `name:` 也当成分支名（本仓库规则文件格式不会触发）。
+- `skills/coding/handoff/references/config-schema.md:12-14` 与 `skills/coding/handoff/evals/evals.json:115` 仍保留旧的“分宿主写进入命令/兜底”说法；不在计划 Files 内，需另行处理。
+- 「准备」在当前目录不是 git 仓库时先返回「不适用」，不看锚点（罕见边缘情形）。
+- CLAUDE.md “它替你守住三条硬约束”略夸大（第 3 条是合并前动作，`manage-worktree` 不合并）；AGENTS.md 交接段比 CLAUDE.md 简略。
+- Spec §7 第 6 条端到端演练按约定留在合并之后，本次未做。
