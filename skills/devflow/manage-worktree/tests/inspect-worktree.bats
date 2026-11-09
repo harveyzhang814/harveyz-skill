@@ -186,3 +186,32 @@ YML
   run bash "$SCRIPT" --path "$wt"
   [[ "$output" == *"integration=main staging"* ]] || false; [[ "$output" == *"base=staging"* ]] || false
 }
+
+# ── reusable 与 default_path ───────────────────────────────────────────────
+@test "19 reusable ignores hooks-missing but not linked/root/detached/integration" {
+  with_githooks
+  wt="$(linked feature/x)"
+  run bash "$SCRIPT" --path "$wt"
+  [ "$status" -eq 1 ]; [[ "$output" == *"reason=hooks-missing"* ]] || false; [[ "$output" == *"reusable=yes"* ]] || false
+  run bash "$SCRIPT" --path "$REPO"
+  [[ "$output" == *"reusable=no"* ]] || false
+  mkdir "$wt/sub"
+  run bash "$SCRIPT" --path "$wt/sub"
+  [[ "$output" == *"reusable=no"* ]] || false
+}
+
+@test "20 --branch gives default_path under the main worktree root, even from a linked worktree" {
+  wt="$(linked feature/x)"
+  run bash "$SCRIPT" --path "$wt" --branch feature/foo
+  [[ "$output" == *"default_path=$REPO/.worktrees/feature+foo"* ]] || false
+}
+
+@test "21 without --branch default_path is empty" {
+  run bash "$SCRIPT" --path "$REPO"
+  [[ "$output" == *$'\ndefault_path=\n'* ]] || false
+}
+
+@test "22 --branch without a value -> exit 2" {
+  run bash "$SCRIPT" --branch
+  [ "$status" -eq 2 ]
+}

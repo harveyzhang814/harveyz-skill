@@ -1,12 +1,15 @@
 #!/usr/bin/env bash
 # inspect-worktree.sh — 只读检测：目标目录是不是一个可以直接开工的 linked worktree。
 #
-# 用法：inspect-worktree.sh [--path <目录>] [--type <分支类型>]
-#   --path  待检测目录，默认当前目录
-#   --type  要开的分支类型，默认 feature（用来从规则文件里推出基线分支）
+# 用法：inspect-worktree.sh [--path <目录>] [--type <分支类型>] [--branch <分支名>]
+#   --path    待检测目录，默认当前目录
+#   --type    要开的分支类型，默认 feature（用来从规则文件里推出基线分支）
+#   --branch  要为之建 worktree 的分支名，只用来算 default_path；不给时 default_path 为空
 #
 # stdout 每行一个 key=value，键依次为：
-#   root linked branch detached rule_file integration is_integration base hooks verdict
+#   root linked branch detached rule_file integration is_integration base default_path
+#   hooks reusable verdict
+# reusable=yes 表示除 hooks 外全部通过（可直接复用为任务工作区）。
 # 每个未通过的项另起一行 reason=<代码>，代码取
 #   not-root | not-linked | detached | integration-branch | hooks-missing
 #
@@ -19,16 +22,18 @@
 set -uo pipefail
 
 usage() {
-  echo "用法：inspect-worktree.sh [--path <目录>] [--type <分支类型>]${1:+（$1）}" >&2
+  echo "用法：inspect-worktree.sh [--path <目录>] [--type <分支类型>] [--branch <分支名>]${1:+（$1）}" >&2
   exit 2
 }
 
 path="."
 type="feature"
+want_branch=""
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --path) [[ $# -ge 2 && -n "$2" ]] || usage "--path 缺少参数"; path="$2"; shift 2 ;;
     --type) [[ $# -ge 2 && -n "$2" ]] || usage "--type 缺少参数"; type="$2"; shift 2 ;;
+    --branch) [[ $# -ge 2 && -n "$2" ]] || usage "--branch 缺少参数"; want_branch="$2"; shift 2 ;;
     *) usage "未知参数：$1" ;;
   esac
 done
@@ -47,6 +52,11 @@ root="$(cd "$top" && pwd -P)" || not_git
 git_dir="$(cd "$root" && cd "$(git rev-parse --absolute-git-dir)" && pwd -P)"
 common_dir="$(cd "$root" && cd "$(git rev-parse --git-common-dir)" && pwd -P)"
 if [[ "$git_dir" != "$common_dir" ]]; then linked="yes"; else linked="no"; fi
+main_root="$(dirname "$common_dir")"   # 主工作树的根，不是当前链接 worktree 的根
+
+# ── default_path：<主工作树根>/.worktrees/<分支名，/ 换成 +> ─────────────────
+default_path=""
+[[ -n "$want_branch" ]] && default_path="$main_root/.worktrees/${want_branch//\//+}"
 
 # ── 当前分支；detached 时 branch 为空 ───────────────────────────────────────
 branch="$(git -C "$root" symbolic-ref --short -q HEAD 2>/dev/null || true)"
@@ -173,7 +183,6 @@ if [[ -d "$root/.githooks" ]]; then
   if [[ -n "$hp" ]]; then
     [[ "$hp" != /* ]] && hp="$root/$hp"
     hp_real="$(cd "$hp" 2>/dev/null && pwd -P || true)"
-    main_root="$(dirname "$common_dir")"
     if [[ -n "$hp_real" && ( "$hp_real" == "$root/.githooks" || "$hp_real" == "$main_root/.githooks" ) ]]; then
       hooks="ok"
     fi
@@ -189,6 +198,7 @@ reasons=""
 [[ "$hooks" == "missing" ]] && reasons="$reasons hooks-missing"
 
 if [[ -z "$reasons" ]]; then verdict="pass"; else verdict="fail"; fi
+if [[ -z "${reasons// hooks-missing/}" ]]; then reusable="yes"; else reusable="no"; fi
 
 echo "root=$root"
 echo "linked=$linked"
@@ -198,7 +208,9 @@ echo "rule_file=$rule_file"
 echo "integration=$integration"
 echo "is_integration=$is_integration"
 echo "base=$base"
+echo "default_path=$default_path"
 echo "hooks=$hooks"
+echo "reusable=$reusable"
 echo "verdict=$verdict"
 for r in $reasons; do echo "reason=$r"; done
 
