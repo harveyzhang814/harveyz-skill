@@ -102,11 +102,13 @@
 - **状态：** 已批准（question-me 摘要确认）
 - **来源：** 用户选择——选项：A 只在用户明确要求时（推荐）/ B 每次询问。答复：“先B，未来准备做自动路由”。
 
-### D16 询问点与交接入口放在哪（待方案审查）
+### D16 询问点与交接入口：develop-plan 只留接口，规则写在项目指令
 
-- **决定：** 待定。
-- **状态：** 已提出
-- **来源：** Agent 推断——D7 要求入口在 AGENTS.md 层，但 develop-plan 原文写“不询问执行方式”，且 Claude Code 读 CLAUDE.md、不读 AGENTS.md。
+- **决定：** develop-plan 第 5 步把“不询问执行方式”改为“项目指令另有规定时按项目指令，否则沿用默认”；“计划确认后询问执行方式、选交接则走 handoff author”的规则写在 AGENTS.md，并按现有做法同步写入 CLAUDE.md（Claude Code 不读 AGENTS.md）。
+- **状态：** 已批准
+- **来源：** 用户选择——选项：A 完全按 D7、develop-plan 不改 / B 修订 D7、写进 develop-plan / C 折中、develop-plan 只留接口（推荐）。答复：“C”。CLAUDE.md 同步为 Agent 推断的次要决定，随 Spec 送审。
+- **依据：** develop-plan 原文写“不询问执行方式”，与 D15 直接矛盾；Claude Code 读 CLAUDE.md、不读 AGENTS.md。
+- **代价：** 只有在项目指令里写了规则的仓库会询问。
 
 ### D17 新 skill 的名称、归属与规则来源
 
@@ -132,10 +134,12 @@
 - **来源：** 用户选择——分工：选项 A 按两类拆分（推荐）/ B handoff 校验脚本全包 / C 校验脚本调用 manage-worktree 的脚本；答复“A”。缺失处理：选项 A 停下提示安装（推荐）/ B 调用方自带最简兜底；答复“A”。
 - **代价：** 工作区类检测靠 agent 按指令调用，不在机器门禁里；未安装 manage-worktree 的用户在该步卡住。
 
-### D19 计划开头 `REQUIRED SUB-SKILL` 的写法（待方案审查）
+### D19 计划开头 `REQUIRED SUB-SKILL` 不改
 
-- **状态：** 已提出
-- **来源：** Agent 推断——现写法只指向 Claude Code 执行技能。
+- **决定：** 保持现写法；交接时接手方同样按它使用 `subagent-driven-development`。
+- **状态：** 已批准
+- **来源：** 用户原始需求——“subagent-driven-development不是claude专属，codex等其他框架也适用”（纠正 Agent 此前“只认 Claude Code”的错误前提）。
+- **依据：** superpowers 7.0.0 的 `using-superpowers/references/codex-tools.md` 为 Codex 适配了 subagent 派发；该 skill 在宿主无 subagent 能力时自行退回 `executing-plans`；它开工前检测已在 worktree 中即不再新建。opencode 未在其适配清单中，是否支持派发 subagent 未查证。
 
 ### D20 与 `superpowers:using-git-worktrees` 的关系
 
