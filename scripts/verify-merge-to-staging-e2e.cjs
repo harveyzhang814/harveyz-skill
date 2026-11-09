@@ -482,6 +482,48 @@ async function scenarioH() {
   }
 }
 
+// 发版流程：hub 切到 release 分支提交版本改动，在 hub 上跑本脚本合回 staging——此时没有任何
+// worktree checkout 着 staging，同步被跳过，持久化的同步基线停在发版前；hub 再切回 staging。
+// 下一次合并若拿这个过期基线 detach，会把发版改动误当成 hub 的在制品 stash 起来，pop 回
+// 新提交时与同一行的后续改动凭空冲突。同步基线必须取 hub 工作树真实所在的提交。
+async function scenarioI() {
+  const { root, hubDir, agentADir, agentBDir } = setupScenarioRepo('i');
+  try {
+    fs.writeFileSync(path.join(agentADir, 'fileA.txt'), 'from agent A\n');
+    git(agentADir, ['add', '.']);
+    git(agentADir, ['commit', '-q', '-m', 'feat: agent A change']);
+    let res = runMergeScript(agentADir);
+    assert(res.status === 0, `第一次合并应成功，实际: ${res.status}\n${res.stderr}`);
+
+    git(hubDir, ['checkout', '-q', '-b', 'release/x']);
+    fs.writeFileSync(path.join(hubDir, 'shared.txt'), 'line1\nRELEASE EDIT\nline3\n');
+    git(hubDir, ['commit', '-q', '-am', 'chore(release): bump']);
+    res = runMergeScript(hubDir);
+    assert(res.status === 0, `release 合回 staging 应成功，实际: ${res.status}\n${res.stderr}`);
+    git(hubDir, ['checkout', '-q', 'staging']);
+    // hub 上一份与合并无关的真实在制品，必须原样保留
+    fs.writeFileSync(path.join(hubDir, 'notes.txt'), 'hub notes\n');
+
+    git(agentBDir, ['reset', '-q', '--hard', 'staging']);
+    fs.writeFileSync(path.join(agentBDir, 'shared.txt'), 'line1\nFROM AGENT B\nline3\n');
+    git(agentBDir, ['commit', '-q', '-am', 'feat: agent B edits the released line']);
+    res = runMergeScript(agentBDir);
+    assert(res.status === 0, `第三次合并应成功，实际: ${res.status}\n${res.stderr}`);
+
+    const shared = fs.readFileSync(path.join(hubDir, 'shared.txt'), 'utf8');
+    assert(shared === 'line1\nFROM AGENT B\nline3\n', `hub 的 shared.txt 应同步为最新提交，实际:\n${shared}`);
+    assert(fs.readFileSync(path.join(hubDir, 'notes.txt'), 'utf8') === 'hub notes\n', 'hub 的真实在制品必须原样保留');
+    const status = git(hubDir, ['status', '--porcelain']).stdout.trim();
+    assert(status === '?? notes.txt', `hub 的 status 应只剩那份在制品，实际:\n${status}`);
+    assert(git(hubDir, ['stash', 'list']).stdout.trim() === '', 'hub 的 stash list 应为空');
+    assert(!res.stderr.includes('冲突'), `不应出现冲突提示，实际 stderr:\n${res.stderr}`);
+
+    console.log('  [场景 I] PASS：同步基线跨过发版后仍取 hub 真实所在提交，不会把发版改动误当在制品。');
+  } finally {
+    cleanup(root);
+  }
+}
+
 async function main() {
   const scenarios = [
     ['场景 A：两个 agent 几乎同时发起', scenarioA],
@@ -492,6 +534,7 @@ async function main() {
     ['场景 F：hub 与合并改到同一文件的不同行', scenarioF],
     ['场景 G：多 agent 并发 + hub 脏（并发锁压力测试）', scenarioG],
     ['场景 H：残留锁过期回收', scenarioH],
+    ['场景 I：发版后同步基线过期', scenarioI],
   ];
 
   let failures = 0;
