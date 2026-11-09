@@ -122,10 +122,15 @@
   - 默认路径：选项 A `.claude/worktrees/`（推荐）/ B `.worktrees/`；答复“B”。追问本仓库冲突：A 本仓库也改用 `.worktrees/`（推荐）/ B 保留并加路径字段；答复“A”。
 - **代价：** handoff 与 manage-worktree 分属两个 bundle；改名牵动目录、`package.json`、`tests/skill-portability.test.mjs`、init-spec 正文与 PRD 中的 bundle 名；Claude Code 中启动时固定工作目录的 subagent 无法切进 `.worktrees/` 下的工作区。
 
-### D18 检测项在新 skill 与 handoff 之间的分工（待方案审查）
+### D18 检测分工与缺失时的处理
 
-- **状态：** 已提出
-- **来源：** Agent 推断
+- **决定：**
+  - 工作区类检测（是否为已登记的 worktree 根、是否为命名分支、是否为集成分支、是否 detached、hooks 是否配置）归 manage-worktree；handoff 在 author 写交接、接手方 verify 两个时点要求先通过 manage-worktree 的“进入并检测”，不通过不放行。
+  - `validate-handoff.sh` 只补文档类检测：引用的 Spec 与计划已提交到该分支、交接文档已提交、接手方为另一会话时写明工作区路径。
+  - manage-worktree 不可用时，调用方（init-spec、develop-plan、handoff）停下，告诉用户安装 `devflow` bundle 中的 manage-worktree，不自带兜底。
+- **状态：** 已批准
+- **来源：** 用户选择——分工：选项 A 按两类拆分（推荐）/ B handoff 校验脚本全包 / C 校验脚本调用 manage-worktree 的脚本；答复“A”。缺失处理：选项 A 停下提示安装（推荐）/ B 调用方自带最简兜底；答复“A”。
+- **代价：** 工作区类检测靠 agent 按指令调用，不在机器门禁里；未安装 manage-worktree 的用户在该步卡住。
 
 ### D19 计划开头 `REQUIRED SUB-SKILL` 的写法（待方案审查）
 
