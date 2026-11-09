@@ -1,5 +1,5 @@
 ---
-status: 待验收
+status: 已验收
 date: 2026-11-08
 author_model: claude-opus-5-5
 acceptance: hard
@@ -104,3 +104,34 @@ target_node: 5664a0e0-9e29-4b72-80a4-1294823b4c8e
 - 「准备」在当前目录不是 git 仓库时先返回「不适用」，不看锚点（罕见边缘情形）。
 - CLAUDE.md “它替你守住三条硬约束”略夸大（第 3 条是合并前动作，`manage-worktree` 不合并）；AGENTS.md 交接段比 CLAUDE.md 简略。
 - Spec §7 第 6 条端到端演练按约定留在合并之后，本次未做。
+
+## 交出方验收记录（2026-11-08）
+
+在交接工作区 `/Users/harveyzhang96/Projects/harveyz-skill/.claude/worktrees/feature+plan-handoff-worktree` 验收，分支 `feature/plan-handoff-worktree`，HEAD 为 `a130a18`。接手方的自测结论不采信，以下各条都由交出方重新运行。
+
+机器校验：`bash ~/.claude/skills/handoff/scripts/validate-handoff.sh docs/commute/2026-11-08-plan-handoff-worktree-handoff.md`，退出码 0。
+
+1. **锚点 1：pass**
+   - `node --test tests/devflow-bundle.test.mjs tests/skill-portability.test.mjs tests/manage-worktree-skill.test.mjs tests/devflow-worktree-callers.test.mjs tests/handoff-worktree.test.mjs tests/repo-handoff-rules.test.mjs`：30 条通过，0 条失败，退出码 0。
+   - `bats tests/skills.bats skills/devflow/manage-worktree/tests/inspect-worktree.bats skills/coding/handoff/tests/validate-handoff.bats`：71 条，0 条 `not ok`，退出码 0。
+2. **锚点 2：pass**
+   - 用脚本从计划各 Task 的 Step 1 中提取代码块，与落盘文件逐字比对。Task 1、2、3、4、6、7 的测试文件全部逐字一致。Task 5 的两段代码都原样出现在 `validate-handoff.bats` 中。
+   - `git diff 0d5c82d..HEAD -- skills/coding/handoff/tests/validate-handoff.bats` 中没有删除行。用例 37、40 只有计划允许的 fixture 改动，用例 41–49 为新增。
+3. **锚点 3：pass**。`npm test` 退出码 0：
+   - node 测试 378 条，371 条通过、0 条失败、7 条跳过；
+   - skill 自带测试 15 套全部通过。
+4. **锚点 4：pass**。`git diff --name-only -M 0d5c82d..HEAD` 共 31 个文件，全部属于锚点允许的范围。`git diff 3646a0e..HEAD`（交接之后）没有触及 `.hskill/spec/`，`docs/commute/` 下只改了本文档。
+5. **锚点 5：pass**。验收开始时 `git status --porcelain` 输出为空。
+
+**回归面核对**
+- 被波及的组件（hskill 打包、所有 SKILL.md 的格式校验、handoff 校验脚本、question-me 渲染脚本）的既有测试都已覆盖：前三项包含在 `npm test` 中。question-me 渲染脚本的测试不在 `npm test` 的发现范围内，单独运行了 `python3 -m pytest -q skills/devflow/question-me/scripts/test_render_tree.py`，9 条通过。
+- `package.json` 的 `files` 中已包含 `skills/devflow/manage-worktree/`，不再出现 `superpowers-rewrite`。
+- 锚点没有点名的回归项均为绿色。
+
+**结论：达成，status 置为「已验收」。**
+
+接手方列出的偏差与遗留项都不构成未达成，转为后续跟进，由交出方汇报给用户：
+- `inspect-worktree.sh` 用字面值比较 `core.hooksPath`，没有覆盖 `./.githooks` 和绝对路径两种写法；
+- `inspect-worktree.sh` 会把 `protected` 下更深层的 `name:` 也当作分支名；
+- handoff 的 `references/config-schema.md` 与 `evals/evals.json` 里仍是旧说法；
+- CLAUDE.md 中“三条硬约束”的措辞需要调整。
