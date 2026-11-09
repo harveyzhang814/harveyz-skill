@@ -1,6 +1,6 @@
 # 计划后交接与统一 worktree 管理 实施计划
 
-> **For agentic workers:** REQUIRED SUB-SKILL: 使用 [执行交接时确定的执行技能] 逐项实施；用 `- [ ]` 跟踪步骤。
+> **For agentic workers:** REQUIRED SUB-SKILL: 使用 `superpowers:subagent-driven-development` 逐项实施；用 `- [ ]` 跟踪步骤。
 
 **Goal:** 新建 `manage-worktree` skill 统一负责 worktree 的建立或复用、进出与检测；把 `superpowers-rewrite` bundle 改名为 `devflow`；让 init-spec、develop-plan、handoff 调用它，并在仓库指令中加入“计划后交接给执行模型”的规则。
 
