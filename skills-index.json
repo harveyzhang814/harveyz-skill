@@ -28,7 +28,7 @@
     }
   ],
   "bundleMeta": {
-    "research": "研究工具（learn-video + extract-vision + survey-skillrepo + learn-paper + extract-cognition + probe-session + clip-url + fetch-paper + explain-design）",
+    "research": "研究工具（learn-video + extract-vision + survey-skillrepo + learn-paper + extract-cognition + probe-session + clip-url + fetch-paper + explain-design + translate-pdf）",
     "feed": "追更工具（manage-creators — 人与渠道名册；sync-xtimeline + sync-ytchannel + sync-website — 按名册跑增量抓取；capture-opinion — 给人记一笔判断）",
     "creative": "创意工具（capture-todo（仅人工调用）+ capture-insight）",
     "coding": "程序工具（init-project + init-workflow + setup-debug + init-goal + capture-vocab + rephrase + explain-pm）",
@@ -100,8 +100,15 @@
       "path": "research/pdf-math-translate",
       "bundle": "research",
       "installScope": "project",
-      "contentHash": "25fab4891079b9e6",
-      "contentVersion": "2.0.1"
+      "contentHash": "1b2699d778c1ece1",
+      "contentVersion": "2.0.2"
+    },
+    {
+      "path": "research/translate-pdf",
+      "bundle": "research",
+      "installScope": "global",
+      "contentHash": "a2b8f637a7f33dbb",
+      "contentVersion": "1.0.0"
     },
     {
       "path": "research/clip-url",
