@@ -12,7 +12,7 @@ status: 待执行            # 待执行|执行中|待验收|已验收|打回
 date: <YYYY-MM-DD>        # 须与文件名的日期段一致
 author_model: <model>
 acceptance: hard          # hard|soft，决定 accept 阶段逐条实跑还是定性判断
-workspace_mode: shared-worktree # same-workspace（复用交出方当前工作区）|shared-worktree（新建交接工作区）
+workspace_mode: <same-workspace|shared-worktree> # 二选一：same-workspace（复用交出方当前工作区）|shared-worktree（新建交接工作区）；占位不替换会被校验拦下
 branch: <分支名>          # workspace_mode 存在时必填
 worktree: <绝对路径>      # workspace_mode 存在时必填
 base_commit: <40位提交>   # 可选：分叉基线，不是文档/最终改动的“当前提交”

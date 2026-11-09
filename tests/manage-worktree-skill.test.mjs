@@ -14,9 +14,9 @@ test('manage-worktree is registered in devflow with matching version and hash', 
   const index = JSON.parse(await readFile(resolve(root, 'skills-index.json'), 'utf8'))
   const entry = index.skills.find(s => s.path === 'devflow/manage-worktree')
   assert.match(body, /^name: manage-worktree$/m)
-  assert.match(body, /^version: ["']?0\.1\.0["']?$/m)
+  assert.match(body, /^version: ["']?0\.1\.1["']?$/m)
   assert.equal(entry.bundle, 'devflow')
-  assert.equal(entry.contentVersion, '0.1.0')
+  assert.equal(entry.contentVersion, '0.1.1')
   assert.equal(entry.contentHash, hash(body))
 })
 

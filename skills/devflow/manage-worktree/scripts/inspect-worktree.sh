@@ -73,6 +73,8 @@ for cand in .hskill/init-workflow/workflow-config.yml workflow-config.yml .claud
 done
 
 # 按缩进解析 branches: → protected: 下的 "- name:" 与其后的 merge_from 列表。
+# 只认条目这一层的 name / merge_from 键（iind 为条目短横线的缩进，kind 为条目内键的缩进），
+# 条目下更深层的 name:（如 reviewers 列表）不当作分支名。
 # mode=names 逐行输出受保护分支名；mode=base 输出第一个 merge_from 含 <type>/* 的分支名。
 parse_rules() { # parse_rules <names|base> <文件>
   awk -v mode="$1" -v want="$type/*" '
@@ -100,18 +102,25 @@ parse_rules() { # parse_rules <names|base> <文件>
       }
       if (!inb) next
       if (!inprot) {
-        if (text ~ /^protected:/) { inprot = 1; pind = ind }
+        if (text ~ /^protected:/) { inprot = 1; pind = ind; iind = -1; kind = -1 }
         next
       }
       if (ind <= pind && text !~ /^-/) { inprot = 0; inmf = 0; next }
-      if (text ~ /^(- +)?name:/) {
-        sub(/^(- +)?name:/, "", text)
+      if (text ~ /^-/ && (iind < 0 || ind == iind)) {   # 新的受保护分支条目
+        iind = ind
+        match(text, /^-[ \t]*/)
+        kind = ind + RLENGTH
+        text = substr(text, RLENGTH + 1)
+        ind = kind; cur = ""; inmf = 0
+      }
+      if (ind == kind && text ~ /^name:/) {
+        sub(/^name:/, "", text)
         cur = clean(text); inmf = 0
         if (mode == "names" && cur != "") print cur
         next
       }
-      if (text ~ /^(- +)?merge_from:/) {
-        sub(/^(- +)?merge_from:/, "", text)
+      if (ind == kind && text ~ /^merge_from:/) {
+        sub(/^merge_from:/, "", text)
         text = clean(text)
         if (text ~ /^\[.*\]$/) {            # 行内写法 [a, "b/*"]
           inmf = 0
@@ -155,12 +164,20 @@ if [[ -n "$branch" ]]; then
 fi
 
 # ── hooks：有 .githooks/ 目录时，core.hooksPath 须指向它 ─────────────────────
+# 相对路径按 git 的规则相对工作区根解析；写成 ./.githooks/、本工作区或主工作树下
+# .githooks 的绝对路径，都算指向它。
 hooks="n/a"
 if [[ -d "$root/.githooks" ]]; then
   hooks="missing"
-  hp="$(git -C "$root" config --get core.hooksPath 2>/dev/null || true)"
-  hp="${hp%/}"
-  if [[ "$hp" == ".githooks" || "$hp" == "$root/.githooks" ]]; then hooks="ok"; fi
+  hp="$(git -C "$root" config --type=path --get core.hooksPath 2>/dev/null || true)"
+  if [[ -n "$hp" ]]; then
+    [[ "$hp" != /* ]] && hp="$root/$hp"
+    hp_real="$(cd "$hp" 2>/dev/null && pwd -P || true)"
+    main_root="$(dirname "$common_dir")"
+    if [[ -n "$hp_real" && ( "$hp_real" == "$root/.githooks" || "$hp_real" == "$main_root/.githooks" ) ]]; then
+      hooks="ok"
+    fi
+  fi
 fi
 
 # ── 判定 ───────────────────────────────────────────────────────────────────

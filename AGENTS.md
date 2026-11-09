@@ -30,13 +30,15 @@ rsync -a --exclude '.DS_Store' <temporary-directory>/skills/<category>/<skill>/ 
 
 ## Git 与工作区
 
-完整规则见 [Git 工作流规范](docs/reference/git-workflow.md)。每组相关改动使用一条 `feature/`、`fix/`、`chore/`、`doc/` 或 `release/` 分支，并从明确的 `staging` 基线创建分支和 worktree；不要隐式使用当前 checkout 作为基线。新建或复用 worktree 一律调用 `manage-worktree`（「准备」「进入」），由它完成建或复用、进入和检测；每个 worktree 都设置 `core.hooksPath=.githooks` 和 `merge.ff=false`。
+完整规则见 [Git 工作流规范](docs/reference/git-workflow.md)。每组相关改动使用一条 `feature/`、`fix/`、`chore/`、`doc/` 或 `release/` 分支，并从明确的 `staging` 基线创建分支和 worktree；不要隐式使用当前 checkout 作为基线。新建或复用 worktree 一律调用 `manage-worktree`（「准备」「进入」），由它完成建或复用、进入和检测。`core.hooksPath=.githooks` 与 `merge.ff=false` 是仓库级设置，存在共享的 `.git/config` 里，对所有 worktree 生效，只在新 clone 时设置一次。
 
 worktree 路径约定为 `.worktrees/<分支名，/ 换成 +>`（例如 `feature/foo` → `.worktrees/feature+foo`）。`.claude/worktrees/` 下已有的目录是历史遗留，不动。
 
+新 clone 后执行一次：
+
 ```bash
-git -C <worktree-path> config core.hooksPath .githooks
-git -C <worktree-path> config merge.ff false
+git config core.hooksPath .githooks
+git config merge.ff false
 ```
 
 合并前运行 `git rev-parse --abbrev-ref HEAD` 确认分支。只有用户明确要求“合并”或“完成”时，才从符合条件的工作分支 worktree 运行 `scripts/merge-to-staging.sh`。脚本以本地原子更新和重试方式合并到 `staging`，不会推送 `origin`。不要手动合并到 `main` 或 `staging`，也不要直接向这两个分支提交。

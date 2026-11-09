@@ -353,7 +353,7 @@
       "bundle": "coding",
       "installScope": "project",
       "contentHash": "ddb0600e5a3171b6",
-      "contentVersion": "1.18.0"
+      "contentVersion": "1.18.1"
     },
     {
       "path": "coding/fork-topic",
@@ -472,7 +472,7 @@
       "bundle": "devflow",
       "installScope": "global",
       "contentHash": "e4ab1764599842d4",
-      "contentVersion": "0.1.0"
+      "contentVersion": "0.1.1"
     }
   ],
   "hooks": [
