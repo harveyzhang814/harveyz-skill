@@ -17,5 +17,5 @@ teardown() {
 @test "version --check: unreachable registry exits non-zero with an error on stderr" {
   run env HSKILL_NPM_REGISTRY="http://127.0.0.1:1" node "${CLI}" version --check
   [ "$status" -eq 1 ]
-  [[ "$output" == *"Could not check npm registry"* ]]
+  [[ "$output" == *"Could not check npm registry"* ]] || false
 }

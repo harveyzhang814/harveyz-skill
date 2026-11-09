@@ -84,7 +84,7 @@ Key points:
 HOME="${MOCK_HOME}" node "${CLI}" install --skill foo --target claude --scope user \
   2>/tmp/bats-install-stderr >/dev/null | cat
 err="$(_stderr)"
-[[ "$err" == *"skipped"* ]]
+[[ "$err" == *"skipped"* ]] || false
 ```
 
 - Project-scope installs use `process.cwd()` as the base. Run from a temp dir:
@@ -228,7 +228,7 @@ Hook 测试验证脚本文件落地 + settings.json 注册两个产物，以及�
 @test "hooks install: skips with up-to-date when version matches" {
   hskill hooks install --name check-similar-branch --scope user --force
   run hskill hooks install --name check-similar-branch --scope user
-  [[ "$output" == *"up-to-date"* ]]
+  [[ "$output" == *"up-to-date"* ]] || false
 }
 
 @test "hooks install --force: updates version in installed script" {
@@ -243,7 +243,7 @@ Hook 测试验证脚本文件落地 + settings.json 注册两个产物，以及�
   # inject older version into installed script
   sed -i '' 's/# version: .*/# version: 0.0.1/' "${MOCK_HOME}/.claude/hooks/check-similar-branch.sh"
   run hskill hooks install --name check-similar-branch --scope user
-  [[ "$output" == *"outdated"* ]]
+  [[ "$output" == *"outdated"* ]] || false
 }
 ```
 
@@ -318,6 +318,7 @@ These constants are defined in both `interactive.bats` and `install.bats`:
 | Asserting skip message in `$output` of `_install` | Skips go to stderr — use `$(_stderr)` |
 | Project scope test installing to `MOCK_HOME` | Must `cd` to the project dir before running the CLI |
 | Adding a new skill fixture | Pull name, src, ver, bundle from `skills-index.json` — do not hardcode paths |
+| Writing an assertion as a bare `[[ ... ]]` | bats runs on macOS `/bin/bash` 3.2, where a failing `[[ ]]` does not fail the test unless it is the last command. Write `[[ ... ]] \|\| false` (or use `[ ]`); `tests/bats-assertions.test.mjs` rejects bare ones |
 
 ---
 

@@ -41,16 +41,16 @@ process.stdout.write(JSON.stringify(r))
 @test "checkToolInstalled: binary absent → none" {
   run _check
   [ "$status" -eq 0 ]
-  [[ "$output" == *'"status":"none"'* ]]
-  [[ "$output" == *'"version":"—"'* ]]
+  [[ "$output" == *'"status":"none"'* ]] || false
+  [[ "$output" == *'"version":"—"'* ]] || false
 }
 
 @test "checkToolInstalled: binary present, no data JSON → up-to-date (cannot compare)" {
   touch "${MOCK_HOME}/.local/bin/fake-tool"
   run _check
   [ "$status" -eq 0 ]
-  [[ "$output" == *'"status":"up-to-date"'* ]]
-  [[ "$output" == *'"version":"—"'* ]]
+  [[ "$output" == *'"status":"up-to-date"'* ]] || false
+  [[ "$output" == *'"version":"—"'* ]] || false
 }
 
 @test "checkToolInstalled: binary present, versions match → up-to-date" {
@@ -59,8 +59,8 @@ process.stdout.write(JSON.stringify(r))
     > "${MOCK_HOME}/.hskill/tools/fake-tool.json"
   run _check
   [ "$status" -eq 0 ]
-  [[ "$output" == *'"status":"up-to-date"'* ]]
-  [[ "$output" == *'"version":"1.0.0"'* ]]
+  [[ "$output" == *'"status":"up-to-date"'* ]] || false
+  [[ "$output" == *'"version":"1.0.0"'* ]] || false
 }
 
 @test "checkToolInstalled: binary present, versions differ → update" {
@@ -69,8 +69,8 @@ process.stdout.write(JSON.stringify(r))
     > "${MOCK_HOME}/.hskill/tools/fake-tool.json"
   run _check
   [ "$status" -eq 0 ]
-  [[ "$output" == *'"status":"update"'* ]]
-  [[ "$output" == *'"version":"0.9.0"'* ]]
+  [[ "$output" == *'"status":"update"'* ]] || false
+  [[ "$output" == *'"version":"0.9.0"'* ]] || false
 }
 
 @test "checkToolInstalled: malformed data JSON → up-to-date (safe fallback)" {
@@ -79,7 +79,7 @@ process.stdout.write(JSON.stringify(r))
     > "${MOCK_HOME}/.hskill/tools/fake-tool.json"
   run _check
   [ "$status" -eq 0 ]
-  [[ "$output" == *'"status":"up-to-date"'* ]]
+  [[ "$output" == *'"status":"up-to-date"'* ]] || false
 }
 
 @test "checkToolInstalled: data JSON missing version field → up-to-date" {
@@ -88,7 +88,7 @@ process.stdout.write(JSON.stringify(r))
     > "${MOCK_HOME}/.hskill/tools/fake-tool.json"
   run _check
   [ "$status" -eq 0 ]
-  [[ "$output" == *'"status":"up-to-date"'* ]]
+  [[ "$output" == *'"status":"up-to-date"'* ]] || false
 }
 
 @test "checkToolInstalled: source tool.json missing → up-to-date (safe fallback)" {
@@ -98,7 +98,7 @@ process.stdout.write(JSON.stringify(r))
   rm "${MOCK_SRC}/tool.json"
   run _check
   [ "$status" -eq 0 ]
-  [[ "$output" == *'"status":"up-to-date"'* ]]
+  [[ "$output" == *'"status":"up-to-date"'* ]] || false
 }
 
 # ── installer: tool.json copied to data dir ────────────────────────────────────
@@ -139,7 +139,7 @@ await installTools(
   run _preview \
     fake-tool 1.0.0 tool "${MOCK_SRC}"
   [ "$status" -eq 0 ]
-  [[ "$output" == *"not installed"* ]]
+  [[ "$output" == *"not installed"* ]] || false
 }
 
 @test "preview: tool installed and up-to-date shows 'ok'" {
@@ -149,7 +149,7 @@ await installTools(
   run _preview \
     fake-tool 1.0.0 tool "${MOCK_SRC}"
   [ "$status" -eq 0 ]
-  [[ "$output" == *"ok"* ]]
+  [[ "$output" == *"ok"* ]] || false
 }
 
 @test "preview: tool installed with older version shows 'update'" {
@@ -159,5 +159,5 @@ await installTools(
   run _preview \
     fake-tool 1.0.0 tool "${MOCK_SRC}"
   [ "$status" -eq 0 ]
-  [[ "$output" == *"update"* ]]
+  [[ "$output" == *"update"* ]] || false
 }
