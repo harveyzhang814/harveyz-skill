@@ -131,7 +131,7 @@ _skill_version() {
     --skill "${SKILL1_NAME}" --target claude --scope user \
     2>"${STDERR_FILE}" >/dev/null | cat
   err="$(_stderr)"
-  [[ "$err" == *"skipped"* ]] || [[ "$err" == *"up-to-date"* ]]
+  [[ "$err" == *"skipped"* ]] || [[ "$err" == *"up-to-date"* ]] || false
 }
 
 @test "install (no --force): outdated skill skipped, old version preserved" {
@@ -162,8 +162,8 @@ _skill_version() {
   out=$(HOME="${MOCK_HOME}" node "${CLI}" install \
     --bundle research --target claude --scope user --force --json 2>/dev/null | cat)
   echo "$out" | node -e "JSON.parse(require('fs').readFileSync('/dev/stdin','utf8'))"
-  [[ "$out" == *'"installed"'* ]]
-  [[ "$out" == *"${SKILL1_NAME}"* ]]
+  [[ "$out" == *'"installed"'* ]] || false
+  [[ "$out" == *"${SKILL1_NAME}"* ]] || false
 }
 
 # ── multiple skills ───────────────────────────────────────────────────────────
@@ -181,9 +181,9 @@ _skill_version() {
   out=$(HOME="${MOCK_HOME}" node "${CLI}" install \
     --skill "${SKILL1_NAME}" --target claude --scope user --force --json 2>/dev/null | cat)
   echo "$out" | node -e "JSON.parse(require('fs').readFileSync('/dev/stdin','utf8'))"
-  [[ "$out" == *'"skills"'* ]]
-  [[ "$out" == *'"claude"'* ]]
-  [[ "$out" == *"${SKILL1_NAME}"* ]]
+  [[ "$out" == *'"skills"'* ]] || false
+  [[ "$out" == *'"claude"'* ]] || false
+  [[ "$out" == *"${SKILL1_NAME}"* ]] || false
 }
 
 @test "install --skill --json: skipped entry has reason field" {
@@ -194,8 +194,8 @@ _skill_version() {
   out=$(HOME="${MOCK_HOME}" node "${CLI}" install \
     --skill "${SKILL1_NAME}" --target claude --scope user --json 2>/dev/null | cat)
   echo "$out" | node -e "JSON.parse(require('fs').readFileSync('/dev/stdin','utf8'))"
-  [[ "$out" == *'"skipped"'* ]]
-  [[ "$out" == *'"reason"'* ]]
+  [[ "$out" == *'"skipped"'* ]] || false
+  [[ "$out" == *'"reason"'* ]] || false
 }
 
 # ── uninstall skill ───────────────────────────────────────────────────────────

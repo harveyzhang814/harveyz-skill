@@ -165,9 +165,9 @@ _skill_version() {
 
   run _run_interactive --force
 
-  [[ "$output" == *"Skills installed"* ]]
-  [[ "$output" == *"${SKILL1_NAME}"* ]]
-  [[ "$output" == *"Nothing selected, exiting"* ]]
+  [[ "$output" == *"Skills installed"* ]] || false
+  [[ "$output" == *"${SKILL1_NAME}"* ]] || false
+  [[ "$output" == *"Nothing selected, exiting"* ]] || false
   [ "$(_fzf_call_count)" -eq 4 ]   # skill + target + scope + loop-back
   [ "$status" -eq 0 ]
 }
@@ -216,8 +216,8 @@ _skill_version() {
   run _run_interactive --force
 
   [ "$status" -eq 0 ]
-  [[ "$output" == *"Cancelled"* ]]
-  [[ "$output" != *"Skills installed"* ]]
+  [[ "$output" == *"Cancelled"* ]] || false
+  [[ "$output" != *"Skills installed"* ]] || false
   [ "$(_fzf_call_count)" -eq 2 ]   # skill + target(Esc)
 }
 
@@ -231,8 +231,8 @@ _skill_version() {
   run _run_interactive --force
 
   [ "$status" -eq 0 ]
-  [[ "$output" == *"Cancelled"* ]]
-  [[ "$output" != *"Skills installed"* ]]
+  [[ "$output" == *"Cancelled"* ]] || false
+  [[ "$output" != *"Skills installed"* ]] || false
   [ "$(_fzf_call_count)" -eq 3 ]   # skill + target + scope(Esc)
 }
 
@@ -249,8 +249,8 @@ _skill_version() {
   run _run_interactive --force
 
   [ "$status" -eq 0 ]
-  [[ "$output" == *"Cancelled"* ]]
-  [[ "$output" != *"Skills installed"* ]]
+  [[ "$output" == *"Cancelled"* ]] || false
+  [[ "$output" != *"Skills installed"* ]] || false
   [ "$(_fzf_call_count)" -eq 2 ]   # skill + action(Esc)
 }
 
@@ -260,8 +260,8 @@ _skill_version() {
   run _run_interactive --force
 
   [ "$status" -eq 0 ]
-  [[ "$output" == *"Nothing selected, exiting"* ]]
-  [[ "$output" != *"Skills installed"* ]]
+  [[ "$output" == *"Nothing selected, exiting"* ]] || false
+  [[ "$output" != *"Skills installed"* ]] || false
   [ "$(_fzf_call_count)" -eq 1 ]
 }
 
@@ -269,7 +269,7 @@ _skill_version() {
   run env HOME="${MOCK_HOME}" PATH="${MOCK_BIN}:${PATH}" NO_COLOR=1 \
     node "${CLI}" 2>&1
   [ "$status" -eq 1 ]
-  [[ "$output" == *"requires a TTY"* ]]
+  [[ "$output" == *"requires a TTY"* ]] || false
 }
 
 # ── multi-select ──────────────────────────────────────────────────────────────
@@ -301,8 +301,8 @@ _skill_version() {
 
   run _run_interactive --force
 
-  [[ "$output" == *"${SKILL1_NAME}"* ]]
-  [[ "$output" == *"${SKILL2_NAME}"* ]]
+  [[ "$output" == *"${SKILL1_NAME}"* ]] || false
+  [[ "$output" == *"${SKILL2_NAME}"* ]] || false
 }
 
 # ── already-installed skill ───────────────────────────────────────────────────
@@ -325,8 +325,8 @@ _skill_version() {
   run _run_interactive
 
   [ "$status" -eq 0 ]
-  [[ "$output" == *"skipped"* ]]
-  [[ "$output" == *"up-to-date"* ]]
+  [[ "$output" == *"skipped"* ]] || false
+  [[ "$output" == *"up-to-date"* ]] || false
 }
 
 @test "interactive: outdated skill skipped in non-TTY (no overwrite prompt)" {
@@ -347,7 +347,7 @@ _skill_version() {
   run _run_interactive
 
   [ "$status" -eq 0 ]
-  [[ "$output" == *"skipped"* ]]
+  [[ "$output" == *"skipped"* ]] || false
   # Old version must still be in place.
   [ "$(_skill_version "${MOCK_HOME}/.claude/skills/${SKILL1_NAME}/SKILL.md")" = "0.0.1" ]
 }
@@ -439,7 +439,7 @@ _skill_version() {
 
   run _run_interactive --force
 
-  [[ "$output" == *"${SKILL1_NAME}"* ]]
+  [[ "$output" == *"${SKILL1_NAME}"* ]] || false
   [ -f "${MOCK_HOME}/.claude/hooks/${HOOK_NAME_INTERACTIVE}.sh" ]
 }
 

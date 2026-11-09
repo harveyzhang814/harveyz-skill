@@ -59,7 +59,7 @@ _install_old_version() {
   run _upgrade --skill "${SKILL_NAME}" --target cursor --scope user
   [ "$status" -eq 0 ]
   [ ! -f "${MOCK_HOME}/.cursor/skills/${SKILL_NAME}/SKILL.md" ]
-  [[ "$output" == *"up to date"* ]]
+  [[ "$output" == *"up to date"* ]] || false
 }
 
 @test "upgrade --skill --target: skips already up-to-date skill silently" {
@@ -68,7 +68,7 @@ _install_old_version() {
     --skill "${SKILL_NAME}" --target claude --scope user --force 2>/dev/null | cat
   run _upgrade --skill "${SKILL_NAME}" --target claude --scope user
   [ "$status" -eq 0 ]
-  [[ "$output" == *"up to date"* ]]
+  [[ "$output" == *"up to date"* ]] || false
 }
 
 @test "upgrade --target: upgrades all outdated skills on that target" {
@@ -84,7 +84,7 @@ _install_old_version() {
 @test "upgrade (global): nothing installed prints up-to-date message" {
   run _upgrade
   [ "$status" -eq 0 ]
-  [[ "$output" == *"up to date"* ]]
+  [[ "$output" == *"up to date"* ]] || false
 }
 
 # ── --json output ─────────────────────────────────────────────────────────────
@@ -94,7 +94,7 @@ _install_old_version() {
   run _upgrade --skill "${SKILL_NAME}" --target claude --scope user --json
   [ "$status" -eq 0 ]
   echo "$output" | node -e "JSON.parse(require('fs').readFileSync('/dev/stdin','utf8'))"
-  [[ "$output" == *'"skills"'* ]]
+  [[ "$output" == *'"skills"'* ]] || false
 }
 
 @test "upgrade --json: installed array contains skill name after upgrade" {
@@ -123,5 +123,5 @@ _install_old_version() {
 @test "upgrade --skill unknown: exits 1 with error" {
   run _upgrade_exit --skill __nonexistent__ --target claude --scope user
   [ "$status" -eq 1 ]
-  [[ "$(_stderr)" == *"Unknown skill"* ]]
+  [[ "$(_stderr)" == *"Unknown skill"* ]] || false
 }

@@ -53,28 +53,28 @@ _stderr() {
 @test "--help --json includes agent_notes and commands array" {
   run _cli --help --json
   [ "$status" -eq 0 ]
-  [[ "$output" == *'"agent_notes"'* ]]
-  [[ "$output" == *'"commands"'* ]]
+  [[ "$output" == *'"agent_notes"'* ]] || false
+  [[ "$output" == *'"commands"'* ]] || false
 }
 
 @test "--help --json install command includes mutual exclusion note" {
   run _cli --help --json
   [ "$status" -eq 0 ]
-  [[ "$output" == *'mutually exclusive'* ]]
+  [[ "$output" == *'mutually exclusive'* ]] || false
 }
 
 @test "--help --json --target enum includes opencode" {
   run _cli --help --json
   [ "$status" -eq 0 ]
-  [[ "$output" == *'"opencode"'* ]]
+  [[ "$output" == *'"opencode"'* ]] || false
 }
 
 @test "status --json emits valid single JSON object to stdout" {
   run _cli status --json
   [ "$status" -eq 0 ]
   echo "$output" | node -e "JSON.parse(require('fs').readFileSync('/dev/stdin','utf8'))"
-  [[ "$output" == *'"skills"'* ]]
-  [[ "$output" == *'"tools"'* ]]
+  [[ "$output" == *'"skills"'* ]] || false
+  [[ "$output" == *'"tools"'* ]] || false
 }
 
 @test "status --json includes opencode in each skill's user scope" {
@@ -92,8 +92,8 @@ _stderr() {
   run _cli list --json
   [ "$status" -eq 0 ]
   echo "$output" | node -e "JSON.parse(require('fs').readFileSync('/dev/stdin','utf8'))"
-  [[ "$output" == *'"skills"'* ]]
-  [[ "$output" == *'"bundle"'* ]]
+  [[ "$output" == *'"skills"'* ]] || false
+  [[ "$output" == *'"bundle"'* ]] || false
 }
 
 @test "outdated --json emits valid single JSON object to stdout" {
@@ -106,8 +106,8 @@ _stderr() {
   run _cli info survey-skillrepo --json
   [ "$status" -eq 0 ]
   echo "$output" | node -e "JSON.parse(require('fs').readFileSync('/dev/stdin','utf8'))"
-  [[ "$output" == *'"type"'* ]]
-  [[ "$output" == *'"skill"'* ]]
+  [[ "$output" == *'"type"'* ]] || false
+  [[ "$output" == *'"skill"'* ]] || false
 }
 
 # ── install --json: unified single object ─────────────────────────────────────
@@ -118,8 +118,8 @@ _stderr() {
   local stdout_content="$output"
   if [ -n "$stdout_content" ]; then
     echo "$stdout_content" | node -e "JSON.parse(require('fs').readFileSync('/dev/stdin','utf8'))"
-    [[ "$stdout_content" == *'"skills"'* ]]
-    [[ "$stdout_content" != *'"tools"'* ]]
+    [[ "$stdout_content" == *'"skills"'* ]] || false
+    [[ "$stdout_content" != *'"tools"'* ]] || false
   fi
 }
 
@@ -143,9 +143,9 @@ JSEOF
   local out
   out="$(HOME="${MOCK_HOME}" "${NODE}" "${jsfile}" 2>/dev/null)"
   echo "$out" | node -e "JSON.parse(require('fs').readFileSync('/dev/stdin','utf8'))"
-  [[ "$out" == *'"installed"'* ]]
-  [[ "$out" == *'"skipped"'* ]]
-  [[ "$out" == *'"failed"'* ]]
+  [[ "$out" == *'"installed"'* ]] || false
+  [[ "$out" == *'"skipped"'* ]] || false
+  [[ "$out" == *'"failed"'* ]] || false
 }
 
 # ── mutual exclusion ──────────────────────────────────────────────────────────
@@ -153,7 +153,7 @@ JSEOF
 @test "--skill and --tool combined: exits 1 with error" {
   run _cli_exit install --skill survey-skillrepo --tool hub --target claude
   [ "$status" -eq 1 ]
-  [[ "$(_stderr)" == *"cannot be combined"* ]]
+  [[ "$(_stderr)" == *"cannot be combined"* ]] || false
 }
 
 @test "--skill and --tool combined with --json: stderr is JSON error" {
@@ -164,8 +164,8 @@ JSEOF
   local err
   err="$(cat "${errfile}")"
   echo "$err" | node -e "JSON.parse(require('fs').readFileSync('/dev/stdin','utf8'))"
-  [[ "$err" == *'"error":true'* ]]
-  [[ "$err" == *'"message"'* ]]
+  [[ "$err" == *'"error":true'* ]] || false
+  [[ "$err" == *'"message"'* ]] || false
 }
 
 # ── error JSON in --json mode ─────────────────────────────────────────────────
@@ -182,13 +182,13 @@ JSEOF
   local err
   err="$(cat "${errfile}")"
   echo "$err" | node -e "JSON.parse(require('fs').readFileSync('/dev/stdin','utf8'))"
-  [[ "$err" == *'"error":true'* ]]
+  [[ "$err" == *'"error":true'* ]] || false
 }
 
 @test "unknown skill (human mode): exits 1 with plain text on stderr" {
   run _cli_exit install --skill __nonexistent__ --target claude --scope user
   [ "$status" -eq 1 ]
-  [[ "$(_stderr)" == *"✗"* ]]
+  [[ "$(_stderr)" == *"✗"* ]] || false
   # stdout should be empty
   [ -z "$output" ]
 }
@@ -208,7 +208,7 @@ JSEOF
     2>/dev/null | cat)"
 
   echo "$stdout_out" | node -e "JSON.parse(require('fs').readFileSync('/dev/stdin','utf8'))"
-  [[ "$stdout_out" == *'"skipped"'* ]]
+  [[ "$stdout_out" == *'"skipped"'* ]] || false
 }
 
 @test "non-TTY install with vars.json: uses defaults, does not hang" {
@@ -231,7 +231,7 @@ process.stdout.write(JSON.stringify(r))
   local out
   out="$(HOME="${MOCK_HOME}" node --input-type=module -e "$js" 2>/dev/null | cat)"
   echo "$out" | node -e "JSON.parse(require('fs').readFileSync('/dev/stdin','utf8'))"
-  [[ "$out" == *'"installed":["fake-varsed-tool"]'* ]]
+  [[ "$out" == *'"installed":["fake-varsed-tool"]'* ]] || false
 
   # Verify the default was substituted in the installed script
   grep -q "hello" "${MOCK_TOOL_DIR}/fake-varsed-tool"
@@ -257,7 +257,7 @@ process.stdout.write(JSON.stringify(r))
   local out
   out="$(HOME="${MOCK_HOME}" node --input-type=module -e "$js" 2>/dev/null | cat)"
   echo "$out" | node -e "JSON.parse(require('fs').readFileSync('/dev/stdin','utf8'))"
-  [[ "$out" == *'"installed":["fake-zshrc-tool"]'* ]]
+  [[ "$out" == *'"installed":["fake-zshrc-tool"]'* ]] || false
 
   # zshrc must NOT have been patched (no confirm() in non-TTY)
   [ ! -f "${MOCK_HOME}/.zshrc" ] || ! grep -q "fake-zshrc-tool" "${MOCK_HOME}/.zshrc"
@@ -272,8 +272,8 @@ process.stdout.write(JSON.stringify(r))
   local err
   err="$(cat "${errfile}")"
   echo "$err" | node -e "JSON.parse(require('fs').readFileSync('/dev/stdin','utf8'))"
-  [[ "$err" == *'"error":true'* ]]
-  [[ "$err" == *'"message"'* ]]
+  [[ "$err" == *'"error":true'* ]] || false
+  [[ "$err" == *'"message"'* ]] || false
 }
 
 @test "uninstall --json: missing name emits JSON error on stderr" {
@@ -283,7 +283,7 @@ process.stdout.write(JSON.stringify(r))
   local err
   err="$(cat "${errfile}")"
   echo "$err" | node -e "JSON.parse(require('fs').readFileSync('/dev/stdin','utf8'))"
-  [[ "$err" == *'"error":true'* ]]
+  [[ "$err" == *'"error":true'* ]] || false
 }
 
 @test "uninstall --json: removes installed skill and reports removed:true" {
@@ -292,7 +292,7 @@ process.stdout.write(JSON.stringify(r))
   run bash -c "HOME='${MOCK_HOME}' node '${CLI}' uninstall survey-skillrepo --scope user --target claude --json"
   [ "$status" -eq 0 ]
   echo "$output" | node -e "JSON.parse(require('fs').readFileSync('/dev/stdin','utf8'))"
-  [[ "$output" == *'"removed": true'* ]]
+  [[ "$output" == *'"removed": true'* ]] || false
   [ ! -d "${MOCK_HOME}/.claude/skills/survey-skillrepo" ]
 }
 
@@ -300,7 +300,7 @@ process.stdout.write(JSON.stringify(r))
   run bash -c "HOME='${MOCK_HOME}' node '${CLI}' uninstall survey-skillrepo --scope user --target claude --json"
   [ "$status" -eq 0 ]
   echo "$output" | node -e "JSON.parse(require('fs').readFileSync('/dev/stdin','utf8'))"
-  [[ "$output" == *'"removed": false'* ]]
+  [[ "$output" == *'"removed": false'* ]] || false
 }
 
 # ── stdout flushing ───────────────────────────────────────────────────────────
