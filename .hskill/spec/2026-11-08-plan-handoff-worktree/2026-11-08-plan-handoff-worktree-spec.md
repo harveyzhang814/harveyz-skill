@@ -1,6 +1,6 @@
 # Spec：计划后交接与统一 worktree 管理
 
-- **版本：** v0.1（送审稿，未批准）
+- **版本：** v0.2（送审稿，未批准；v0.1 经构建者检查后修订）
 - **决定记录：** `2026-11-08-plan-handoff-worktree-record.md`（下文以 D 编号引用）
 - **分支：** `feature/plan-handoff-worktree`
 - **未决事项：** 见第 9 节
@@ -39,7 +39,7 @@
 - 交接文档指向的 Spec 或计划没有提交到交接分支，接手方看不到（D8）。
 - 交接文档没有写明工作区路径，接手方要自己猜在哪开工（D8）。
 - 任何调用方在 manage-worktree 不可用时自行兜底建 worktree，导致写法再次分散（D18）。
-- 没有 `workspace_mode` 字段的旧交接文档，校验结果发生变化（D21）。
+- 已验收、执行中、待验收等非「待执行」状态的交接文档，以及没有 `workspace_mode` 字段的文档，校验结果发生变化（D21，范围见 5.6）。
 - manage-worktree 删除任何 worktree 或分支（D12）。
 
 ## 4. 现状（实施前提）
@@ -47,8 +47,9 @@
 - worktree 逻辑分散在五处：handoff（author 第 4 步建 worktree，以及文末「平台适配」一节的分宿主进出写法）、develop-plan（第 1 步“工作区”，无规则时调用 `superpowers:using-git-worktrees`）、init-skill（`.worktrees/feature-init-<name>`）、contribute-skill（`.claude/worktrees/feature+contribute-<name>`）、CLAUDE.md 与 AGENTS.md 各写一份建 worktree 的步骤。
 - init-spec 没有工作区步骤，决定记录和 Spec 写在项目根下的 `.hskill/spec/` 中，位置取决于会话当前所在目录。
 - develop-plan 第 5 步原文：“确认后直接使用 `superpowers:subagent-driven-development` 执行，不询问执行方式”。
-- `validate-handoff.sh` 不检查引用文件或交接文档是否已提交；`same-workspace` 模式下跳过全部工作区校验。
-- 本仓库的分支规则以结构化形式存在于 init-workflow 生成的 `.claude/workflow-config.yml`：`branches.protected`（`main`、`staging`），各受保护分支的 `merge_from`（`staging` 接收 `feature/*`、`fix/*`、`chore/*`、`doc/*`），`branch_naming.allowed_patterns`。该文件没有 worktree 路径字段。
+- `validate-handoff.sh` 不检查引用文件或交接文档是否已提交；`same-workspace` 模式下跳过全部工作区校验。`workspace_mode` 字段在 handoff 1.17.1 已存在：模板、`docs/commute/` 下两份文档、bats 用例 35–40 都在用；bats 默认 fixture 的 `status` 为「待执行」，文档未被 git 跟踪。
+- handoff 的 verify 与 accept 都会重跑 `validate-handoff.sh`；接手方在执行中修改 `status`、写自测记录后，没有提交义务。
+- init-workflow 按以下顺序查找规则文件：`.hskill/init-workflow/workflow-config.yml`（主路径）→ 项目根 `workflow-config.yml` → `.claude/workflow-config.yml`（后两者为向后兼容，init-workflow 会询问是否迁到主路径）。本仓库目前在第三个位置，其中有：`branches.protected`（`main`、`staging`），各受保护分支的 `merge_from`（`staging` 接收 `feature/*`、`fix/*`、`chore/*`、`doc/*`），`branch_naming.allowed_patterns`。该文件没有 worktree 路径字段。
 - 本仓库的 `core.hooksPath=.githooks` 与 `merge.ff=false` 记录在共享的 `.git/config` 中，对所有 worktree 生效。
 - `.worktrees/` 与 `.claude/worktrees/` 都已被 `.gitignore` 忽略。
 - bundle 名即 `skills/` 下的目录名。`superpowers-rewrite` 当前含 question-me、init-spec、develop-plan；引用该名称的位置有 `skills-index.json`（3 个 skill 的 `bundle` 字段和 `bundleMeta` 键）、`package.json` 的 `files`（由 `scripts/generate-npmignore.js` 从 `skills-index.json` 生成）、`tests/skill-portability.test.mjs`、init-spec 正文（HARD-GATE 一段）、`docs/product/PRD.md`。
@@ -92,12 +93,12 @@ subagent-driven-development       handoff author：用当前 worktree 作为交�
 
 | 动作 | 输入 | 行为 | 结果 |
 |---|---|---|---|
-| 准备 | 任务 topic（用于分支名 slug）；可选的期望分支类型 | 按下文“建或复用”的规则找到或建出工作区，进入，检测 | 工作区绝对路径、分支名、基线（新建时）、检测结果 |
+| 准备 | 任务 topic（用于分支名 slug）；可选的期望分支类型；可选的锚点文件路径（本任务已产生的决定记录、Spec 或计划） | 按下文“建或复用”的规则找到或建出工作区，进入，检测 | 工作区绝对路径、分支名、基线（新建时）、检测结果 |
 | 进入 | 已有工作区的绝对路径；可选的期望分支名 | 按宿主进入该路径并检测；分支与期望不符时报告，不自行切换 | 同上 |
 | 检测 | 无（检测当前所在工作区） | 只读检测 | 检测结果 |
 | 离开 | 无 | 按宿主离开并保留工作区 | — |
 
-**规则来源（D17）：** 读取 `.claude/workflow-config.yml`：
+**规则来源（D17）：** 按 init-workflow 的查找顺序读取第一个存在的规则文件（`.hskill/init-workflow/workflow-config.yml` → 项目根 `workflow-config.yml` → `.claude/workflow-config.yml`），只读不迁移：
 
 - **集成分支：** `branches.protected` 中列出的分支。
 - **基线推断：** 新分支类型（默认 `feature`）对应的 `<type>/*` 出现在哪个受保护分支的 `merge_from` 里，就用那个分支（本仓库为 `staging`）。
@@ -107,16 +108,19 @@ subagent-driven-development       handoff author：用当前 worktree 作为交�
 
 **建或复用（按顺序判断，命中即止）：**
 
-1. 当前目录是已登记 worktree 的根，处于命名分支且不是集成分支 → 复用，不询问（D14）。
-2. 期望分支已存在，并已被某个 worktree checkout → 复用那个 worktree，不询问。
-3. 期望分支已存在，但没有被任何 worktree checkout → 为它新增 worktree（不建新分支），在默认路径下；告知路径，不询问基线。
-4. 其他情况（含主目录停在某条功能分支上、处于 detached HEAD、处于集成分支）→ 新建：先向用户一次确认基线、分支名、路径；基线按“规则来源”推断，当前所在分支（若是非集成的命名分支）列为可选的另一基线（D14）。用户确认后从显式基线拉分支建 worktree。
+“链接 worktree”指 `git worktree add` 建出的工作区，不含仓库主工作树。
+
+0. 给了锚点文件 → 找到包含该文件的工作区；它是处于命名、非集成分支的链接 worktree 时复用，不询问；否则报告原因，转入规则 1–4。这一条保证换会话后，develop-plan、handoff 仍能回到建档时的同一工作区。
+1. 当前目录是链接 worktree 的根，处于命名分支且不是集成分支 → 复用，不询问（D14）。
+2. 期望分支已存在，并已被某个链接 worktree checkout → 复用那个 worktree，不询问。
+3. 期望分支已存在，但没有被任何工作区 checkout → 为它新增 worktree（不建新分支），在默认路径下；告知路径，不询问基线。
+4. 其他情况（含主工作树停在某条功能分支上、处于 detached HEAD、处于集成分支、未给锚点的新会话）→ 新建：先向用户一次确认基线、分支名、路径；基线按“规则来源”推断，当前所在分支（若是非集成的命名分支）列为可选的另一基线（D14）。用户确认后从显式基线拉分支建 worktree。
 
 **默认路径（D17）：** `<仓库根>/.worktrees/<分支名，/ 换成 +>`。该目录未被 git 忽略时，把补写 `.gitignore` 的改动并入新建前的那次确认，确认后提交该改动。
 
 **检测项（D18）：** 每项给出通过、不通过及原因：
 
-- 当前目录是一个已登记 worktree 的根目录。
+- 当前目录是一个链接 worktree 的根目录（不是主工作树）。
 - 处于命名分支，不是 detached HEAD。
 - 当前分支不是集成分支。
 - 仓库存在 `.githooks/` 目录时，`core.hooksPath` 指向它。
@@ -143,14 +147,14 @@ subagent-driven-development       handoff author：用当前 worktree 作为交�
 
 ### 5.5 develop-plan
 
-- **第 1 步“工作区”：** 改为调用 manage-worktree「准备」。接续 init-spec 时会命中复用；独立调用时可能新建。删除“没有专门规则时使用 `superpowers:using-git-worktrees`”。不可用时同 5.4。
+- **第 1 步“工作区”：** 改为调用 manage-worktree「准备」。接续 init-spec 时把已批准 Spec 的路径作为锚点传入，命中复用；独立调用时可能新建。删除“没有专门规则时使用 `superpowers:using-git-worktrees`”。不可用时同 5.4。
 - **第 5 步：** 把“确认后直接使用 `subagent-driven-development` 执行，不询问执行方式”改为：项目指令对计划确认后的执行方式另有规定时按项目指令，否则直接使用 `subagent-driven-development`（D16）。`REQUIRED SUB-SKILL` 的写法不变（D19）。
 
 ### 5.6 handoff
 
 **author 第 4 步（D8）：** 判定条件从“接手方是否在另一条分支上开工”改为“接手方是另一个会话，需要被指到一个确定的工作区”。
 
-- 调用 manage-worktree「准备」：已在命名分支的 worktree 里就复用它，否则按 manage-worktree 的规则新建。
+- 调用 manage-worktree「准备」，有计划或 Spec 时把它的路径作为锚点传入：已在命名分支的链接 worktree 里就复用它，否则按 manage-worktree 的规则新建。
 - 文档里写明 `workspace_mode`、`branch`、`worktree`。复用当前工作区时填 `same-workspace`，新建交接工作区时填 `shared-worktree`；两种模式都必须填 `branch` 与 `worktree`。
 - manage-worktree 不可用时同 5.4。
 
@@ -160,7 +164,7 @@ subagent-driven-development       handoff author：用当前 worktree 作为交�
 
 **文末「平台适配」一节：** 改为指向 manage-worktree 的“进入”与“离开”，删去重复内容。
 
-**`validate-handoff.sh` 新增检查（D18）：** 只对含 `workspace_mode` 字段的文档生效，旧文档结果不变。
+**`validate-handoff.sh` 新增检查（D18）：** 只在文档同时满足“含 `workspace_mode` 字段”和“`status` 为「待执行」”时生效。「待执行」覆盖 author 门禁与接手方 verify 两个时点，正是“接手方开工时必须看得到”的检查对象；执行中、待验收、已验收、打回的文档不受影响，因此 accept 不会因接手方未提交而误判打回。现有 bats 用例 37、40（含 `workspace_mode`、状态为「待执行」、文档未跟踪）的 fixture 需要把文档提交后再校验，期望结果不变。
 
 | 检查 | 不通过时 |
 |---|---|
@@ -174,7 +178,7 @@ subagent-driven-development       handoff author：用当前 worktree 作为交�
 **AGENTS.md「跨会话交接」新增小节“计划后交接给执行模型”（D3、D5、D6、D9、D15、D16）：**
 
 1. develop-plan 的计划经用户确认后，先询问用户“本会话执行，还是交接给其他执行方”。
-2. 选择交接：不调用执行技能，改走 handoff 的 author 阶段。一份计划对应一次交接。交接文档列 Spec 与计划为权威依据。最小验收锚点写成“各 Task 的测试与计划写定的断言一致，并全部通过”，再加上 Spec 的验收标准。
+2. 选择交接：不调用执行技能。交出方先把计划开头的 `REQUIRED SUB-SKILL` 填为 `superpowers:subagent-driven-development` 并提交计划，再走 handoff 的 author 阶段。一份计划对应一次交接。交接文档列 Spec 与计划为权威依据。最小验收锚点写成“各 Task 的测试与计划写定的断言一致，并全部通过”，再加上 Spec 的验收标准。
 3. 接手方按计划执行，可自行决定函数内部实现；不得修改接口签名、测试名称与断言、`Global Constraints`；计划与现状冲突时停手打回。
 
 **AGENTS.md「Git 与工作区」：** 建 worktree 改为调用 manage-worktree；路径约定改为 `.worktrees/<分支名，/ 换成 +>`，`.claude/worktrees/` 改称历史遗留。
@@ -210,14 +214,16 @@ subagent-driven-development       handoff author：用当前 worktree 作为交�
 1. `npm test` 通过。
 2. 新 skill 通过格式校验并登记：`skills/devflow/manage-worktree/SKILL.md` 存在，已在 `skills-index.json` 中登记，bundle 为 `devflow`。
 3. 改名后的打包无误：`skills/superpowers-rewrite/` 不再存在；`skills-index.json`、`package.json`（重新生成后）、`tests/skill-portability.test.mjs`、init-spec 正文、PRD 中不再出现 `superpowers-rewrite`。
-4. handoff 的 bats 测试新增以下用例，并全部通过：
-   - 含 `workspace_mode: same-workspace` 但缺 `worktree` → exit 1；
+4. handoff 的 bats 测试新增以下用例，并全部通过（以下均指含 `workspace_mode`、状态为「待执行」的文档，除非另注）：
+   - `same-workspace` 但缺 `worktree` → exit 1；
    - 交接文档未被跟踪 → exit 1；
    - 交接文档有未提交改动 → exit 1；
    - 正文链接指向一个未被跟踪的已存在文件 → exit 1；
    - 正文链接指向一个已跟踪但有未提交改动的文件 → exit 1；
    - 全部已提交的合规文档 → exit 0；
-   - 不含 `workspace_mode` 的旧文档，在上述各种情形下结果与改动前一致。
+   - 状态为「执行中」「待验收」的文档未提交 → 结果与改动前一致；
+   - 不含 `workspace_mode` 的文档，在上述各种情形下结果与改动前一致；
+   - 既有用例 37、40 只改 fixture（先提交文档），期望值不变。
 5. 文本核对：
    - develop-plan 第 5 步不再含“不询问执行方式”，并含“项目指令另有规定时按项目指令”的分支；第 1 步不再引用 `using-git-worktrees`。
    - init-spec 建档步骤在写决定记录前调用 manage-worktree。
@@ -225,7 +231,7 @@ subagent-driven-development       handoff author：用当前 worktree 作为交�
    - AGENTS.md 与 CLAUDE.md 都含“计划后交接给执行模型”的规则。
    - `.hskill/handoff/config.md` 不再提 `writing-plans` 和 `executing-plans`。
    - CLAUDE.md、AGENTS.md、config.md 中的 worktree 路径约定为 `.worktrees/`。
-6. 端到端演练（人工，按交互式 TUI 测试的惯例由用户执行）：在本仓库从 init-spec 走到计划确认，选择“交接”，确认交接文档的 `worktree` 指向建档时的同一工作区、文档已提交、门禁通过。
+6. 端到端演练（人工，由用户执行）：在合并进 `staging`、按 CLAUDE.md 规定从 `staging` 装机之后进行，不属于合并前的验收。在本仓库从 init-spec 走到计划确认，选择“交接”，确认交接文档的 `worktree` 指向建档时的同一工作区、文档已提交、门禁通过。演练产生的 worktree 与分支由用户按现有流程清理。合并前的验收只包括第 1–5 条。
 
 ## 8. 由 Agent 决定、随本稿送审的次要决定
 
@@ -237,6 +243,11 @@ subagent-driven-development       handoff author：用当前 worktree 作为交�
 - **S6：** 检测项“hooks 已配置”只检查 `core.hooksPath`；`merge.ff=false` 等本仓库特有设置仍由 AGENTS.md 和 CLAUDE.md 规定（它们存在共享的 `.git/config` 中，对所有 worktree 生效）。
 - **S7：** bundle 改名不保留旧名别名。
 - **S8：** CLAUDE.md 按现有做法同步 AGENTS.md 的新规则。
+- **S9：** manage-worktree 按 init-workflow 的三级查找顺序读规则文件（已有答案：init-workflow 的主路径是 `.hskill/init-workflow/workflow-config.yml`）。
+- **S10：** 「准备」接受锚点文件路径，换会话后靠它回到建档时的工作区；没有锚点时按规则 4 新建并请用户确认，用户可在确认时改选已有分支。“链接 worktree”不含主工作树（由 D14 推出）。
+- **S11：** 选择交接时，交出方把 `REQUIRED SUB-SKILL` 填为 `superpowers:subagent-driven-development` 并提交计划后再交接（由 D19 推出）。
+- **S12：** 端到端演练放在合并、从 `staging` 装机之后；合并前只做第 7 节第 1–5 条（CLAUDE.md 规定装机只能从 `staging` 取）。
+- **S13（推断）：** D17 记录的代价“Claude Code 中启动时固定工作目录的 subagent 无法切进 `.worktrees/`”只影响需要中途切换工作区的 subagent。`subagent-driven-development` 派出的 subagent 从主会话当前目录（已在 worktree 内）启动，不需要切换，默认执行路径不受影响；未实测。
 
 ## 9. 未决事项
 
