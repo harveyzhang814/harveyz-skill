@@ -359,15 +359,15 @@
       "path": "coding/handoff",
       "bundle": "coding",
       "installScope": "project",
-      "contentHash": "ddb0600e5a3171b6",
-      "contentVersion": "1.18.1"
+      "contentHash": "18e918c083b2ac90",
+      "contentVersion": "1.19.0"
     },
     {
       "path": "coding/fork-topic",
       "bundle": "coding",
       "installScope": "global",
-      "contentHash": "688c90727fcfec9f",
-      "contentVersion": "1.0.0"
+      "contentHash": "f5a95b1901dc02f9",
+      "contentVersion": "1.1.0"
     },
     {
       "path": "coding/full-recap",

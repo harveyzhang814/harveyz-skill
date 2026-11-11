@@ -12,8 +12,8 @@ const hash = b => createHash('sha256').update(b.replace(/^version:.*$/m, 'versio
 test('handoff version and index hash are updated', async () => {
   const body = await read('skills/coding/handoff/SKILL.md')
   const entry = JSON.parse(await read('skills-index.json')).skills.find(s => s.path === 'coding/handoff')
-  assert.match(body, /^version: ["']?1\.18\.1["']?$/m)
-  assert.equal(entry.contentVersion, '1.18.1')
+  assert.match(body, /^version: ["']?1\.19\.0["']?$/m)
+  assert.equal(entry.contentVersion, '1.19.0')
   assert.equal(entry.contentHash, hash(body))
 })
 
