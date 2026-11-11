@@ -140,6 +140,124 @@
           "text": "没有执行 git worktree add 另建工作区——author 已经建好，那条分支已被占用"
         }
       ]
+    },
+    {
+      "id": 5,
+      "name": "author-canvas-routes-develop",
+      "prompt": "先运行 `bash evals/fixtures/canvas-stub/setup.sh routed`，它会打印三行：STUB_BIN、STUB_LOG、WORKTREE。本次运行里你执行的每一条画布命令（agent-canvas-ctl、agent-canvas-arrange）前面都必须加上 `PATH=<STUB_BIN>:$PATH`，例如 `PATH=<STUB_BIN>:$PATH agent-canvas-ctl whoami`，一条都不能漏——漏了就会打到真实画布上。你当前就在一个 Agent Canvas 节点里（用桩的 whoami 即可确认）。交接工作区已经建好：就是 setup 打印的 WORKTREE（分支 feature/slugify-numbers），直接复用，不要新建 worktree 或分支，交接文档写在这个工作区里。用户的任务：slugify 保留数字这个小任务，测试清单已经写在工作区的 docs/superpowers/specs/ 下，实现很直白。我想把实现交给另一个 session 去做，帮我写交接并把接手的节点建好派过去。",
+      "expected_output": "author phase 第 6 步走路由：先 list-node-route-categories，再 describe-node-route-category develop，然后 create-routed-pty-node --category develop，--params 恰好含 describe 列出的全部字段，--evidence 指向工作区里真实存在的文件（交接文档、测试清单），--description 按 describe 的段落写，不带 --message；全程不调用 create-pty-node。之后 put、link-nodes、send 照旧，派发消息只含寻址信息。断言全部走 transcript：这条 eval 测的是调用了哪些命令、传了什么参数，证据在执行轨迹里。画布命令全部由桩应答，桩的调用日志（STUB_LOG）可作旁证。",
+      "files": [
+        "evals/fixtures/canvas-stub/setup.sh"
+      ],
+      "frozen": "2026-11-11",
+      "assertions": [
+        {
+          "id": "describe-before-create",
+          "source": "transcript",
+          "text": "创建节点前调用过 describe-node-route-category develop"
+        },
+        {
+          "id": "routed-create",
+          "source": "transcript",
+          "text": "调用了 create-routed-pty-node 且带 --category develop"
+        },
+        {
+          "id": "params-complete",
+          "source": "transcript",
+          "text": "--params 恰好包含 describe 列出的全部字段"
+        },
+        {
+          "id": "evidence-real",
+          "source": "transcript",
+          "text": "--evidence 的路径都是 WORKTREE 里真实存在的文件"
+        },
+        {
+          "id": "no-direct-create",
+          "source": "transcript",
+          "text": "没有调用 create-pty-node"
+        },
+        {
+          "id": "dispatch-addressing-only",
+          "source": "transcript",
+          "text": "send 发出的派发消息只含工作区路径、分支、文档路径，没有内容摘要"
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "name": "author-canvas-named-codex",
+      "prompt": "先运行 `bash evals/fixtures/canvas-stub/setup.sh routed`，它会打印三行：STUB_BIN、STUB_LOG、WORKTREE。本次运行里你执行的每一条画布命令（agent-canvas-ctl、agent-canvas-arrange）前面都必须加上 `PATH=<STUB_BIN>:$PATH`，例如 `PATH=<STUB_BIN>:$PATH agent-canvas-ctl whoami`，一条都不能漏——漏了就会打到真实画布上。你当前就在一个 Agent Canvas 节点里（用桩的 whoami 即可确认）。交接工作区已经建好：就是 setup 打印的 WORKTREE（分支 feature/slugify-numbers），直接复用，不要新建 worktree 或分支，交接文档写在这个工作区里。用户的任务：slugify 保留数字这个小任务，测试清单已经写在工作区里。交给 codex 做，帮我写交接并把接手的节点建好派过去。",
+      "expected_output": "用户点名了 codex：author 第 6 步直接 create-pty-node --node-type codex，不调用任何路由命令（list/describe/create-routed 都不调）。断言全部走 transcript：这条 eval 测的是调用了哪些命令、传了什么参数，证据在执行轨迹里。画布命令全部由桩应答，桩的调用日志（STUB_LOG）可作旁证。",
+      "files": [
+        "evals/fixtures/canvas-stub/setup.sh"
+      ],
+      "frozen": "2026-11-11",
+      "assertions": [
+        {
+          "id": "direct-codex",
+          "source": "transcript",
+          "text": "调用了 create-pty-node --node-type codex"
+        },
+        {
+          "id": "no-routing",
+          "source": "transcript",
+          "text": "没有调用任何路由命令"
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "name": "author-canvas-old-app-fallback",
+      "prompt": "先运行 `bash evals/fixtures/canvas-stub/setup.sh old-app`，它会打印三行：STUB_BIN、STUB_LOG、WORKTREE。本次运行里你执行的每一条画布命令（agent-canvas-ctl、agent-canvas-arrange）前面都必须加上 `PATH=<STUB_BIN>:$PATH`，例如 `PATH=<STUB_BIN>:$PATH agent-canvas-ctl whoami`，一条都不能漏——漏了就会打到真实画布上。你当前就在一个 Agent Canvas 节点里（用桩的 whoami 即可确认）。交接工作区已经建好：就是 setup 打印的 WORKTREE（分支 feature/slugify-numbers），直接复用，不要新建 worktree 或分支，交接文档写在这个工作区里。用户的任务：slugify 保留数字这个小任务，测试清单已经写在工作区里。我想把实现交给另一个 session 去做，帮我写交接并把接手的节点建好派过去。",
+      "expected_output": "旧版 App 没有路由命令（报未知子命令、退出码 1）：author 第 6 步退回 create-pty-node --node-type claude-code --task-type execute，全程只建一个节点，并告诉用户路由不可用、已退回。断言全部走 transcript：这条 eval 测的是调用了哪些命令、传了什么参数，证据在执行轨迹里。画布命令全部由桩应答，桩的调用日志（STUB_LOG）可作旁证。",
+      "files": [
+        "evals/fixtures/canvas-stub/setup.sh"
+      ],
+      "frozen": "2026-11-11",
+      "assertions": [
+        {
+          "id": "fallback-create",
+          "source": "transcript",
+          "text": "路由命令报未知子命令后调用了 create-pty-node --node-type claude-code --task-type execute"
+        },
+        {
+          "id": "single-node",
+          "source": "transcript",
+          "text": "create-pty-node 与 create-routed-pty-node 成功创建的节点合计恰好 1 个"
+        },
+        {
+          "id": "told-user",
+          "source": "transcript",
+          "text": "回复告诉用户路由不可用、已退回"
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "name": "author-canvas-invalid-retry",
+      "prompt": "先运行 `bash evals/fixtures/canvas-stub/setup.sh reject-once`，它会打印三行：STUB_BIN、STUB_LOG、WORKTREE。本次运行里你执行的每一条画布命令（agent-canvas-ctl、agent-canvas-arrange）前面都必须加上 `PATH=<STUB_BIN>:$PATH`，例如 `PATH=<STUB_BIN>:$PATH agent-canvas-ctl whoami`，一条都不能漏——漏了就会打到真实画布上。你当前就在一个 Agent Canvas 节点里（用桩的 whoami 即可确认）。交接工作区已经建好：就是 setup 打印的 WORKTREE（分支 feature/slugify-numbers），直接复用，不要新建 worktree 或分支，交接文档写在这个工作区里。用户的任务：slugify 保留数字这个小任务，测试清单已经写在工作区里。我想把实现交给另一个 session 去做，帮我写交接并把接手的节点建好派过去。",
+      "expected_output": "桩对第一次 create-routed-pty-node 返回 INVALID_ARGUMENT：author 按报错修正后再次调用 create-routed-pty-node，不退回 create-pty-node，最终只建出一个节点。断言全部走 transcript：这条 eval 测的是调用了哪些命令、传了什么参数，证据在执行轨迹里。画布命令全部由桩应答，桩的调用日志（STUB_LOG）可作旁证。",
+      "files": [
+        "evals/fixtures/canvas-stub/setup.sh"
+      ],
+      "frozen": "2026-11-11",
+      "assertions": [
+        {
+          "id": "retried-routed",
+          "source": "transcript",
+          "text": "被 INVALID_ARGUMENT 拒绝后再次调用 create-routed-pty-node"
+        },
+        {
+          "id": "no-fallback",
+          "source": "transcript",
+          "text": "没有调用 create-pty-node"
+        },
+        {
+          "id": "single-node",
+          "source": "transcript",
+          "text": "成功创建的节点恰好 1 个"
+        }
+      ]
     }
   ]
 }

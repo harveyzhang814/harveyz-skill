@@ -1,7 +1,7 @@
 ---
 name: handoff
 description: Use when handing a task across sessions — writing a self-contained handoff doc for a fresh session to pick up (author), sanity-checking an inbound handoff before starting (verify), self-testing against the agreed criteria before reporting the work done or re-submitting after a rejection (self-test), or accepting completed work against the criteria agreed at handoff time (accept). Triggers on phrases like "write a handoff", "hand this off", "pick up this task", "sign off on this work". Not for carrying discussion conclusions into a new topic with no acceptance — use fork-topic for that. Generic skill — project-specific conventions are read from .hskill/handoff/config.md.
-version: "1.18.1"
+version: "1.19.0"
 user_invocable: true
 ---
 
@@ -50,15 +50,32 @@ user_invocable: true
    画布节点里就整步跳过，不报错，第 9 步改走可粘贴指令，`source_node`/`target_node` 两个字段删掉）。
    命令用法以 `agent-canvas-ctl help <命令>` 为准：
    - `whoami` 取到的自己的节点 id 填进 frontmatter 的 `source_node`。
-   - 建接手节点：`agent-canvas-ctl create-pty-node --node-type claude-code --title "接手：<任务一句话>"
-     --cwd <工作区绝对路径> --task-type execute`。类型默认 `claude-code`，用户点名了别的 agent（如
-     `codex`）就用那个。`--cwd` 填第 4 步的 worktree；第 4 步跳过时填当前工作目录。**这里不带
-     `--message`**：文档还没提交、没过门禁，派发消息留到第 9 步发。
+   - 建接手节点，默认走路由引擎，由它按任务难度选 agent 类型与模型，依次做：
+     1. `agent-canvas-ctl list-node-route-categories` 确认有 `develop` 类别。
+     2. `agent-canvas-ctl describe-node-route-category develop`，按它的输出给每个字段定级、
+        备证据、按它规定的段落格式写节点说明。字段、级别口径、证据要求、说明格式都以这条命令的
+        输出为准，这里不重抄。证据指向第 5 步写出的交接文档，以及 plan 或测试清单（有的话），
+        都必须是工作区里真实存在的文件。
+     3. `agent-canvas-ctl create-routed-pty-node --category develop --title "接手：<任务一句话>"
+        --cwd <工作区绝对路径>`，再加上第 2 步得出的 `--params`、`--evidence`、`--description`
+        （具体写法以 `help create-routed-pty-node` 为准）。不自己指定 agent 类型与模型。
+        `--cwd` 填第 4 步的 worktree；第 4 步跳过时填当前工作目录。**这里不带 `--message`**：
+        文档还没提交、没过门禁，派发消息留到第 9 步发。`--description` 是节点说明，不是派发消息。
+   - 只有下面两种情形绕开路由、用 `create-pty-node` 建（其余一律走上面的路由）：
+     - 用户点名了 agent 类型或模型（如「交给 codex 做」）→ 不走路由，直接
+       `agent-canvas-ctl create-pty-node --node-type <点名的类型> --title "接手：<任务一句话>"
+       --cwd <工作区绝对路径> --task-type execute`。
+     - 路由命令报未知子命令（旧版 App：退出码 1，stderr 以 `未知子命令:` 开头），或报
+       `PRECONDITION_FAILED` → 退回
+       `agent-canvas-ctl create-pty-node --node-type claude-code --title "接手：<任务一句话>"
+       --cwd <工作区绝对路径> --task-type execute`，并告诉用户路由不可用、已退回。
+   - 路由报 `INVALID_ARGUMENT` **不退回**：按报错修正字段后重试 `create-routed-pty-node`。
+     报错表示这次没建出节点，所以重试或退回之后，全程仍只有一个接手节点。
    - `agent-canvas-arrange put <接手节点 id>` 放上画布（建出来默认不在画布上）。
    - 建关系 `agent-canvas-ctl link-nodes --from <自己的 nodeId> --to <接手节点 id> --type hands-off-to`，
      把接手节点 id 填进 `target_node`。接手方在 verify 只核对、不重复建。
    - 建节点失败 → 把报错告诉用户，`target_node` 留空，第 9 步退回可粘贴指令，由接手方在 verify
-     回填。**不要换个参数再建一个**；退出码 2 先 `agent-canvas-ctl search-nodes <标题关键词> --kind pty`
+     回填。除上面规定的重试与退回外，**不要换个参数再建一个**；退出码 2 先 `agent-canvas-ctl search-nodes <标题关键词> --kind pty`
      核对是不是已经建出来了（旧版 App 不认 `--kind` 时去掉它；结果是顶层数组或 `{results}` 里的数组）。
 7. **落库**：把交接文档以及本次产生、被它引用的产物都 commit 进这条分支（没提交的内容接手方
    看不到；第 8 步的门禁会检查它们已提交）。
