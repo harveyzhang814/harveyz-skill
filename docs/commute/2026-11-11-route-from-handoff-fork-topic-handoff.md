@@ -1,5 +1,5 @@
 ---
-status: 待验收
+status: 已验收
 date: 2026-11-11
 author_model: claude-opus-5-5
 acceptance: hard
@@ -63,6 +63,28 @@ target_node: 071b2430-75f2-46a2-9318-7b9738b49e2a
 5. `git diff $(git merge-base staging HEAD)..HEAD --name-only` 列出的文件不超出 plan 各 Task 的 Files 清单、本交接文档、测试清单与 plan 本身。
 
 测试清单的 `## 验收标准`（V1–V3）要等带路由命令的 App 发版后才能验证，不属于本次交接的验收范围。
+
+### 交出方验收记录（2026-11-11，代码 `99c9600`）
+
+在交接工作区里逐条重跑，不采信接手方结论。被测 `claude-sonnet-5-5`，grader `claude-opus-5-5`。
+
+1. **锚点 1：pass。** 同一条 `node --test ...` 退出码 0，38/38 pass。另核对测试名称与 plan 写定的一致；`tests/handoff-routing.test.mjs` 多出一个 plan 外的测试（`step 6 supports a named model and bounds the INVALID_ARGUMENT retry`），属于新增，不违反「不改测试名称与断言」。
+2. **锚点 2：pass。** `npm test` 退出码 0（400 个测试：393 pass、0 fail、7 skipped）。
+3. **锚点 3：pass。** handoff `1.19.0`、fork-topic `1.1.0`，`skills-index.json` 两个条目 `contentVersion` 一致，hash 由锚点 1 的测试比对通过。
+4. **锚点 4：pass。** 重跑 handoff `20261111-022402-0724`（native）与 fork-topic `20261111-022404-59f9`（inject）：
+   - 新增 7 条全部断言 pass（handoff 5、6、7、8；fork-topic 3、4、5）。
+   - handoff 原有 eval 0（0/5）、1（0/4）fail，表现与分叉点 `20261111-014107-83f1` 相同（agent 反问而不写文档），判为既有问题放行；handoff 原有 eval 2、4 pass。
+   - fork-topic 原有 eval 0 `no-extrapolation` fail（把「不接受新外部服务」引申成「如消息队列、外部事件总线」），分叉点同样 fail，判为既有问题放行；eval 1、2 全部 pass。
+   - **接手方带红送验的 fork-topic eval 1 `no-extrapolation`，裁定为既有问题，放行。** 依据：分叉点 `20261111-021422-8a0d` 中被记为 `unavailable` 的两次，grader 原始输出可读出其中一次 `no-extrapolation` 的判定是 `fail`，失败方式与本分支相同（「如果日志采集方案的讨论里碰到相关点（比如是否引入额外的外部组件、单机部署这一前提）…」）；本次重跑本分支为 pass。这是模型行为的波动，不是本次改动引入的。
+5. **锚点 5：pass。** `git diff $(git merge-base staging HEAD)..HEAD --name-only` 共 19 个文件，均在 plan 各 Task 的 Files、交接文档、测试清单、plan 与 measurements 文档之内。
+
+**回归面核对**：改动面是 handoff、fork-topic 两个 skill 及其测试与 eval。被波及组件的既有回归资产就是 `npm test` 与两个 skill 原有的 eval，都已在上面跑过，没有本次改动引入的红。
+
+**更正与补记**：
+- 接手方记录的「`npm test` 400 个测试」与重跑一致；「锚点 5 共 17 个文件」是在 `31800f9` 上统计的，HEAD `99c9600` 加上自测提交后为 19 个，不影响结论。
+- 已核对 `tests/canvas-stub.test.mjs` 的清理守卫：只删除含 `mode` 文件的 setup 目录。早期误删 `$TMPDIR` 文件的问题已修正，但被删的内容无法恢复。
+
+**结论：达成，`status` 置「已验收」。**
 
 ## 接手方自测记录（2026-11-11）
 
