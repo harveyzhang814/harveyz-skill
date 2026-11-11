@@ -6,7 +6,8 @@
   migrate <manifest.json>    原地迁移 manifest 登记的所有稿子：删 base64 内嵌字体、重复图标收进
                              图标定义区、按 id / data-ui-state / data-state 属性补状态标记；
                              最后列出仍需人工（模型）补标记的状态
-  check <manifest.json>      只检查不修改；有待迁移项时退出码为 1
+  check <manifest.json>      只检查不修改（含相对路径引用的 <link href> / <script src> 是否指得到文件）；
+                             有待迁移或待修项时退出码为 1
   verify <改前> <改后>        补标记后校验：去掉状态标记与标签间空白后两份必须一致，否则退出码为 1
 """
 import json
@@ -22,6 +23,7 @@ FONT_FACE = re.compile(
     r'@font-face\s*\{[^}]*?url\(\s*["\']?data:(?:font|application/(?:x-)?font)[^}]*\}\s*', re.S)
 SPRITE_OPEN = re.compile(r'<svg class="sd-sprite"[^>]*>')
 SVG_CHILD = re.compile(r'(?:^|[\s>+~,(])(?:path|circle|rect|polyline|polygon|ellipse|line|g)(?=$|[\s>+~,.:\[)])')
+LOCAL_REF = re.compile(r'<(?:link|script)\b[^>]*?\s(?:href|src)="([^"]+)"')
 PARTIAL_MIN = 40_000  # 少于 4 万字符的稿子直接全量读，不要求状态标记
 VOID = {'area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input', 'link', 'meta', 'source', 'track', 'wbr'}
 
@@ -225,8 +227,23 @@ def entries(manifest_path):
             yield kind, e, root / e['htmlFile']
 
 
-def problems(text, states):
+def broken_refs(text, html_path):
+    """相对路径引用的 <link href> / <script src> 中指不到文件的；URL、data:、锚点不算。"""
     out = []
+    for ref in LOCAL_REF.findall(text):
+        if re.match(r'^(?:[a-z][\w+.-]*:|//|#)', ref, re.I):
+            continue
+        rel = re.split(r'[?#]', ref)[0]
+        if rel and not (html_path.parent / rel).exists():
+            out.append(ref)
+    return out
+
+
+def problems(text, states, html_path=None):
+    out = []
+    broken = broken_refs(text, html_path) if html_path else []
+    if broken:
+        out.append(f'引用的文件不存在：{" | ".join(broken)}')
     if FONT_FACE.search(text):
         out.append('有 base64 内嵌字体')
     dups = len(plan_icons(text)[0])
@@ -286,7 +303,7 @@ def cmd_migrate(manifest_path):
         new = infer_anchors(new, e.get('uiStates', []), report)
         if new != old:
             f.write_text(new, encoding='utf-8')
-        left = problems(new, e.get('uiStates', []))
+        left = problems(new, e.get('uiStates', []), f)
         todo += bool(left)
         if report or left:
             print(f'{kind} {e["id"]}  {len(old) // 1000}K -> {len(new) // 1000}K 字符')
@@ -304,7 +321,7 @@ def cmd_check(manifest_path):
             print(f'[缺文件] {kind} {e["id"]}: {e["htmlFile"]}')
             continue
         text = f.read_text(encoding='utf-8')
-        ps = problems(text, e.get('uiStates', []))
+        ps = problems(text, e.get('uiStates', []), f)
         if ps:
             bad += 1
             print(f'[待迁移] {kind} {e["id"]} ({len(text) // 1000}K 字符): ' + '；'.join(ps))
