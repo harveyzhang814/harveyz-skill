@@ -3,7 +3,7 @@ status: 待执行
 date: 2026-11-11
 author_model: claude-opus-5-5
 acceptance: hard
-workspace_mode: same-workspace
+workspace_mode: shared-worktree
 branch: feature/route-from-handoff-fork-topic
 worktree: /Users/harveyzhang96/Projects/harveyz-skill/.worktrees/feature+route-from-handoff-fork-topic
 source_node: ce78124f-0115-46b5-86ec-44b7cb2b6db2
@@ -59,7 +59,7 @@ target_node: 071b2430-75f2-46a2-9318-7b9738b49e2a
 1. plan 里各 Task 的测试与 plan 写定的测试名称和断言一致，并全部通过：`node --test tests/canvas-stub.test.mjs tests/handoff-routing.test.mjs tests/handoff-worktree.test.mjs tests/fork-topic-routing.test.mjs tests/harness/declarations.test.mjs` 退出码 0。
 2. `npm test` 退出码 0。
 3. `skills/coding/handoff/SKILL.md` 版本为 `1.19.0`，`skills/coding/fork-topic/SKILL.md` 版本为 `1.1.0`，`skills-index.json` 两个条目的 `contentVersion` 和 `contentHash` 与正文一致（由第 1 条里的测试覆盖）。
-4. Task 4 的 eval 实跑：handoff 新增的 4 条（`author-canvas-routes-develop`、`author-canvas-named-codex`、`author-canvas-old-app-fallback`、`author-canvas-invalid-retry`）与 fork-topic 新增的 3 条（`fork-canvas-routes-think`、`fork-canvas-old-app-fallback`、`fork-canvas-named-model`），全部断言为 pass；handoff 原有 eval 0、1，fork-topic 原有 eval 0–2，断言结果不比改动前差。runId 与逐条结果记录在 `docs/superpowers/specs/measurements/2026-11-11-route-from-handoff-fork-topic-evals.md`。
+4. Task 4 的 eval 实跑：handoff 新增的 4 条（`author-canvas-routes-develop`、`author-canvas-named-codex`、`author-canvas-old-app-fallback`、`author-canvas-invalid-retry`）与 fork-topic 新增的 3 条（`fork-canvas-routes-think`、`fork-canvas-old-app-fallback`、`fork-canvas-named-model`），全部断言为 pass；handoff 原有 eval 0、1，fork-topic 原有 eval 0–2，断言全部 pass；其中任何一条 fail 时，在分叉点（`git merge-base staging HEAD`，用 `git worktree add --detach` 临时检出，跑完删除）上重跑同一条 eval：分叉点也 fail 的，判为既有问题，在 measurements 文档里附上两边的 runId 和结果后放行；分叉点 pass 的，判为回归。runId 与逐条结果记录在 `docs/superpowers/specs/measurements/2026-11-11-route-from-handoff-fork-topic-evals.md`。
 5. `git diff $(git merge-base staging HEAD)..HEAD --name-only` 列出的文件不超出 plan 各 Task 的 Files 清单、本交接文档、测试清单与 plan 本身。
 
 测试清单的 `## 验收标准`（V1–V3）要等带路由命令的 App 发版后才能验证，不属于本次交接的验收范围。
