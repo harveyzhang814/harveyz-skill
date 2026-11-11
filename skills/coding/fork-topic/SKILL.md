@@ -34,10 +34,10 @@ version: "1.1.0"
 2. 只有下面两种情形绕开路由、用 `create-pty-node` 建，其余一律走路由：
    - 用户点名了 agent 类型或模型 → 不走路由，直接 `agent-canvas-ctl create-pty-node --node-type <点名的类型> --title "<支线一句话>" --cwd <当前工作目录> --task-type plan`。只点名模型（如「用 opus 开个支线」）时，节点类型取默认的 `claude-code`，并带上 `--model <点名的模型>`。
    - 路由命令报未知子命令（旧版 App：退出码 1，stderr 以 `未知子命令:` 开头），或报 `PRECONDITION_FAILED` → 退回 `agent-canvas-ctl create-pty-node --node-type claude-code --title "<支线一句话>" --cwd <当前工作目录> --task-type plan`，并告诉用户路由不可用、已退回。
-3. 路由报 `INVALID_ARGUMENT` 不退回：按报错修正字段后重试路由，最多重试两次，仍不过就把报错告诉用户并停下。任何报错都表示这次没建出节点，所以重试或退回之后，全程仍只有一个新节点。
+3. 路由报 `INVALID_ARGUMENT` 不退回：按报错修正字段后重试路由，最多重试两次，仍不过就把报错告诉用户，并按第 7 条输出可粘贴的 prompt，不停下。任何报错都表示这次没建出节点，所以重试或退回之后，全程仍只有一个新节点。
 4. `agent-canvas-arrange put <新节点 id>` 放上画布（建出来默认不在画布上）。
-5. 把 prompt（形式同上，不带外层代码块围栏）写进 `mktemp` 建的临时文件，文件在仓库之外，不进任何 git 目录；然后 `agent-canvas-ctl send <新节点 id> --file <临时文件>`。
-6. 回复里说明派给了哪个节点、`messageId` 是什么，结束本轮；不 sleep、不轮询，不等对方回复。交回要求照常写在 prompt 里，对方的回报会作为新的一轮到达。
-7. 建节点失败（含重试用尽）→ 把报错告诉用户，改为输出代码块里的可粘贴 prompt。除上面规定的重试与退回外，不要换个参数再建一个；退出码 2 先 `agent-canvas-ctl search-nodes <标题关键词> --kind pty` 核对是不是已经建出来了（旧版 App 不认 `--kind` 时去掉它）。
+5. 把 prompt（只写 prompt 正文，不加代码块围栏）写进 `mktemp` 建的临时文件，文件在仓库之外，不进任何 git 目录；然后 `agent-canvas-ctl send <新节点 id> --file <临时文件>`。
+6. 回复里说明派给了哪个节点、`messageId` 是什么，结束本轮；不 sleep、不轮询，不等对方回复。交回要求照常写在 prompt 里，让对方产出一段可贴回主讨论的结论；没有自动回传，结论由用户到那个节点里取，再自己贴回主讨论。
+7. 建节点失败（含重试用尽，含退回的 `create-pty-node` 也失败）→ 把报错告诉用户，改为输出代码块里的可粘贴 prompt，与不在画布里时的输出形式相同。这是建节点失败的唯一处理方式。除上面规定的重试与退回外，不要换个参数再建一个；退出码 2 先 `agent-canvas-ctl search-nodes <标题关键词> --kind pty` 核对是不是已经建出来了（旧版 App 不认 `--kind` 时去掉它）。
 
 画布路径只多写一个仓库之外的临时文件，仍然不落仓库文件、不建分支、不验收。
