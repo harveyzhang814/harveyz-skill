@@ -42,11 +42,11 @@ python3 SKILL_DIR/scripts/design_html.py check .hskill/sync-design/manifest.json
 
 ### 4. 写回与摘要
 
-1. `manifest.json` 的 `version` 更新为 `5` 写回。
+1. `manifest.json` 的 `version` 小于 `5` 时更新为 `5` 写回。
 2. 输出摘要：迁移前后总大小；删除了哪些字体（预览时会回退到系统字体）；未解决的状态（稿子 id + 状态名）。
 3. 询问是否 `git add`，建议 commit message：`chore: migrate HTML design drafts to partial-read format`
 
 ## 完成标准
 
 - `check` 只列出摘要里报告过的未画状态，或输出「全部合规」。
-- `manifest.json` 的 `version` 为 `5`。
+- `manifest.json` 的 `version` 不小于 `5`。
