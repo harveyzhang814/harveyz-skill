@@ -63,7 +63,7 @@ fi
 
 case "$SUB" in
   whoami)
-    echo '{"id":"node-src","title":"发起节点","kind":"pty"}' ;;
+    echo '{"id":"11111111-1111-4111-8111-111111111111","title":"发起节点","kind":"pty"}' ;;
   list-node-route-categories)
     echo '{"configSource":"builtin","categories":[{"name":"develop","description":"产出是代码改动","taskType":"execute"},{"name":"think","description":"产出是结论、对比或 spec","taskType":"plan"}]}' ;;
   describe-node-route-category)
@@ -91,9 +91,9 @@ case "$SUB" in
     done
     CATEGORY="${CATEGORY//\\/\\\\}"
     CATEGORY="${CATEGORY//\"/\\\"}"
-    printf '{"nodeId":"node-new","startRequested":true,"routeId":"route-1","decision":{"category":"%s","final":{"nodeType":"claude-code","tier":"standard","model":"sonnet","effort":"medium"}}}\n' "$CATEGORY" ;;
+    printf '{"nodeId":"22222222-2222-4222-8222-222222222222","startRequested":true,"routeId":"route-1","decision":{"category":"%s","final":{"nodeType":"claude-code","tier":"standard","model":"sonnet","effort":"medium"}}}\n' "$CATEGORY" ;;
   create-pty-node)
-    echo '{"nodeId":"node-new","startRequested":true}' ;;
+    echo '{"nodeId":"22222222-2222-4222-8222-222222222222","startRequested":true}' ;;
   link-nodes)
     echo '{"relationId":"rel-1"}' ;;
   send)

@@ -26,6 +26,9 @@ function setup(mode) {
   return { ...vars, dir, cleanup: () => rmSync(dir, { recursive: true, force: true }) }
 }
 
+// handoff 的完整性门禁（validate-handoff.sh）要求 source_node / target_node 是合法 uuid，桩返回的 id 必须过这一关
+const UUID = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/
+
 const ctl = (env, ...args) =>
   spawnSync(resolve(env.STUB_BIN, 'agent-canvas-ctl'), args, { encoding: 'utf8' })
 
@@ -44,6 +47,7 @@ test('routed mode answers the routing commands and logs every call', () => {
     const create = ctl(env, 'create-routed-pty-node', '--title', 'T 1', '--category', 'develop', '--params', 'scale=small')
     assert.equal(create.status, 0)
     assert.equal(JSON.parse(create.stdout).decision.category, 'develop')
+    assert.match(JSON.parse(create.stdout).nodeId, UUID)
 
     const lines = readFileSync(env.STUB_LOG, 'utf8').split('\n').filter(Boolean)
     assert.equal(lines.length, 3)
@@ -66,7 +70,9 @@ test('old-app mode rejects routing commands like an App without them', () => {
       assert.equal(r.status, 1, args[0])
       assert.ok(r.stderr.startsWith('未知子命令: '), `${args[0]}: ${r.stderr}`)
     }
-    assert.equal(ctl(env, 'create-pty-node', '--title', 'x').status, 0)
+    const plain = ctl(env, 'create-pty-node', '--title', 'x')
+    assert.equal(plain.status, 0)
+    assert.match(JSON.parse(plain.stdout).nodeId, UUID)
   } finally {
     env.cleanup()
   }
@@ -75,12 +81,13 @@ test('old-app mode rejects routing commands like an App without them', () => {
 test('reject-once mode rejects the first routed create with INVALID_ARGUMENT then accepts', () => {
   const env = setup('reject-once')
   try {
+    assert.match(JSON.parse(ctl(env, 'whoami').stdout).id, UUID)
     const first = ctl(env, 'create-routed-pty-node', '--category', 'develop')
     assert.equal(first.status, 1)
     assert.ok(first.stderr.startsWith('INVALID_ARGUMENT'), first.stderr)
     const second = ctl(env, 'create-routed-pty-node', '--category', 'develop')
     assert.equal(second.status, 0)
-    assert.ok('nodeId' in JSON.parse(second.stdout))
+    assert.match(JSON.parse(second.stdout).nodeId, UUID)
   } finally {
     env.cleanup()
   }
