@@ -359,14 +359,14 @@
       "path": "coding/handoff",
       "bundle": "coding",
       "installScope": "project",
-      "contentHash": "fff6775c01c29aff",
+      "contentHash": "22f92e85dd52b355",
       "contentVersion": "1.19.0"
     },
     {
       "path": "coding/fork-topic",
       "bundle": "coding",
       "installScope": "global",
-      "contentHash": "c442279de7ac629d",
+      "contentHash": "6f251149d5ddf3cb",
       "contentVersion": "1.1.0"
     },
     {

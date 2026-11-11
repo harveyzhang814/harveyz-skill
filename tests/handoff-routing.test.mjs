@@ -52,3 +52,9 @@ test('dispatch message in step 9 stays addressing-only', async () => {
   assert.ok(start > 0)
   assert.ok(body.slice(start).includes('只放寻址信息，不放文档内容摘要'))
 })
+
+test('step 6 supports a named model and bounds the INVALID_ARGUMENT retry', async () => {
+  const s = await step6()
+  assert.ok(s.includes('--model'), '--model')
+  assert.ok(s.includes('最多重试两次'), 'retry limit')
+})

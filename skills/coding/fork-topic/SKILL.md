@@ -1,6 +1,6 @@
 ---
 name: fork-topic
-description: "Fork a side topic out of the current discussion into a concise prompt for another agent session. When outside a canvas node it outputs paste-ready text only; inside an Agent Canvas node it also creates a think node and sends the prompt there. Never writes repo files, creates branches, or does acceptance. Use handoff instead when the work must come back for formal acceptance. Only on the user's request; do not suggest it unprompted. Triggers: '/fork-topic', 'fork this topic', 'split this off into a new session', 'spin off a side discussion', 'take these conclusions into a new topic'."
+description: "Fork a side topic out of the current discussion into a concise prompt for another agent session. When outside a canvas node it outputs paste-ready text only; inside an Agent Canvas node it instead creates a think node and sends the prompt there. Never writes repo files, creates branches, or does acceptance. Use handoff instead when the work must come back for formal acceptance. Only on the user's request; do not suggest it unprompted. Triggers: '/fork-topic', 'fork this topic', 'split this off into a new session', 'spin off a side discussion', 'take these conclusions into a new topic'."
 user_invocable: true
 version: "1.1.0"
 ---

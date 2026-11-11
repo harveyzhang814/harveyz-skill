@@ -20,7 +20,7 @@ test('fork-topic version and index hash are 1.1.0', async () => {
 
 test('fork-topic routes a think node when inside a canvas node', async () => {
   const body = await read(SKILL)
-  const order = ['agent-canvas-ctl whoami', 'describe-node-route-category think', 'create-routed-pty-node', '--category think']
+  const order = ['agent-canvas-ctl whoami', 'list-node-route-categories', 'describe-node-route-category think', 'create-routed-pty-node', '--category think']
   let last = -1
   for (const phrase of order) {
     const at = body.indexOf(phrase)
@@ -28,7 +28,7 @@ test('fork-topic routes a think node when inside a canvas node', async () => {
     assert.ok(at > last, `out of order: ${phrase}`)
     last = at
   }
-  assert.ok(body.includes('send'), 'send')
+  assert.ok(body.split(/^---$/m).slice(2).join('---').includes('agent-canvas-ctl send'), 'agent-canvas-ctl send')
   assert.ok(body.includes('--file'), '--file')
 })
 
