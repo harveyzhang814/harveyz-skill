@@ -1,5 +1,5 @@
 ---
-status: 执行中
+status: 待验收
 date: 2026-11-11
 author_model: claude-opus-5-5
 acceptance: hard
@@ -63,3 +63,34 @@ target_node: 071b2430-75f2-46a2-9318-7b9738b49e2a
 5. `git diff $(git merge-base staging HEAD)..HEAD --name-only` 列出的文件不超出 plan 各 Task 的 Files 清单、本交接文档、测试清单与 plan 本身。
 
 测试清单的 `## 验收标准`（V1–V3）要等带路由命令的 App 发版后才能验证，不属于本次交接的验收范围。
+
+## 接手方自测记录（2026-11-11）
+
+代码 `31800f9`（分支 `feature/route-from-handoff-fork-topic`），逐条按锚点实跑。判成败的命令没有接管道。
+
+1. **锚点 1：pass。** `node --test tests/canvas-stub.test.mjs tests/handoff-routing.test.mjs tests/handoff-worktree.test.mjs tests/fork-topic-routing.test.mjs tests/harness/declarations.test.mjs`，退出码 0，38 个测试 38 pass、0 fail。
+2. **锚点 2：pass。** `npm test`，退出码 0，400 个测试 393 pass、0 fail、7 skipped。
+3. **锚点 3：pass。** handoff `version: "1.19.0"`、fork-topic `version: "1.1.0"`；`skills-index.json` 两个条目的 `contentHash`（`22f92e85dd52b355`、`6f251149d5ddf3cb`）由锚点 1 里的测试比对正文通过。
+4. **锚点 4：部分 pass，有一项未闭环，请验收方判断。** 逐条结果与 runId 见 `docs/superpowers/specs/measurements/2026-11-11-route-from-handoff-fork-topic-evals.md`。
+   - 新增 7 条（handoff 5–8，fork-topic 3–5）：在 `5fc2b9e` 上全部断言 pass（handoff `20261111-021009-244e`，fork-topic `20261111-020755-23b5`）。
+   - handoff 原有 eval 0、1：fail，分叉点（`20261111-014107-83f1`）同样 fail，判既有问题放行。
+   - fork-topic 原有 eval 2：pass。
+   - fork-topic 原有 eval 0 `no-extrapolation`：fail，分叉点 fail（`20261111-012817-822f`、`20261111-021422-8a0d`），判既有问题放行。
+   - **未闭环：fork-topic 原有 eval 1 `no-extrapolation`。** 本分支 4 次里 fail 2 次、pass 2 次；分叉点 repeat 3 只有 1 次可判（pass），另 2 次 grader 输出非法 JSON，所以没能证明分叉点也会 fail。我没有证据说明这是回归，也没有证据排除。inject 模式下 frontmatter 被剥掉，本分支对非画布路径的正文只是把「输出」拆成两条路。按锚点 4 的字面，这一条在分叉点没有 fail 的证据，应判为未放行，由验收方裁定。
+5. **锚点 5：pass。** `git diff $(git merge-base staging HEAD)..HEAD --name-only` 共 17 个文件，都在 plan 各 Task 的 Files 清单、本交接文档、测试清单与 plan 之内。
+
+### 与 plan 不一致、需要交出方知晓的地方
+
+- **桩的节点 id 改成了 uuid**：plan Task 1 的表格里是 `node-src` / `node-new`（plan 第 53、56、57 行），我没有改 plan。原因：`validate-handoff.sh` 的门禁要求 `source_node` / `target_node` 是 uuid，字面值会让 eval 8 的 agent 停在门禁上。改的是夹具取值，没动接口签名、测试名称和断言。
+- **fork-topic 的三条新 eval 只在 inject 模式跑过**：它们通过 `<skill 目录>/../handoff/...` 引用桩，native 模式的 jail 里没有 `../handoff`。
+- **新增 eval 5–8 的 prompt 路径改成了 `<skill 目录>/evals/fixtures/...`**（`4f426ba`）：原写法在 native 模式下找不到桩，格子超时。既有 eval 4 没动。
+- **fork-topic 的两处行为与 plan 的 Approach 不同**：画布里不承诺回传（结论由用户贴回主讨论）；重试用尽或建节点失败时输出可粘贴 prompt。两者在 handoff 里有对应写法，评审认可。
+- **handoff 与 fork-topic 的「只点名模型」「INVALID_ARGUMENT 最多重试两次」**是整分支评审后补的，plan 未写。
+
+### 遗留与未做
+
+- 临时目录没能删（权限拒绝了 `rm -rf`），请手动清：`/private/var/folders/0g/clby1fg9341729jj41dymllr0000gn/T/tmp.ZZeYhJRCpH`、`/var/folders/0g/clby1fg9341729jj41dymllr0000gn/T/tmp.MOE8CwigaH`、`/private/var/folders/0g/clby1fg9341729jj41dymllr0000gn/T/tmp.KQ0GassDjA`。另外，Task 1 实现者早期的一个测试清理 bug 曾在 `$TMPDIR` 里误删过一批文件（已加守卫修正，被删内容无法恢复也查不出）。
+- 评审中未修的 Minor：桩的 `get-node` 不模拟在线状态；两个 skill 没写「类别不存在」怎么办；每次 eval 运行都会在 TMPDIR 留一个临时仓库；eval 防止打到真实画布靠的是 prompt 里的 PATH 前缀加 harness 环境清洗。
+- 没有合并、没有 `npm publish`、没有在真实画布上建任何节点、没有 `git worktree remove` 本工作区。
+
+**显式声明：带着 fork-topic 原有 eval 1 的 `no-extrapolation` 这一条未闭环的红送验。** 其余锚点 1、2、3、5 全部 pass，锚点 4 除这一条外全部 pass 或判为既有问题放行。
