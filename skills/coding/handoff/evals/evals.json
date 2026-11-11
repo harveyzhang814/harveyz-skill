@@ -144,7 +144,7 @@
     {
       "id": 5,
       "name": "author-canvas-routes-develop",
-      "prompt": "先运行 `bash evals/fixtures/canvas-stub/setup.sh routed`，它会打印三行：STUB_BIN、STUB_LOG、WORKTREE。本次运行里你执行的每一条画布命令（agent-canvas-ctl、agent-canvas-arrange）前面都必须加上 `PATH=<STUB_BIN>:$PATH`，例如 `PATH=<STUB_BIN>:$PATH agent-canvas-ctl whoami`，一条都不能漏——漏了就会打到真实画布上。你当前就在一个 Agent Canvas 节点里（用桩的 whoami 即可确认）。交接工作区已经建好：就是 setup 打印的 WORKTREE（分支 feature/slugify-numbers），直接复用，不要新建 worktree 或分支，交接文档写在这个工作区里。用户的任务：slugify 保留数字这个小任务，测试清单已经写在工作区的 docs/superpowers/specs/ 下，实现很直白。我想把实现交给另一个 session 去做，帮我写交接并把接手的节点建好派过去。",
+      "prompt": "先运行 `bash <skill 目录>/evals/fixtures/canvas-stub/setup.sh routed`（<skill 目录> 就是 handoff skill 所在目录：native 模式在当前目录的 `.claude/skills/handoff/`；inject 模式见提示里 This skill directory is 那一行），它会打印三行：STUB_BIN、STUB_LOG、WORKTREE。本次运行里你执行的每一条画布命令（agent-canvas-ctl、agent-canvas-arrange）前面都必须加上 `PATH=<STUB_BIN>:$PATH`，例如 `PATH=<STUB_BIN>:$PATH agent-canvas-ctl whoami`，一条都不能漏——漏了就会打到真实画布上。你当前就在一个 Agent Canvas 节点里（用桩的 whoami 即可确认）。交接工作区已经建好：就是 setup 打印的 WORKTREE（分支 feature/slugify-numbers），直接复用，不要新建 worktree 或分支，交接文档写在这个工作区里。用户的任务：slugify 保留数字这个小任务，测试清单已经写在工作区的 docs/superpowers/specs/ 下，实现很直白。我想把实现交给另一个 session 去做，帮我写交接并把接手的节点建好派过去。",
       "expected_output": "author phase 第 6 步走路由：先 list-node-route-categories，再 describe-node-route-category develop，然后 create-routed-pty-node --category develop，--params 恰好含 describe 列出的全部字段，--evidence 指向工作区里真实存在的文件（交接文档、测试清单），--description 按 describe 的段落写，不带 --message；全程不调用 create-pty-node。之后 put、link-nodes、send 照旧，派发消息只含寻址信息。断言全部走 transcript：这条 eval 测的是调用了哪些命令、传了什么参数，证据在执行轨迹里。画布命令全部由桩应答，桩的调用日志（STUB_LOG）可作旁证。",
       "files": [
         "evals/fixtures/canvas-stub/setup.sh"
@@ -186,7 +186,7 @@
     {
       "id": 6,
       "name": "author-canvas-named-codex",
-      "prompt": "先运行 `bash evals/fixtures/canvas-stub/setup.sh routed`，它会打印三行：STUB_BIN、STUB_LOG、WORKTREE。本次运行里你执行的每一条画布命令（agent-canvas-ctl、agent-canvas-arrange）前面都必须加上 `PATH=<STUB_BIN>:$PATH`，例如 `PATH=<STUB_BIN>:$PATH agent-canvas-ctl whoami`，一条都不能漏——漏了就会打到真实画布上。你当前就在一个 Agent Canvas 节点里（用桩的 whoami 即可确认）。交接工作区已经建好：就是 setup 打印的 WORKTREE（分支 feature/slugify-numbers），直接复用，不要新建 worktree 或分支，交接文档写在这个工作区里。用户的任务：slugify 保留数字这个小任务，测试清单已经写在工作区里。交给 codex 做，帮我写交接并把接手的节点建好派过去。",
+      "prompt": "先运行 `bash <skill 目录>/evals/fixtures/canvas-stub/setup.sh routed`（<skill 目录> 就是 handoff skill 所在目录：native 模式在当前目录的 `.claude/skills/handoff/`；inject 模式见提示里 This skill directory is 那一行），它会打印三行：STUB_BIN、STUB_LOG、WORKTREE。本次运行里你执行的每一条画布命令（agent-canvas-ctl、agent-canvas-arrange）前面都必须加上 `PATH=<STUB_BIN>:$PATH`，例如 `PATH=<STUB_BIN>:$PATH agent-canvas-ctl whoami`，一条都不能漏——漏了就会打到真实画布上。你当前就在一个 Agent Canvas 节点里（用桩的 whoami 即可确认）。交接工作区已经建好：就是 setup 打印的 WORKTREE（分支 feature/slugify-numbers），直接复用，不要新建 worktree 或分支，交接文档写在这个工作区里。用户的任务：slugify 保留数字这个小任务，测试清单已经写在工作区里。交给 codex 做，帮我写交接并把接手的节点建好派过去。",
       "expected_output": "用户点名了 codex：author 第 6 步直接 create-pty-node --node-type codex，不调用任何路由命令（list/describe/create-routed 都不调）。断言全部走 transcript：这条 eval 测的是调用了哪些命令、传了什么参数，证据在执行轨迹里。画布命令全部由桩应答，桩的调用日志（STUB_LOG）可作旁证。",
       "files": [
         "evals/fixtures/canvas-stub/setup.sh"
@@ -208,7 +208,7 @@
     {
       "id": 7,
       "name": "author-canvas-old-app-fallback",
-      "prompt": "先运行 `bash evals/fixtures/canvas-stub/setup.sh old-app`，它会打印三行：STUB_BIN、STUB_LOG、WORKTREE。本次运行里你执行的每一条画布命令（agent-canvas-ctl、agent-canvas-arrange）前面都必须加上 `PATH=<STUB_BIN>:$PATH`，例如 `PATH=<STUB_BIN>:$PATH agent-canvas-ctl whoami`，一条都不能漏——漏了就会打到真实画布上。你当前就在一个 Agent Canvas 节点里（用桩的 whoami 即可确认）。交接工作区已经建好：就是 setup 打印的 WORKTREE（分支 feature/slugify-numbers），直接复用，不要新建 worktree 或分支，交接文档写在这个工作区里。用户的任务：slugify 保留数字这个小任务，测试清单已经写在工作区里。我想把实现交给另一个 session 去做，帮我写交接并把接手的节点建好派过去。",
+      "prompt": "先运行 `bash <skill 目录>/evals/fixtures/canvas-stub/setup.sh old-app`（<skill 目录> 就是 handoff skill 所在目录：native 模式在当前目录的 `.claude/skills/handoff/`；inject 模式见提示里 This skill directory is 那一行），它会打印三行：STUB_BIN、STUB_LOG、WORKTREE。本次运行里你执行的每一条画布命令（agent-canvas-ctl、agent-canvas-arrange）前面都必须加上 `PATH=<STUB_BIN>:$PATH`，例如 `PATH=<STUB_BIN>:$PATH agent-canvas-ctl whoami`，一条都不能漏——漏了就会打到真实画布上。你当前就在一个 Agent Canvas 节点里（用桩的 whoami 即可确认）。交接工作区已经建好：就是 setup 打印的 WORKTREE（分支 feature/slugify-numbers），直接复用，不要新建 worktree 或分支，交接文档写在这个工作区里。用户的任务：slugify 保留数字这个小任务，测试清单已经写在工作区里。我想把实现交给另一个 session 去做，帮我写交接并把接手的节点建好派过去。",
       "expected_output": "旧版 App 没有路由命令（报未知子命令、退出码 1）：author 第 6 步退回 create-pty-node --node-type claude-code --task-type execute，全程只建一个节点，并告诉用户路由不可用、已退回。断言全部走 transcript：这条 eval 测的是调用了哪些命令、传了什么参数，证据在执行轨迹里。画布命令全部由桩应答，桩的调用日志（STUB_LOG）可作旁证。",
       "files": [
         "evals/fixtures/canvas-stub/setup.sh"
@@ -235,7 +235,7 @@
     {
       "id": 8,
       "name": "author-canvas-invalid-retry",
-      "prompt": "先运行 `bash evals/fixtures/canvas-stub/setup.sh reject-once`，它会打印三行：STUB_BIN、STUB_LOG、WORKTREE。本次运行里你执行的每一条画布命令（agent-canvas-ctl、agent-canvas-arrange）前面都必须加上 `PATH=<STUB_BIN>:$PATH`，例如 `PATH=<STUB_BIN>:$PATH agent-canvas-ctl whoami`，一条都不能漏——漏了就会打到真实画布上。你当前就在一个 Agent Canvas 节点里（用桩的 whoami 即可确认）。交接工作区已经建好：就是 setup 打印的 WORKTREE（分支 feature/slugify-numbers），直接复用，不要新建 worktree 或分支，交接文档写在这个工作区里。用户的任务：slugify 保留数字这个小任务，测试清单已经写在工作区里。我想把实现交给另一个 session 去做，帮我写交接并把接手的节点建好派过去。",
+      "prompt": "先运行 `bash <skill 目录>/evals/fixtures/canvas-stub/setup.sh reject-once`（<skill 目录> 就是 handoff skill 所在目录：native 模式在当前目录的 `.claude/skills/handoff/`；inject 模式见提示里 This skill directory is 那一行），它会打印三行：STUB_BIN、STUB_LOG、WORKTREE。本次运行里你执行的每一条画布命令（agent-canvas-ctl、agent-canvas-arrange）前面都必须加上 `PATH=<STUB_BIN>:$PATH`，例如 `PATH=<STUB_BIN>:$PATH agent-canvas-ctl whoami`，一条都不能漏——漏了就会打到真实画布上。你当前就在一个 Agent Canvas 节点里（用桩的 whoami 即可确认）。交接工作区已经建好：就是 setup 打印的 WORKTREE（分支 feature/slugify-numbers），直接复用，不要新建 worktree 或分支，交接文档写在这个工作区里。用户的任务：slugify 保留数字这个小任务，测试清单已经写在工作区里。我想把实现交给另一个 session 去做，帮我写交接并把接手的节点建好派过去。",
       "expected_output": "桩对第一次 create-routed-pty-node 返回 INVALID_ARGUMENT：author 按报错修正后再次调用 create-routed-pty-node，不退回 create-pty-node，最终只建出一个节点。断言全部走 transcript：这条 eval 测的是调用了哪些命令、传了什么参数，证据在执行轨迹里。画布命令全部由桩应答，桩的调用日志（STUB_LOG）可作旁证。",
       "files": [
         "evals/fixtures/canvas-stub/setup.sh"
