@@ -105,6 +105,14 @@ test('step 7 says manage-worktree merge with script fallback', () => {
   assert.ok(text.includes('scripts/merge-to-develop.sh'))
   assert.ok(!text.includes('@{'))
 })
+test('merge_script is read from resolved.env, not derived from merge_target', () => {
+  const text = generateWith(cfg, 'merge_target=develop\nmerge_script=scripts/custom-merge.sh\n')
+  assert.ok(text.includes('scripts/custom-merge.sh'))
+  assert.ok(!text.includes('scripts/merge-to-develop.sh'))
+  assert.ok(text.includes('merge-base --is-ancestor HEAD develop'))
+  // merge_script 缺省时才回退到 scripts/merge-to-<merge_target>.sh
+  assert.ok(generateWith(cfg, 'merge_target=develop\n').includes('scripts/merge-to-develop.sh'))
+})
 test('compose sources never read workflow-config.yml', () => {
   const skillDir = fileURLToPath(new URL('../skills/devflow/compose-agentsmd', import.meta.url))
   for (const sub of ['scripts', 'assets']) {
