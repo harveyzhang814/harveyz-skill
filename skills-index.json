@@ -486,7 +486,7 @@
       "bundle": "devflow",
       "installScope": "global",
       "contentHash": "411304456391ad45",
-      "contentVersion": "0.1.0"
+      "contentVersion": "0.1.1"
     }
   ],
   "hooks": [

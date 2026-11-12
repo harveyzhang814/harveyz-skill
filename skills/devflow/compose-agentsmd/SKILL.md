@@ -2,7 +2,7 @@
 name: compose-agentsmd
 description: "Compose, generate, or check a project's AGENTS.md from a fixed skeleton, reusable module packs and a small per-project config, so the standard development-flow rules stay in one place and the generated file never drifts by hand-editing. Triggers: 'compose AGENTS.md', 'generate AGENTS.md', 'check AGENTS.md', 'adopt the standard AGENTS.md skeleton', 'upgrade AGENTS.md modules'."
 user_invocable: true
-version: "0.1.0"
+version: "0.1.1"
 ---
 
 # 生成 AGENTS.md

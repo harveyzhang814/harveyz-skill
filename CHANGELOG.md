@@ -8,8 +8,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed
+- `compose-agentsmd` 0.1.1（devflow 模块包 1.1.0）：Step 5.3 不再把执行 skill 写死为 `superpowers:subagent-driven-development`，本会话执行与交接都改为按 `develop-plan` 的条件选定，交接文档写明所选 skill 及理由；接手方边界补充自行裁决只适用于不可修改项以外的问题。引用 `develop-plan` 时不再写死步骤号；高档路径名由“SDD”改为“spec 路径”，避免与 subagent-driven-development 的缩写混淆。已用旧包生成 AGENTS.md 的项目需重新生成
 - `develop-plan` 0.6.0：计划确认后先按项目指令确定执行方（默认本会话），再按条件选执行技能并说明依据。本会话执行、多数任务要读大量与后续无关的代码或输出、或前置依赖链长且测试不足以判定对错时选 `superpowers:subagent-driven-development`；其余情况（典型是交给全新会话）选 `superpowers:executing-plans`。用户指定时按用户，不再只在用户显式要求时才用 `executing-plans`
-- 仓库 `CLAUDE.md` / `AGENTS.md`：交接时不再固定填 `superpowers:subagent-driven-development`，改为交出方按 develop-plan 第 5 步的条件为全新会话选定执行技能，并在交接文档写明理由；补充执行技能的自行裁决只适用于不可修改项以外的问题，涉及接口签名、测试名称与断言、`Global Constraints` 的冲突一律停止并打回。取代 2026-11-08 决定记录中 D16 的“否则直接使用 SDD”与 D19 的“交接时同样使用 SDD”
+- 仓库 `CLAUDE.md` / `AGENTS.md`：交接时不再固定填 `superpowers:subagent-driven-development`，改为交出方按 develop-plan 的条件为全新会话选定执行技能，并在交接文档写明理由；补充执行技能的自行裁决只适用于不可修改项以外的问题，涉及接口签名、测试名称与断言、`Global Constraints` 的冲突一律停止并打回。取代 2026-11-08 决定记录中 D16 的“否则直接使用 SDD”与 D19 的“交接时同样使用 SDD”
 
 ### Added
 - `sync-design` 5.4.0：`designSystem` 新增可选字段 `screenshot`（截图命令，占位符 `{url}`、`{out}`，可选 `{height}`）。生成后检查看主题时，对每个主题运行它截图再读图检查，截图只放临时目录；没登记时仍用宿主的浏览器或截图能力。在 agent-canvas 实测中，截图查出了守卫查不到的导航被截断、提示条压住模态边缘
