@@ -124,3 +124,11 @@ target_node: b3654081-a108-4549-820d-066b380e09e0
 **偏离裁决**：自测记录列出的 7 项全部接受。第 6 项（`137df93`）只新增用例 23–27，未改计划写定的断言；“缺 `base.<type>` 不兜底默认分支”符合 Spec 第 3 节，接受。第 1 项署名按实际执行模型写，属正确做法，计划的 Global Constraints 写法有误。
 
 **结论：已验收。** 合并前需交出方处理：本分支与当前 staging 在 `CLAUDE.md`（staging 已删除，内容并入 AGENTS.md）与 `.hskill/handoff/config.md` 冲突，需把 Task 9 的合并写法移植到 AGENTS.md 与新版 config.md 后再合并。
+
+## 交出方合并前处理（2026-11-12）
+
+- 把 staging（`bde620a`）并入本分支，合并提交 `c7a1d90`。冲突两处：
+  - `CLAUDE.md`：staging 已删除并入 AGENTS.md，按 staging 删除；Task 9 的两处改动移植到 AGENTS.md「Git 与工作区」的合并一段（调用 manage-worktree「合并」，未安装时运行脚本；hooks 拦截说明）与「跨会话交接」第 6 条（在交接工作区里合并，不另建 staging 工作区）。
+  - `.hskill/handoff/config.md`：合并写法取本分支版本；`authority.architecture` 取 staging 版本（不再指向已删除的 CLAUDE.md）。
+- 验收锚点 5 中“CLAUDE.md ≥ 1”随之改由 AGENTS.md 承担：`manage-worktree「合并」` 在 AGENTS.md 与 config.md 均出现。
+- 合并后复验：`npm test` exit 0（471 pass / 0 fail / 7 skipped）；对真实最新 staging 不固定基线重跑走查 `clone`、`deploy-hs`、`exec-hs`：功能分支干净并入副本 staging，(i)–(iv) 结果与验收记录一致。
