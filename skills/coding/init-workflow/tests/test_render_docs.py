@@ -177,3 +177,84 @@ def test_cli_prints_warn_before_status_and_is_idempotent(tmp_path):
         "UPDATED",
     ]
     assert run() == ["UNCHANGED"]
+
+
+def h2_section(doc, title):
+    """取 '## title' 到下一个 '## ' 标题之间的文本。"""
+    start = doc.index(f"## {title}")
+    nxt = doc.find("\n## ", start + 1)
+    return doc[start:nxt] if nxt != -1 else doc[start:]
+
+
+def rule_line(doc, branch):
+    rules = h2_section(doc, "分支保护规则")
+    return next(l for l in rules.splitlines() if l.startswith(f"- **`{branch}`**"))
+
+
+# ── I-3：合并目标分支的保护规则写真实机制，不再列来源分支 ───────────────────
+
+def test_merge_target_rule_states_script_and_trailer_hooks(tmp_path):
+    doc = render_cfg(tmp_path, STAGING_CFG)
+    line = rule_line(doc, "staging")
+    assert "禁止直接提交" in line
+    assert "scripts/merge-to-staging.sh" in line
+    assert "Merge-Via: merge-to-staging.sh" in line
+    assert ".githooks/commit-msg" in line and ".githooks/pre-push" in line
+    assert "只接受来自" not in line
+    assert "`feature/*`" not in line
+
+
+def test_other_protected_branch_keeps_source_list(tmp_path):
+    doc = render_cfg(tmp_path, STAGING_CFG)
+    assert rule_line(doc, "main") == "- **`main`** — 禁止直接提交。只接受来自 `staging`、`release/*` 的合并。"
+
+
+def test_rules_intro_does_not_attribute_everything_to_pre_commit(tmp_path):
+    rules = h2_section(render_cfg(tmp_path, STAGING_CFG), "分支保护规则")
+    assert "以下规则由 `.githooks/pre-commit` 自动强制执行" not in rules
+
+
+def test_no_merge_target_keeps_source_list_wording(tmp_path):
+    doc = render_cfg(tmp_path, NO_FEATURE_CFG)
+    assert rule_line(doc, "main") == "- **`main`** — 禁止直接提交。只接受来自 `fix/*` 的合并。"
+    assert "Merge-Via" not in doc
+
+
+# ── M-1：分支类型行的合并目标取 base.<类型> ─────────────────────────────────
+
+def test_branch_table_targets_follow_resolved_base(tmp_path):
+    doc = render_cfg(tmp_path, STAGING_CFG)
+    table = h2_section(doc, "分支模型")
+    assert "| `release/<名称>` | 发版切点 | `main` |" in table
+    assert "| `feature/<名称>` | 新功能 | `staging` |" in table
+
+
+# ── I-2 / M-3：FAQ 指向合并脚本，并说明远端同步用快进 ───────────────────────
+
+def test_hotfix_faq_brings_fix_back_via_merge_script(tmp_path):
+    faq = h2_section(render_cfg(tmp_path, STAGING_CFG), "常见问题")
+    hotfix = faq[faq.index("紧急热修复"):]
+    hotfix = hotfix[:hotfix.index("\n\n")]
+    assert "scripts/merge-to-staging.sh" in hotfix
+    assert "反向合并到 staging" not in hotfix
+
+
+def test_faq_explains_remote_sync_by_fast_forward(tmp_path):
+    faq = h2_section(render_cfg(tmp_path, STAGING_CFG), "常见问题")
+    assert "git pull --ff-only" in faq
+    assert "Merge remote-tracking branch" in faq
+    assert "Merge-Via: merge-to-staging.sh" in faq
+
+
+def test_no_merge_target_faq_has_no_merge_via_items(tmp_path):
+    faq = h2_section(render_cfg(tmp_path, NO_FEATURE_CFG), "常见问题")
+    assert "merge-to-" not in faq
+    assert "--ff-only" not in faq
+
+
+def test_main_only_hotfix_faq_uses_merge_script(tmp_path):
+    cfg = NO_FEATURE_CFG.replace('"fix/*"', '"feature/*"\n        - "release/*"').replace(
+        '    - "^fix/.+"\n', '    - "^feature/.+"\n    - "^release/.+"\n')
+    faq = h2_section(render_cfg(tmp_path, cfg), "常见问题")
+    assert "scripts/merge-to-main.sh" in faq
+    assert "反向合并" not in faq

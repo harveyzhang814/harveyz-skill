@@ -96,15 +96,27 @@ def render(config, resolved, template):
     for p in c['naming_patterns']:
         prefix = pattern_to_prefix(p)
         purpose, _ = pattern_purpose(prefix)
-        target_branch = next((b['name'] for b in protected if b['name'] not in roots), roots[0] if roots else '—')
+        # 与 resolved.env 一致：分支类型并入 base.<类型>；解释器没给出时不猜
+        target_branch = resolved['base'].get(prefix.rstrip('/'), '—')
         rows.append(f'| `{prefix}<名称>` | {purpose} | `{target_branch}` |')
     branch_table = '\n'.join(rows)
 
     # ── PROTECTION_RULES ──────────────────────────────────────────
     rule_lines = []
+    target = resolved['merge_target']
     for b in protected:
         sources = '、'.join(f'`{s}`' for s in b['merge_from'])
-        if b['allow_direct_commit']:
+        if b['name'] == target:
+            # 合并目标：pre-commit 只管直接提交；合并来源不再检查，只认合并脚本留下的标记
+            direct = ('直接提交时发出警告（不阻断）' if b['allow_direct_commit']
+                      else '禁止直接提交')
+            rule_lines.append(
+                f'- **`{target}`** — {direct}（`.githooks/pre-commit`）。'
+                f'合并只经 `{resolved["merge_script"]}` 进行，任何非集成分支都用它合并进来；'
+                f'合并提交须带 `{resolved["merge_trailer"]}` 行，缺少该行的合并提交由 '
+                f'`.githooks/commit-msg` 拒绝，推送时由 `.githooks/pre-push` 拒绝'
+                f'（远端同步合并 `Merge branch \'{target}\' of …` 除外）。')
+        elif b['allow_direct_commit']:
             rule_lines.append(f'- **`{b["name"]}`** — 直接提交时发出警告（不阻断）。合并来源建议为 {sources}。')
         else:
             rule_lines.append(f'- **`{b["name"]}`** — 禁止直接提交。只接受来自 {sources} 的合并。')
@@ -135,7 +147,6 @@ def render(config, resolved, template):
     )
 
     # 合并到集成分支：有合并目标 → 合并脚本；否则保留通用 git merge
-    target = resolved['merge_target']
     if target:
         if resolved['pre_checks']:
             checks = '\n'.join(f'{i}. `{cmd}`' for i, cmd in enumerate(resolved['pre_checks'], 1))
@@ -209,9 +220,25 @@ def render(config, resolved, template):
         faq.append(f'**Q：在 {integration} 上提交被拒绝怎么办？**\n'
                    f'A：你正在直接向 {integration} 提交。请新建分支，在新分支提交后再合并回 {integration}。')
     release_p = [p for p in c['naming_patterns'] if 'release' in p]
-    if release_p:
+    if release_p and target and target != main_branch:
+        faq.append(f'**Q：需要紧急热修复直接上 {main_branch} 怎么办？**\n'
+                   f'A：从 {main_branch} 切一个 `release/*` 分支，修复后按项目发布流程合并到 {main_branch}；'
+                   f'再在这个 `release/*` 分支的 worktree 里调用 `manage-worktree「合并」`'
+                   f'（或直接运行 `{resolved["merge_script"]}`）把修复带回 {target}，'
+                   f'不要手动 `git merge` 进 {target}。')
+    elif release_p and target:
+        faq.append(f'**Q：需要紧急热修复直接上 {main_branch} 怎么办？**\n'
+                   f'A：从 {main_branch} 切一个 `release/*` 分支，修复后在它的 worktree 里调用 '
+                   f'`manage-worktree「合并」`（或直接运行 `{resolved["merge_script"]}`）合并到 {main_branch}。')
+    elif release_p:
         faq.append(f'**Q：需要紧急热修复直接上 {main_branch} 怎么办？**\n'
                    f'A：从 {main_branch} 切一个 `release/*` 分支，修复后合并到 {main_branch}，再反向合并到 {integration}。')
+    if target:
+        faq.append(f'**Q：怎么把远端的 {target} 同步到本地？**\n'
+                   f'A：用快进同步：`git pull --ff-only`（或 `git merge --ff-only origin/{target}`）。'
+                   f'本仓库设置了 `merge.ff=false`，直接 `git merge origin/{target}` 会生成一个 '
+                   f'"Merge remote-tracking branch …" 合并提交，它不带 `{resolved["merge_trailer"]}` 行，'
+                   f'会被 commit-msg 拒绝（只放行 `Merge branch \'{target}\' of …` 形式的远端同步合并）。')
     faq_section = '\n\n'.join(faq)
 
     # ── 替换占位符 ─────────────────────────────────────────────────

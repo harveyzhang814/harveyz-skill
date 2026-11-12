@@ -19,7 +19,7 @@
 
 ## 分支保护规则
 
-以下规则由 `.githooks/pre-commit` 自动强制执行：
+以下规则由 `.githooks/` 中的 hooks 自动强制执行：
 
 {{PROTECTION_RULES}}
 
