@@ -28,11 +28,14 @@ test('init-spec prepares the worktree before writing the decision record', async
   assert.ok(body.includes('工作区根目录下'))
 })
 
-test('develop-plan reuses the spec worktree and defers execution mode to project instructions', async () => {
-  const body = await checkIndexed('develop-plan', '0.5.0')
+test('develop-plan reuses the spec worktree and picks the execution skill by condition', async () => {
+  const body = await checkIndexed('develop-plan', '0.6.0')
   assert.ok(body.includes('调用 `manage-worktree` 的「准备」'))
   assert.ok(body.includes('把已批准 Spec 的路径作为锚点传入'))
-  assert.ok(body.includes('项目指令对计划确认后的执行方式另有规定时按项目指令，否则直接使用 `superpowers:subagent-driven-development` 执行'))
+  assert.ok(body.includes('确认后先确定执行方：项目指令对此有规定时按项目指令，否则由本会话执行'))
+  assert.ok(body.includes('- `superpowers:subagent-driven-development`：由本会话执行'))
+  assert.ok(body.includes('- `superpowers:executing-plans`：其余情况，典型是交给全新会话执行'))
+  assert.ok(!body.includes('仅当用户显式要求原生执行时'))
   assert.ok(body.includes(INSTALL))
   assert.ok(!body.includes('不询问执行方式'))
   assert.ok(!body.includes('using-git-worktrees'))

@@ -19,8 +19,8 @@ test('handoff config schema sends workspace entry to manage-worktree', async () 
   assert.ok(!schema.includes('分别写 Claude Code、Codex 与通用兜底'))
 })
 
-test('CLAUDE.md does not credit manage-worktree with the pre-merge check', async () => {
-  const body = await read('CLAUDE.md')
+test('AGENTS.md does not credit manage-worktree with the pre-merge check', async () => {
+  const body = await read('AGENTS.md')
   assert.ok(!body.includes('它替你守住三条硬约束'))
   assert.ok(!body.includes('进入后补上 `git config core.hooksPath .githooks && git config merge.ff false`。'))
 })
