@@ -247,3 +247,20 @@ real 两仓库都没有 feature/walk 分支；两份副本的 remote 均为空
 2. **删除 commit-msg 的手写合并拦截时，必须按模板重新生成 `commit-msg/format`**，首行带 `[ -f "$(git rev-parse --git-dir)/MERGE_HEAD" ] && exit 0`。部署后实测两件事：一次手动 `git merge` 进 staging 被拒；功能分支上的合并提交（如把 staging 并入功能分支）不被格式检查拒绝。
 3. **`AGENTS.md` Step 7 第 5 条（Spec 5.7 agent-canvas 第 4 条）还没改**：改为调用 manage-worktree「合并」，未安装带「合并」的版本时直接运行 `scripts/merge-to-staging.sh`。
 4. **预期会看到合并脚本的 WARN**：`deploy_artifacts.py` 覆盖 `scripts/merge-to-staging.sh` 时，stdout 打印 `WARN scripts/merge-to-staging.sh`，stderr 打印找回命令 `git diff HEAD -- scripts/merge-to-staging.sh`。这是预期的，需照录给用户。文档只要先加好自填区标记，就不会 WARN。
+
+## Task 12：合并后部署与核对（2026-11-12，交出方执行）
+
+### harveyz-skill
+
+- 本分支经新版合并脚本合入 staging（`c12120f`，带 `Merge-Via`）；随后 init-workflow 5.0.1 修正 hook 模板版本（`a79bfcd`），装机副本同步到 5.0.1。
+- 试用（`chore/hooks-header-5`，`71c8c78`）：新版 manage-worktree「准备」从 staging 上的 `resolved.env` 推断基线并新建 worktree；主工作树上手动 `git merge --no-ff` 被 commit-msg 拒绝，`--abort` 后 staging 未动；「合并」（`merge-worktree.sh`）exit 0。
+- staging 上四类产物取值一致：`merge_target=staging`、标记行 `Merge-Via: merge-to-staging.sh`、`worktree_dir=.worktrees`；文档无 `checkout -b`。
+
+### agent-canvas
+
+- 用户授权后在 `chore/deploy-init-workflow-5`（`f9db825`）部署 init-workflow 5.0.1：手写内容迁入自填区（部署前后自填区 sha256 一致）；`merge.pre_checks` 承接 token 预算检查；新增 `commit-msg/merge-via`、`pre-push/merge-via`，删除块外手写拦截，`commit-msg/format` 带 MERGE_HEAD 豁免；hooks 标识与 lock 改为 5.0.1；AGENTS.md Step 7 第 5 条改为调用 manage-worktree「合并」（未安装时运行脚本）。
+- 发现并修正：预算检查从“合并脚本所在目录”改为“工作树根”查找后，agent-canvas 自带 `scripts/verify-merge-to-staging-e2e.js` 0/14。pre_check 改为 `node "$(dirname "$0")/check-file-token-budget.js" --changed-since {target}`（`$0` 为合并脚本，检查在脚本内 eval），恢复原查找方式；临时软链 `node_modules` 后 14/14，与 staging 上旧脚本基线（14/14）一致，软链已删除。`$0` 依赖标准脚本内部实现，正式的 `{script_dir}` 占位符留待后续。
+- `pre-push/force-push` 块 hash 与内容不符为部署前既有状态（主工作树同样），未改动，下次运行 init-workflow 时按类型 C 由用户裁决。
+- 用分支上的新合并脚本合入 agent-canvas staging（`d98b84e`，带 `Merge-Via`；预算检查按规则跳过）。主工作树已同步到新 hooks 与 `resolved.env`。
+- 主工作树上用 `commit-tree` 生成的游离提交做手动 `git merge --no-ff` → commit-msg 拒绝；`--abort` 后 staging 仍为 `d98b84e`，工作树干净，无残留合并状态，未建任何分支。
+- staging 上四类产物取值一致：`merge_target=staging`、标记行一致、`worktree_dir=.worktrees`、合并脚本含预算 pre_check；文档无 `checkout -b`、自填区标记在；新版 manage-worktree 在 agent-canvas 读到 `resolved.env`，`base=staging`。
