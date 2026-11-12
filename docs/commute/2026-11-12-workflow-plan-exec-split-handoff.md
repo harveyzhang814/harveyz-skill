@@ -6,7 +6,7 @@ acceptance: hard
 workspace_mode: same-workspace
 branch: feature/workflow-plan-exec-split
 worktree: /Users/harveyzhang96/Projects/harveyz-skill/.worktrees/feature+workflow-plan-exec-split
-base_commit: 22a1c0238e383c0a3c21567c9c7d6ead4acb2f0a
+base_commit: 22a1c02a49ee2e2a0c9af5030e930e3133ad8c19
 source_node: c308ef8a-67b3-4a94-b405-b4cc1caf9f45
 target_node: b3654081-a108-4549-820d-066b380e09e0
 ---
