@@ -25,7 +25,7 @@ const walk = dir => readdirSync(dir).flatMap(name => {
 test('compose-agentsmd is registered in devflow with matching version and hash', async () => {
   const entry = index.skills.find(s => s.path === 'devflow/compose-agentsmd')
   assert.equal(entry.bundle, 'devflow'); assert.equal(entry.installScope, 'global')
-  assert.equal(entry.contentVersion, '0.1.0'); assert.equal(entry.contentHash, hash(body))
+  assert.equal(entry.contentVersion, '0.2.0'); assert.equal(entry.contentHash, hash(body))
   assert.match(index.bundleMeta.devflow, /compose-agentsmd/)
   assert.ok(pkg.files.includes('skills/devflow/compose-agentsmd/'))
 })

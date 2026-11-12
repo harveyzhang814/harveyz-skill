@@ -268,9 +268,9 @@ E2E 未通过即任务未完成，不得以“单测全绿”宣告完成。
    git merge-base --is-ancestor HEAD @{integration_branch}
    ```
 
-   退出码为 0 表示已合并，跳过脚本；退出码为 1 表示尚未合并，运行
-   `@{merge_command}`；其他退出码表示 Git 状态无法判定，停止并报告。合并到
-   `@{integration_branch}` 一律使用该脚本，禁止手动执行 `git checkout @{integration_branch} && git merge ...`。真实冲突按
+   退出码为 0 表示已合并，跳过合并动作；退出码为 1 表示尚未合并，调用 manage-worktree「合并」；未安装带「合并」的版本时直接运行
+   `@{merge_script}`；其他退出码表示 Git 状态无法判定，停止并报告。合并到
+   `@{integration_branch}` 一律走这条路径，禁止手动执行 `git checkout @{integration_branch} && git merge ...`。真实冲突按
    脚本提示处理。
 6. 汇报改动、验证结果、集成责任与结果、剩余风险及当前分支状态。
 <!-- @if agent_canvas -->
