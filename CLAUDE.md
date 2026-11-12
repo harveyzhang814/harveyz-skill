@@ -102,7 +102,7 @@ hskill CLI 行为（安装、交互、JSON 输出）+ 所有 skill 的 SKILL.md 
 
 1. **基线分支 `staging` 必须显式写出来。** 不写就从主工作树当前 HEAD 拉分支，而主工作树未必停在 `staging`——它可能正停在**别的 session 的分支**上。那样你的新分支会静默夹带别人未合并的提交，合并时等于替对方把没写完的东西发布出去。merge 会干净利落地成功，没有任何报错。
 2. **建完立刻进入。** 不进去的话后面每一条裸 git 命令都作用在主工作树上。`manage-worktree` 按宿主走原生进入方式（Claude Code 用 `path` 模式，不用 `name`——`name` 会自己建分支，名字过不了本仓库的命名规范，基线还默认取 `origin/<默认分支>`）。`cd` 顶不上——它只在单条命令内有效，下一条又回到原目录。
-3. **合并前 `git rev-parse --abbrev-ref HEAD` 真的核对一次。** 本仓库手动合并，没有任何护栏；打印出来不算，要对上。
+3. **合并前 `git rev-parse --abbrev-ref HEAD` 真的核对一次。** 合并脚本与 hooks 拦得住在集成分支上合并、拦得住不带 `Merge-Via` 行的合并，但拦不住你站在别人的分支上把它合进去；打印出来不算，要对上。
 
 `core.hooksPath=.githooks` 与 `merge.ff=false` 是仓库级设置，存在共享的 `.git/config` 里，对所有 worktree 生效；只在新 clone 时设置一次，`manage-worktree` 的「检测」会核对 hooks 是否生效。
 

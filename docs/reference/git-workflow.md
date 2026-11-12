@@ -28,16 +28,16 @@ main
 | `fix/<名称>` | Bug 修复 | `staging` |
 | `chore/<名称>` | 维护、依赖升级等 | `staging` |
 | `doc/<名称>` | 文档更新 | `staging` |
-| `release/<名称>` | 发版切点 | `staging` |
+| `release/<名称>` | 发版切点 | `main` |
 
 ---
 
 ## 分支保护规则
 
-以下规则由 `.githooks/pre-commit` 自动强制执行：
+以下规则由 `.githooks/` 中的 hooks 自动强制执行：
 
 - **`main`** — 禁止直接提交。只接受来自 `staging`、`release/*` 的合并。
-- **`staging`** — 禁止直接提交。只接受来自 `feature/*`、`fix/*`、`chore/*`、`doc/*` 的合并。
+- **`staging`** — 禁止直接提交（`.githooks/pre-commit`）。合并只经 `scripts/merge-to-staging.sh` 进行，任何非集成分支都用它合并进来；合并提交须带 `Merge-Via: merge-to-staging.sh` 行，缺少该行的合并提交由 `.githooks/commit-msg` 拒绝，推送时由 `.githooks/pre-push` 拒绝（远端同步合并 `Merge branch 'staging' of …` 除外）。
 
 提交被拒绝时，请检查当前所在分支，改用正确的合并流程操作。
 
@@ -128,7 +128,10 @@ git config merge.ff false   # 禁止 fast-forward，确保 merge commit 可被�
 A：你正在直接向 staging 提交。请新建分支，在新分支提交后再合并回 staging。
 
 **Q：需要紧急热修复直接上 main 怎么办？**
-A：从 main 切一个 `release/*` 分支，修复后合并到 main，再反向合并到 staging。
+A：从 main 切一个 `release/*` 分支，修复后按项目发布流程合并到 main；再在这个 `release/*` 分支的 worktree 里调用 `manage-worktree「合并」`（或直接运行 `scripts/merge-to-staging.sh`）把修复带回 staging，不要手动 `git merge` 进 staging。
+
+**Q：怎么把远端的 staging 同步到本地？**
+A：用快进同步：`git pull --ff-only`（或 `git merge --ff-only origin/staging`）。本仓库设置了 `merge.ff=false`，直接 `git merge origin/staging` 会生成一个 "Merge remote-tracking branch …" 合并提交，它不带 `Merge-Via: merge-to-staging.sh` 行，会被 commit-msg 拒绝（只放行 `Merge branch 'staging' of …` 形式的远端同步合并）。
 
 
 

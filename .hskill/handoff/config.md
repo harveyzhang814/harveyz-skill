@@ -11,7 +11,7 @@ workflow: |
   - commit-msg hook 强制 Conventional Commits：
     feat | fix | chore | docs | refactor | test | style | perf
     （注意是 docs 不是 doc——doc(...) 会被 hook 拒绝。）
-  - 规范全文：docs/reference/git-workflow.md（自动生成，勿手改）
+  - 规范全文：docs/reference/git-workflow.md（自动生成，自填区以外勿手改）
   工作区已经建好（frontmatter 的 workspace_mode 为 shared-worktree 或 same-workspace，
   两种模式都带 worktree 绝对路径与 branch 分支名）。**不建 worktree、不建分支**，按 `manage-worktree` 的「进入」进入这个已有路径。
   到位后核对：
