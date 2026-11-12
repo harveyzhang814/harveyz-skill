@@ -76,3 +76,17 @@ target_node: 048fa050-dd70-45bc-972f-7f0511a0a05a
    - V1、V2、V4–V11 分别对应计划 Task 3、4、5 中的具名测试。
    - V3 的判定依据是 Task 6 产出的逐节对照表，写在本文档的接手方自测记录里：每处差异都能归到 Spec 5.4 表的某一行、5.4a，或 Task 4 提交说明里的兜底条目；出现无法归类的差异，即为未达成。
 4. **publish-skill 检查**：对 `devflow/compose-agentsmd` 运行，F1–F9 与 R1–R4 都没有违规（警告可以有）。
+
+## 接手方 verify 缺口（2026-11-11）
+
+`validate-handoff.sh` exit 0；工作区检测 pass（`branch`、`core.hooksPath=.githooks`、`merge.ff=false` 均已核对）；`hands-off-to` 边已存在，`target_node` 与本节点一致。已核实无问题：Agent Canvas `14dbe3e0b` 存在且 `AGENTS.md` 为 394 行、§3.1 存在；`hskill install --skill/--target/--scope/--force` 均存在；分叉点基线 `npm test` exit 0。
+
+以下缺口按「关键决定」（计划与 Spec 冲突以 Spec 为准并打回；接手方不得改测试名称与断言）打回，`status` 不动：
+
+1. **（阻断）计划 Task 3 的 V10 测试与 Spec 第 7 节 V10 冲突。**
+   - Spec V10：`slot_packs` 把某个**非联动槽**改用本地包；该槽**正文来自本地包**、标记为 `pack=local:<名>`、**首行 `packs` 含两者**。
+   - 计划测试 `V10 slot_packs to a local pack uses it and records local:<name>`：本地包 `local-a` 声明联动组两槽、`slot_packs` 两槽都指向它；只断言槽标记与首行匹配 `/packs=local:local-a/`。
+   - 后果：(a) 测的是联动槽而非非联动槽；(b) 此时主包 `alpha` 一个槽也不填，不算“被用到”，首行只有 `local:local-a`，“含两者”没被验证，“正文来自本地包”也没断言；(c) 若按 Spec 让两包都被用到，按名字排序首行应为 `packs=alpha@1.0.0,local:local-a`，计划断言 `/packs=local:local-a/` 必然失败——不改断言就无法满足 Spec。另外 fixture `alpha` 只声明联动组两槽，没有可“改用”的非联动槽，需要计划同时说明 fixture 怎么调整（例如 `alpha` 增加一个非联动槽，或本地包改填一个 `alpha` 不填的非联动槽）。
+   - 顺带请明确：首行 `packs` 的排序键对本地包取 `local-a` 还是 `local:local-a`。
+   - 请交出方修订计划中这条测试的名称/断言/fixture 说明。
+2. **（次要）Spec V7 的“嵌套 `@if` → 退出码 2 且不写文件”在计划里没有生成层面的断言。** Task 3 的 V7 测试 `breakIt` 只含未知参数、未闭合 `@if`、只关 `flow-summary`、拆联动组四项；嵌套 `@if` 只在 Task 1 渲染器层断言抛错。最小验收锚点 3 说 V7 对应具名测试。请二选一：在 `breakIt` 中补一项嵌套 `@if`，或在锚点里写明嵌套以 Task 1 测试为准。
