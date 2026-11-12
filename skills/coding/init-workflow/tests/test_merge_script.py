@@ -141,6 +141,21 @@ def test_pre_check_with_single_quote_is_quoted_safely(tmp_path):
     assert "run_pre_check 'echo '\"'\"'a b'\"'\"' && true'" in pre_checks_block(script)
 
 
+def test_script_dir_placeholder_rendered_quoted(tmp_path):
+    cfg = MAIN_CFG + "\nmerge:\n  pre_checks:\n    - node {script_dir}/check.js --changed-since {target}\n"
+    script = render_cfg(tmp_path, cfg)
+    assert pre_checks_block(script).strip() == \
+        "run_pre_check 'node \"$MERGE_SCRIPT_DIR\"/check.js --changed-since main'"
+
+
+def test_merge_script_dir_defined_before_any_cd(tmp_path):
+    script = render_cfg(tmp_path, MAIN_CFG)
+    line = 'MERGE_SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd -P)"'
+    assert line in script
+    assert script.index(line) < script.index("run_pre_check()")
+    assert script.index(line) < script.index("feature_branch=")
+
+
 def test_generated_header_line(tmp_path):
     script = render_cfg(tmp_path, STAGING_CFG)
     lines = script.split("\n")

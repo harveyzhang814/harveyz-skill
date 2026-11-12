@@ -9,13 +9,13 @@ const root = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const PATH = 'skills/coding/init-workflow/SKILL.md'
 const hash = b => createHash('sha256').update(b.replace(/^version:.*$/m, 'version: __HASH_PLACEHOLDER__')).digest('hex').slice(0, 16)
 
-test('init-workflow is 5.0.1 with matching index hash', async () => {
+test('init-workflow is 5.0.2 with matching index hash', async () => {
   const body = await readFile(resolve(root, PATH), 'utf8')
   const index = JSON.parse(await readFile(resolve(root, 'skills-index.json'), 'utf8'))
   const entry = index.skills.find(s => s.path === 'coding/init-workflow')
   assert.match(body, /^name: init-workflow$/m)
-  assert.match(body, /^version: ["']?5\.0\.1["']?$/m)
-  assert.equal(entry.contentVersion, '5.0.1')
+  assert.match(body, /^version: ["']?5\.0\.2["']?$/m)
+  assert.equal(entry.contentVersion, '5.0.2')
   assert.equal(entry.contentHash, hash(body))
 })
 
@@ -45,6 +45,7 @@ test('init-workflow states single resolver, deploy and outputs', async () => {
     'commit-msg/merge-via',
     'pre-push/merge-via',
     'worktree.dir',
+    '{script_dir}',
     'WARN',
   ]) assert.ok(body.includes(phrase), phrase)
 })

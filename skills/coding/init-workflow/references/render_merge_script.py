@@ -19,9 +19,11 @@ def render_merge_script(resolved, template, version):
     if not target:
         raise ValueError('resolved 没有 merge_target，不应渲染合并脚本')
 
-    # 每条 pre_check 一行 run_pre_check '<命令>'；{target} 替换为合并目标，shlex.quote 保证原样传给 eval
+    # 每条 pre_check 一行 run_pre_check '<命令>'；{target} 替换为合并目标，{script_dir} 替换为
+    # 带引号的 "$MERGE_SCRIPT_DIR"（eval 时展开，路径含空格也安全）；shlex.quote 保证原样传给 eval
     block = '\n'.join(
-        f"run_pre_check {shlex.quote(cmd.replace('{target}', target))}"
+        "run_pre_check " + shlex.quote(
+            cmd.replace('{target}', target).replace('{script_dir}', '"$MERGE_SCRIPT_DIR"'))
         for cmd in resolved['pre_checks']
     )
 
