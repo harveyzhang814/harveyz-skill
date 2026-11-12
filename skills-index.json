@@ -478,7 +478,7 @@
       "path": "devflow/manage-worktree",
       "bundle": "devflow",
       "installScope": "global",
-      "contentHash": "65f342128b25a72a",
+      "contentHash": "5d42c61d1c0e1230",
       "contentVersion": "0.2.0"
     },
     {

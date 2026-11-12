@@ -60,6 +60,20 @@ commit_in_wt() { echo feat > "$WT/b.txt" && git -C "$WT" add b.txt && git -C "$W
   [[ "$output" == *"init-workflow"* ]] || false
 }
 
+@test "resolved.env without integration_branches -> exit 4 naming resolved-invalid" {
+  deploy_with ""
+  sed -e '/^integration_branches=/d' "$HUB/.hskill/init-workflow/resolved.env" > "$TMP/e.env"
+  cp "$TMP/e.env" "$HUB/.hskill/init-workflow/resolved.env"
+  git -C "$HUB" add -A && git -C "$HUB" commit -qm broken
+  add_wt
+  cd "$WT"
+  before="$(git -C "$HUB" rev-parse staging)"
+  run bash "$SCRIPT"
+  [ "$status" -eq 4 ]
+  [[ "$output" == *"resolved-invalid"* ]] || false
+  [ "$(git -C "$HUB" rev-parse staging)" = "$before" ]
+}
+
 @test "on integration branch -> exit 5" {
   deploy_with ""
   git -C "$HUB" worktree add -q "$TMP/mainwt" main

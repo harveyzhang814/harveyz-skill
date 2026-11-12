@@ -15,13 +15,19 @@
 # 每个未通过的项另起一行 reason=<代码>，代码取
 #   not-root | not-linked | detached | integration-branch | hooks-missing
 #
+# base 取自 resolved.env 的 base.<--type>；该键不存在时为空（不退回默认分支），
+# 调用方据此不新建 worktree。
+#
 # 退出码：0 pass / 1 fail / 2 用法错误 / 3 目标不是 git 目录（此时 verdict=n/a）/
-#         4 仓库未部署 resolved.env（此时输出 resolved=missing、verdict=n/a、
-#         reason=workflow-not-deployed，只含这三行）
-# 非 git 先于未部署判断。
+#         4 resolved.env 不可用，只输出三行 resolved、verdict=n/a、reason：
+#           reason=workflow-not-deployed  仓库未部署（resolved=missing）
+#           reason=resolved-invalid       文件在但缺 integration_branches 或其值为空
+#                                         （resolved=<相对路径>）
+# 非 git 先于退出码 4 判断。
 #
 # 策略来源：两步读取 resolved.env，不解析任何规则文件、不 source 它（逐行读取）。
-#   ① 引导：依次取目标工作区根、主工作树根下的 resolved.env，用第一份得到 base.<--type>；
+#   ① 引导：依次取目标工作区根、主工作树根下的 resolved.env，用第一份得到 base.<--type>
+#      （没有则 base.feature，再没有则第一个集成分支，只用于定位②）；
 #   ② 权威：git show <基线分支>:.hskill/init-workflow/resolved.env 的内容为准。
 # 主工作树停在别的分支、或目标工作区早于部署，都不影响取值。
 #
@@ -68,20 +74,6 @@ main_root="$(dirname "$common_dir")"   # 主工作树的根，不是当前链接
 branch="$(git -C "$root" symbolic-ref --short -q HEAD 2>/dev/null || true)"
 if [[ -z "$branch" ]]; then detached="yes"; else detached="no"; fi
 
-# ── 默认分支：origin/HEAD 指向的分支，否则依次取存在的 main、master，都没有则为空 ──
-default_branch=""
-origin_head="$(git -C "$root" symbolic-ref -q refs/remotes/origin/HEAD 2>/dev/null || true)"
-if [[ -n "$origin_head" ]]; then
-  default_branch="${origin_head#refs/remotes/origin/}"
-else
-  for cand in main master; do
-    if git -C "$root" show-ref --verify --quiet "refs/heads/$cand"; then
-      default_branch="$cand"
-      break
-    fi
-  done
-fi
-
 # ── resolved.env 的逐行读取：env_get <键> <文本>，键不存在返回 1 ───────────────
 # 只认行首 key=value（第一个 = 切分），# 开头为注释；不 source、不 eval。
 env_get() {
@@ -101,9 +93,24 @@ boot=""
 for dir in "$root" "$main_root"; do
   if [[ -f "$dir/$resolved_rel" ]]; then boot="$(cat "$dir/$resolved_rel")"; break; fi
 done
+# 定位用的分支只取自这份文件：base.<--type>，没有则 base.feature，再没有则第一个集成分支；
+# 不按默认分支猜。文件在、却连集成分支都没有 → 视为无效。
+invalid() {
+  echo "resolved=$resolved_rel"
+  echo "verdict=n/a"
+  echo "reason=resolved-invalid"
+  exit 4
+}
 boot_base=""
-[[ -n "$boot" ]] && boot_base="$(env_get "base.$type" "$boot" || true)"
-boot_base="${boot_base:-$default_branch}"
+if [[ -n "$boot" ]]; then
+  boot_base="$(env_get "base.$type" "$boot" || true)"
+  [[ -z "$boot_base" ]] && boot_base="$(env_get base.feature "$boot" || true)"
+  if [[ -z "$boot_base" ]]; then
+    boot_int="$(env_get integration_branches "$boot" || true)"
+    boot_base="${boot_int%% *}"
+  fi
+  [[ -z "$boot_base" ]] && invalid
+fi
 
 # ── ② 权威：基线分支上已提交的那份；取不到视为未部署 ─────────────────────────
 env_text=""
@@ -118,10 +125,11 @@ if [[ -z "$env_text" ]]; then
 fi
 
 # ── integration / base / merge / default_path：全部来自权威那份 ───────────────
+# 没有集成分支就判断不了 is_integration，整份视为无效；base.<--type> 缺失时 base 为空
+# （调用方据此不新建），绝不退回默认分支。
 integration="$(env_get integration_branches "$env_text" || true)"
-[[ -z "$integration" ]] && integration="$default_branch"
-base_auth="$(env_get "base.$type" "$env_text" || true)"
-base="${base_auth:-$default_branch}"
+[[ -z "${integration// /}" ]] && invalid
+base="$(env_get "base.$type" "$env_text" || true)"
 merge_target="$(env_get merge_target "$env_text" || true)"
 merge_script="$(env_get merge_script "$env_text" || true)"
 worktree_dir="$(env_get worktree_dir "$env_text" || true)"

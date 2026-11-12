@@ -35,10 +35,10 @@ version: "0.2.0"
 
 所有动作的取值（集成分支、基线、合并目标、worktree 目录）都来自 `.hskill/init-workflow/resolved.env`，以基线分支上已提交的那份为准，不读规则文件，也不 `source` 它（逐行读取）。`inspect-worktree.sh` 分两步取：
 
-1. 引导：依次取当前工作区根、主工作树根下的 `resolved.env`，用第一份得到 `base.<类型>`（「准备」用期望分支类型，其余动作用 `feature`）；两处都没有，也按未部署处理。
+1. 引导：依次取当前工作区根、主工作树根下的 `resolved.env`，用第一份得到 `base.<类型>`（「准备」用期望分支类型，其余动作用 `feature`；该键缺失时改用 `base.feature`，再缺失用第一个集成分支，仅用于定位第 2 步）；两处都没有，也按未部署处理。
 2. 权威：`git show <该基线分支>:.hskill/init-workflow/resolved.env`，以它的取值输出。这一份读不到（基线分支上没有此文件）→ 退出码 4。
 
-因此主工作树停在别的会话的分支上，或目标工作区是部署前建的分支，都不影响取值。退出码 4 时各动作停下，提示先在该仓库部署新版 init-workflow。
+因此主工作树停在别的会话的分支上，或目标工作区是部署前建的分支，都不影响取值。任何取值都不按默认分支猜：`resolved.env` 没有 `base.<类型>` 时 `base` 为空；没有集成分支（`integration_branches` 缺失或为空）时整份视为无效，退出码 4。退出码 4 时各动作停下，提示先在该仓库（重新）部署 init-workflow。
 
 ## 「检测」
 
@@ -60,8 +60,8 @@ bash <skill 目录>/scripts/inspect-worktree.sh [--path <目录>] [--type <分�
 `reusable=yes` 表示除 hooks 外全部通过，可以直接复用为任务工作区。其余输出：
 
 - `resolved`：`resolved.env` 的仓库相对路径 `.hskill/init-workflow/resolved.env`；仓库未部署时为 `missing`。
-- `integration`、`base`、`merge_target`、`merge_script`：取自 `resolved.env`（`integration_branches`、`base.<类型>`、`merge_target`、`merge_script`）；`resolved.env` 没有 `merge_target` 键（本仓库未配置合并目标）时 `merge_target`、`merge_script` 为空。
-- `default_path`：`<主工作树根>/.worktrees/<分支名，/ 换成 +>`，即仓库相对路径 `.worktrees/<分支名，/ 换成 +>`，例如 `feature/foo` → `.worktrees/feature+foo`；从链接 worktree 里调用也落在主工作树下。
+- `integration`、`base`、`merge_target`、`merge_script`：取自 `resolved.env`（`integration_branches`、`base.<类型>`、`merge_target`、`merge_script`）；`resolved.env` 没有 `base.<类型>` 键时 `base` 为空（不退回默认分支）；没有 `merge_target` 键（本仓库未配置合并目标）时 `merge_target`、`merge_script` 为空。
+- `default_path`：`<主工作树根>/<worktree_dir>/<分支名，/ 换成 +>`，`worktree_dir` 取自 `resolved.env`；默认 `worktree_dir=.worktrees` 时即仓库相对路径 `.worktrees/<分支名，/ 换成 +>`，例如 `feature/foo` → `.worktrees/feature+foo`；从链接 worktree 里调用也落在主工作树下。
 
 脚本不核对分支命名：分支名须匹配 `resolved.env` 的 `naming.<n>`（`naming_exempt` 所列分支豁免），由你读 `resolved.env` 核对，不读规则文件。
 
@@ -71,7 +71,7 @@ bash <skill 目录>/scripts/inspect-worktree.sh [--path <目录>] [--type <分�
 | 1 | `verdict=fail` | 按 `reason` 逐项报告 |
 | 2 | 用法错误 | 修正调用参数后重跑 |
 | 3 | 目标路径不存在或不是 git 目录，`verdict=n/a` | 「准备」「检测」在当前目录遇到（非 git 目录）：返回“不适用”，不建、不进，调用方在当前目录继续；「进入」遇到：报告不通过 |
-| 4 | 仓库未部署 `resolved.env`（`resolved=missing`、`verdict=n/a`、`reason=workflow-not-deployed`）；非 git 目录先于此判断 | 所有动作停下，提示该仓库的集成分支尚未部署新版 init-workflow，不继续、不兜底 |
+| 4 | `resolved.env` 不可用，只输出 `resolved`、`verdict=n/a`、`reason` 三行：仓库未部署（`resolved=missing`、`reason=workflow-not-deployed`），或文件无效——缺 `integration_branches` 或其值为空（`resolved=<相对路径>`、`reason=resolved-invalid`）；非 git 目录先于此判断 | 所有动作停下，提示该仓库需（重新）部署 init-workflow，按 `reason` 说明原因，不继续、不兜底 |
 
 向调用方报告时，四个检测项逐项给出通过或不通过及原因。项目特有设置不在检测范围内，由项目指令规定。
 
@@ -87,7 +87,7 @@ bash <skill 目录>/scripts/merge-worktree.sh
 
 **时机：** 只在用户明确说“合并”，或项目指令规定了合并时机时，由调用方触发。其他动作（「准备」「进入」「检测」「离开」）绝不顺带合并。
 
-**步骤：**
+**脚本内部依次做**（说明它做什么，不是要你逐步执行）：
 
 1. 对当前目录跑 `inspect-worktree.sh`。
 2. 读 `merge_target`、`merge_script`。
@@ -99,13 +99,15 @@ bash <skill 目录>/scripts/merge-worktree.sh
 | 退出码 | 含义 | 处理 |
 |---|---|---|
 | 0 | 已合并，或已包含在合并目标里 | 报告结果 |
-| 1 | 合并脚本出错（含 `merge.pre_checks` 未通过，脚本会打印失败的命令） | 报告脚本输出，不合并 |
+| 1 | 合并脚本出错（含 `merge.pre_checks` 未通过，脚本会打印失败的命令）；也可能是 `merge-worktree.sh` 自身的用法错误（带了参数）或检测脚本异常退出 | 报告输出，不合并 |
 | 2 | 真实冲突，冲突标记已落在当前工作区 | 解决冲突并提交后重新「合并」 |
 | 3 | 当前目录不是 git 目录 | 报告，不合并 |
-| 4 | 仓库未部署 `resolved.env` | 停下，提示先部署 init-workflow |
+| 4 | 仓库未部署 `resolved.env`，或它无效（`resolved-invalid`） | 停下，提示先（重新）部署 init-workflow |
 | 5 | 检测未通过：当前目录不是链接 worktree 的根目录（含其子目录）、detached HEAD、或处于集成分支 | 按输出的 `reason` 报告，不合并 |
 | 6 | `resolved.env` 没有合并目标 | 报告“本仓库未配置合并目标”，不合并 |
 | 7 | 本工作区缺合并脚本（本分支早于部署） | 提示先把 `<merge_target>` 并入本分支再「合并」，不退回 `git merge` |
+
+合并脚本返回 0、1、2 以外的退出码时，原样透传，不改写；按脚本输出报告。
 
 不 push（合并只更新本地合并目标分支），不移除 worktree，不删除分支；合并后清理由用户另行决定。
 
@@ -123,14 +125,14 @@ bash <skill 目录>/scripts/merge-worktree.sh
 
 - **期望分支已存在，且没有被任何工作区 checkout** → `git worktree add <路径> <分支>`，不建分支，不问基线。
 - **其他情况**（含主工作树停在功能分支上、detached HEAD、集成分支、未给锚点的新会话）→ 新建前向用户一次确认基线、分支名和路径，确认后 `git worktree add <路径> -b <分支> <基线>`：
-  - 基线：取 `base`；当前所在分支若是非集成的命名分支，列为可选的另一基线。不从当前 HEAD 静默拉分支——那会夹带其他会话未合并的提交。
+  - 基线：取 `base`；当前所在分支若是非集成的命名分支，列为可选的另一基线。不从当前 HEAD 静默拉分支——那会夹带其他会话未合并的提交。`base` 为空时不新建（见停止条件）。
   - 分支名：默认期望分支，须匹配命名模式。期望分支已存在但正被主工作树占用时，一个分支不能同时被两个工作区 checkout，确认时说明并请用户另取分支名。
-- **`.gitignore`**：`git -C <主工作树根> check-ignore -q .worktrees/`（主工作树根即 `default_path` 中 `/.worktrees/` 之前的部分）失败（未被忽略）时，补写一行 `.worktrees/` 须经用户确认：有上面那次确认就并入，没有就单独问这一项；确认后在新工作区里补写并提交。
+- **`.gitignore`**：worktree 目录的忽略规则由 init-workflow 部署时补写，本技能不检查、不改 `.gitignore`。
 
 停止条件：
 
 - 用户拒绝确认 → 不建；调用方停下，告诉用户可改选基线、分支名或路径后重来。
-- 基线分支在本地不存在（`git show-ref --verify refs/heads/<基线>` 失败）或推断不出 → 不新建，报告原因，请用户指定基线。
+- 基线推断不出（检测输出 `base` 为空，即 `resolved.env` 没有该分支类型的 `base.<类型>`），或基线分支在本地不存在（`git show-ref --verify refs/heads/<基线>` 失败）→ 不新建，报告原因，请用户指定基线；不拿默认分支或当前 HEAD 顶替。
 - 目标路径已存在 → 不覆盖，报告并请用户另选路径。
 
 ### 收尾

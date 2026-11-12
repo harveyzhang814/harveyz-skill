@@ -238,3 +238,59 @@ with_githooks() {
   run bash "$SCRIPT" --branch
   [ "$status" -eq 2 ]
 }
+
+# ── 不按默认分支兜底（I-1 c）：缺 base 输出空，缺集成分支视为无效 ───────────────
+# deploy_edited <sed 表达式>：先按标准夹具写出，再用 sed 改写后提交（main 与 staging 都带上）
+deploy_edited() {
+  write_env "$REPO"
+  sed -e "$1" "$REPO/.hskill/init-workflow/resolved.env" > "$TMP/edited.env"
+  cp "$TMP/edited.env" "$REPO/.hskill/init-workflow/resolved.env"
+  git -C "$REPO" add -A && git -C "$REPO" commit -qm deploy
+  git -C "$REPO" branch -f staging main
+}
+
+@test "23 resolved.env without any base.* -> base is empty, never the default branch" {
+  deploy_edited '/^base\./d'
+  wt="$(linked feature/x)"
+  run bash "$SCRIPT" --path "$wt"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *$'\nbase=\n'* ]] || false
+  [[ "$output" != *"base=main"* ]] || false
+  [[ "$output" == *"integration=main staging"* ]] || false
+}
+
+@test "24 --type absent from resolved.env -> base is empty" {
+  deploy
+  wt="$(linked feature/x)"
+  run bash "$SCRIPT" --path "$wt" --type hotfix
+  [ "$status" -eq 0 ]
+  [[ "$output" == *$'\nbase=\n'* ]] || false
+}
+
+@test "25 empty integration_branches -> exit 4 resolved-invalid" {
+  deploy_edited 's/^integration_branches=.*/integration_branches=/'
+  wt="$(linked feature/x)"
+  run bash "$SCRIPT" --path "$wt"
+  [ "$status" -eq 4 ]
+  [[ "$output" == *"resolved=.hskill/init-workflow/resolved.env"* ]] || false
+  [[ "$output" == *"verdict=n/a"* ]] || false
+  [[ "$output" == *"reason=resolved-invalid"* ]] || false
+  [[ "$output" != *"integration="* ]] || false
+}
+
+@test "26 missing integration_branches key -> exit 4 resolved-invalid" {
+  deploy_edited '/^integration_branches=/d'
+  wt="$(linked feature/x)"
+  run bash "$SCRIPT" --path "$wt"
+  [ "$status" -eq 4 ]
+  [[ "$output" == *"reason=resolved-invalid"* ]] || false
+}
+
+@test "27 staging with no base.* is still an integration branch, not reusable" {
+  deploy_edited '/^base\./d'
+  git -C "$REPO" worktree add -q "$TMP/wt" staging
+  run bash "$SCRIPT" --path "$TMP/wt"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"is_integration=yes"* ]] || false
+  [[ "$output" == *"reusable=no"* ]] || false
+}
