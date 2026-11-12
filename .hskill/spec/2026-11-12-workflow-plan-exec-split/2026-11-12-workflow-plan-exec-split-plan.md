@@ -441,6 +441,7 @@ git commit -m "feat(compose-agentsmd): 0.2.0 reads integration branch from resol
 - Create: `.hskill/init-workflow/resolved.env`
 - Modify: `docs/reference/git-workflow.md`、`scripts/merge-to-staging.sh`、`.githooks/pre-commit`、`.githooks/commit-msg`、`.githooks/pre-push`、`.githooks/.workflow-config.lock.yml`
 - Modify: `CLAUDE.md`（“合并方式”一节；“跨 session 交接”第 6 条，S4、S13、S14）
+- Modify: `.hskill/handoff/config.md`（workflow 段“本仓库没有合并脚本，交出方手动 git merge --no-ff 即可”改为交出方在交接工作区里调用 manage-worktree「合并」，未安装带「合并」的版本时运行 `scripts/merge-to-staging.sh`）
 - Test: `scripts/verify-merge-to-staging-e2e.cjs`（既有）
 
 - [ ] **Step 1: 确认现有 `docs/reference/git-workflow.md` 无需迁入自填区的手写内容**（与模板旧版逐节对照；有则先迁入）
@@ -452,7 +453,7 @@ Expected: 输出含 `.hskill/init-workflow/resolved.env`、`docs/reference/git-w
 
 - [ ] **Step 3: 按本分支 `hook-templates.md` 更新三个 hooks 的 MANAGED 块与 lock 文件**（取值来自 `resolved.env`）
 
-- [ ] **Step 4: 改 `CLAUDE.md` 两处**：合并改为调用 manage-worktree「合并」，未安装带「合并」的版本时运行 `scripts/merge-to-staging.sh`；交接第 6 条改为交出方在交接工作区里调用「合并」
+- [ ] **Step 4: 改 `CLAUDE.md` 两处与 `.hskill/handoff/config.md` 一处**：合并改为调用 manage-worktree「合并」，未安装带「合并」的版本时运行 `scripts/merge-to-staging.sh`；交接第 6 条改为交出方在交接工作区里调用「合并」；config.md 的“手动 git merge --no-ff”同样改掉
 
 - [ ] **Step 5: 运行验证**
 
@@ -462,7 +463,7 @@ Expected: e2e 全部场景通过；检测输出 `resolved=.hskill/init-workflow/
 - [ ] **Step 6: 提交**
 
 ```bash
-git add -A .claude .hskill/init-workflow docs/reference/git-workflow.md scripts/merge-to-staging.sh .githooks CLAUDE.md
+git add -A .claude .hskill/init-workflow .hskill/handoff/config.md docs/reference/git-workflow.md scripts/merge-to-staging.sh .githooks CLAUDE.md
 git commit -m "chore: deploy init-workflow 5.0.0 to harveyz-skill"
 ```
 
