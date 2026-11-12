@@ -9,13 +9,13 @@ const root = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const PATH = 'skills/coding/init-workflow/SKILL.md'
 const hash = b => createHash('sha256').update(b.replace(/^version:.*$/m, 'version: __HASH_PLACEHOLDER__')).digest('hex').slice(0, 16)
 
-test('init-workflow is 5.0.2 with matching index hash', async () => {
+test('init-workflow is 5.0.3 with matching index hash', async () => {
   const body = await readFile(resolve(root, PATH), 'utf8')
   const index = JSON.parse(await readFile(resolve(root, 'skills-index.json'), 'utf8'))
   const entry = index.skills.find(s => s.path === 'coding/init-workflow')
   assert.match(body, /^name: init-workflow$/m)
-  assert.match(body, /^version: ["']?5\.0\.2["']?$/m)
-  assert.equal(entry.contentVersion, '5.0.2')
+  assert.match(body, /^version: ["']?5\.0\.3["']?$/m)
+  assert.equal(entry.contentVersion, '5.0.3')
   assert.equal(entry.contentHash, hash(body))
 })
 
@@ -53,4 +53,25 @@ test('init-workflow states single resolver, deploy and outputs', async () => {
 test('init-workflow no longer tells the agent to parse config by hand for docs', async () => {
   const body = await readFile(resolve(root, PATH), 'utf8')
   assert.ok(!/render_docs\.py\s*\\?\s*\.hskill\/init-workflow\/workflow-config\.yml/.test(body))
+})
+
+test('acceptance test swaps HEAD with symbolic-ref instead of checking out branches', async () => {
+  const doc = await readFile(resolve(root, 'skills/coding/init-workflow/references/acceptance-test.md'), 'utf8')
+  assert.ok(!/git checkout/.test(doc), 'no git checkout (fails in repos without commits)')
+  assert.ok(!/git branch -D/.test(doc), 'no throwaway branches to clean up')
+  assert.ok(doc.includes('ORIGINAL_REF=$(git symbolic-ref -q HEAD)'))
+  assert.ok(/git symbolic-ref HEAD "\$ORIGINAL_REF" \|\|/.test(doc), 'restore reports failure')
+})
+
+test('hook templates quote every naming pattern', async () => {
+  const tpl = await readFile(resolve(root, 'skills/coding/init-workflow/references/hook-templates.md'), 'utf8')
+  const loops = tpl.match(/for PATTERN in .*; do/g) ?? []
+  assert.ok(loops.length >= 2)
+  for (const l of loops) assert.equal(l, "for PATTERN in '<pattern 1>' '<pattern 2>' ...; do")
+})
+
+test('init-workflow wires the bootstrap step', async () => {
+  const body = await readFile(resolve(root, PATH), 'utf8')
+  for (const phrase of ['bootstrap_branches.py', '--dry-run', 'ROOT-COMMIT', 'first-publish', 'unpushed'])
+    assert.ok(body.includes(phrase), phrase)
 })

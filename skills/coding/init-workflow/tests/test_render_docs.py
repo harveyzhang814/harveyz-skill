@@ -246,6 +246,15 @@ def test_faq_explains_remote_sync_by_fast_forward(tmp_path):
     assert "Merge-Via: merge-to-staging.sh" in faq
 
 
+def test_faq_explains_rejected_manual_merge_and_fast_forward(tmp_path):
+    faq = h2_section(render_cfg(tmp_path, STAGING_CFG), "常见问题")
+    item = faq[faq.index("手动合并被拒"):]
+    item = item[:item.index("\n\n")]
+    assert "git merge --abort" in item
+    assert "pre-push" in item
+    assert "scripts/merge-to-staging.sh" in item
+
+
 def test_no_merge_target_faq_has_no_merge_via_items(tmp_path):
     faq = h2_section(render_cfg(tmp_path, NO_FEATURE_CFG), "常见问题")
     assert "merge-to-" not in faq

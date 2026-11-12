@@ -1,8 +1,8 @@
 ---
 name: init-workflow
-description: "Initialize or update git branch management standards: reads .hskill/init-workflow/workflow-config.yml, audits config, incrementally generates and deploys git hooks (pre-commit, commit-msg, pre-push, post-checkout), and deploys resolved.env, the workflow doc and the standard merge script. Triggers: initializing a new git repo, first-time git setup, user asks to set/update branch protection or naming rules, reinstalling git hooks, or syncing after skill/template updates."
+description: "Initialize or update git branch management standards: reads .hskill/init-workflow/workflow-config.yml, audits config, incrementally generates and deploys git hooks (pre-commit, commit-msg, pre-push, post-checkout), deploys resolved.env, the workflow doc and the standard merge script, and bootstraps the first commit and missing integration branches. Triggers: initializing a new git repo, first-time git setup, user asks to set/update branch protection or naming rules, reinstalling git hooks, or syncing after skill/template updates."
 user_invocable: true
-version: "5.0.2"
+version: "5.0.3"
 ---
 
 # Git 工作流初始化
@@ -20,7 +20,9 @@ version: "5.0.2"
 git rev-parse --show-toplevel
 ```
 
-若不在 git 仓库中，询问用户是否先执行 `git init`，用户拒绝则停止，告知需先 `git init` 再运行本 skill。
+若不在 git 仓库中，询问用户是否先执行 `git init`，用户拒绝则停止，告知需先 `git init` 再运行本 skill。`git init` 不必指定分支名，Step 9 的起步引导会把 HEAD 改到根集成分支。
+
+**在哪运行：** 仓库还没有提交时，在主工作树运行即可，部署产物由 Step 9 的起步引导做成根提交。仓库已有提交时，在一条 `chore/` 分支的 worktree 里运行（用 `manage-worktree`「准备」建；合并目标分支还不存在时，基线用根集成分支，如 `main`）：部署产物在这条分支提交，结束后用刚部署的合并脚本合并。不要在主工作树的集成分支上运行——hooks 部署后立即生效，产物就提交不进去了。
 
 ---
 
@@ -146,7 +148,8 @@ mkdir -p .githooks
 
 4. **`merge-via` 块仅在存在合并目标时生成**（`resolved.env` 有 `merge_target`，即配置有 `base.feature`）：`commit-msg/merge-via` 与 `pre-push/merge-via` 两个 MANAGED 块，并把合并目标分支的 `branches.protected/<merge_target>` 块换成专用变体（保留“禁止直接提交”，提示改用合并脚本）；其他受保护分支的块不变。没有合并目标时三者都不生成，`commit-msg` 仅因 `commit_message.enforce: true` 才生成。
    - 提交标记是**绊线而非强制**：对远端同步合并（主题以 `Merge branch '<目标>' of ` 开头）放行，所以 `merge-via` 能拦住误操作，拦不住有意绕过。
-   - 合并目标分支**首次发布**（远端还没有该分支，此时只检查本地尖端提交）且尖端不是脚本产生的合并时，`pre-push/merge-via` 会拒绝，需要一次 `git push --no-verify`；之后的推送正常。
+   - 合并目标分支**首次发布**（远端还没有该分支，此时只检查本地尖端提交）且尖端不是脚本产生的合并时，`pre-push/merge-via` 会拒绝，需要一次 `git push --no-verify`；之后的推送正常。Step 9 的起步引导会用 `WARN first-publish` / `WARN unpushed` 提前指出。
+   - 快进合并（`git merge --ff-only <功能分支>`）不产生提交，本地不触发任何 hook，只在推送时被 `pre-push/merge-via` 拦下。
 
 各 hook 的触发条件、固定头部代码、MANAGED 块结构、块 ID 规范、hash 计算方式及多行内容写入技巧，见 `references/hook-templates.md`。
 
@@ -208,6 +211,28 @@ git config merge.ff false
 
 将本次生效配置的关键字段写入 `.githooks/.workflow-config.lock.yml`，格式见 `references/lock-file-format.md`。
 
+#### 起步引导（每次都跑，已就绪时什么都不做）
+
+hooks 已经生效，集成分支禁止直接提交；全新仓库因此做不出第一个提交，缺 `staging` 的仓库也建不了以它为基线的 worktree。先预演：
+
+```bash
+python3 <skill-path>/references/bootstrap_branches.py <仓库根> --dry-run
+```
+
+stdout 逐行一项（`--dry-run` 末行为 `DRY-RUN`）：
+
+| 行 | 含义 |
+|---|---|
+| `ROOT-COMMIT <根分支>` | 仓库还没有提交：把 HEAD 改到根集成分支（不出现在其他受保护分支 `merge_from` 里的那个，如 `main`），只收部署产物（规则文件、`resolved.env`、`.githooks/`、工作流文档、合并脚本、`.gitignore`）做根提交，绕过 hooks。用户自己的文件不收，之后走功能分支 |
+| `CREATE <分支> <来源>` | 本地缺这条集成分支：有 `origin/<分支>` 就从它建，否则从它的上游（`merge_from` 里列出它的那个受保护分支）建 |
+| `EXISTS <分支>` | 已存在，不动 |
+| `WARN unpushed <合并目标> <数量>` | 合并目标上有未推送、不带合并标记行的提交，推送会被 `pre-push/merge-via` 拒绝 |
+| `WARN first-publish <合并目标>` | 合并目标还没发布到远端，尖端又不是脚本产生的合并，首次推送会被拒 |
+
+只有 `EXISTS` 行时直接进入汇报。否则把预演结果给用户，确认一次后去掉 `--dry-run` 再跑一次。`WARN` 行只提醒、不推送：stderr 里有对应的一次性 `git push --no-verify` 命令，由用户确认这些提交确实要发布后自己执行。
+
+退出码：0 正常；2 找不到规则文件（回到 Step 2）；3 受保护分支推不出唯一的根或存在循环（回到 Step 3）；4 仓库已有提交，但根集成分支在本地和 `origin` 都没有（如默认分支叫 `master`）——不猜从哪建，把 stderr 给用户，由用户改名或建好后重跑。2–4 都在改动之前退出。
+
 #### 汇报结果
 
 用表格展示每个操作的状态：
@@ -229,6 +254,7 @@ merge.ff                           = false      ✅（或 ❌ 已修复 / ❌ �
 docs/reference/git-workflow.md     UPDATED
 CLAUDE.md                          已有引用，跳过
 WARN <路径>                        （如有）照录 stdout 的 WARN 行，并附 stderr 的找回命令
+起步引导                           照录 ROOT-COMMIT / CREATE / EXISTS 行；WARN 行附 stderr 的推送命令
 ─────────────────────────────────────────────────────
 冲突决策摘要：
   [1/3] branches.protected/main 手改块 → 用户选择保留修改
@@ -255,3 +281,4 @@ WARN <路径>                        （如有）照录 stdout 的 WARN 行，�
 | `references/render_docs.py` | 文档渲染 | 由 deploy_artifacts.py 调用 |
 | `references/render_merge_script.py` | 合并脚本渲染 | 由 deploy_artifacts.py 调用 |
 | `references/merge-script-template.sh` | 标准合并脚本模板 | 由 render_merge_script.py 读取 |
+| `references/bootstrap_branches.py` | 起步引导：根提交、补建集成分支、推送提醒 | Step 9：写完 lock 文件后执行（先 `--dry-run`） |

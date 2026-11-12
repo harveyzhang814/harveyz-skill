@@ -7,9 +7,17 @@ Step 6.5 用户选 Y 后读取此文件，按顺序执行各 hook 的验收场�
 ## 初始化
 
 ```bash
-ORIGINAL_BRANCH=$(git symbolic-ref --short HEAD)
+ORIGINAL_REF=$(git symbolic-ref -q HEAD)
 TIMESTAMP=$(date +%s)
+
+restore_head() {
+    git symbolic-ref HEAD "$ORIGINAL_REF" || echo "❌ HEAD 未能恢复，请手动执行：git symbolic-ref HEAD $ORIGINAL_REF"
+}
 ```
+
+`ORIGINAL_REF` 为空（detached HEAD）时不运行验收，告诉用户先切到命名分支。
+
+需要"站在某个分支上"的场景只用 `git symbolic-ref HEAD refs/heads/<分支>` 临时改 HEAD 指向，跑完立刻 `restore_head`：hooks 只读当前分支名，这样不切换文件、不新建分支，在还没有提交的仓库里也能用（切换分支在那里会失败）。恢复失败要报出来，不要用 `2>/dev/null` 吞掉。
 
 ---
 
@@ -22,17 +30,10 @@ TIMESTAMP=$(date +%s)
 取配置 `branches.protected` 第一个 `name` 字段作为 `PROTECTED_BRANCH`。
 
 ```bash
-SWITCHED=0
-if [ "$(git symbolic-ref --short HEAD 2>/dev/null)" != "$PROTECTED_BRANCH" ]; then
-    git checkout "$PROTECTED_BRANCH" 2>/dev/null \
-        || git checkout -b "$PROTECTED_BRANCH" 2>/dev/null
-    SWITCHED=1
-fi
-
+git symbolic-ref HEAD "refs/heads/$PROTECTED_BRANCH"
 output=$(sh .githooks/pre-commit 2>&1)
 exit_code=$?
-
-[ "$SWITCHED" = "1" ] && git checkout "$ORIGINAL_BRANCH" 2>/dev/null
+restore_head
 ```
 
 **期望：** `exit_code = 1`，output 含拒绝提示。
@@ -97,13 +98,9 @@ exit_code=$?
 前缀 `gwi-test-INVALID-NAME-` 不匹配任何常见命名规范。
 
 ```bash
-TEST_BRANCH="gwi-test-INVALID-NAME-${TIMESTAMP}"
-git checkout -b "$TEST_BRANCH" 2>/dev/null
-
+git symbolic-ref HEAD "refs/heads/gwi-test-INVALID-NAME-${TIMESTAMP}"
 output=$(sh .githooks/post-checkout HEAD HEAD 1 2>&1)
-
-git checkout "$ORIGINAL_BRANCH" 2>/dev/null
-git branch -D "$TEST_BRANCH" 2>/dev/null
+restore_head
 ```
 
 **期望：** output 含 `⚠️` 警告（此 hook 不阻断，exit 0 正常）。

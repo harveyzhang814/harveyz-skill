@@ -239,6 +239,11 @@ def render(config, resolved, template):
                    f'本仓库设置了 `merge.ff=false`，直接 `git merge origin/{target}` 会生成一个 '
                    f'"Merge remote-tracking branch …" 合并提交，它不带 `{resolved["merge_trailer"]}` 行，'
                    f'会被 commit-msg 拒绝（只放行 `Merge branch \'{target}\' of …` 形式的远端同步合并）。')
+        faq.append(f'**Q：手动合并被拒后怎么办？**\n'
+                   f'A：被 commit-msg 拒绝后合并仍处于进行中，先 `git merge --abort` 撤销，'
+                   f'再到被合并分支的 worktree 里运行 `{resolved["merge_script"]}`。'
+                   f'`git merge --ff-only <功能分支>` 这类快进不产生提交，本地不会被拦，'
+                   f'要到推送 {target} 时才被 pre-push 拒绝；快进只用于同步远端 {target}。')
     faq_section = '\n\n'.join(faq)
 
     # ── 替换占位符 ─────────────────────────────────────────────────
