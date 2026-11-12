@@ -2,7 +2,7 @@
 name: compose-agentsmd
 description: "Compose, generate, or check a project's AGENTS.md from a fixed skeleton, reusable module packs and a small per-project config, so the standard development-flow rules stay in one place and the generated file never drifts by hand-editing. Triggers: 'compose AGENTS.md', 'generate AGENTS.md', 'check AGENTS.md', 'adopt the standard AGENTS.md skeleton', 'upgrade AGENTS.md modules'."
 user_invocable: true
-version: "0.1.1"
+version: "0.2.1"
 ---
 
 # 生成 AGENTS.md
@@ -45,8 +45,6 @@ node <skill 目录>/scripts/compose-agentsmd.mjs <init|generate|check> [--root <
 | `title` | string | 是 | 无 | 骨架级：`overview` 的一级标题 |
 | `pack` | string | 是 | 无 | 骨架级：主包名，填它声明的全部标准槽 |
 | `slot_packs` | object | 否 | `{}` | 骨架级：`{ "<槽id>": "<包名>" }`，逐槽改用另一个包的模块（见「本地包」） |
-| `integration_branch` | string | 是 | 无 | 流程里基线分支的说明，以及合并判定命令 |
-| `merge_command` | string | 是 | 无 | 合并到集成分支的方式（如 `scripts/merge-to-staging.sh`） |
 | `e2e` | string | 否 | 空 | 验证步骤里「高档或涉及前端」那一行的端到端测试写法；为空时该行写「方式由仓库环境或其他约定规定」 |
 | `complexity_signals` | string | 否 | 空 | 复杂度判定里，通用高档信号之后追加的项目补充信号 |
 | `spec_dir` | string | 否 | `docs/superpowers/specs` | spec 与测试清单的存放目录 |
@@ -55,11 +53,13 @@ node <skill 目录>/scripts/compose-agentsmd.mjs <init|generate|check> [--root <
 | `agent_canvas` | boolean | 否 | `false` | 骨架级：是否生成 Agent Canvas 画布相关内容 |
 | `disabled_slots` | string[] | 否 | `[]` | 骨架级：关闭的标准槽 id；联动组（`flow-summary` 与 `flow-steps`）只能一起关 |
 
+   集成分支和合并脚本不是配置字段：生成时从 `<项目根>/.hskill/init-workflow/resolved.env` 读取 `merge_target`（流程里的基线分支与合并判定命令）和 `merge_script`（合并脚本路径，Step 7 在没有带「合并」的 `manage-worktree` 时直接运行它）。该文件缺失或没有 `merge_target` 时，`generate` 和 `check` 退出码为 2，stderr 提示先运行 init-workflow；配置里残留 `integration_branch` 或 `merge_command` 按未知字段报错，删掉即可。
+
    `release-acceptance`（版本验收）只在 `agent_canvas` 为 `true` 时生成，为 `false` 时流程是 7 步，不含 Step 8。`agent_canvas: true` 时 `spec_dir` 必须以 `docs/superpowers/specs` 开头，否则校验报错。配置里不能出现既非骨架级字段、也非所选包声明的参数的未知字段。
 
 **项目已有手写 AGENTS.md 时：** 由你把现有内容拆开，再生成。
 
-1. 对照 `<skill 目录>/assets/skeleton.json` 的槽和所选包的 `pack.json`，把现有内容归入描述槽（项目原则、平台适配、仓库环境、其他约定、概述）或配置参数（分支名、合并命令等）。
+1. 对照 `<skill 目录>/assets/skeleton.json` 的槽和所选包的 `pack.json`，把现有内容归入描述槽（项目原则、平台适配、仓库环境、其他约定、概述）或配置参数（`e2e`、目录等；分支名与合并脚本不进配置，由 init-workflow 的 `resolved.env` 提供）。
 2. 凡属标准模块已覆盖的流程规则，不抄进描述槽；项目与模块写法不同的地方，用参数或本地包表达，不在描述槽里重复一套。
 3. 运行 `generate --force`（原文件没有生成标记，会被判为手改，必须 `--force` 才能覆盖）。覆盖前先保留原文件副本。
 4. 向用户展示原文与生成结果的差异，由用户确认。确认后才算完成；不确认则把副本恢复为 `AGENTS.md`。

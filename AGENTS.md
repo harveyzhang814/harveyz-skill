@@ -48,7 +48,7 @@ git config merge.ff false
 
 worktree 路径约定为 `.worktrees/<分支名，/ 换成 +>`（例如 `feature/foo` → `.worktrees/feature+foo`），`.worktrees/` 已被 `.gitignore` 忽略。`.claude/worktrees/` 下已有的目录是历史遗留，不动。
 
-合并只在用户明确说“合并”或“完成”后进行：从工作分支的 worktree 运行 `scripts/merge-to-staging.sh`。合并前先运行 `git rev-parse --abbrev-ref HEAD`，结果要与预期分支对上，打印出来不算核对。脚本以本地原子更新和重试方式合并到 `staging`，并同步 checkout 着 `staging` 的工作树，不会推送 `origin`；当前在 `staging`、`main` 或 detached HEAD 时脚本拒绝执行。不要手动合并到 `main` 或 `staging`，也不要直接向这两个分支提交。
+合并只在用户明确说“合并”或“完成”后进行：在工作分支的 worktree 里调用 `manage-worktree`「合并」；未安装带「合并」的版本时，在同一 worktree 直接运行 `scripts/merge-to-staging.sh`，两者走的是同一个脚本。合并前先运行 `git rev-parse --abbrev-ref HEAD`，结果要与预期分支对上，打印出来不算核对：脚本与 hooks 拦得住在集成分支上合并、拦得住不带 `Merge-Via` 行的合并，但拦不住你站在别人的分支上把它合进去。脚本以本地原子更新和重试方式合并到 `staging`，并同步 checkout 着 `staging` 的工作树，不会推送 `origin`；当前在 `staging`、`main` 或 detached HEAD 时脚本拒绝执行。不要手动合并到 `main` 或 `staging`（缺 `Merge-Via` 标记的合并会被 hook 拒绝），也不要直接向这两个分支提交。
 
 ## 跨会话交接
 
@@ -61,7 +61,7 @@ worktree 路径约定为 `.worktrees/<分支名，/ 换成 +>`（例如 `feature
 3. 交接文档 frontmatter 的 `branch` 与 `worktree` 成对出现，都由交出方填写。分支名是权威依据，worktree 路径是它当前的落脚点，必须写明，不能让接手方去猜；路径失效时用 `git worktree list` 查这条分支挂在哪。
 4. 接手方不建 worktree、不建分支，按 `manage-worktree` 的「进入」进入文档里的路径，核对当前分支与 `branch` 一致后再开工。`git worktree add` 失败说明该分支已被这个工作区 checkout，这是提示，不是障碍。离开时只保留工作区，绝不 `remove`。
 5. 验收也在这个工作区里进行，不在主工作树或 `staging`/`main` 上进行：那里没有接手方的改动，跑出来的通过是别的代码的结果，看起来像验过了，比不跑更有害。验收方进入后先重读交接文档，接手方的自测记录与 `status` 只在这一份里。
-6. 只有交出方能合并，接手方与验收方都不合。验收通过后，交出方按上文方式合并到 `staging`，再 `git worktree remove` 收掉交接工作区。
+6. 只有交出方能合并，接手方与验收方都不合。验收通过后，交出方在交接工作区里按上文方式合并到 `staging`（不为合并另建 `staging` 工作区），再 `git worktree remove` 收掉交接工作区。
 7. 同一时刻只有一方在这个工作区里操作：交出方写完停手，接手方做完停手，再轮到验收方。两个会话同时在一个工作区里跑 git 会互相破坏暂存区。
 
 ### 计划后交接给执行模型

@@ -17,6 +17,8 @@ const PARAM_TYPES = ['string', 'boolean']
 const PARAM_NAME = /^\w+$/
 // 骨架级字段由生成器固定，包不可声明同名参数；其中只有 agent_canvas 可被模板引用。
 const SKELETON_FIELDS = ['title', 'pack', 'slot_packs', 'agent_canvas', 'disabled_slots']
+// 由生成器从 resolved.env 注入、可被模板引用的内部取值名；包不可声明同名参数，配置里也不能写。
+export const INJECTED_PARAMS = ['integration_branch', 'merge_script']
 const PACK_NAME = /^[A-Za-z0-9][A-Za-z0-9._-]*$/
 const RESERVED_PACK_NAMES = ['disabled']
 const FORBIDDEN_IN_TITLE = ['<!-- slot:', '<!-- compose-agentsmd:']
@@ -24,6 +26,23 @@ const SPEC_DIR_PREFIX = 'docs/superpowers/specs'
 
 const isPlainObject = v => v !== null && typeof v === 'object' && !Array.isArray(v)
 const isStringArray = v => Array.isArray(v) && v.every(x => typeof x === 'string')
+
+const RESOLVED_ENV_PATH = '.hskill/init-workflow/resolved.env'
+
+// 逐行读取 <root>/.hskill/init-workflow/resolved.env（不 source）：跳过 # 注释与空行，按第一个 = 拆分，去掉 CR。
+export function readResolvedEnv(root) {
+  const file = join(root, RESOLVED_ENV_PATH)
+  if (!existsSync(file)) throw new ConfigError(`找不到 ${file}，请先运行 init-workflow 生成它（集成分支与合并脚本取自其中的 merge_target / merge_script）`)
+  const env = new Map()
+  for (const raw of readFileSync(file, 'utf8').split('\n')) {
+    const line = raw.replace(/\r$/, '')
+    if (line.trim() === '' || line.trimStart().startsWith('#')) continue
+    const i = line.indexOf('=')
+    if (i < 0) continue
+    env.set(line.slice(0, i), line.slice(i + 1))
+  }
+  return env
+}
 
 function readJson(path, what) {
   try {
@@ -43,6 +62,7 @@ function validateParams(params, where) {
   if (!isPlainObject(params)) throw new ConfigError(`${where}: params 必须是对象`)
   for (const [name, decl] of Object.entries(params)) {
     if (!PARAM_NAME.test(name)) throw new ConfigError(`${where}: 参数名 "${name}" 非法`)
+    if (INJECTED_PARAMS.includes(name)) throw new ConfigError(`${where}: 参数 "${name}" 由生成器从 resolved.env 注入，不可在包里声明`)
     if (SKELETON_FIELDS.includes(name)) throw new ConfigError(`${where}: 参数 "${name}" 与骨架级字段重名，不可在包里声明`)
     if (!isPlainObject(decl) || !PARAM_TYPES.includes(decl.type)) {
       throw new ConfigError(`${where}: 参数 "${name}" 的 type 只能是 ${PARAM_TYPES.join(' / ')}`)
@@ -76,7 +96,7 @@ function loadPack(dir, name, source, standardSlots) {
   const params = m.params ?? {}
   validateParams(params, where)
 
-  const allowed = new Set([...Object.keys(params), 'agent_canvas'])
+  const allowed = new Set([...Object.keys(params), 'agent_canvas', ...INJECTED_PARAMS])
   for (const s of m.slots) {
     const file = join(dir, `${s}.md`)
     for (const n of templateParams(readFileSync(file, 'utf8'), file)) {
@@ -196,7 +216,10 @@ export function resolveConfig({ config, skeleton, packs }) {
 
   for (const key of Object.keys(config)) {
     if (!SKELETON_FIELDS.includes(key) && !effective.has(key)) {
-      throw new ConfigError(`未知字段 "${key}"：既不是骨架级字段，也不是所用包声明的参数`)
+      const hint = INJECTED_PARAMS.includes(key) || key === 'merge_command'
+        ? '；集成分支与合并脚本现由 init-workflow 的 resolved.env 提供，请从配置中删除该字段'
+        : ''
+      throw new ConfigError(`未知字段 "${key}"：既不是骨架级字段，也不是所用包声明的参数${hint}`)
     }
   }
 

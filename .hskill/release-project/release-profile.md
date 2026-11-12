@@ -12,7 +12,7 @@ staging → release/<version> → staging → main
 ```
 
 1. 从 `staging` 切出 `release/<version>` 分支，提交版本文件改动
-2. 本地合并回 `staging`
+2. 本地合并回 `staging`：在 `release/<version>` 分支上（其 worktree 根目录）运行 `scripts/merge-to-staging.sh`，或调用 manage-worktree「合并」。不要手动 `git checkout staging && git merge`——合并提交缺 `Merge-Via: merge-to-staging.sh` 行，会被 commit-msg 拒绝、推送时被 pre-push 拒绝
 3. 本地合并到 `main`，在 `main` 上打 tag
 4. 所有推送由用户手动执行
 

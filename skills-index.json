@@ -163,8 +163,8 @@
       "path": "coding/init-workflow",
       "bundle": "coding",
       "installScope": "essential",
-      "contentHash": "83d6126adf09c23f",
-      "contentVersion": "4.1.5"
+      "contentHash": "3ab278d30c224081",
+      "contentVersion": "5.0.1"
     },
     {
       "path": "coding/setup-debug",
@@ -478,15 +478,15 @@
       "path": "devflow/manage-worktree",
       "bundle": "devflow",
       "installScope": "global",
-      "contentHash": "116a7a053de3a288",
-      "contentVersion": "0.1.5"
+      "contentHash": "5f9d56e8db796def",
+      "contentVersion": "0.2.1"
     },
     {
       "path": "devflow/compose-agentsmd",
       "bundle": "devflow",
       "installScope": "global",
-      "contentHash": "411304456391ad45",
-      "contentVersion": "0.1.1"
+      "contentHash": "119e964625ea74a6",
+      "contentVersion": "0.2.1"
     }
   ],
   "hooks": [

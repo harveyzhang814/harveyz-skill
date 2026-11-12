@@ -1,0 +1,46 @@
+{
+  "schema_version": 2,
+  "diagram_type": "workflow",
+  "meta": {
+    "title": "一次「合并」走过哪几道关，在哪停下",
+    "output": "diagrams/merge.html",
+    "locale": "zh-CN",
+    "quality_profile": "showcase"
+  },
+  "lanes": [
+    { "id": "mw", "label": "manage-worktree「合并」" },
+    { "id": "script", "label": "仓库里的合并脚本" },
+    { "id": "stop", "label": "停下，不合并", "variant": "exception" }
+  ],
+  "phases": [
+    { "id": "check", "label": "执行侧核对", "fromCol": 0, "toCol": 2 },
+    { "id": "merge", "label": "脚本合并", "fromCol": 3, "toCol": 5, "variant": "emphasis" }
+  ],
+  "mainPath": ["inspect", "read", "exists", "prechecks", "tryMerge", "write"],
+  "nodes": [
+    { "id": "inspect", "lane": "mw", "col": 0, "type": "backend", "label": "检测工作区", "sublabel": "是 worktree 根、非集成分支", "width": 140 },
+    { "id": "read", "lane": "mw", "col": 1, "type": "database", "label": "读合并目标", "sublabel": "基线分支上的 resolved.env", "width": 140 },
+    { "id": "exists", "lane": "mw", "col": 2, "type": "backend", "label": "脚本在吗", "sublabel": "本工作区里", "width": 140 },
+    { "id": "prechecks", "lane": "script", "col": 3, "type": "security", "label": "项目检查", "sublabel": "merge.pre_checks", "width": 140 },
+    { "id": "tryMerge", "lane": "script", "col": 4, "type": "backend", "label": "试合并", "sublabel": "不动工作区", "width": 140 },
+    { "id": "write", "lane": "script", "col": 5, "type": "database", "label": "写入 staging", "sublabel": "CAS，只动本地", "tag": "退出 0", "width": 140 },
+    { "id": "refuse", "lane": "stop", "col": 0, "type": "security", "label": "拒绝", "sublabel": "报原因", "width": 140 },
+    { "id": "notDeployed", "lane": "stop", "col": 1, "type": "security", "label": "未部署", "sublabel": "退出 4", "width": 140 },
+    { "id": "rebase", "lane": "stop", "col": 2, "type": "security", "label": "先并入集成分支", "sublabel": "分支早于部署", "width": 140 },
+    { "id": "checkFail", "lane": "stop", "col": 3, "type": "security", "label": "检查没过", "sublabel": "退出 1", "width": 140 },
+    { "id": "conflict", "lane": "stop", "col": 4, "type": "security", "label": "真实冲突", "sublabel": "退出 2，标记落地", "width": 140 }
+  ],
+  "edges": [
+    { "id": "e1", "from": "inspect", "to": "read" },
+    { "id": "e2", "from": "read", "to": "exists" },
+    { "id": "e3", "from": "exists", "to": "prechecks", "variant": "emphasis" },
+    { "id": "e4", "from": "prechecks", "to": "tryMerge" },
+    { "id": "e5", "from": "tryMerge", "to": "write", "variant": "emphasis" },
+    { "id": "x1", "from": "inspect", "to": "refuse", "role": "error", "variant": "security" },
+    { "id": "x2", "from": "read", "to": "notDeployed", "role": "error", "variant": "security" },
+    { "id": "x3", "from": "exists", "to": "rebase", "role": "error", "variant": "security" },
+    { "id": "x4", "from": "prechecks", "to": "checkFail", "role": "error", "variant": "security" },
+    { "id": "x5", "from": "tryMerge", "to": "conflict", "role": "error", "variant": "security" },
+    { "id": "retry", "from": "write", "to": "tryMerge", "label": "被抢先，重算", "role": "return", "variant": "dashed" }
+  ]
+}
