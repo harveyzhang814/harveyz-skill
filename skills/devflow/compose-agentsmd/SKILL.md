@@ -29,16 +29,16 @@ node <skill 目录>/scripts/compose-agentsmd.mjs <init|generate|check> [--root <
 | 子命令 | 退出码 |
 |---|---|
 | `init` | 0 已建；1 配置目录已存在（不动任何文件） |
-| `generate` | 0 已写；1 目标文件疑似手改，拒绝覆盖（需 `--force`）；2 配置或模板错误 |
-| `check` | 0 `ok`；1 其他状态；2 配置或模板错误 |
+| `generate` | 0 已写；1 目标文件疑似手改，拒绝覆盖（需 `--force`）；2 配置或模板错误、用法错误、意外的 I/O 错误（不写文件） |
+| `check` | 0 `ok`；1 其他状态；2 配置或模板错误、用法错误、意外的 I/O 错误 |
 
-配置目录不存在时 `generate` 和 `check` 退出码为 2，先 `init`。
+配置目录不存在时 `generate` 和 `check` 退出码为 2，先 `init`。`init` 遇到意外的 I/O 错误（如目录不可写）同样退出码 2。退出码 1 只表示「已存在 / 拒绝覆盖 / 状态非 ok」，不会因为程序异常出现。
 
 ## 初始化
 
 1. 运行 `init`。它在 `<项目根>/.hskill/compose-agentsmd/` 下写入 `config.json`（`pack` 预填 `devflow`，其余必填项留空字符串）和空的描述槽文件。已存在则退出码 1，不改任何文件，把现状告诉用户，不重来。
 2. 发布包有多个时，先列出各包填哪些标准槽，请用户选主包（`pack`）。只有 `devflow` 时直接用。
-3. 向用户确认配置字段。下表是 `devflow` 包的字段（其他包的参数以各自 `pack.json` 为准）；必填项为空时 `generate` 会报错：
+3. 向用户确认配置字段。下表是 `devflow` 包的字段（其他包的参数以各自 `pack.json` 为准）；必填 string 项为空字符串（含纯空白）时 `generate` 退出码 2 并指出字段；`title` 另外不能含换行或 `<!-- slot:`、`<!-- compose-agentsmd:`；包名只能由字母、数字、`.`、`_`、`-` 组成且以字母或数字开头，`disabled` 为保留名：
 
 | 字段 | 类型 | 必填 | 默认 | 用在 |
 |---|---|---|---|---|
@@ -75,7 +75,7 @@ node <skill 目录>/scripts/compose-agentsmd.mjs <init|generate|check> [--root <
 
 用户想替换某个标准槽的内容，又不想改发布包时：
 
-1. 在 `.hskill/compose-agentsmd/packs/<名>/` 建本地包，可复制发布包里对应的模板作起点。本地包的 `pack.json` 声明它填哪些槽、用哪些参数，格式同发布包；模板里的参数写 `@{name}`，条件独占一行：`<!-- @if name -->`、`<!-- @else -->`、`<!-- @endif -->`，只允许单层。
+1. 在 `.hskill/compose-agentsmd/packs/<名>/` 建本地包，可复制发布包里对应的模板作起点。本地包的 `pack.json` 声明它填哪些槽、用哪些参数，格式同发布包；模板里的参数写 `@{name}`（name 只含字母、数字、下划线），条件独占一行：`<!-- @if name -->`、`<!-- @else -->`、`<!-- @endif -->`，只允许单层。写法必须逐字符严格一致：多空格、缺空格、与其他文字同行的近似指令，以及 `@{foo-bar}` 这类非法参数名，都会按模板错误报出文件和行号，不会原样输出。模板的 CRLF 换行和开头的 BOM 会被归一为 LF。
 2. 在 `config.json` 的 `slot_packs` 里指向它，例如 `"slot_packs": { "flow-steps": "my-steps" }`。该包必须声明了这个槽。
 3. 不改发布包；本地包与发布包同名时校验报错，不做隐式优先。
 4. 联动组里的槽（`devflow` 的 `flow-summary` 与 `flow-steps`，互相引用步骤编号）必须来自同一个包，只能一起替换、一起关闭；拆开会校验报错。
@@ -94,6 +94,8 @@ node <skill 目录>/scripts/compose-agentsmd.mjs <init|generate|check> [--root <
 | `stale` | 配置或描述槽改了没重新生成 | 询问是否 `generate` |
 
 `check` 只读，不改任何文件。
+
+项目应把 `AGENTS.md` 按 LF 提交（例如 `.gitattributes` 里写 `AGENTS.md text eol=lf`）；否则 Windows 或 `autocrlf` 的 CRLF 检出会改变文件字节，`check` 会报 `hand-edited`。
 
 ## 边界
 

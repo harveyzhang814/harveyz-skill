@@ -485,7 +485,7 @@
       "path": "devflow/compose-agentsmd",
       "bundle": "devflow",
       "installScope": "global",
-      "contentHash": "f64f6536490b710a",
+      "contentHash": "411304456391ad45",
       "contentVersion": "0.1.0"
     }
   ],
