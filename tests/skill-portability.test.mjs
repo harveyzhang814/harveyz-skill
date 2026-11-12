@@ -102,7 +102,7 @@ test('B portability release versions and index hashes match published SKILL.md c
     ['feed/sync-xtimeline', '0.8.5'],
     ['feed/sync-ytchannel', '0.7.5'],
     ['feed/sync-website', '0.2.4'],
-    ['devflow/question-me', '4.3.0'],
+    ['devflow/question-me', '4.3.1'],
     ['coding/rephrase', '1.0.2'],
     ['coding/init-project', '0.1.5'],
     ['mint/runby-opencode', '1.1.1'],
