@@ -36,7 +36,7 @@ git rev-parse --show-toplevel
 - 使用默认配置（从此 skill 的 `references/workflow-config.yml` 复制到 `.hskill/init-workflow/workflow-config.yml`）
 - 还是中止并自行创建后重新运行
 
-**配置的三级查找只在解释器 `references/workflow_resolve.py` 里实现**——`deploy_artifacts.py`（Step 7）与文档、合并脚本、`resolved.env` 都经它取值，本步骤的查找顺序只用于告知用户配置在哪、以及是否需要迁移，不要另写一套解析逻辑去生成产物。
+**配置的三级查找只在解释器 `references/workflow_resolve.py` 里实现**——`deploy_artifacts.py`（Step 6.0）与文档、合并脚本、`resolved.env` 都经它取值，本步骤的查找顺序只用于告知用户配置在哪、以及是否需要迁移，不要另写一套解析逻辑去生成产物。
 
 找到后读取并解析 YAML。若文件来自向后兼容路径（2 或 3），询问用户是否将其移动到 `.hskill/init-workflow/workflow-config.yml`；用户同意则执行移动，否则继续使用原位置（不影响本次运行）。
 
@@ -52,6 +52,7 @@ git rev-parse --show-toplevel
 - 若 `format: regex`，必须同时存在 `pattern` 字段
 
 **逻辑校验：**
+- `branches.protected` 至少有一个分支；写了 `merge_from:` 的分支须列出条目（块列表 `- 来源` 或行内 `[a, "b/*"]` 均可，缩进任意但须一致；明确为空写 `merge_from: []`）。解释器解析不出时 `deploy_artifacts.py` 以退出码 3 停下，见 Step 6.0
 - `branches.protected` 中任何分支的 `merge_from` 不得包含自身（循环依赖）
 - `push_rules.block_force_push` 中的分支建议与 `branches.protected` 保持一致，不一致则警告
 - `branch_naming.exempt` 中的分支不应同时被 `allowed_patterns` 覆盖（冗余）
@@ -113,18 +114,25 @@ python3 <skill-path>/references/deploy_artifacts.py <仓库根>
 
 这一次运行同时写出 Step 7 列出的全部产物。**整次 skill 执行只运行这一次，Step 7 不再运行**：重跑时文件已是新内容，输出全变成 `UNCHANGED`，首次运行的 `NEW` / `UPDATED` 行和 `WARN` 行（用户手改被覆盖的唯一提示）就丢了。把这次的 stdout 与 stderr 完整保存，Step 7 和 Step 9 都用它。
 
-```bash
-mkdir -p .githooks
-```
+非 0 退出时不生成 hooks，按 stderr 的 `ERROR` 行处理（两种情况都在写任何产物之前退出）：
+
+- 退出码 2：找不到规则文件 → 回到 Step 2。
+- 退出码 3：配置解释不出必需取值（`branches.protected` 为空，或某分支写了 `merge_from:` 却解析不出条目）→ 回到 Step 3，向用户报告该行并请其修正配置后重跑。
 
 #### 取值来源与顺序
 
 hooks 里用到的集成分支、合并目标、`merge_trailer`、`merge_script` 以及分支命名的**真实 ERE 模式**，一律取自 `.hskill/init-workflow/resolved.env`（或解释器输出），**不得**直接抄 `workflow-config.yml` 的原文——配置里的写法可能和解释后的有效模式不同。映射：
 
 - `hook-templates.md` 里的 `<allowed_patterns>`（`post-checkout/branch-naming`）= `resolved.env` 的 `naming.1` … `naming.n`，按编号顺序；exempt 列表 = `naming_exempt`（空格分隔，生成 `case` 时改用 `|` 连接）。
-- 例外：`pre-push/tags` 块里的 `<allowed_patterns>` 是 **tag** 命名模式，`resolved.env` 不含，取配置 `tags.allowed_patterns`（经解释器读到的配置）。
+- 例外：`pre-push/tags` 块里的 `<allowed_patterns>` 是 **tag** 命名模式，`resolved.env` 不含、解释器也不解析 `tags` 节：读 `resolved.env` 的 `rule_file` 所指的规则文件，取其中 `tags.allowed_patterns`。YAML 双引号里的 `\\` 是一个反斜杠，填进 tags 块时还原为 `\`（如 `"^v[0-9]+\\.[0-9]+"` 填作 `^v[0-9]+\.[0-9]+`）。
 
 #### 生成原则
+
+先确保 hooks 目录存在：
+
+```bash
+mkdir -p .githooks
+```
 
 根据 Step 5 的决策结果，对每个 hook 文件按以下规则处理：
 
@@ -132,7 +140,7 @@ hooks 里用到的集成分支、合并目标、`merge_trailer`、`merge_script`
    - 若 Step 5 中用户选择"保留用户修改"→ 跳过此块，保持现有内容和 hash 不变
    - 若配置中某节 `enforce: false` 且对应 MANAGED 块存在 → 删除该块（保留块外用户代码）
 
-2. **用户代码区（MANAGED 块外）**：永远不覆盖，原样保留
+2. **用户代码区（MANAGED 块外）**：永远不覆盖，原样保留。唯一例外：块外手写的合并拦截（如在 commit-msg / pre-push 里判断 `MERGE_HEAD` 与 `Merge-Via` 行的旧代码）已被 `merge-via` 块取代，**经用户同意**后可以删除；删除时同时按 `hook-templates.md` 重新生成 `commit-msg/format` 块，确保其首行是合并提交豁免（`[ -f "$(git rev-parse --git-dir)/MERGE_HEAD" ] && exit 0`），且 `commit-msg/merge-via` 位于它之前——否则远端同步合并会被格式检查拒绝，或 merge-via 永远执行不到。用户不同意则原样保留
 
 3. **差量写入**：生成全文后与磁盘文件对比——内容相同标记 `UNCHANGED`，不同标记 `UPDATED`，新建标记 `NEW`
 
@@ -174,7 +182,7 @@ git config merge.ff false
 - `scripts/merge-to-<合并目标>.sh`：标准合并脚本，仅在有合并目标时部署；项目自己的合并前检查改配置里的 `merge.pre_checks`，不要改脚本。`pre_checks` 在“已包含 / 冲突”判断之前执行，任一失败退出码为 1、不合并。
 - `.gitignore`：`<worktree.dir>/` 未被忽略时追加一行（状态：文件原不存在为 `NEW`，追加了一行为 `UPDATED`，已忽略则 `UNCHANGED`）。
 
-**`WARN` 行：** 现有文件没有生成标记（或自填区标记）、且内容与新渲染结果不同时，脚本照旧覆盖，并输出 `WARN`：stdout 里是 `WARN <路径>`，紧挨在该文件的 `UPDATED` 行之前；找回命令（如 `git diff HEAD -- docs/reference/git-workflow.md`）的说明文字走 **stderr**。所以运行时 stdout 与 stderr 都要捕获并照录给用户，说明旧内容可用该命令找回、需要保留的部分手工并入自填区。无规则文件时脚本以退出码 2 结束，回到 Step 2。
+**`WARN` 行：** 现有文件没有生成标记（或自填区标记）、且内容与新渲染结果不同时，脚本照旧覆盖，并输出 `WARN`：stdout 里是 `WARN <路径>`，紧挨在该文件的 `UPDATED` 行之前；找回命令（如 `git diff HEAD -- docs/reference/git-workflow.md`）的说明文字走 **stderr**。所以运行时 stdout 与 stderr 都要捕获并照录给用户，说明旧内容可用该命令找回、需要保留的部分手工并入自填区。非 0 退出码的处理见 Step 6.0。
 
 脚本不处理索引：若 `docs/INDEX.md` 存在，由你追加 `docs/reference/git-workflow.md` 的索引行（已存在则跳过）。
 
