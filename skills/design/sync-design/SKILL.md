@@ -1,7 +1,7 @@
 ---
 name: sync-design
 description: Use after any UI source file change — detects changed view/component files via git diff and syncs them to high-fidelity HTML design backups. Also supports pre-development design phase: creates or updates design draft HTML based on user feature descriptions. Maintains a manifest as the source-of-truth mapping between source files, design drafts, and HTML previews. Trigger when user says "sync design", "update HTML preview", "design changed", "create design", "design this", "migrate design drafts", "configure design system", or the Chinese equivalents, or after UI code edits.
-version: "5.3.1"
+version: "5.3.2"
 user_invocable: true
 ---
 
@@ -67,7 +67,7 @@ user_invocable: true
 
 ## 标准上下文（后读覆盖先读）
 
-启用设计系统时，第 1–3 项换成依次读 `designSystem.standard`、`designSystem.tokens`、`designSystem.componentStyles`，第 4 项照旧。
+启用设计系统时，第 1–3 项换成依次读 `designSystem.standard`、`designSystem.tokens`、`designSystem.componentStyles`，第 4 项照旧。这几个文件少于 4 万字符时全量读；更大时先列目录（Markdown 标题、CSS 的分块注释），全量读通用规则（硬规则、不要做、例外之类的章节），再按目录读与本页面有关的章节（用到的组件、布局、所在板块），以及标准里点名为本类界面样本的文件。
 
 1. `manifest.config.designSpec`（若有）
 2. 所属平台的 `designSystemFile`（若有）
@@ -196,7 +196,7 @@ user_invocable: true
 （启用设计系统时，下笔写进稿子之前）
 
 - **局部取舍：** 某一局部有几种画法都合标准、用户没定（组件画法、几个色值或间距前后对比）时，先在 `designSystem.scratchDir` 做只含该局部的小对比视图（同样引用设计系统），用宿主能打开本地网页的方式直接打开给用户看（如画布节点的 open-browser 命令；没有这类能力就给出文件绝对路径），请用户选。一个页面的这类小项全部确认后，才写进设计稿。
-- **标准缺口：** 要画的东西需要标准里没有的规则时，不在稿里自创。按 `designSystem.gapsFile` 现有条目的格式（编号、状态等）追加一条，写明哪个页面、哪个局部、缺什么；告诉用户「这里要先在设计系统里定标准（按 `<dir>` 自己的改动流程），定了再回来画」。涉及缺口的局部先停，页面其余部分照常画。
+- **标准缺口：** 要画的东西需要标准里没有的规则、或现有界面的做法与标准冲突而标准没给替代时，不在稿里自创。按 `designSystem.gapsFile` 现有条目的格式（编号、状态等）追加一条，写明哪个页面、哪个局部、缺什么。编号取本地所有分支上出现过的最大号加一（`git grep -h -E '<编号的写法>' $(git for-each-ref --format='%(refname:short)' refs/heads) -- <gapsFile>`）：设计系统常在自己的分支上维护缺口清单，只看当前分支会撞号。告诉用户「这里要先在设计系统里定标准（按 `<dir>` 自己的改动流程），定了再回来画」，并说明缺口记在哪个分支。涉及缺口的局部先停，页面其余部分照常画；整页都依赖它时整页不出稿，删掉本次为它复制或新建、还没登记进 manifest 的稿子。
 
 ### 3. 生成后检查（启用设计系统时）
 
