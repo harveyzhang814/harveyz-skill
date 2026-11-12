@@ -184,8 +184,8 @@
       "path": "devflow/question-me",
       "bundle": "devflow",
       "installScope": "global",
-      "contentHash": "2fcce8b6b7c95753",
-      "contentVersion": "4.1.2"
+      "contentHash": "7277ba2667780748",
+      "contentVersion": "4.3.1"
     },
     {
       "path": "coding/capture-vocab",
