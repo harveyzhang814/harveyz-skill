@@ -1,6 +1,6 @@
 # git 工作流规划与执行分离 实施计划
 
-> **For agentic workers:** REQUIRED SUB-SKILL: 使用 [执行交接时确定的执行技能] 逐项实施；用 `- [ ]` 跟踪步骤。
+> **For agentic workers:** REQUIRED SUB-SKILL: 使用 superpowers:subagent-driven-development 逐项实施；用 `- [ ]` 跟踪步骤。
 
 **Goal:** init-workflow 成为 git 策略的唯一解释者，部署时写出 `resolved.env`、工作流文档、hooks 与标准合并脚本；manage-worktree 与 compose-agentsmd 只读 `resolved.env`，manage-worktree 新增「合并」。
 
