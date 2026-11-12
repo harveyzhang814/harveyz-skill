@@ -18,7 +18,7 @@
 - 只用 Node 内置模块；脚本与库为 ESM `.mjs`；不使用 `import.meta.dirname`（Node 18 不支持），用 `fileURLToPath(import.meta.url)`。
 - 参数语法 `@{name}`；条件指令独占一行：`<!-- @if name -->`、`<!-- @else -->`、`<!-- @endif -->`；单层，不可嵌套。
 - 项目配置目录固定为 `<root>/.hskill/compose-agentsmd/`，配置文件 `config.json`，描述槽 `slots/<槽id>.md`，本地包 `packs/<名>/`。
-- 生成文件首行严格为：`<!-- compose-agentsmd: packs=<列表> sha256=<64位小写hex>; generated from .hskill/compose-agentsmd/, do not edit -->`；`<列表>` 为逗号分隔、按包名排序的 `<名>@<版本>` / `local:<名>`；`sha256` 是首行之后全部内容（含首行后的 `\n` 之后的所有字节）的哈希。
+- 生成文件首行严格为：`<!-- compose-agentsmd: packs=<列表> sha256=<64位小写hex>; generated from .hskill/compose-agentsmd/, do not edit -->`；`<列表>` 为逗号分隔、按包名（不含 `local:` 前缀与版本）升序排列的 `<名>@<版本>` / `local:<名>`；`sha256` 是首行之后全部内容（含首行后的 `\n` 之后的所有字节）的哈希。
 - 槽标记：描述槽 `<!-- slot:<id> -->`，标准槽 `<!-- slot:<id> pack=<名>@<版本> -->` 或 `<!-- slot:<id> pack=local:<名> -->`。
 - 换行统一 `\n`；文件以单个 `\n` 结尾；槽之间恰好一个空行；连续空行压成一行。
 - 退出码：`init` 0 已建 / 1 已存在；`generate` 0 已写 / 1 拒绝覆盖 / 2 配置或模板错误；`check` 0 ok / 1 其他 / 2 配置或模板错误。用法错误按 2。
@@ -152,7 +152,7 @@ git commit -m "feat(compose-agentsmd): add template renderer"
 **Files:**
 - Create: `skills/devflow/compose-agentsmd/assets/skeleton.json`
 - Create: `skills/devflow/compose-agentsmd/scripts/lib/config.mjs`
-- Create: `tests/fixtures/compose-agentsmd/packs/alpha/{pack.json,VERSION,flow-summary.md,flow-steps.md}`（合成发布包；见下）
+- Create: `tests/fixtures/compose-agentsmd/packs/alpha/{pack.json,VERSION,flow-summary.md,instruction-sources.md,flow-steps.md}`（合成发布包；见下）
 - Create: `tests/fixtures/compose-agentsmd/packs/beta/{pack.json,VERSION,flow-steps.md}`
 - Test: `tests/compose-agentsmd-config.test.mjs`
 
@@ -166,7 +166,7 @@ git commit -m "feat(compose-agentsmd): add template renderer"
 
 骨架文件按 Spec 5.2：`overview`(description, null) · `flow-summary`(standard, null) · `principles`(description, `## 项目原则`) · `instruction-sources`(standard, null) · `platform-fallbacks`(standard, null) · `platform-adaptation`(description, `## 平台适配`) · `repo-env`(description, `## 仓库环境`) · `flow-steps`(standard, null) · `release-acceptance`(standard, null) · `other`(description, `## 其他约定`)。标准槽 `heading` 为 `null`（标题由模块自带）。
 
-合成包：`alpha` 声明 `slots: ["flow-summary","flow-steps"]`、`linked: [["flow-summary","flow-steps"]]`、`params: { branch: {type:"string", required:true}, extra: {type:"string", default:""} }`；`beta` 声明 `slots: ["flow-steps"]`、`params: { branch: {type:"string", required:true} }`。模板正文各含一个标题行（如 `## Flow @{branch}`），`alpha/flow-steps.md` 另含 `<!-- @if extra -->…<!-- @endif -->` 块。`VERSION` 均为 `1.0.0`。
+合成包：`alpha` 声明 `slots: ["flow-summary","instruction-sources","flow-steps"]`、`linked: [["flow-summary","flow-steps"]]`、`params: { branch: {type:"string", required:true}, extra: {type:"string", default:""} }`；`beta` 声明 `slots: ["flow-steps"]`、`params: { branch: {type:"string", required:true} }`。模板正文各含一个标题行（如 `## Flow @{branch}`），`alpha/flow-steps.md` 另含 `<!-- @if extra -->…<!-- @endif -->` 块。`VERSION` 均为 `1.0.0`。
 
 - [ ] **Step 1: 编写失败测试**
 
@@ -178,7 +178,8 @@ test('skeleton has the 10 slots in spec order', () => {
 test('resolves slots from the main pack and applies param defaults', () => {
   const r = resolveConfig({ config: base, skeleton, packs: loadPacks(dirs) })
   assert.equal(r.slots.find(s => s.id === 'flow-steps').pack, 'alpha')
-  assert.equal(r.slots.find(s => s.id === 'instruction-sources').pack, null)
+  assert.equal(r.slots.find(s => s.id === 'instruction-sources').pack, 'alpha')
+  assert.equal(r.slots.find(s => s.id === 'platform-fallbacks').pack, null)
   assert.equal(r.params.extra, '')
   assert.equal(r.params.agent_canvas, false)
 })
@@ -333,20 +334,23 @@ test('config change without regenerate reports stale', () => {
   runGenerate({ root, packsDir }); writeSlot(root, 'other', 'new text\n')
   assert.match(runCheck({ root, packsDir }).lines.join('\n'), /status=stale/)
 })
-test('V10 slot_packs to a local pack uses it and records local:<name>', () => {
-  // 本地包 local-a 声明 flow-summary + flow-steps（同一联动组），slot_packs 两槽都指向它
+test('V10 slot_packs moves a non-linked slot to a local pack and both packs are recorded', () => {
+  // 本地包 local-a 只声明非联动槽 instruction-sources，模板正文含 'LOCAL-A BODY'；
+  // 配置 slot_packs: { 'instruction-sources': 'local-a' }，主包仍为 alpha
   runGenerate({ root, packsDir })
   const text = readFileSync(agents, 'utf8')
-  assert.ok(text.includes('<!-- slot:flow-steps pack=local:local-a -->'))
-  assert.match(text.split('\n')[0], /packs=local:local-a/)
+  assert.ok(text.includes('<!-- slot:instruction-sources pack=local:local-a -->\n'))
+  assert.ok(text.includes('LOCAL-A BODY'))
+  assert.ok(text.includes('<!-- slot:flow-steps pack=alpha@1.0.0 -->'))
+  assert.match(text.split('\n')[0], /^<!-- compose-agentsmd: packs=alpha@1\.0\.0,local:local-a sha256=/)
 })
 test('V11 editing a local pack template reports stale, not outdated', () => {
-  runGenerate({ root, packsDir }); appendToLocalTemplate(root, 'local-a', 'flow-steps', 'x\n')
+  runGenerate({ root, packsDir }); appendToLocalTemplate(root, 'local-a', 'instruction-sources', 'x\n')
   const s = runCheck({ root, packsDir }).lines.join('\n')
   assert.match(s, /stale/); assert.doesNotMatch(s, /outdated/)
 })
 test('V7 config or template errors exit 2 and write nothing', () => {
-  for (const breakIt of [setUnknownParamInLocalTemplate, setUnclosedIfInLocalTemplate, disableOnlyFlowSummary, splitLinkedGroup]) {
+  for (const breakIt of [setUnknownParamInLocalTemplate, setUnclosedIfInLocalTemplate, setNestedIfInLocalTemplate, disableOnlyFlowSummary, splitLinkedGroup]) {
     const r = freshRoot(); breakIt(r)
     assert.equal(runGenerate({ root: r, packsDir }).code, 2); assert.equal(existsSync(join(r, 'AGENTS.md')), false)
   }
@@ -377,7 +381,9 @@ test('CLI maps results to stdout and exit codes', () => {
 })
 ```
 
-（`rewriteHeaderVersion`、`writeSlot`、`appendToLocalTemplate`、`freshRoot` 及四个 `breakIt` 为测试文件内辅助函数。）
+（`rewriteHeaderVersion`、`writeSlot`、`appendToLocalTemplate`、`freshRoot` 及五个 `breakIt` 为测试文件内辅助函数。V10、V11 的根在 `slots` 外另建本地包 `.hskill/compose-agentsmd/packs/local-a/`（`pack.json` 声明 `slots: ["instruction-sources"]`、`params: {}`），配置加 `slot_packs`。）
+
+首行 `packs` 的排序键为包名本身（`alpha`、`local-a`），不含 `local:` 前缀与版本；按 JavaScript 默认字符串比较升序。
 
 - [ ] **Step 2: 运行测试，验证它失败**
 

@@ -90,3 +90,18 @@ target_node: 048fa050-dd70-45bc-972f-7f0511a0a05a
    - 顺带请明确：首行 `packs` 的排序键对本地包取 `local-a` 还是 `local:local-a`。
    - 请交出方修订计划中这条测试的名称/断言/fixture 说明。
 2. **（次要）Spec V7 的“嵌套 `@if` → 退出码 2 且不写文件”在计划里没有生成层面的断言。** Task 3 的 V7 测试 `breakIt` 只含未知参数、未闭合 `@if`、只关 `flow-summary`、拆联动组四项；嵌套 `@if` 只在 Task 1 渲染器层断言抛错。最小验收锚点 3 说 V7 对应具名测试。请二选一：在 `breakIt` 中补一项嵌套 `@if`，或在锚点里写明嵌套以 Task 1 测试为准。
+
+## 交出方补正（2026-11-11）
+
+两条缺口都成立，已修订计划（`2026-11-11-compose-agentsmd-plan.md`），Spec 不变：
+
+1. **V10（阻断）**：
+   - fixture 调整：`alpha` 新增非联动槽 `instruction-sources`（`slots: ["flow-summary","instruction-sources","flow-steps"]`）。本地包 `local-a` 只声明 `instruction-sources`，模板正文含 `LOCAL-A BODY`，配置写 `slot_packs: { "instruction-sources": "local-a" }`。
+   - 测试改名为 `V10 slot_packs moves a non-linked slot to a local pack and both packs are recorded`，断言改为三条：该槽标记为 `pack=local:local-a`、正文含 `LOCAL-A BODY`、`flow-steps` 仍来自 `alpha@1.0.0`。首行为 `packs=alpha@1.0.0,local:local-a`。
+   - 排序键：取包名本身，不含 `local:` 前缀，也不含版本，按 JavaScript 默认字符串比较升序。Global Constraints 已同步写明。
+   - 连带修改：
+     - Task 2 断言改为 `instruction-sources` 来自 `alpha`、`platform-fallbacks` 为 `null`；
+     - V11 改为修改 `local-a/instruction-sources.md`。
+2. **V7（次要）**：Task 3 的 `breakIt` 新增 `setNestedIfInLocalTemplate`，生成层也断言嵌套 `@if` 时退出码为 2、不写文件。
+
+请重新 verify。
