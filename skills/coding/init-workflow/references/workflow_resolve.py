@@ -23,48 +23,126 @@ def find_rule_file(repo_root):
     return None
 
 
+class ConfigError(ValueError):
+    """配置解释不出必需的取值（如受保护分支为空）；部署须停下，不得静默省略。"""
+
+
+def _scalar(text):
+    """取一个 YAML 标量：引号内原样（不反转义），无引号时去掉 ` #` 起的行内注释。"""
+    s = text.strip()
+    if s[:1] in ('"', "'"):
+        end = s.find(s[0], 1)
+        return s[1:end] if end != -1 else s[1:]
+    return re.split(r'\s#', s, maxsplit=1)[0].strip()
+
+
+def _inline_list(text):
+    """解析以 `[` 开头的行内列表，引号内的 `,` 与 `]` 不算分隔；返回 (项列表, 是否闭合)。"""
+    items, buf, quote = [], '', None
+    for ch in text[1:]:
+        if quote:
+            buf += ch
+            if ch == quote:
+                quote = None
+        elif ch in ('"', "'"):
+            quote = ch
+            buf += ch
+        elif ch in (',', ']'):
+            if buf.strip():
+                items.append(_scalar(buf))
+            buf = ''
+            if ch == ']':
+                return items, True
+        else:
+            buf += ch
+    return items, False
+
+
+def _indent(line):
+    return len(line) - len(line.lstrip(' \t'))
+
+
+def _parse_protected(content):
+    """解析 branches.protected：块列表或行内 merge_from 均可，缩进任意但须一致。
+
+    每项为 {'name', 'allow_direct_commit', 'merge_from'}。写了块写法的 `merge_from:`
+    却没解析出任何条目 → ConfigError（行内 `merge_from: []` 是明确的空列表，不算）。
+    """
+    lines = content.splitlines()
+    start = next((i for i, l in enumerate(lines)
+                  if re.match(r'^[ \t]+protected:[ \t]*(#.*)?$', l)
+                  or re.match(r'^[ \t]+protected:[ \t]*\[', l)), None)
+    if start is None:
+        return []
+    head = lines[start]
+    head_indent = _indent(head)
+    rest = head.split(':', 1)[1].strip()
+    if rest.startswith('['):
+        return []  # 行内写法只可能是空列表 []；非空时无法表达各分支的字段
+
+    protected, current, mf_indent, block_declared = [], None, None, set()
+    for line in lines[start + 1:]:
+        stripped = line.strip()
+        if not stripped or stripped.startswith('#'):
+            continue
+        ind = _indent(line)
+        # 缩进回到 protected: 及以外、且不是同级的列表项 → 本节结束
+        if ind < head_indent or (ind == head_indent and not stripped.startswith('-')):
+            break
+        m = re.match(r'^-[ \t]+name:[ \t]*(.*)$', stripped)
+        if m:
+            current = {'name': _scalar(m.group(1)), 'allow_direct_commit': False,
+                       'merge_from': []}
+            protected.append(current)
+            mf_indent = None
+            continue
+        if current is None:
+            continue
+        if mf_indent is not None and stripped.startswith('- ') and ind >= mf_indent:
+            current['merge_from'].append(_scalar(stripped[2:]))
+            continue
+        mf_indent = None
+        m = re.match(r'^allow_direct_commit:[ \t]*(true|false)\b', stripped)
+        if m:
+            current['allow_direct_commit'] = m.group(1) == 'true'
+            continue
+        m = re.match(r'^merge_from:[ \t]*(.*)$', stripped)
+        if m:
+            value = m.group(1).strip()
+            if value.startswith('['):
+                current['merge_from'], _ = _inline_list(value)
+            else:
+                block_declared.add(id(current))
+                mf_indent = ind
+    for b in protected:
+        if id(b) in block_declared and not b['merge_from']:
+            raise ConfigError(
+                f"branches.protected 中 {b['name']} 写了 merge_from 却没有解析出任何条目；"
+                "请写成 `- <来源>` 逐行列表或行内 [a, \"b/*\"]，明确为空写 merge_from: []")
+    return protected
+
+
 def load_config(path):
     """简单 YAML 解析（只处理此 skill 使用的字段，无需完整 YAML 库）"""
     content = open(path).read()
 
     def extract_list_under(key, text):
-        """提取某个 key 下的列表项（- value 或 - "value"）"""
-        pattern = rf'{re.escape(key)}:[ \t]*(?:#[^\n]*)?\n((?:[ \t]+- .+\n?)+)'
-        m = re.search(pattern, text)
+        """取第一个 `key:` 下的列表：块列表（- value）或行内列表 [a, "b"]。"""
+        m = re.search(rf'^[ \t]*{re.escape(key)}:[ \t]*(.*)$', text, re.M)
         if not m:
-            # 尝试行内列表 [a, b, c]
-            m2 = re.search(rf'{re.escape(key)}:\s*\[([^\]]+)\]', text)
-            if m2:
-                return [v.strip().strip('"') for v in m2.group(1).split(',')]
             return []
-        return [re.sub(r'^[ \t]+- ', '', l).strip().strip('"')
-                for l in m.group(1).splitlines() if l.strip().startswith('- ')]
+        value = m.group(1).strip()
+        if value.startswith('['):
+            return _inline_list(value)[0]
+        items = []
+        for l in text[m.end():].split('\n')[1:]:
+            if not re.match(r'^[ \t]*- ', l):
+                break
+            items.append(re.sub(r'^[ \t]*- ', '', l).strip().strip('"'))
+        return items
 
     # 提取 branches.protected
-    protected = []
-    in_protected = False
-    current = None
-    for line in content.splitlines():
-        if re.match(r'\s+protected:', line):
-            in_protected = True
-            continue
-        if in_protected:
-            m = re.match(r'\s{4}- name:\s+(\S+)', line)
-            if m:
-                if current:
-                    protected.append(current)
-                current = {'name': m.group(1), 'allow_direct_commit': False, 'merge_from': []}
-            elif current and re.match(r'\s+allow_direct_commit:\s*(true|false)', line):
-                current['allow_direct_commit'] = 'true' in line
-            elif current and re.match(r'\s+merge_from:', line):
-                pass  # next lines are the list
-            elif current and re.match(r'\s{8}- ', line):
-                val = line.strip().lstrip('- ').strip('"')
-                current['merge_from'].append(val)
-            elif line.strip() and not line.startswith(' '):
-                in_protected = False
-    if current:
-        protected.append(current)
+    protected = _parse_protected(content)
 
     # branch_naming
     naming_patterns = extract_list_under('allowed_patterns', content)
@@ -109,8 +187,16 @@ def _branch_types(patterns):
 
 
 def resolve(config, rule_file):
-    """从 load_config 的结果推断 resolved.env 的全部取值。"""
+    """从 load_config 的结果推断 resolved.env 的全部取值。
+
+    受保护分支解析为空 → ConfigError：没有集成分支就推不出基线与合并目标，
+    不得静默写出一份缺键的 resolved.env。
+    """
     protected = config['protected']
+    if not protected:
+        raise ConfigError(
+            f'{rule_file} 的 branches.protected 没有解析出任何分支（缺这一节、写成空列表，'
+            '或写法无法识别）；集成分支、基线与合并目标都推不出，不部署')
     base = {}
     for t in _branch_types(config['naming_patterns']):
         for b in protected:

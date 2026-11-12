@@ -232,3 +232,24 @@ def test_cli_prints_status_path_lines(tmp_path):
         "NEW scripts/merge-to-staging.sh",
         "NEW .gitignore",
     ]
+
+
+def test_cli_exit_3_when_protected_branches_parse_empty(tmp_path):
+    """受保护分支解释不出 → 退出码 3、stderr 说明原因、不写任何产物。"""
+    init_repo(tmp_path, "branches:\n  protected: []\n\n" + CFG_HEAD.split("\n\n", 1)[1])
+    r = subprocess.run([sys.executable, os.path.join(REFS, "deploy_artifacts.py"), str(tmp_path)],
+                       capture_output=True, text=True)
+    assert r.returncode == 3
+    assert r.stdout == ""
+    assert r.stderr.startswith("ERROR ") and "branches.protected" in r.stderr
+    assert not (tmp_path / ".hskill").exists()
+    assert not (tmp_path / "docs").exists()
+
+
+def test_cli_exit_3_when_merge_from_has_no_entries(tmp_path):
+    init_repo(tmp_path, CFG_HEAD.replace('        - "feature/*"\n        - "fix/*"\n', ""))
+    r = subprocess.run([sys.executable, os.path.join(REFS, "deploy_artifacts.py"), str(tmp_path)],
+                       capture_output=True, text=True)
+    assert r.returncode == 3
+    assert "staging" in r.stderr and "merge_from" in r.stderr
+    assert not (tmp_path / ".hskill").exists()

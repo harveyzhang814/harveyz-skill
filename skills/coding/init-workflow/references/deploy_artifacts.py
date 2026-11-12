@@ -4,7 +4,8 @@ init-workflow 一次性部署入口（Spec 5.4 a/b/c/e）
 按序写出 resolved.env、docs/reference/git-workflow.md、标准合并脚本、.gitignore 条目，
 逐项汇报 NEW / UPDATED / UNCHANGED / WARN。hooks 不在这里（由 agent 按 hook-templates.md 生成）。
 
-用法：python3 deploy_artifacts.py <repo_root>   退出码：0 正常；2 找不到规则文件
+用法：python3 deploy_artifacts.py <repo_root>
+退出码：0 正常；2 找不到规则文件；3 配置解释不出必需取值（如受保护分支为空），未写任何产物
 """
 import os
 import subprocess
@@ -12,7 +13,7 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from workflow_resolve import (  # noqa: E402
-    INIT_WORKFLOW_VERSION, find_rule_file, format_env, load_config, resolve,
+    INIT_WORKFLOW_VERSION, ConfigError, find_rule_file, format_env, load_config, resolve,
 )
 from render_docs import carry_notes, render  # noqa: E402
 from render_merge_script import render_merge_script  # noqa: E402
@@ -62,7 +63,8 @@ def _is_ignored(repo_root, worktree_dir):
 
 
 def deploy(repo_root):
-    """返回 [(状态, 相对路径)]；没有规则文件时抛 FileNotFoundError。"""
+    """返回 [(状态, 相对路径)]；没有规则文件时抛 FileNotFoundError，
+    配置解释不出时抛 ConfigError（都在写任何产物之前）。"""
     rule_file = find_rule_file(repo_root)
     if rule_file is None:
         raise FileNotFoundError('找不到 workflow-config.yml（三级查找均不存在）')
@@ -119,3 +121,6 @@ if __name__ == '__main__':
     except FileNotFoundError as e:
         print(f'ERROR {e}', file=sys.stderr)
         sys.exit(2)
+    except ConfigError as e:
+        print(f'ERROR {e}', file=sys.stderr)
+        sys.exit(3)

@@ -1,6 +1,8 @@
 import os
 import sys
 
+import pytest
+
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "references"))
 
 import workflow_resolve as wr  # noqa: E402
@@ -197,3 +199,168 @@ def test_format_env_roundtrip(tmp_path):
     assert env["worktree_dir"] == ".worktrees"
     # a '\\' escape in the YAML double-quoted pattern becomes a single backslash
     assert env["naming.5"] == r"^release/[0-9]+\.[0-9]+\.[0-9]+(-.+)?$"
+
+
+# ── 写法变体：行内列表与任意一致缩进（回归 I-1） ─────────────────────────────
+
+INLINE_MERGE_FROM_CFG = """\
+branches:
+  protected:
+    - name: main
+      allow_direct_commit: false
+      merge_from: [staging, "release/*"]   # inline
+    - name: staging
+      allow_direct_commit: false
+      merge_from: ["feature/*", "fix/*", 'chore/*', doc/*]
+
+branch_naming:
+  enforce: true
+  allowed_patterns:
+    - "^feature/.+"
+    - "^fix/.+"
+    - "^chore/.+"
+    - "^doc/.+"
+    - "^release/.+"
+  exempt:
+    - main
+    - staging
+"""
+
+COMPACT_INDENT_CFG = """\
+branches:
+  protected:
+  - name: main
+    allow_direct_commit: false
+    merge_from:
+    - staging
+    - "release/*"
+  - name: staging
+    allow_direct_commit: true
+    merge_from:
+      - "feature/*"
+      - "fix/*"
+
+branch_naming:
+  enforce: true
+  allowed_patterns:
+  - "^feature/.+"
+  - "^fix/.+"
+  - "^release/.+"
+  exempt:
+  - main
+  - staging
+"""
+
+FOUR_SPACE_CFG = """\
+branches:
+    protected:
+        -   name: main
+            allow_direct_commit: false
+            merge_from:
+                - staging
+        -   name: staging
+            allow_direct_commit: false
+            merge_from:
+                - "feature/*"
+
+branch_naming:
+    enforce: true
+    allowed_patterns:
+        - "^feature/.+"
+    exempt:
+        - main
+        - staging
+"""
+
+
+def test_inline_merge_from_lists(tmp_path):
+    r = resolved_from(tmp_path, INLINE_MERGE_FROM_CFG)
+    assert r["integration_branches"] == ["main", "staging"]
+    assert r["base"] == {
+        "feature": "staging", "fix": "staging", "chore": "staging",
+        "doc": "staging", "release": "main",
+    }
+    assert r["merge_target"] == "staging"
+
+
+def test_two_space_list_directly_under_protected(tmp_path):
+    cfg = wr.load_config(write(tmp_path, COMPACT_INDENT_CFG))
+    assert [b["name"] for b in cfg["protected"]] == ["main", "staging"]
+    assert cfg["protected"][0]["merge_from"] == ["staging", "release/*"]
+    assert cfg["protected"][1]["merge_from"] == ["feature/*", "fix/*"]
+    assert cfg["protected"][1]["allow_direct_commit"] is True
+    assert cfg["naming_patterns"] == ["^feature/.+", "^fix/.+", "^release/.+"]
+    assert cfg["naming_exempt"] == ["main", "staging"]
+    r = wr.resolve(cfg, RULE)
+    assert r["integration_branches"] == ["main", "staging"]
+    assert r["base"] == {"feature": "staging", "fix": "staging", "release": "main"}
+    assert r["merge_target"] == "staging"
+
+
+def test_four_space_indentation(tmp_path):
+    r = resolved_from(tmp_path, FOUR_SPACE_CFG)
+    assert r["integration_branches"] == ["main", "staging"]
+    assert r["base"] == {"feature": "staging"}
+
+
+def test_block_style_still_parses_exactly(tmp_path):
+    cfg = wr.load_config(write(tmp_path, STAGING_CFG))
+    assert cfg["protected"] == [
+        {"name": "main", "allow_direct_commit": False,
+         "merge_from": ["staging", "release/*"]},
+        {"name": "staging", "allow_direct_commit": False,
+         "merge_from": ["feature/*", "fix/*", "chore/*", "doc/*"]},
+    ]
+
+
+def test_inline_allowed_patterns_keep_brackets_and_commas(tmp_path):
+    text = MAIN_ONLY_CFG.replace(
+        '  allowed_patterns:\n    - "^feature/.+"\n',
+        '  allowed_patterns: ["^feature/.+", "^release/[0-9]+\\\\.[0-9]{1,3}$"]\n',
+    ).replace("  exempt:\n    - main\n", "  exempt: [main]\n")
+    cfg = wr.load_config(write(tmp_path, text))
+    assert cfg["naming_patterns"] == ["^feature/.+", "^release/[0-9]+\\\\.[0-9]{1,3}$"]
+    assert cfg["naming_exempt"] == ["main"]
+
+
+def test_inline_allowed_patterns_not_shadowed_by_later_block_list(tmp_path):
+    text = MAIN_ONLY_CFG.replace(
+        '  allowed_patterns:\n    - "^feature/.+"\n',
+        '  allowed_patterns: ["^feature/.+"]\n',
+    ) + 'tags:\n  allowed_patterns:\n    - "^v[0-9]+$"\n'
+    cfg = wr.load_config(write(tmp_path, text))
+    assert cfg["naming_patterns"] == ["^feature/.+"]
+
+
+# ── 解释不出时报错，不静默省略（I-1 b） ────────────────────────────────────
+
+def test_empty_protected_raises(tmp_path):
+    text = "branches:\n  protected: []\n\nbranch_naming:\n  allowed_patterns:\n    - \"^feature/.+\"\n"
+    with pytest.raises(wr.ConfigError, match="branches.protected"):
+        resolved_from(tmp_path, text)
+
+
+def test_missing_protected_raises(tmp_path):
+    text = "branch_naming:\n  allowed_patterns:\n    - \"^feature/.+\"\n"
+    with pytest.raises(wr.ConfigError, match="branches.protected"):
+        resolved_from(tmp_path, text)
+
+
+def test_merge_from_line_with_no_entries_raises(tmp_path):
+    text = STAGING_CFG.replace(
+        '      merge_from:\n        - "feature/*"\n        - "fix/*"\n'
+        '        - "chore/*"\n        - "doc/*"\n',
+        '      merge_from:\n',
+    )
+    with pytest.raises(wr.ConfigError, match="staging.*merge_from"):
+        resolved_from(tmp_path, text)
+
+
+def test_explicit_empty_inline_merge_from_is_allowed(tmp_path):
+    text = STAGING_CFG.replace(
+        '      merge_from:\n        - staging\n        - "release/*"\n',
+        '      merge_from: []\n',
+    )
+    r = resolved_from(tmp_path, text)
+    assert r["integration_branches"] == ["main", "staging"]
+    assert "release" not in r["base"]
