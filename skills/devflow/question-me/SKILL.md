@@ -2,7 +2,7 @@
 name: question-me
 description: "Pre-task requirement clarification — clarifies what the user wants before execution through one-question-at-a-time Q&A with a live decision tree, switching between exploring and defining modes, and ends with a self-contained summary for the user to confirm. After confirmation, routes the task by explicit criteria: stop, execute directly (no behavior change), execute test-first (small behavior change), or propose handing off to init-spec. Triggers: '/question-me', 'help me clarify this', 'question me before starting', 'let's define this first', 'clarify the requirements', 'help me think this through'. The current agent may propose it for ambiguous or complex requests (multiple conflicting goals, vague keywords like 'optimize/refactor/clean up', missing success criteria, unstated context assumptions), then wait for user confirmation."
 user_invocable: true
-version: "4.3.1"
+version: "4.3.2"
 ---
 
 # question-me — 执行前需求澄清
@@ -206,7 +206,7 @@ C. 自定义...
 **选题逻辑（每轮使用）：**
 > 从所有 `dep` 已满足（或无 `dep`）的 `open` 节点中，选被其他节点依赖次数最多的（影响面最大）；并列时按树中出现顺序选最早的
 
-dep 已满足的 `open` 节点必须问答或当场评估 infer，不能以「其他节点的答案已覆盖」为由跳过。
+dep 已满足的 `open` 节点必须问答或当场评估：答案已被其他节点覆盖的标 `infer`，并注明出自哪个节点；`skip` 只在兄弟扫描时标。
 
 **每次树更新后**立即重新渲染；首次渲染（第一问答完后）加 `--open`：
 ```bash
