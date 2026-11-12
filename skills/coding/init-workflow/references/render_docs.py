@@ -5,72 +5,8 @@ init-workflow Step 7 渲染器
 """
 import sys, re, os
 
-def load_config(path):
-    """简单 YAML 解析（只处理此 skill 使用的字段，无需完整 YAML 库）"""
-    content = open(path).read()
-
-    def extract_list_under(key, text):
-        """提取某个 key 下的列表项（- value 或 - "value"）"""
-        pattern = rf'{re.escape(key)}:\s*\n((?:[ \t]+- .+\n?)+)'
-        m = re.search(pattern, text)
-        if not m:
-            # 尝试行内列表 [a, b, c]
-            m2 = re.search(rf'{re.escape(key)}:\s*\[([^\]]+)\]', text)
-            if m2:
-                return [v.strip().strip('"') for v in m2.group(1).split(',')]
-            return []
-        return [re.sub(r'^[ \t]+- ', '', l).strip().strip('"')
-                for l in m.group(1).splitlines() if l.strip().startswith('- ')]
-
-    # 提取 branches.protected
-    protected = []
-    in_protected = False
-    current = None
-    for line in content.splitlines():
-        if re.match(r'\s+protected:', line):
-            in_protected = True
-            continue
-        if in_protected:
-            m = re.match(r'\s{4}- name:\s+(\S+)', line)
-            if m:
-                if current:
-                    protected.append(current)
-                current = {'name': m.group(1), 'allow_direct_commit': False, 'merge_from': []}
-            elif current and re.match(r'\s+allow_direct_commit:\s*(true|false)', line):
-                current['allow_direct_commit'] = 'true' in line
-            elif current and re.match(r'\s+merge_from:', line):
-                pass  # next lines are the list
-            elif current and re.match(r'\s{8}- ', line):
-                val = line.strip().lstrip('- ').strip('"')
-                current['merge_from'].append(val)
-            elif line.strip() and not line.startswith(' '):
-                in_protected = False
-    if current:
-        protected.append(current)
-
-    # branch_naming
-    naming_patterns = extract_list_under('allowed_patterns', content)
-    naming_exempt   = extract_list_under('exempt', content)
-
-    # commit_message
-    fmt_m = re.search(r'format:\s*(\S+)', content)
-    fmt = fmt_m.group(1) if fmt_m else 'none'
-    types = extract_list_under('types', content)
-    pattern_m = re.search(r'pattern:\s*"([^"]+)"', content)
-    regex_pattern = pattern_m.group(1) if pattern_m else ''
-    max_len_m = re.search(r'max_subject_length:\s*(\d+)', content)
-    max_len = int(max_len_m.group(1)) if max_len_m else 72
-
-    return {
-        'protected': protected,
-        'naming_patterns': naming_patterns,
-        'naming_exempt': naming_exempt,
-        'commit_format': fmt,
-        'commit_types': types,
-        'commit_regex': regex_pattern,
-        'max_subject_length': max_len,
-    }
-
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from workflow_resolve import load_config  # noqa: E402
 
 def branch_purpose(name):
     mapping = {
