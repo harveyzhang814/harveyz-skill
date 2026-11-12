@@ -1,0 +1,209 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>git 工作流：规划与执行分离——管理机制与调用时机</title>
+<style>
+  :root { --fg:#1f2328; --muted:#59636e; --line:#d1d9e0; --bg:#ffffff; --soft:#f6f8fa; --accent:#0969da;
+          --ok:#1a7f37; --infer:#9a6700; --unk:#cf222e; }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--fg);
+         font: 15px/1.75 -apple-system, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif; }
+  main { max-width: 1120px; margin: 0 auto; padding: 40px 28px 80px; }
+  h1 { font-size: 26px; line-height:1.35; margin: 0 0 6px; }
+  h2 { font-size: 20px; margin: 48px 0 12px; padding-top: 12px; border-top: 1px solid var(--line); }
+  h3 { font-size: 16px; margin: 24px 0 8px; }
+  p { margin: 8px 0; }
+  .meta { color: var(--muted); font-size: 13px; }
+  .thesis { background: var(--soft); border-left: 4px solid var(--accent); padding: 12px 16px; margin: 20px 0; font-size: 16px; }
+  table { border-collapse: collapse; width: 100%; margin: 12px 0; font-size: 14px; }
+  th, td { border: 1px solid var(--line); padding: 7px 10px; vertical-align: top; text-align: left; }
+  th { background: var(--soft); font-weight: 600; white-space: nowrap; }
+  code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px; background: var(--soft); padding: 1px 5px; border-radius: 4px; }
+  .tag { display:inline-block; font-size: 12px; line-height: 1.5; padding: 0 6px; border-radius: 10px; border: 1px solid; margin-left: 4px; white-space: nowrap; }
+  .t-ok { color: var(--ok); border-color: var(--ok); }
+  .t-infer { color: var(--infer); border-color: var(--infer); }
+  .t-unk { color: var(--unk); border-color: var(--unk); }
+  .cost { background: #fff8c5; border: 1px solid #eac54f; border-radius: 6px; padding: 10px 14px; margin: 12px 0; }
+  .cost b { color: #7d4e00; }
+  .judge { background: #ddf4ff; border: 1px solid #54aeff; border-radius: 6px; padding: 10px 14px; margin: 12px 0; }
+  figure { margin: 16px 0; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+  figure iframe { width: 100%; border: 0; display: block; }
+  figcaption { font-size: 13px; color: var(--muted); padding: 8px 12px; background: var(--soft); border-top: 1px solid var(--line); }
+  nav { background: var(--soft); border-radius: 8px; padding: 10px 18px; margin: 20px 0; font-size: 14px; }
+  nav ol { margin: 4px 0; padding-left: 20px; columns: 2; }
+  .anchors { font-size: 13px; color: var(--muted); }
+</style>
+</head>
+<body>
+<main>
+
+<h1>git 工作流：规划与执行分离<br>管理机制与调用时机</h1>
+<p class="meta">依据：Spec <code>2026-11-12-workflow-plan-exec-split-spec.md</code> v0.1 送审稿（未批准）。
+把握度标记：<span class="tag t-ok">读到的</span> 读过代码或文件 · <span class="tag t-infer">推出来的</span> 由已读内容推断 · <span class="tag t-unk">没查的</span> 依据文档或尚未验证。</p>
+
+<div class="thesis"><b>主线：</b>改完之后，git 的规矩只在 init-workflow 部署那一刻被解释一次，结果写进仓库里的一个文件；此后每个任务里建 worktree、合并、拦截手动合并，都只读这份结果，不再各自理解配置。</div>
+
+<nav><b>目录</b>
+<ol>
+  <li><a href="#pos">定位：为什么要改</a></li>
+  <li><a href="#parts">部件：谁解释，谁只读</a></li>
+  <li><a href="#when">调用时机总表</a></li>
+  <li><a href="#seq">一个任务里的时序</a></li>
+  <li><a href="#read">执行侧怎么读到规矩</a></li>
+  <li><a href="#merge">「合并」的关卡</a></li>
+  <li><a href="#hooks">拦截：哪个 hook 在什么时候起作用</a></li>
+  <li><a href="#deploy">部署：什么时候要重跑 init-workflow</a></li>
+  <li><a href="#fail">失败后停在什么状态</a></li>
+  <li><a href="#bound">边界与判断</a></li>
+</ol></nav>
+
+<h2 id="pos">1. 定位：为什么要改</h2>
+<p>这套机制管的是“一个仓库里怎么开分支、在哪开工、怎么合回集成分支”。它被 devflow 的每一步用到：建档、写计划、交接、验收、合并。</p>
+<p>现在同一套规矩被三处各自理解 <span class="tag t-ok">读到的</span>：</p>
+<table>
+  <tr><th>谁</th><th>怎么理解规矩</th><th>已经出的问题</th></tr>
+  <tr><td>init-workflow</td><td>解析配置，生成 hooks 和工作流文档</td><td>文档还写着“在当前工作树上切分支”“切到 staging 再 merge”，和现行流程相反</td></tr>
+  <tr><td>manage-worktree</td><td>自己再解析一遍配置，推出基线；worktree 放哪写死在自己身上</td><td>两份解析只要有一边改了解读，文档说的基线和实际建 worktree 用的基线就对不上，且不报错</td></tr>
+  <tr><td>compose-agentsmd</td><td>集成分支、合并方式由人手填</td><td>同一个集成分支要在两处手填</td></tr>
+</table>
+<p>另外两件策略没有登记在任何地方：合并必须走脚本（只在 agent-canvas 的 hooks 里手写了拦截，harveyz-skill 没有），以及合并前要跑哪些项目检查（agent-canvas 的 token 预算写死在脚本里）。</p>
+
+<h2 id="parts">2. 部件：谁解释，谁只读</h2>
+<figure>
+  <iframe src="diagrams/parts.html" style="height:640px" title="部件图"></iframe>
+  <figcaption>只画“谁产出什么、谁读什么”；不画 git 本身、不画调用时机（见第 3、4 节）。</figcaption>
+</figure>
+<table>
+  <tr><th>部件</th><th>职责</th><th>不做什么</th></tr>
+  <tr><td><b>init-workflow</b>（规划侧）</td><td>唯一读配置、唯一做推断（集成分支、各类分支的基线、worktree 目录、合并目标、合并前检查）。一次运行同时写出下面四样产物，它们来自同一次解释</td><td>不在任务里被调用；不替任何任务建 worktree 或合并</td></tr>
+  <tr><td><b>resolved.env</b></td><td>解释结果，一行一个取值，提交进仓库。执行侧与 compose-agentsmd 之间的唯一契约</td><td>不由人编辑；消费方逐行读，不当脚本执行</td></tr>
+  <tr><td><b>git-workflow.md</b></td><td>给人和 agent 看的工作流文档，末尾有一块“项目自填区”，重跑不覆盖</td><td>自填区以外的手改会被下次部署覆盖（会打印提醒）</td></tr>
+  <tr><td><b>git hooks</b></td><td>git 自动触发：拦截直接提交、拦截不经过脚本的合并、拦截推送里的违规提交</td><td>不防恶意：手写一行合并标记就能骗过</td></tr>
+  <tr><td><b>合并脚本</b></td><td>标准版，按配置写死目标分支；先跑项目检查，再无锁合并进本地集成分支</td><td>不 push；不删 worktree 和分支</td></tr>
+  <tr><td><b>manage-worktree</b>（执行侧）</td><td>按任务做：准备、进入、离开、检测、合并。所需取值只从 resolved.env 来</td><td>不解析配置；没有 resolved.env 就停，不猜</td></tr>
+  <tr><td><b>compose-agentsmd</b></td><td>生成 AGENTS.md 时从 resolved.env 取集成分支</td><td>不再接受手填的集成分支、合并方式</td></tr>
+</table>
+<p><b>信任关系：</b>消费方不信任自己对配置的理解，只信 resolved.env；resolved.env 又只信“集成分支上已提交的那份”（第 5 节）。</p>
+<div class="cost"><b>代价：</b>改了配置但没重跑 init-workflow，所有产物和执行侧都停在旧取值上——彼此仍一致，但都是旧的。换来的是“同一时刻文档、hooks、脚本、执行侧说法一定相同”。另一个代价是仓库里多一个必须提交、不能手改的文件。</div>
+
+<h2 id="when">3. 调用时机总表</h2>
+<p>按“谁触发”分三类：人主动跑的、devflow skill 在固定步骤调用的、git 自动触发的。</p>
+<table>
+  <tr><th>动作</th><th>什么时候</th><th>谁触发</th><th>读 / 写</th><th>要不要人确认</th></tr>
+  <tr><td><b>init-workflow 部署</b></td><td>仓库第一次接入；改了分支规矩；init-workflow 升级后</td><td>人</td><td>读配置；写 resolved.env、文档、hooks、合并脚本、.gitignore</td><td>有冲突时逐条确认（沿用现有流程）</td></tr>
+  <tr><td>manage-worktree「准备」</td><td>① init-spec 建档前（高档）<br>② develop-plan 第 1 步，带 spec 路径作锚点<br>③ handoff author 第 4 步，带计划或 spec 作锚点<br>④ 低档、琐碎档在改动前由 agent 直接调</td><td>devflow skill / agent</td><td>读基线分支上的 resolved.env；必要时新建 worktree</td><td>只在<b>新建</b>时确认一次（基线、分支名、路径）；复用不问</td></tr>
+  <tr><td>「进入」</td><td>handoff verify（接手方开工前）、accept（交出方验收前）</td><td>handoff</td><td>读 resolved.env 做检测，然后进入</td><td>不问；检测不过就打回</td></tr>
+  <tr><td>「检测」</td><td>每个动作内部第一步；人也可单独要求</td><td>其他动作 / 人</td><td>只读</td><td>不问</td></tr>
+  <tr><td>「离开」</td><td>handoff 各方离开交接工作区时</td><td>handoff</td><td>不写；工作区保留</td><td>不问</td></tr>
+  <tr><td><b>「合并」（新增）</b></td><td>只在用户明确说“合并”，或项目指令规定时。独立任务：Step 7 由当前 agent 调；交接任务：交出方在 accept 通过后调</td><td>agent，受人的指令驱动</td><td>读 resolved.env；执行仓库里的合并脚本</td><td>时机由人定；动作本身不再问</td></tr>
+  <tr><td>合并脚本</td><td>被「合并」调用；没装新版 manage-worktree 时人或 agent 直接运行（兜底）</td><td>「合并」/ 人</td><td>只更新本地集成分支</td><td>—</td></tr>
+  <tr><td>git hooks</td><td>git 自己触发：普通提交、合并提交、推送</td><td>git</td><td>按部署时写死的取值判断</td><td>—</td></tr>
+  <tr><td>compose-agentsmd 生成</td><td>人要生成或升级 AGENTS.md 时</td><td>人</td><td>读 resolved.env；写 AGENTS.md</td><td>手改过的 AGENTS.md 要人同意才覆盖（沿用现有）</td></tr>
+</table>
+<div class="cost"><b>代价：</b>「合并」不判断“该不该合并”，判断留给人和项目指令。好处是自动调用的 skill 不会自作主张合并；代价是每次合并都要人说一句。</div>
+
+<h2 id="seq">4. 一个任务里的时序</h2>
+<figure>
+  <iframe src="diagrams/task.html" style="height:820px" title="任务时序图"></iframe>
+  <figcaption>只画 manage-worktree 被调用的时刻与它读写的对象；不画 init-spec、develop-plan 内部的写文档步骤。</figcaption>
+</figure>
+<h3>在哪等待</h3>
+<p>整条链上只有两处停下来等人：新建 worktree 前的一次确认，以及“合并”这句话。其余调用（复用工作区、进入、检测、离开）都不问。<span class="tag t-ok">读到的</span>（Spec 5.5、D20）</p>
+<h3>在哪失败、失败后是什么状态</h3>
+<p>读不到解释结果时，「准备」直接停下，此时还没有建任何东西；「合并」的失败点见第 6 节，所有失败都停在“集成分支没动”的状态，唯一的例外是真实冲突——冲突标记会落在当前工作区，等人解决。</p>
+
+<h2 id="read">5. 执行侧怎么读到规矩</h2>
+<p>问题在于：resolved.env 在哪个检出里？主工作树可能正停在别的会话的分支上，你要进入的工作区也可能是部署之前建的老分支。两者里的 resolved.env 都可能是旧的，甚至没有。</p>
+<p>所以执行侧分两步读 <span class="tag t-infer">推出来的</span>（构建者检查后的次要决定 S8，随 Spec 送审）：</p>
+<table>
+  <tr><th>步骤</th><th>做什么</th><th>为什么</th></tr>
+  <tr><td>① 引导</td><td>从当前工作区或主工作树里随便取到一份，只用来知道“基线分支叫什么”</td><td>不读任何文件就不知道集成分支是哪条</td></tr>
+  <tr><td>② 权威</td><td>再去读<b>基线分支上已提交的那份</b>，以它为准输出</td><td>新 worktree 从哪条分支拉出，就该用那条分支上的规矩</td></tr>
+</table>
+<table>
+  <tr><th>情形</th><th>结果</th></tr>
+  <tr><td>主工作树停在别的分支、那里的文件是旧的</td><td>不影响，取值来自基线分支</td></tr>
+  <tr><td>要进入的是部署前建的老分支</td><td>「进入」「检测」照常；「合并」会因为老分支里没有标准脚本而停下，提示先把集成分支并入</td></tr>
+  <tr><td>基线分支上也没有这个文件（仓库还没部署新版）</td><td>所有动作停下，提示先部署 init-workflow</td></tr>
+</table>
+<div class="cost"><b>代价：</b>“没部署就停”是你在方案审查里选的（C1b）。新版 manage-worktree 一旦装进本机，其余 17 个还没重新部署的项目，devflow 会全部停下，直到逐个重跑 init-workflow。所以 Spec 规定本轮合并后<b>不同步装机副本</b>，装机与批量部署由你一起排期。</div>
+
+<h2 id="merge">6. 「合并」的关卡</h2>
+<figure>
+  <iframe src="diagrams/merge.html" style="height:600px" title="合并流程图"></iframe>
+  <figcaption>前三关在执行侧，后三关在仓库里的合并脚本；红色一行是每一关失败时停下的位置。</figcaption>
+</figure>
+<table>
+  <tr><th>结果</th><th>含义</th><th>集成分支</th><th>下一步</th></tr>
+  <tr><td>退出 0</td><td>已合并，或本来就已包含</td><td>前进一个合并提交</td><td>push 另做；worktree 保留</td></tr>
+  <tr><td>退出 1</td><td>出错，或项目检查（如 token 预算）没过</td><td>没动</td><td>按提示修，再「合并」</td></tr>
+  <tr><td>退出 2</td><td>真实冲突</td><td>没动</td><td>冲突标记已落在当前工作区，解决并提交后再「合并」</td></tr>
+  <tr><td>退出 4</td><td>仓库没部署新版 init-workflow</td><td>没动</td><td>先部署</td></tr>
+  <tr><td>拒绝</td><td>不在 worktree 根、detached、或正站在集成分支上</td><td>没动</td><td>换到正确的工作区</td></tr>
+</table>
+<p>“写入 staging”这一步是无锁的——多个 worktree 同时合并时，后到的一方发现目标分支被抢先移动，就重新试合并再写，不互相覆盖。这是现有脚本已有的机制，本轮只是把它标准化 <span class="tag t-ok">读到的</span>。</p>
+<div class="cost"><b>代价：</b>老分支（部署前建的）里没有标准脚本，必须先把集成分支并入才能「合并」，多一步。换来的是不用从别的分支“借”脚本来跑，项目检查用的文件也一定和被合并的代码同版本。</div>
+
+<h2 id="hooks">7. 拦截：哪个 hook 在什么时候起作用</h2>
+<p>一个关键事实决定了拦截要放在哪：干净的手动 <code>git merge</code> 不会触发 pre-commit，只会触发 commit-msg <span class="tag t-unk">没查的</span>（依据 git 文档，本会话处于 worktree 隔离无法实测，已排进计划首个任务与验收第 1 条）。这意味着现在 init-workflow 生成的“staging 只接受 feature/* 合并”检查，对干净合并其实不起作用。</p>
+<table>
+  <tr><th>操作</th><th>pre-commit</th><th>commit-msg</th><th>pre-push</th><th>结果</th></tr>
+  <tr><td>在 staging 上直接提交</td><td>拒绝</td><td>—</td><td>—</td><td>拒绝</td></tr>
+  <tr><td>在 staging 上手动 <code>git merge</code>（干净）</td><td>不触发</td><td><b>拒绝</b>：没有合并标记</td><td>—</td><td>拒绝</td></tr>
+  <tr><td>手动合并有冲突，解决后 commit</td><td>放行到下一关</td><td><b>拒绝</b>：没有合并标记</td><td>—</td><td>拒绝</td></tr>
+  <tr><td>标准脚本合并</td><td colspan="2">不触发任何 hook（脚本不走 commit 命令），提交信息自带合并标记</td><td>放行</td><td>通过</td></tr>
+  <tr><td>从远端同步 staging 产生的合并</td><td>—</td><td>放行（例外）</td><td>放行（例外）</td><td>通过</td></tr>
+  <tr><td>绕过本地 hook 后推送无标记的合并</td><td>—</td><td>—</td><td><b>拒绝</b>：逐个检查推送的主线提交</td><td>拒绝</td></tr>
+</table>
+<div class="cost"><b>代价：</b>拦截靠的是提交信息里的一行标记，手写这一行就能骗过。目标是防误操作，不防有意绕过——你在方案审查里接受了这一点（C4a）。另一条路是不认标记、直接拦所有手动合并，但要为远端同步开更多例外，且少了推送这道关。</div>
+
+<h2 id="deploy">8. 部署：什么时候要重跑 init-workflow</h2>
+<table>
+  <tr><th>场景</th><th>要不要重跑</th><th>不重跑会怎样</th></tr>
+  <tr><td>新仓库接入</td><td>要</td><td>没有 resolved.env，执行侧直接停</td></tr>
+  <tr><td>改了分支规矩、worktree 目录、合并前检查</td><td>要</td><td>所有产物和执行侧继续用旧取值（彼此一致）</td></tr>
+  <tr><td>init-workflow 升级</td><td>要</td><td>文档、hooks、脚本停在旧模板</td></tr>
+  <tr><td>只改了项目自填区</td><td>不用</td><td>—</td></tr>
+</table>
+<p>第一次用新版重跑一个手改过文档的老仓库时：照旧整份覆盖，打印一行提醒和找回命令（你选的 C）。所以本轮在 harveyz-skill 和 agent-canvas 上，要先由人把需要保留的手写内容挪进自填区，再部署。agent-canvas 那份要挪的包括：合并脚本用法、“未自动同步”警告的处理、token 预算说明、冲突处理、主工作树常驻 staging 的问答 <span class="tag t-ok">读到的</span>。</p>
+
+<h2 id="fail">9. 失败后停在什么状态</h2>
+<table>
+  <tr><th>情形</th><th>停在哪</th></tr>
+  <tr><td>仓库没部署新版</td><td>manage-worktree 各动作停下（退出 4）；compose-agentsmd 报错；什么都没建、没写</td></tr>
+  <tr><td>配置里没有 feature 分支的合并去向</td><td>不部署合并脚本和拦截；文档保留通用 merge 写法；「合并」报“未配置合并目标”</td></tr>
+  <tr><td>项目检查没过</td><td>集成分支没动；退出 1，并说明哪条检查失败</td></tr>
+  <tr><td>合并冲突</td><td>集成分支没动；冲突标记在当前工作区</td></tr>
+  <tr><td>装机副本还是旧版（没有「合并」）</td><td>指令文件写明兜底：直接运行仓库里的合并脚本</td></tr>
+  <tr><td>文档或脚本被手改过、没有生成标记</td><td>照旧覆盖，打印提醒和找回命令</td></tr>
+</table>
+
+<h2 id="bound">10. 边界与判断</h2>
+<h3>明确不做</h3>
+<ul>
+  <li>manage-worktree 不清理：合并后不删 worktree、不删分支（留作以后）。</li>
+  <li>不 push：合并只到本地集成分支。</li>
+  <li>不标准化发布流程：模板里只改成“不切主工作树”，并指向项目自己的发布流程。</li>
+  <li>本轮只部署 harveyz-skill 和 agent-canvas；File Translator 和其余 16 个项目以后再说。</li>
+  <li>不验证 Codex 等非 Claude Code 宿主。</li>
+</ul>
+<div class="judge">
+<p><b>技术判断：</b>“部署时一次解释、写成文件”把一致性问题从“三段代码各自理解”变成“有没有重跑部署”，后者可见、可检查（文件头记着版本和来源），前者是静默的。风险集中在过渡期：没部署的仓库会因为“没部署就停”而整体不可用，这是一次性成本，但发生时影响面大。</p>
+<p><b>产品判断</b>（依据只到代码与本仓库流程，未考虑其他使用者）<b>：</b>装机副本同步和 17 个项目的批量部署应当排在同一个时间窗口里做；先装机后部署，会在中间这段时间让这些项目里的 devflow 停摆。</p>
+</div>
+
+<h3>未确认项汇总</h3>
+<table>
+  <tr><th>项</th><th>把握度</th><th>怎么查实</th></tr>
+  <tr><td>干净 <code>git merge</code> 不触发 pre-commit、只触发 commit-msg；脚本合并不触发任何 hook</td><td><span class="tag t-unk">没查的</span> 依据 git 文档</td><td>计划首个任务在临时仓库实测（验收第 1 条）；与预期不符会回到方案审查</td></tr>
+  <tr><td>执行侧的“两步读取”（S8）</td><td><span class="tag t-infer">推出来的</span></td><td>随 Spec 送审；验收第 6 条有专门用例</td></tr>
+  <tr><td>Codex 等宿主上的进出与合并</td><td><span class="tag t-unk">没查的</span></td><td>本轮不做</td></tr>
+</table>
+
+<p class="anchors"><b>出处：</b>Spec §1 意图、§3 不可接受结果、§5.3 解释器与 resolved.env、§5.4 部署产物、§5.5 manage-worktree、§6 状态与异常、§7 验收、§8 风险、§9 次要决定（S8、S9、S13、S14）；决定记录 D3、D10、D20、D25、D30–D36。</p>
+
+</main>
+</body>
+</html>

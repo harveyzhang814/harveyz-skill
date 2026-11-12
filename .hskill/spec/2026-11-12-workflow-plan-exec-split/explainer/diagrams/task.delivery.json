@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "receiptId": "c277c437-26cd-4d37-9ae1-98f5a284c76b",
+  "status": "current",
+  "command": "deliver",
+  "type": "sequence",
+  "input": "/Users/harveyzhang96/Projects/harveyz-skill/.worktrees/feature+workflow-plan-exec-split/.hskill/spec/2026-11-12-workflow-plan-exec-split/explainer/diagrams/task.sequence.json",
+  "output": "/Users/harveyzhang96/Projects/harveyz-skill/.worktrees/feature+workflow-plan-exec-split/.hskill/spec/2026-11-12-workflow-plan-exec-split/explainer/diagrams/task.html",
+  "specification": {
+    "sha256": "253d6640e924436b69361b19d7a6456be82c5faf89c6843f2ab6962c581e874e",
+    "bytes": 2889
+  },
+  "artifact": {
+    "sha256": "abfd070a76b1bd285b0355b94a648083c38dd88d3a9c81e010597ce1d9509818",
+    "bytes": 760067
+  }
+}

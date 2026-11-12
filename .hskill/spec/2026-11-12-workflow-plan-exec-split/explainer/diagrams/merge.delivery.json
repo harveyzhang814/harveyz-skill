@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "receiptId": "38acd53b-7a98-44fc-8d38-966535c247f0",
+  "status": "current",
+  "command": "deliver",
+  "type": "workflow",
+  "input": "/Users/harveyzhang96/Projects/harveyz-skill/.worktrees/feature+workflow-plan-exec-split/.hskill/spec/2026-11-12-workflow-plan-exec-split/explainer/diagrams/merge.workflow.json",
+  "output": "/Users/harveyzhang96/Projects/harveyz-skill/.worktrees/feature+workflow-plan-exec-split/.hskill/spec/2026-11-12-workflow-plan-exec-split/explainer/diagrams/merge.html",
+  "specification": {
+    "sha256": "d03b041a125940d41ef7c33d174e148617f831e24e16fb3092526427650c4284",
+    "bytes": 3293
+  },
+  "artifact": {
+    "sha256": "644dc5e5bc9da77117059b99be4cc678c7b28de97d8f3a310384d3d56d74f5f7",
+    "bytes": 758749
+  }
+}

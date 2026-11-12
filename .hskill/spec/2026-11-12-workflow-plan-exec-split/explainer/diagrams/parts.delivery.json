@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "receiptId": "2b2946ec-49fc-4ca8-ac98-1ac6dcb9bc48",
+  "status": "current",
+  "command": "deliver",
+  "type": "architecture",
+  "input": "/Users/harveyzhang96/Projects/harveyz-skill/.worktrees/feature+workflow-plan-exec-split/.hskill/spec/2026-11-12-workflow-plan-exec-split/explainer/diagrams/parts.architecture.json",
+  "output": "/Users/harveyzhang96/Projects/harveyz-skill/.worktrees/feature+workflow-plan-exec-split/.hskill/spec/2026-11-12-workflow-plan-exec-split/explainer/diagrams/parts.html",
+  "specification": {
+    "sha256": "5948732c0b9f1ca4c4957d9ed02caf136fc455fb323524b90bd3e3fc3d4f36f0",
+    "bytes": 2265
+  },
+  "artifact": {
+    "sha256": "ca08f9d395d5c55bd5ea5728ec4c627ec37101a077a32bbd77566fba5f3b2d52",
+    "bytes": 757693
+  }
+}
