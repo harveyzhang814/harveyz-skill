@@ -22,7 +22,7 @@ git rev-parse --show-toplevel
 
 若不在 git 仓库中，询问用户是否先执行 `git init`，用户拒绝则停止，告知需先 `git init` 再运行本 skill。`git init` 不必指定分支名，Step 9 的起步引导会把 HEAD 改到根集成分支。
 
-**在哪运行：** 仓库还没有提交时，在主工作树运行即可，部署产物由 Step 9 的起步引导做成根提交。仓库已有提交时，在一条 `chore/` 分支的 worktree 里运行（用 `manage-worktree`「准备」建；合并目标分支还不存在时，基线用根集成分支，如 `main`）：部署产物在这条分支提交，结束后用刚部署的合并脚本合并。不要在主工作树的集成分支上运行——hooks 部署后立即生效，产物就提交不进去了。
+**在哪运行：** 仓库还没有提交时，在主工作树运行即可，部署产物连同已有文件由 Step 9 的起步引导做成根提交。仓库已有提交时，在一条 `chore/` 分支的 worktree 里运行（用 `manage-worktree`「准备」建；合并目标分支还不存在时，基线用根集成分支，如 `main`）：部署产物在这条分支提交，结束后用刚部署的合并脚本合并，再把主工作树切到合并目标（见 Step 9「主工作树常驻合并目标」）。不要在主工作树的集成分支上运行——hooks 部署后立即生效，产物就提交不进去了。
 
 ---
 
@@ -146,7 +146,7 @@ mkdir -p .githooks
 
 3. **差量写入**：生成全文后与磁盘文件对比——内容相同标记 `UNCHANGED`，不同标记 `UPDATED`，新建标记 `NEW`
 
-4. **`merge-via` 块仅在存在合并目标时生成**（`resolved.env` 有 `merge_target`，即配置有 `base.feature`）：`commit-msg/merge-via` 与 `pre-push/merge-via` 两个 MANAGED 块，并把合并目标分支的 `branches.protected/<merge_target>` 块换成专用变体（保留“禁止直接提交”，提示改用合并脚本）；其他受保护分支的块不变。没有合并目标时三者都不生成，`commit-msg` 仅因 `commit_message.enforce: true` 才生成。
+4. **`merge-via` 块仅在存在合并目标时生成**（`resolved.env` 有 `merge_target`，即某个受保护分支的 `merge_from` 列有 `"feature/*"`）：`commit-msg/merge-via` 与 `pre-push/merge-via` 两个 MANAGED 块，并把合并目标分支的 `branches.protected/<merge_target>` 块换成专用变体（保留“禁止直接提交”，提示改用合并脚本）；其他受保护分支的块不变。没有合并目标时三者都不生成，`commit-msg` 仅因 `commit_message.enforce: true` 才生成。
    - 提交标记是**绊线而非强制**：对远端同步合并（主题以 `Merge branch '<目标>' of ` 开头）放行，所以 `merge-via` 能拦住误操作，拦不住有意绕过。
    - 合并目标分支**首次发布**（远端还没有该分支，此时只检查本地尖端提交）且尖端不是脚本产生的合并时，`pre-push/merge-via` 会拒绝，需要一次 `git push --no-verify`；之后的推送正常。Step 9 的起步引导会用 `WARN first-publish` / `WARN unpushed` 提前指出。
    - 快进合并（`git merge --ff-only <功能分支>`）不产生提交，本地不触发任何 hook，只在推送时被 `pre-push/merge-via` 拦下。
@@ -223,13 +223,17 @@ stdout 逐行一项（`--dry-run` 末行为 `DRY-RUN`）：
 
 | 行 | 含义 |
 |---|---|
-| `ROOT-COMMIT <根分支>` | 仓库还没有提交：把 HEAD 改到根集成分支（不出现在其他受保护分支 `merge_from` 里的那个，如 `main`），只收部署产物（规则文件、`resolved.env`、`.githooks/`、工作流文档、合并脚本、`.gitignore`）做根提交，绕过 hooks。用户自己的文件不收，之后走功能分支 |
+| `ROOT-COMMIT <根分支>` | 仓库还没有提交：把 HEAD 改到根集成分支（不出现在其他受保护分支 `merge_from` 里的那个，如 `main`），收入所有未被 `.gitignore` 忽略的文件（部署产物和用户已有的文件，同 `git add -A`）做根提交，绕过 hooks |
+| `FILE <路径>` | 紧跟 `ROOT-COMMIT`，逐个列出根提交将收入的文件 |
 | `CREATE <分支> <来源>` | 本地缺这条集成分支：有 `origin/<分支>` 就从它建，否则从它的上游（`merge_from` 里列出它的那个受保护分支）建 |
+| `SWITCH <合并目标>` | 仅全新仓库：根提交后把主工作树切到合并目标常驻（两条分支同一提交，只改 HEAD 指向） |
 | `EXISTS <分支>` | 已存在，不动 |
 | `WARN unpushed <合并目标> <数量>` | 合并目标上有未推送、不带合并标记行的提交，推送会被 `pre-push/merge-via` 拒绝 |
 | `WARN first-publish <合并目标>` | 合并目标还没发布到远端，尖端又不是脚本产生的合并，首次推送会被拒 |
 
-只有 `EXISTS` 行时直接进入汇报。否则把预演结果给用户，确认一次后去掉 `--dry-run` 再跑一次。`WARN` 行只提醒、不推送：stderr 里有对应的一次性 `git push --no-verify` 命令，由用户确认这些提交确实要发布后自己执行。
+只有 `EXISTS` 行时直接进入汇报。否则把预演结果给用户，确认一次后去掉 `--dry-run` 再跑一次。有 `FILE` 行时请用户逐个过目：密钥（如 `.env`）、依赖目录、构建产物不该进根提交，先补进 `.gitignore` 再重新预演。`WARN` 行只提醒、不推送，stderr 里有处理办法。
+
+**主工作树常驻合并目标：** 主工作树停在合并目标（如 `staging`）上，合并脚本每次合并后都会同步它，hooks、工作流文档和规则文件始终是最新的。停在根分支（如 `main`）上时，这些产物要等发版才到那里：hooks 缺席，直接提交不会被拦，`manage-worktree` 也读不到规则文件，推断出错误的基线。全新仓库由 `SWITCH` 自动切换。已有提交的仓库在 chore 分支合并进合并目标之后，把主工作树切过去（`git -C <主工作树> switch <合并目标>`）；主工作树有未提交改动时不切，告诉用户先处理。
 
 退出码：0 正常；2 找不到规则文件（回到 Step 2）；3 受保护分支推不出唯一的根或存在循环（回到 Step 3）；4 仓库已有提交，但根集成分支在本地和 `origin` 都没有（如默认分支叫 `master`）——不猜从哪建，把 stderr 给用户，由用户改名或建好后重跑。2–4 都在改动之前退出。
 
@@ -254,7 +258,8 @@ merge.ff                           = false      ✅（或 ❌ 已修复 / ❌ �
 docs/reference/git-workflow.md     UPDATED
 CLAUDE.md                          已有引用，跳过
 WARN <路径>                        （如有）照录 stdout 的 WARN 行，并附 stderr 的找回命令
-起步引导                           照录 ROOT-COMMIT / CREATE / EXISTS 行；WARN 行附 stderr 的推送命令
+起步引导                           照录 ROOT-COMMIT / FILE / CREATE / SWITCH / EXISTS 行；WARN 行附 stderr 的说明
+主工作树                           = <合并目标>  ✅（或 ⚠️ 停在 <分支>，附切换命令）
 ─────────────────────────────────────────────────────
 冲突决策摘要：
   [1/3] branches.protected/main 手改块 → 用户选择保留修改

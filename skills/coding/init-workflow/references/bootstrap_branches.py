@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
 """
 init-workflow 起步引导（Step 9，写完 lock 文件之后）
-让仓库具备开始工作的分支：全新仓库（还没有提交）在根集成分支上做一个只含部署产物的根提交；
-本地缺少的集成分支从远端同名分支或其上游建出；最后提醒合并目标分支上推送会被 pre-push 拒绝的提交。
+让仓库具备开始工作的分支：全新仓库（还没有提交）在根集成分支上做根提交（收入所有未被忽略的文件），
+再把主工作树切到合并目标常驻；本地缺少的集成分支从远端同名分支或其上游建出；
+最后提醒合并目标分支上推送会被 pre-push 拒绝的提交。
 先算出完整计划再动手：任何一步推不出来就在改动之前停下。
 
 用法：python3 bootstrap_branches.py <repo_root> [--dry-run]
-stdout 逐行：ROOT-COMMIT <分支> / CREATE <分支> <来源> / EXISTS <分支> /
-             WARN unpushed <分支> <数量> / WARN first-publish <分支>；--dry-run 时末行 DRY-RUN
+stdout 逐行：ROOT-COMMIT <分支>（随后每个将提交的文件一行 FILE <路径>）/ CREATE <分支> <来源> /
+             EXISTS <分支> / SWITCH <分支> / WARN unpushed <分支> <数量> / WARN first-publish <分支>；--dry-run 时末行 DRY-RUN
 退出码：0 正常；2 找不到规则文件；3 配置推不出分支顺序；4 已有提交的仓库缺根集成分支
 """
 import os
@@ -15,7 +16,6 @@ import subprocess
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from deploy_artifacts import DOC_PATH, ENV_PATH  # noqa: E402
 from workflow_resolve import ConfigError, find_rule_file, load_config, resolve  # noqa: E402
 
 ROOT_COMMIT_MSG = 'chore: initialize git workflow'
@@ -80,6 +80,13 @@ def _push_warning(repo, target, trailer, tip):
     return ('WARN', 'unpushed', target, str(n)) if n else None
 
 
+def _root_files(repo_root):
+    """根提交将收入的文件：已暂存的加上未跟踪且未被忽略的，与 git add -A 一致。"""
+    staged = _git(repo_root, 'ls-files', '-z').stdout.split('\0')
+    others = _git(repo_root, 'ls-files', '-z', '--others', '--exclude-standard').stdout.split('\0')
+    return sorted({f for f in staged + others if f})
+
+
 def bootstrap(repo_root, dry_run=False):
     rule_file = find_rule_file(repo_root)
     if rule_file is None:
@@ -103,6 +110,7 @@ def bootstrap(repo_root, dry_run=False):
             tips[name] = tips[up]
         elif unborn:
             plan.append(('ROOT-COMMIT', name))
+            plan.extend(('FILE', f) for f in _root_files(repo_root))
             tips[name] = None
         else:
             raise BootstrapError(
@@ -110,32 +118,34 @@ def bootstrap(repo_root, dry_run=False):
                 f'不猜测从哪建，请先确定 {name} 的来源（例如 git branch -m <现有默认分支> {name}）后重跑')
 
     target = resolved['merge_target']
+    if plan[0][0] == 'ROOT-COMMIT' and target and target != order[0][0]:
+        plan.append(('SWITCH', target))  # 与根分支同一提交，只改 HEAD 指向
     warning = _push_warning(repo_root, target, resolved['merge_trailer'], tips.get(target)) \
         if target and target in tips else None
 
     if dry_run:
         return plan + ([warning] if warning else [])
 
-    # 2. 按计划执行；根提交只收部署产物，绕过已生效的 hooks（它们禁止在集成分支上直接提交）
+    # 2. 按计划执行；根提交绕过已生效的 hooks（它们禁止在集成分支上直接提交）
     for step in plan:
         if step[0] == 'ROOT-COMMIT':
             _git(repo_root, 'symbolic-ref', 'HEAD', f'refs/heads/{step[1]}')
-            paths = [p for p in (rule_file, ENV_PATH, DOC_PATH, '.githooks',
-                                 resolved['merge_script'], '.gitignore')
-                     if p and os.path.exists(os.path.join(repo_root, p))]
-            _git(repo_root, 'add', '--', *paths)
+            _git(repo_root, 'add', '-A')
             _git(repo_root, '-c', 'core.hooksPath=/dev/null', 'commit', '-q', '--no-verify',
                  '-m', ROOT_COMMIT_MSG)
         elif step[0] == 'CREATE':
             _git(repo_root, 'branch', step[1], step[2])
+        elif step[0] == 'SWITCH':
+            _git(repo_root, 'symbolic-ref', 'HEAD', f'refs/heads/{step[1]}')
     return plan + ([warning] if warning else [])
 
 
 WARN_HELP = {
     'unpushed': '{0} 有 {1} 个未推送、不带合并标记行的提交，推送时会被 pre-push/merge-via 拒绝；'
                 '确认它们应发布后执行一次 git push --no-verify origin {0}',
-    'first-publish': '{0} 还没发布到远端，且尖端不是合并脚本产生的合并；'
-                     '首次推送会被 pre-push/merge-via 拒绝，需要一次 git push --no-verify -u origin {0}',
+    'first-publish': '{0} 还没发布到远端，且尖端不是合并脚本产生的合并，现在推送会被 pre-push/merge-via 拒绝；'
+                     '先用合并脚本合并一次（如部署产物所在的 chore 分支）再推送即可，'
+                     '或确认后执行一次 git push --no-verify -u origin {0}',
 }
 
 if __name__ == '__main__':
@@ -157,7 +167,7 @@ if __name__ == '__main__':
         print(f'ERROR {e}', file=sys.stderr)
         sys.exit(4)
     for r in results:
-        print(' '.join(r))
+        print(' '.join(r), flush=True)  # 先出 stdout 行，stderr 的说明紧随其后
         if r[0] == 'WARN':
             print('WARN ' + WARN_HELP[r[1]].format(*r[2:]), file=sys.stderr)
     if dry:

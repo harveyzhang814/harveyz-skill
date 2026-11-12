@@ -111,35 +111,51 @@ def test_branch_order_rejects_cycle():
 
 def fresh_deployed(tmp_path):
     repo = make_repo(tmp_path / "proj")  # 不带 -b：git 默认分支名（可能是 master）
-    (repo / "README.md").write_text("hello\n")  # 用户自己的文件，不进根提交
+    (repo / "README.md").write_text("hello\n")  # 用户自己的文件，进根提交
+    (repo / "src").mkdir()
+    (repo / "src" / "app.sh").write_text("echo hi\n")
+    (repo / "debug.log").write_text("noise\n")  # 被 .gitignore 忽略，不进根提交
     write_cfg(repo)
     da.deploy(str(repo))
+    with open(repo / ".gitignore", "a") as f:
+        f.write("*.log\n")
     install_blocking_hooks(repo)
     return repo
 
 
+FRESH_FILES = sorted([
+    ".githooks/commit-msg", ".githooks/pre-commit", ".gitignore",
+    ".hskill/init-workflow/resolved.env", RULE, "README.md",
+    "docs/reference/git-workflow.md", "scripts/merge-to-staging.sh", "src/app.sh",
+])
+FRESH_PLAN = ([("ROOT-COMMIT", "main")] + [("FILE", p) for p in FRESH_FILES]
+              + [("CREATE", "staging", "main"), ("SWITCH", "staging")])
+
+
 def test_fresh_repo_root_commit_and_branches(tmp_path):
     repo = fresh_deployed(tmp_path)
-    results = bb.bootstrap(str(repo))
-    assert results == [("ROOT-COMMIT", "main"), ("CREATE", "staging", "main")]
-    assert git(repo, "symbolic-ref", "--short", "HEAD") == "main"
+    assert bb.bootstrap(str(repo)) == FRESH_PLAN
     assert git(repo, "rev-list", "--count", "main") == "1"
     assert git(repo, "rev-parse", "staging") == git(repo, "rev-parse", "main")
-    tracked = git(repo, "ls-tree", "-r", "--name-only", "main").splitlines()
-    for path in (RULE, ".hskill/init-workflow/resolved.env", "docs/reference/git-workflow.md",
-                 "scripts/merge-to-staging.sh", ".gitignore", ".githooks/pre-commit"):
-        assert path in tracked, path
-    assert "README.md" not in tracked
+    assert sorted(git(repo, "ls-tree", "-r", "--name-only", "main").splitlines()) == FRESH_FILES
+
+
+def test_fresh_repo_main_worktree_rests_on_merge_target(tmp_path):
+    repo = fresh_deployed(tmp_path)
+    bb.bootstrap(str(repo))
+    assert git(repo, "symbolic-ref", "--short", "HEAD") == "staging"
+    # 切换只改 HEAD 指向；两条分支同一提交，工作区与索引都干净（被忽略的文件不算）
+    assert git(repo, "status", "--porcelain") == ""
 
 
 def test_dry_run_changes_nothing(tmp_path):
     repo = fresh_deployed(tmp_path)
     head_before = git(repo, "symbolic-ref", "HEAD")
-    results = bb.bootstrap(str(repo), dry_run=True)
-    assert results == [("ROOT-COMMIT", "main"), ("CREATE", "staging", "main")]
+    assert bb.bootstrap(str(repo), dry_run=True) == FRESH_PLAN
     assert git(repo, "symbolic-ref", "HEAD") == head_before
     assert git(repo, "rev-parse", "-q", "--verify", "HEAD", check=False) == ""
     assert git(repo, "for-each-ref", "refs/heads") == ""
+    assert git(repo, "ls-files") == ""
 
 
 def test_rerun_after_bootstrap_is_noop(tmp_path):
@@ -237,7 +253,7 @@ def test_cli_prints_results_and_exit_0(tmp_path):
     repo = fresh_deployed(tmp_path)
     r = run_cli(repo, "--dry-run")
     assert r.returncode == 0, r.stderr
-    assert r.stdout.splitlines() == ["ROOT-COMMIT main", "CREATE staging main", "DRY-RUN"]
+    assert r.stdout.splitlines() == [" ".join(s) for s in FRESH_PLAN] + ["DRY-RUN"]
 
 
 def test_cli_exit_2_without_rule_file(tmp_path):

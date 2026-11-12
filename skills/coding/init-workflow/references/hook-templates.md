@@ -72,10 +72,10 @@ fi
 ```
 
 `case` 模式从配置的 `merge_from` 列表动态生成，`|` 分隔。
-`allow_direct_commit: true` 时将 `exit 1` 改为 `echo "⚠️ 警告"`（不阻断）。
+`allow_direct_commit: true` 时，非合并分支里的 `echo "❌ …"` 改为 `echo "⚠️ …"` 警告，`exit 1` 改为 `exit 0`（直接提交放行；只把 `exit 1` 换成 `echo` 会落到下面的来源检查，照样被拒）。
 
 **合并目标分支的块（`branches.protected/<merge_target>`）：** 合并目标 = `resolved.env` 的 `merge_target`。该分支用下面的变体，其他受保护分支（如上面的 `main`）仍用上面的写法，不变。变体保留“禁止直接提交”，删去 `MERGE_MSG` 来源判断（合并来源与标记由 `commit-msg/merge-via` 负责），报错改为指向合并脚本。占位：`<merge_target>`（合并目标分支名）、`<merge_script>`（`scripts/merge-to-<merge_target>.sh`）。
-没有合并目标（配置无 `base.feature`）时，不生成该变体，所有受保护分支都用上面的写法。
+没有合并目标（没有受保护分支的 `merge_from` 列有 `"feature/*"`）时，不生成该变体，所有受保护分支都用上面的写法。
 ```sh
 # --- BEGIN MANAGED: branches.protected/<merge_target> (hash:<hash>) ---
 if [ "$BRANCH" = "<merge_target>" ]; then
@@ -107,7 +107,7 @@ SUBJECT=$(printf '%s\n' "$SUBJECT" | sed '/^#/d' | sed 's/^[[:space:]]*//')
 ```
 
 **合并标记 MANAGED 块（`commit-msg/merge-via`）：**
-生成条件：存在合并目标（`resolved.env` 的 `merge_target` 非空，即配置有 `base.feature`）。没有合并目标时不生成；此时 `commit-msg` 仅因 `commit_message.enforce: true` 才生成。
+生成条件：存在合并目标（`resolved.env` 的 `merge_target` 非空，即某个受保护分支的 `merge_from` 列有 `"feature/*"`）。没有合并目标时不生成；此时 `commit-msg` 仅因 `commit_message.enforce: true` 才生成。
 位置：必须放在 `commit-msg/format` 之前。`commit-msg/format` 首行遇 `MERGE_HEAD` 即 `exit 0`，排在它后面这个块永远执行不到。
 占位：`<merge_target>`（合并目标分支名）、`<merge_trailer>`（`Merge-Via: merge-to-<merge_target>.sh`）、`<merge_script>`（`scripts/merge-to-<merge_target>.sh`）。
 判定：存在 `MERGE_HEAD`、当前分支是合并目标、提交信息中没有整行等于 `<merge_trailer>` 的行、且主题不是远端同步合并（以 `Merge branch '<merge_target>' of ` 开头）时拒绝。

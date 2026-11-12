@@ -57,16 +57,20 @@ setup() {
 }
 teardown() { [[ -n "${TMP:-}" && "$TMP" == /*/* ]] && rm -rf "$TMP"; }
 
-@test "fresh repo: bootstrap makes root commit on main and creates staging" {
+@test "fresh repo: bootstrap commits everything on main, creates staging and rests on it" {
   run python3 "$REFS/bootstrap_branches.py" .
   [ "$status" -eq 0 ]
-  [ "$output" = "$(printf 'ROOT-COMMIT main\nCREATE staging main')" ]
-  [ "$(git symbolic-ref --short HEAD)" = "main" ]
+  [ "${lines[0]}" = "ROOT-COMMIT main" ]
+  [[ "$output" == *"FILE README.md"* ]] || false
+  [ "${lines[${#lines[@]}-2]}" = "CREATE staging main" ]
+  [ "${lines[${#lines[@]}-1]}" = "SWITCH staging" ]
+  [ "$(git symbolic-ref --short HEAD)" = "staging" ]
   [ "$(git rev-parse staging)" = "$(git rev-parse main)" ]
   git ls-tree -r --name-only main | grep -qx '.githooks/pre-commit'
-  ! git ls-tree -r --name-only main | grep -qx 'README.md'
-  # hooks 依旧生效：根提交之后在 main 上直接提交仍被拒
-  git add README.md
+  git ls-tree -r --name-only main | grep -qx 'README.md'
+  [ -z "$(git status --porcelain)" ]
+  # hooks 依旧生效：常驻的 staging 上直接提交被拒
+  echo more >> README.md && git add README.md
   run git commit -qm "docs: readme"
   [ "$status" -ne 0 ]
 }
