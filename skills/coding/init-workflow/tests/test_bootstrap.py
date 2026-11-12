@@ -1,0 +1,254 @@
+import os
+import subprocess
+import sys
+
+import pytest
+
+REFS = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "references")
+sys.path.insert(0, REFS)
+
+import bootstrap_branches as bb  # noqa: E402
+import deploy_artifacts as da  # noqa: E402
+import workflow_resolve as wr  # noqa: E402
+
+SCRIPT = os.path.join(REFS, "bootstrap_branches.py")
+RULE = ".hskill/init-workflow/workflow-config.yml"
+TRAILER = "Merge-Via: merge-to-staging.sh"
+
+CFG = """\
+branches:
+  protected:
+    - name: main
+      allow_direct_commit: false
+      merge_from:
+        - staging
+        - "release/*"
+    - name: staging
+      allow_direct_commit: false
+      merge_from:
+        - "feature/*"
+        - "chore/*"
+branch_naming:
+  enforce: true
+  allowed_patterns:
+    - "^feature/.+"
+    - "^chore/.+"
+  exempt:
+    - main
+    - staging
+"""
+
+
+def git(repo, *args, check=True):
+    r = subprocess.run(["git", "-C", str(repo), *args], capture_output=True, text=True)
+    if check and r.returncode != 0:
+        raise AssertionError(f"git {args} failed: {r.stderr}")
+    return r.stdout.strip()
+
+
+def make_repo(path, branch=None):
+    path.mkdir(parents=True, exist_ok=True)
+    git(path, "init", "-q", *(["-b", branch] if branch else []))
+    git(path, "config", "user.email", "t@example.com")
+    git(path, "config", "user.name", "t")
+    return path
+
+
+def write_cfg(repo):
+    p = repo / RULE
+    p.parent.mkdir(parents=True, exist_ok=True)
+    p.write_text(CFG)
+
+
+def commit_file(repo, name, msg):
+    (repo / name).write_text(msg + "\n")
+    git(repo, "add", name)
+    git(repo, "commit", "-qm", msg, "--no-verify")
+
+
+def install_blocking_hooks(repo):
+    """模拟已部署的 hooks：任何提交都被拒。起步引导的根提交必须不受它影响。"""
+    hooks = repo / ".githooks"
+    hooks.mkdir(exist_ok=True)
+    for name in ("pre-commit", "commit-msg"):
+        h = hooks / name
+        h.write_text("#!/bin/sh\necho blocked >&2\nexit 1\n")
+        h.chmod(0o755)
+    git(repo, "config", "core.hooksPath", ".githooks")
+
+
+def protected(tmp_path):
+    p = tmp_path / "cfg.yml"
+    p.write_text(CFG)
+    return wr.load_config(str(p))["protected"]
+
+
+# ---- branch_order ----
+
+def test_branch_order_root_first(tmp_path):
+    assert bb.branch_order(protected(tmp_path)) == [("main", None), ("staging", "main")]
+
+
+def test_branch_order_rejects_multiple_roots():
+    two_roots = [
+        {"name": "main", "allow_direct_commit": False, "merge_from": ["release/*"]},
+        {"name": "staging", "allow_direct_commit": False, "merge_from": ["feature/*"]},
+    ]
+    with pytest.raises(wr.ConfigError):
+        bb.branch_order(two_roots)
+
+
+def test_branch_order_rejects_cycle():
+    cyc = [
+        {"name": "a", "allow_direct_commit": False, "merge_from": ["b"]},
+        {"name": "b", "allow_direct_commit": False, "merge_from": ["a"]},
+    ]
+    with pytest.raises(wr.ConfigError):
+        bb.branch_order(cyc)
+
+
+# ---- 全新仓库 ----
+
+def fresh_deployed(tmp_path):
+    repo = make_repo(tmp_path / "proj")  # 不带 -b：git 默认分支名（可能是 master）
+    (repo / "README.md").write_text("hello\n")  # 用户自己的文件，不进根提交
+    write_cfg(repo)
+    da.deploy(str(repo))
+    install_blocking_hooks(repo)
+    return repo
+
+
+def test_fresh_repo_root_commit_and_branches(tmp_path):
+    repo = fresh_deployed(tmp_path)
+    results = bb.bootstrap(str(repo))
+    assert results == [("ROOT-COMMIT", "main"), ("CREATE", "staging", "main")]
+    assert git(repo, "symbolic-ref", "--short", "HEAD") == "main"
+    assert git(repo, "rev-list", "--count", "main") == "1"
+    assert git(repo, "rev-parse", "staging") == git(repo, "rev-parse", "main")
+    tracked = git(repo, "ls-tree", "-r", "--name-only", "main").splitlines()
+    for path in (RULE, ".hskill/init-workflow/resolved.env", "docs/reference/git-workflow.md",
+                 "scripts/merge-to-staging.sh", ".gitignore", ".githooks/pre-commit"):
+        assert path in tracked, path
+    assert "README.md" not in tracked
+
+
+def test_dry_run_changes_nothing(tmp_path):
+    repo = fresh_deployed(tmp_path)
+    head_before = git(repo, "symbolic-ref", "HEAD")
+    results = bb.bootstrap(str(repo), dry_run=True)
+    assert results == [("ROOT-COMMIT", "main"), ("CREATE", "staging", "main")]
+    assert git(repo, "symbolic-ref", "HEAD") == head_before
+    assert git(repo, "rev-parse", "-q", "--verify", "HEAD", check=False) == ""
+    assert git(repo, "for-each-ref", "refs/heads") == ""
+
+
+def test_rerun_after_bootstrap_is_noop(tmp_path):
+    repo = fresh_deployed(tmp_path)
+    bb.bootstrap(str(repo))
+    assert bb.bootstrap(str(repo)) == [("EXISTS", "main"), ("EXISTS", "staging")]
+
+
+# ---- 已有提交的仓库 ----
+
+def test_existing_repo_creates_missing_integration_branch(tmp_path):
+    repo = make_repo(tmp_path / "proj", "main")
+    commit_file(repo, "a.txt", "seed")
+    write_cfg(repo)
+    main_before = git(repo, "rev-parse", "main")
+    assert bb.bootstrap(str(repo)) == [("EXISTS", "main"), ("CREATE", "staging", "main")]
+    assert git(repo, "rev-parse", "main") == main_before
+    assert git(repo, "rev-parse", "staging") == main_before
+
+
+def test_existing_repo_without_root_branch_stops(tmp_path):
+    repo = make_repo(tmp_path / "proj", "master")
+    commit_file(repo, "a.txt", "seed")
+    write_cfg(repo)
+    with pytest.raises(bb.BootstrapError, match="main"):
+        bb.bootstrap(str(repo))
+    assert git(repo, "for-each-ref", "--format=%(refname:short)", "refs/heads") == "master"
+
+
+def test_missing_branch_taken_from_remote(tmp_path):
+    origin = make_repo(tmp_path / "origin", "main")
+    commit_file(origin, "a.txt", "seed")
+    git(origin, "branch", "staging")
+    git(origin, "checkout", "-q", "staging")
+    commit_file(origin, "b.txt", "staging-only")
+    git(origin, "checkout", "-q", "main")
+    clone = tmp_path / "clone"
+    subprocess.run(["git", "clone", "-q", str(origin), str(clone)], check=True)
+    write_cfg(clone)
+    assert bb.bootstrap(str(clone)) == [("EXISTS", "main"), ("CREATE", "staging", "origin/staging")]
+    assert git(clone, "rev-parse", "staging") == git(origin, "rev-parse", "staging")
+
+
+# ---- 推送前提醒（合并目标上未推送、不带标记行的 first-parent 提交） ----
+
+def repo_with_remote(tmp_path):
+    bare = tmp_path / "remote.git"
+    subprocess.run(["git", "init", "-q", "--bare", str(bare)], check=True)
+    repo = make_repo(tmp_path / "proj", "main")
+    commit_file(repo, "a.txt", "seed")
+    git(repo, "branch", "staging")
+    git(repo, "remote", "add", "origin", str(bare))
+    write_cfg(repo)
+    return repo
+
+
+def test_warns_unpushed_unmarked_commits(tmp_path):
+    repo = repo_with_remote(tmp_path)
+    git(repo, "push", "-q", "-u", "origin", "main", "staging")
+    git(repo, "checkout", "-q", "staging")
+    commit_file(repo, "b.txt", "direct one")
+    commit_file(repo, "c.txt", "direct two")
+    git(repo, "commit", "-q", "--allow-empty", "--no-verify", "-m", f"merge: x\n\n{TRAILER}")
+    assert bb.bootstrap(str(repo)) == [
+        ("EXISTS", "main"), ("EXISTS", "staging"), ("WARN", "unpushed", "staging", "2")]
+
+
+def test_no_warning_when_target_in_sync(tmp_path):
+    repo = repo_with_remote(tmp_path)
+    git(repo, "push", "-q", "-u", "origin", "main", "staging")
+    assert bb.bootstrap(str(repo)) == [("EXISTS", "main"), ("EXISTS", "staging")]
+
+
+def test_warns_first_publish_when_target_not_on_remote(tmp_path):
+    repo = repo_with_remote(tmp_path)
+    git(repo, "push", "-q", "-u", "origin", "main")
+    assert bb.bootstrap(str(repo)) == [
+        ("EXISTS", "main"), ("EXISTS", "staging"), ("WARN", "first-publish", "staging")]
+
+
+def test_no_push_warning_without_remote(tmp_path):
+    repo = make_repo(tmp_path / "proj", "main")
+    commit_file(repo, "a.txt", "seed")
+    write_cfg(repo)
+    assert ("WARN", "first-publish", "staging") not in bb.bootstrap(str(repo))
+
+
+# ---- CLI ----
+
+def run_cli(repo, *args):
+    return subprocess.run([sys.executable, SCRIPT, str(repo), *args], capture_output=True, text=True)
+
+
+def test_cli_prints_results_and_exit_0(tmp_path):
+    repo = fresh_deployed(tmp_path)
+    r = run_cli(repo, "--dry-run")
+    assert r.returncode == 0, r.stderr
+    assert r.stdout.splitlines() == ["ROOT-COMMIT main", "CREATE staging main", "DRY-RUN"]
+
+
+def test_cli_exit_2_without_rule_file(tmp_path):
+    repo = make_repo(tmp_path / "proj", "main")
+    assert run_cli(repo).returncode == 2
+
+
+def test_cli_exit_4_when_root_branch_missing(tmp_path):
+    repo = make_repo(tmp_path / "proj", "master")
+    commit_file(repo, "a.txt", "seed")
+    write_cfg(repo)
+    r = run_cli(repo)
+    assert r.returncode == 4
+    assert "ERROR" in r.stderr and "main" in r.stderr
