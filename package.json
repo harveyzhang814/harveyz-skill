@@ -81,6 +81,7 @@
     "skills/devflow/init-spec/",
     "skills/devflow/develop-plan/",
     "skills/devflow/manage-worktree/",
+    "skills/devflow/compose-agentsmd/",
     "tools/hub/",
     "tools/sync-agent/",
     "tools/browser-fetch/",
