@@ -58,3 +58,10 @@ test('step 6 supports a named model and bounds the INVALID_ARGUMENT retry', asyn
   assert.ok(s.includes('--model'), '--model')
   assert.ok(s.includes('最多重试两次'), 'retry limit')
 })
+
+test('step 6 reads help only on error and spells out the routed flags', async () => {
+  const s = await step6()
+  assert.ok(s.includes('报错时再查 `agent-canvas-ctl help <命令>`'), 'help only on error')
+  assert.ok(!s.includes('命令用法以 `agent-canvas-ctl help <命令>` 为准'), 'old help-first wording gone')
+  for (const phrase of ['--params 字段=级别', '--evidence 名称=路径', '`## <段名>`']) assert.ok(s.includes(phrase), phrase)
+})
