@@ -2,7 +2,7 @@
 name: init-workflow
 description: "Initialize or update git branch management standards: reads .hskill/init-workflow/workflow-config.yml, audits config, incrementally generates and deploys git hooks (pre-commit, commit-msg, pre-push, post-checkout), and deploys resolved.env, the workflow doc and the standard merge script. Triggers: initializing a new git repo, first-time git setup, user asks to set/update branch protection or naming rules, reinstalling git hooks, or syncing after skill/template updates."
 user_invocable: true
-version: "5.0.0"
+version: "5.0.1"
 ---
 
 # Git 工作流初始化

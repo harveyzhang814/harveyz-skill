@@ -164,7 +164,7 @@
       "bundle": "coding",
       "installScope": "essential",
       "contentHash": "3ab278d30c224081",
-      "contentVersion": "5.0.0"
+      "contentVersion": "5.0.1"
     },
     {
       "path": "coding/setup-debug",

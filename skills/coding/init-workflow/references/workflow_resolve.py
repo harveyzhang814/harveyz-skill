@@ -7,7 +7,7 @@ init-workflow 单一解释器
 import os
 import re
 
-INIT_WORKFLOW_VERSION = "5.0.0"
+INIT_WORKFLOW_VERSION = "5.0.1"
 RULE_FILE_CANDIDATES = (
     ".hskill/init-workflow/workflow-config.yml",
     "workflow-config.yml",
