@@ -38,7 +38,24 @@ node <skill 目录>/scripts/compose-agentsmd.mjs <init|generate|check> [--root <
 
 1. 运行 `init`。它在 `<项目根>/.hskill/compose-agentsmd/` 下写入 `config.json`（`pack` 预填 `devflow`，其余必填项留空字符串）和空的描述槽文件。已存在则退出码 1，不改任何文件，把现状告诉用户，不重来。
 2. 发布包有多个时，先列出各包填哪些标准槽，请用户选主包（`pack`）。只有 `devflow` 时直接用。
-3. 向用户确认必填参数：`title`（`overview` 的一级标题）、`integration_branch`、`merge_command`。可选参数：`e2e`、`complexity_signals`、`spec_dir`、`plan_dir`、`record_dir`；骨架级开关：`agent_canvas`（默认 `false`）、`disabled_slots`。各参数含义和默认值见包的 `pack.json`。
+3. 向用户确认配置字段。下表是 `devflow` 包的字段（其他包的参数以各自 `pack.json` 为准）；必填项为空时 `generate` 会报错：
+
+| 字段 | 类型 | 必填 | 默认 | 用在 |
+|---|---|---|---|---|
+| `title` | string | 是 | 无 | 骨架级：`overview` 的一级标题 |
+| `pack` | string | 是 | 无 | 骨架级：主包名，填它声明的全部标准槽 |
+| `slot_packs` | object | 否 | `{}` | 骨架级：`{ "<槽id>": "<包名>" }`，逐槽改用另一个包的模块（见「本地包」） |
+| `integration_branch` | string | 是 | 无 | 流程里基线分支的说明，以及合并判定命令 |
+| `merge_command` | string | 是 | 无 | 合并到集成分支的方式（如 `scripts/merge-to-staging.sh`） |
+| `e2e` | string | 否 | 空 | 验证步骤里「高档或涉及前端」那一行的端到端测试写法；为空时该行写「方式由仓库环境或其他约定规定」 |
+| `complexity_signals` | string | 否 | 空 | 复杂度判定里，通用高档信号之后追加的项目补充信号 |
+| `spec_dir` | string | 否 | `docs/superpowers/specs` | spec 与测试清单的存放目录 |
+| `plan_dir` | string | 否 | `docs/superpowers/plans` | 实施计划的存放目录 |
+| `record_dir` | string | 否 | `.hskill/spec` | 决定记录的存放目录 |
+| `agent_canvas` | boolean | 否 | `false` | 骨架级：是否生成 Agent Canvas 画布相关内容 |
+| `disabled_slots` | string[] | 否 | `[]` | 骨架级：关闭的标准槽 id；联动组（`flow-summary` 与 `flow-steps`）只能一起关 |
+
+   `release-acceptance`（版本验收）只在 `agent_canvas` 为 `true` 时生成，为 `false` 时流程是 7 步，不含 Step 8。`agent_canvas: true` 时 `spec_dir` 必须以 `docs/superpowers/specs` 开头，否则校验报错。配置里不能出现既非骨架级字段、也非所选包声明的参数的未知字段。
 
 **项目已有手写 AGENTS.md 时：** 由你把现有内容拆开，再生成。
 
