@@ -9,11 +9,18 @@
 #   exec-hs    harveyz-skill 副本执行 (i)~(iv)
 #   exec-ac    agent-canvas 副本执行 (i)~(iv)
 #   budget-ac  agent-canvas 副本执行 (v)：超出 token 预算的改动「合并」→ 退出 1、staging 不动
+#   evidence   只读：ac 旧/新合并脚本 diff；hooks MANAGED 块 hash 规则核对
 #   verify     真实仓库未被改动的核对
 #
 # 安全：只写 /tmp/wt-hs 与 /tmp/wt-ac；对真实仓库只做 git clone（读）与 rev-parse/status（读）；
 # 克隆后立即删 origin，任何东西都推不回真实仓库；不碰 ~/.claude/skills。
+# 例外的读取方式：(i)/(v) 的 ac worktree 里软链真实仓库的 node_modules，只供预算检查读取
+# gpt-tokenizer。git status 看不到被忽略的路径，所以“真实仓库未改动”的依据是：verify 的
+# staging SHA / status 核对 + 该软链只被读取（本脚本不向 node_modules 写任何东西）。
 # 本分支的工具一律用字面绝对路径引用。
+#
+# 快照：FEATURE_SHA（80604bf）与 verify 里的真实 staging SHA 是实走当时的值，写死在脚本里；
+# 本分支合并后真实 staging 会前进，verify 届时“失败”是预期的。
 
 set -u
 
@@ -441,6 +448,44 @@ PYEOF
   echo "feature/walk-budget in staging: $(git -C "$AC" merge-base --is-ancestor feature/walk-budget staging && echo yes || echo no)"
 }
 
+# 只读：给 walkthrough.md 的两处说明补证据（不动 ref、不改工作树；只在 /tmp/wt-ac/.git/ 写两份临时对比文件）
+stage_evidence() {
+  section "evidence 1: ac 副本部署前的合并脚本（9d10e90）对比 staging 上渲染出的标准版"
+  git -C "$AC" show 9d10e908db56cc747400469edd5a4d65e9f80789:scripts/merge-to-staging.sh > /tmp/wt-ac/.git/old-merge-script.sh
+  git -C "$AC" show staging:scripts/merge-to-staging.sh > /tmp/wt-ac/.git/new-merge-script.sh
+  echo "\$ diff -u <9d10e90:scripts/merge-to-staging.sh> <staging:scripts/merge-to-staging.sh>"
+  diff -u /tmp/wt-ac/.git/old-merge-script.sh /tmp/wt-ac/.git/new-merge-script.sh
+  echo "[exit $?]"
+  echo "hunks: $(diff -u /tmp/wt-ac/.git/old-merge-script.sh /tmp/wt-ac/.git/new-merge-script.sh | grep -c '^@@')" \
+    "lines -: $(diff -u /tmp/wt-ac/.git/old-merge-script.sh /tmp/wt-ac/.git/new-merge-script.sh | grep -c '^-[^-]')" \
+    "lines +: $(diff -u /tmp/wt-ac/.git/old-merge-script.sh /tmp/wt-ac/.git/new-merge-script.sh | grep -c '^+[^+]')"
+
+  section "evidence 2: hook-templates.md 的 hash 规则（块内容去首尾空白 | git hash-object --stdin | cut -c1-8）"
+  echo "--- harveyz-skill 本分支已部署的 hooks（80604bf）:"
+  for f in pre-commit commit-msg pre-push post-checkout; do
+    git -C /Users/harveyzhang96/Projects/harveyz-skill/.worktrees/feature+workflow-plan-exec-split show "80604bf:.githooks/$f" 2>/dev/null \
+      | python3 -c "$HASHCHECK_PY" "hs:$f"
+  done
+  echo "--- agent-canvas 部署前（9d10e90）:"
+  for f in pre-commit commit-msg pre-push post-checkout; do
+    git -C "$AC" show "9d10e908db56cc747400469edd5a4d65e9f80789:.githooks/$f" | python3 -c "$HASHCHECK_PY" "ac-before:$f"
+  done
+  echo "--- agent-canvas 副本部署后（staging）:"
+  for f in pre-commit commit-msg pre-push post-checkout; do
+    git -C "$AC" show "staging:.githooks/$f" | python3 -c "$HASHCHECK_PY" "ac-after:$f"
+  done
+}
+
+# 从 stdin 读一个 hook，逐个 MANAGED 块按文档规则算 hash（调用 git hash-object --stdin），与块头记录对比
+HASHCHECK_PY='
+import re, subprocess, sys
+t = sys.stdin.read()
+for m in re.finditer(r"# --- BEGIN MANAGED: (\S+) \(hash:(\w+)\) ---\n(.*?)\n# --- END MANAGED: \1 ---", t, re.S):
+    h = subprocess.run(["git", "hash-object", "--stdin"], input=m.group(3).strip().encode(), capture_output=True).stdout.decode()[:8]
+    verdict = "OK" if h == m.group(2) else "MISMATCH"
+    print(f"{sys.argv[1]:24} {m.group(1):32} recorded={m.group(2)} computed={h} {verdict}")
+'
+
 stage_verify() {
   section "verify: 真实仓库未被改动"
   echo "real harveyz-skill staging = $(git -C "$REAL_HS" rev-parse staging) (expect 22a1c02a49ee2e2a0c9af5030e930e3133ad8c19)"
@@ -458,6 +503,7 @@ case "${1:-}" in
   exec-hs) exec_common /tmp/wt-hs doc; notes_extra_probe /tmp/wt-hs; consistency /tmp/wt-hs ;;
   exec-ac) exec_common /tmp/wt-ac src; consistency /tmp/wt-ac ;;
   budget-ac) stage_budget_ac ;;
+  evidence) stage_evidence ;;
   verify) stage_verify ;;
   *) echo "用法：bash walkthrough.sh clone|deploy-hs|deploy-ac|exec-hs|exec-ac|budget-ac|verify" >&2; exit 2 ;;
 esac

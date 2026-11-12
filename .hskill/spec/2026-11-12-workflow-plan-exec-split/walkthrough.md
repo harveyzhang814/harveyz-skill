@@ -2,9 +2,11 @@
 
 日期：2026-11-12　分支：`feature/workflow-plan-exec-split`（HEAD `80604bf`）
 
-**结论：Spec 7(8) 的五条判据在两份副本上全部通过；没有发现本分支工具的缺陷。** 真实仓库的 staging 未被移动，agent-canvas 工作树无改动。
+**结论：Spec 7(8) 的五条判据在两份副本上全部通过；没有发现本分支工具的行为缺陷，但有一处文档缺口（见第 6 节第 2 条）。** 真实仓库的 staging 未被移动，agent-canvas 工作树无改动。
 
-- 全部命令都在 `walkthrough.sh`（同目录）里，分阶段运行：`bash walkthrough.sh clone|deploy-hs|deploy-ac|exec-hs|exec-ac|budget-ac|verify`。脚本逐条打印 `$ 命令`、输出与 `[exit N]`，下文是对其输出的摘录。
+> **快照说明：** `walkthrough.sh` 是实走当时的快照。`FEATURE_SHA`（`80604bf`）和 `verify` 阶段期望的真实 staging SHA（hs `22a1c02…`、ac `9d10e90…`）都写死在脚本里。本分支合并进 staging 后，真实 staging 会前进，届时再跑 `verify` 显示不一致是预期结果，不代表实走出了问题。
+
+- 全部命令都在 `walkthrough.sh`（同目录）里，分阶段运行：`bash walkthrough.sh clone|deploy-hs|deploy-ac|exec-hs|exec-ac|budget-ac|evidence|verify`（`evidence` 是修订轮补跑的只读阶段：不改 ref、不改工作树，只在 `/tmp/wt-ac/.git/` 下写两份临时对比文件）。脚本逐条打印 `$ 命令`、输出与 `[exit N]`，下文是对其输出的摘录。
 - 本分支的工具一律用字面绝对路径调用：
   - `skills/coding/init-workflow/references/deploy_artifacts.py`
   - `skills/devflow/manage-worktree/scripts/inspect-worktree.sh`
@@ -89,11 +91,24 @@ hub（主工作树）同步到 7701a29，branch=staging，status 空
    stderr:
    WARN scripts/merge-to-staging.sh 没有生成标记，现有内容已被覆盖；找回手改内容：git diff HEAD -- scripts/merge-to-staging.sh
    ```
-   - **WARN 只有一条**，针对旧合并脚本。旧脚本相对标准版的差异只有两处：手写的 token 预算调用，改由 `pre_checks` 承接；hub 同步还是旧逻辑，标准版带有 harveyz-skill 后来加的 reflog 修正（见第 6 节）。
+   - **WARN 只有一条**，针对旧合并脚本。新旧两版的差异见 stage `evidence` 第 1 项：`diff -u` 对比 `9d10e90:scripts/merge-to-staging.sh` 与副本 staging 上渲染出的版本，exit 1，共 11 个 hunk，删 35 行、加 63 行。按行为归类：
+     - **有行为变化，共两处：**
+       - 手写的 token 预算调用（`budget_checker=…; node "$budget_checker" --changed-since "$TARGET_BRANCH"`）删掉，改为 MANAGED 块 `merge/pre-checks` 里的 `run_pre_check 'node scripts/check-file-token-budget.js --changed-since staging'`，在 worktree 根执行。
+       - hub 同步的基准改为优先读 hub 自己 HEAD reflog 的最新一条，再退回 `synced-to` 标记，并给 `update-ref` / `symbolic-ref` 加上 `-m "merge-to-staging: at …"`。这是 harveyz-skill 版后来加的修正，旧 ac 版没有。
+     - **对 staging 目标行为等价：**
+       - 拒绝在集成分支上运行：从写死的 `staging`/`main` 改成循环 `INTEGRATION_BRANCHES="main staging"`。
+       - 锁目录、标记文件名改为 `merge-to-${TARGET_BRANCH}.*`，展开后同名。
+       - 冲突提示里的脚本名改用变量。
+       - 第 2 行生成标记与注释措辞改为通用写法。
    - 文档因为已有标记，不发 WARN；自填区搬运后 sha256 仍是 `51f55c89…a296`。
    - 渲染出的 `merge/pre-checks` 块：`run_pre_check 'node scripts/check-file-token-budget.js --changed-since staging'`（hash `a872d800`）。
    - `resolved.env` 的键集合与 Spec 5.3 一致：`integration_branches=main staging`、`base.*`、`merge_target=staging`、`merge_script=scripts/merge-to-staging.sh`、`merge_trailer=Merge-Via: merge-to-staging.sh`、`worktree_dir=.worktrees`、`naming.1..5`、`naming_exempt=main staging`。
-4. **Step 6 hooks**（按 hook-templates.md，hash = 块内容去首尾空白后的 blob sha1 前 8 位；事先用本仓库已部署的 8 个块验证了这条规则，全部吻合）：
+4. **Step 6 hooks**（按 hook-templates.md，hash = 块内容去首尾空白后经 `git hash-object --stdin` 取前 8 位）。这条规则的核对见 stage `evidence` 第 2 项：
+   - harveyz-skill 本分支已部署的 hooks（`80604bf`），9 个 MANAGED 块按此规则算出的 hash 与块头记录全部一致（`OK`）。
+   - ac 部署前（`9d10e90`）7 个块中 6 个 `OK`；`pre-push/force-push` 为 `MISMATCH`（recorded `a384dbd9`，computed `ddee04db`）。
+   - ac 副本部署后（staging）9 个块中 8 个 `OK`；`pre-push/force-push` 仍是 `MISMATCH`，因为按“保留用户修改”原样保留了。
+
+   具体改动：
    - `pre-commit`：`branches.protected/staging` 换成合并目标变体，hash `e03686de` → `02585d06`。`main` 块不变。
    - `commit-msg`：删除 MANAGED 块外的手写合并拦截（`# Skip merge commits …` 那 14 行，原先遇 `MERGE_HEAD` 即判 trailer 并 `exit 0`）。在 `commit-msg/format` 之前插入 `commit-msg/merge-via`（hash `5d49f638`）。按模板给 `commit-msg/format` 首行补上 `[ -f …/MERGE_HEAD ] && exit 0`，hash `76ee3b62` → `7ead49e6`。
    - `pre-push`：在 `while` 与 `case` 之间插入 `pre-push/merge-via`（hash `9c1a8ddb`）；删除 `esac` 之后手写的 staging 推送检查（6 行）。
@@ -127,7 +142,7 @@ hub（主工作树）同步到 7701a29，branch=staging，status 空
 | 最新提交 | `merge: feature/walk into staging`，含 `Merge-Via: merge-to-staging.sh` 行（grep -cx = 1） | 同左 |
 | 主工作树（hub） | 已同步到新 staging，status 空 | 同左 |
 
-inspect 在主工作树上返回 1（`reason=not-linked`、`reason=integration-branch`）属于预期：主工作树本身不能当任务工作区，`default_path` 照常给出。agent-canvas 这一侧，`feature/walk` 与 (v) 的 worktree 里把 `node_modules` 软链到真实仓库的 `node_modules`，只读使用，`node_modules` 已被 `.gitignore` 忽略。原因是预算检查需要 `gpt-tokenizer`，而副本没有装依赖。
+inspect 在主工作树上返回 1（`reason=not-linked`、`reason=integration-branch`）属于预期：主工作树本身不能当任务工作区，`default_path` 照常给出。agent-canvas 这一侧，`feature/walk` 与 (v) 的 worktree 里把 `node_modules` 软链到真实仓库的 `node_modules`，原因是预算检查需要 `gpt-tokenizer`，而副本没有装依赖。这条软链只被读取：脚本不向 `node_modules` 写入任何东西，预算检查只做 `require` 和读文件。注意 `node_modules` 被 `.gitignore` 忽略，`git status` 看不到被忽略路径下的变化，所以第 4 节“真实仓库未改动”的依据是两部分：staging SHA 与 `status --short` 的核对，加上这条软链只读使用的事实。仅凭 `status` 为空并不能排除 `node_modules` 里的写入。
 
 ### (ii) 在主工作树（staging）上手动 `git merge` → 被拒
 
@@ -209,13 +224,26 @@ real 两仓库都没有 feature/walk 分支；两份副本的 remote 均为空
 | `resolved.env`、文档、hooks、脚本对合并目标与 worktree 目录取值一致 | **通过**：四处都是 `staging` / `scripts/merge-to-staging.sh` / `Merge-Via: merge-to-staging.sh`；worktree 目录在 `resolved.env`、文档与实际路径中都是 `.worktrees`，hooks 与脚本不引用它 |
 | 不触碰真实仓库的 staging | **通过**：两个 SHA 与基线一致，agent-canvas 工作树干净 |
 
-## 6. 偏差与意外（均不是本分支工具的缺陷）
+## 6. 偏差与意外（没有本分支工具的行为缺陷；第 2 条是文档缺口）
 
-1. **agent-canvas 的 `pre-push/force-push` 块，部署前 hash 就对不上**：记录 `a384dbd9`，按内容算出 `ddee04db`。推断是在生成后手改过措辞（现为“禁止 force push”，模板是“禁止强制推送”），按 Step 4b 属于类型 C。实走里选了“保留用户修改”，块与 hash 原样保留。真实部署（Spec 7(9)）时 Step 5 会把它作为冲突呈现，由用户决定。
-2. **删除 commit-msg 的手写拦截时，`commit-msg/format` 必须同步补上 `MERGE_HEAD` 豁免行。** 旧文件的 format 块没有这一行，豁免靠的是手写块里的 `exit 0`。如果只删手写块而不按模板重新生成 format 块，所有合并提交都会被格式检查拒绝，包括把 staging 并入功能分支。按模板重新生成即可，实走就是这样做的。真实部署时要注意这一处耦合。
-3. **agent-canvas 合并脚本的变化：** 被标准版覆盖（WARN 已记录）后，token 预算检查改由 `pre_checks` 执行；标准版还带有 harveyz-skill 版本里 hub 同步的 reflog 修正（旧 ac 脚本只读 `synced-to` 标记）。这是行为上的改进，属于预期内的副作用。
+1. **agent-canvas 的 `pre-push/force-push` 块，部署前 hash 就对不上**：记录 `a384dbd9`，按内容算出 `ddee04db`（stage `evidence` 第 2 项）。推断是在生成后手改过措辞（现为“禁止 force push”，模板是“禁止强制推送”），按 Step 4b 属于类型 C。实走里选了“保留用户修改”，块与 hash 原样保留。真实部署（Spec 7(9)）时 Step 5 会把它作为冲突呈现，由用户决定。
+2. **文档缺口：删除 commit-msg 的手写拦截时，`commit-msg/format` 必须带 `MERGE_HEAD` 豁免行。**
+   - **问题：** 旧 ac 文件的 format 块没有这一行，豁免靠的是手写块里的 `exit 0`。如果只删手写块、不按模板重新生成 format 块，所有合并提交都会被格式检查拒绝，包括把 staging 并入功能分支。实走里是按模板重新生成的，所以没有出问题。
+   - **已有文档覆盖的部分：** 用 `grep -n 'MERGE_HEAD\|手写\|块外\|豁免'` 检查了 `skills/coding/init-workflow/SKILL.md`、`references/hook-templates.md`、`references/conflict-analysis.md`。hook-templates.md 第 132–146 行把豁免行定为 format 块的固定首行，并解释了原因；SKILL.md Step 6 规定重新生成 MANAGED 块。所以只要正常重新生成，就会带上这一行。
+   - **缺口：**
+     - SKILL.md Step 6 第 2 条写的是“MANAGED 块外的用户代码永远不覆盖”，没有覆盖 Spec 5.7 要求的“删除块外手写合并拦截”这一操作。
+     - 两份文件都没有提醒：块外代码若承担了合并豁免，删除它之后 format 块不能走“保留用户修改”。
+   - 本任务不改 `skills/`，只在此记录。
+3. **agent-canvas 合并脚本的变化：** 被标准版覆盖（WARN 已记录）。有行为变化的只有两处：token 预算检查改由 `pre_checks` 执行，以及 hub 同步的 reflog 修正。逐行依据见第 2.2 节第 3 步与 stage `evidence` 第 1 项。reflog 修正是行为上的改进，属于预期内的副作用。
 4. **hooks 的固定头部仍写着 `git-workflow-init v4.x`。** 模板规定固定头部原样保留，所以版本号不会更新，harveyz-skill 自身的部署也是如此。这只是信息性的。
 5. **Spec 5.7 agent-canvas 第 4 条（`AGENTS.md` Step 7 第 5 条）没有在副本里改。** 它属于指令文件，不影响工具实走的验收，留待真实部署时处理。
-6. **副本没有装依赖**，(i) 与 (v) 的 agent-canvas worktree 用软链借用真实仓库的 `node_modules`，只读。没有它，预算检查会以“缺 gpt-tokenizer”的退出码 2 失败，经 `pre_checks` 表现为合并退出 1，那样就测不到真正的预算判定。
+6. **副本没有装依赖**，(i) 与 (v) 的 agent-canvas worktree 用软链借用真实仓库的 `node_modules`，只读。没有它，预算检查会以“缺 gpt-tokenizer”的退出码 2 失败，经 `pre_checks` 表现为合并退出 1，那样就测不到真正的预算判定。真实仓库未改动的依据见 (i) 下的说明：`git status` 看不到被忽略路径，所以依据是 SHA/status 核对，加上软链只读使用。
 7. **inspect 在主工作树上运行时退出 1**，属于设计如此，见 (i)。
 8. **macOS 路径：** 工具输出 `/private/tmp/…`。`/tmp/…` 与它指向同一处，不影响任何判定。
+
+## 7. 带入真实部署（Task 12）的注意事项
+
+1. **agent-canvas `pre-push/force-push` 块的 hash 与内容不符**（`a384dbd9` 对 `ddee04db`）：按 Step 4b/5 作为类型 C 冲突呈现，由用户决定保留手改还是按模板重新生成，不要静默处理。
+2. **删除 commit-msg 的手写合并拦截时，必须按模板重新生成 `commit-msg/format`**，首行带 `[ -f "$(git rev-parse --git-dir)/MERGE_HEAD" ] && exit 0`。部署后实测两件事：一次手动 `git merge` 进 staging 被拒；功能分支上的合并提交（如把 staging 并入功能分支）不被格式检查拒绝。
+3. **`AGENTS.md` Step 7 第 5 条（Spec 5.7 agent-canvas 第 4 条）还没改**：改为调用 manage-worktree「合并」，未安装带「合并」的版本时直接运行 `scripts/merge-to-staging.sh`。
+4. **预期会看到合并脚本的 WARN**：`deploy_artifacts.py` 覆盖 `scripts/merge-to-staging.sh` 时，stdout 打印 `WARN scripts/merge-to-staging.sh`，stderr 打印找回命令 `git diff HEAD -- scripts/merge-to-staging.sh`。这是预期的，需照录给用户。文档只要先加好自填区标记，就不会 WARN。
