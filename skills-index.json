@@ -478,8 +478,8 @@
       "path": "devflow/manage-worktree",
       "bundle": "devflow",
       "installScope": "global",
-      "contentHash": "6ebf189a111b524c",
-      "contentVersion": "0.1.4"
+      "contentHash": "65f342128b25a72a",
+      "contentVersion": "0.2.0"
     },
     {
       "path": "devflow/compose-agentsmd",
