@@ -478,15 +478,15 @@
       "path": "devflow/manage-worktree",
       "bundle": "devflow",
       "installScope": "global",
-      "contentHash": "5d42c61d1c0e1230",
-      "contentVersion": "0.2.0"
+      "contentHash": "5f9d56e8db796def",
+      "contentVersion": "0.2.1"
     },
     {
       "path": "devflow/compose-agentsmd",
       "bundle": "devflow",
       "installScope": "global",
       "contentHash": "119e964625ea74a6",
-      "contentVersion": "0.2.0"
+      "contentVersion": "0.2.1"
     }
   ],
   "hooks": [

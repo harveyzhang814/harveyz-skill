@@ -9,7 +9,7 @@ const read = p => readFile(resolve(root, p), 'utf8')
 const RULE = [
   '### 计划后交接给执行模型',
   '先询问用户“本会话执行，还是交接给其他执行方”',
-  '交出方按 develop-plan 第 5 步的条件（执行方为全新会话）选定执行技能，填入计划开头的 `REQUIRED SUB-SKILL` 并提交计划',
+  '交出方按 develop-plan 的条件（执行方为全新会话）选定执行技能，填入计划开头的 `REQUIRED SUB-SKILL` 并提交计划',
   '交接文档写明所选技能及理由',
   '各 Task 的测试与计划写定的断言一致，并全部通过',
   '不得修改接口签名、测试名称与断言、`Global Constraints`',
@@ -20,6 +20,7 @@ test('AGENTS.md carries the plan handoff rule and the unified worktree path', as
   const body = await read('AGENTS.md')
   for (const phrase of [...RULE, '`manage-worktree`', '`.worktrees/<分支名，/ 换成 +>`']) assert.ok(body.includes(phrase), phrase)
   assert.ok(!body.includes('填为 `superpowers:subagent-driven-development`'), 'hard-coded execution skill')
+  assert.doesNotMatch(body, /develop-plan`? ?第 ?\d+ ?步/, 'hard-coded develop-plan step number')
 })
 
 test('AGENTS.md is the only repo instruction file', async () => {

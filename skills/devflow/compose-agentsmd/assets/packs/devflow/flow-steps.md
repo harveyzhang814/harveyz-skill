@@ -40,7 +40,7 @@
 ### 1.4 特例
 
 - 琐碎档也必须澄清，一轮复述确认即可。
-- 用户声明“走 SDD / 走 TDD”不构成跳过；它只指定路径，不代表需求已定稿。
+- 用户声明“走 spec 路径（旧称 SDD）/ 走 TDD”不构成跳过；它只指定路径，不代表需求已定稿。
 
 ## Step 2 复杂度判定
 
@@ -53,9 +53,9 @@
 | 档 | 判定信号 | 路径 |
 |---|---|---|
 <!-- @if complexity_signals -->
-| 高 | 跨进程或跨模块、修改数据模型或持久化格式、修改协议/状态机/生命周期、多方案需取舍、可拆成 3 个以上任务、@{complexity_signals} | **SDD**：spec → plan → execute |
+| 高 | 跨进程或跨模块、修改数据模型或持久化格式、修改协议/状态机/生命周期、多方案需取舍、可拆成 3 个以上任务、@{complexity_signals} | **spec 路径**：spec → plan → execute |
 <!-- @else -->
-| 高 | 跨进程或跨模块、修改数据模型或持久化格式、修改协议/状态机/生命周期、多方案需取舍、可拆成 3 个以上任务 | **SDD**：spec → plan → execute |
+| 高 | 跨进程或跨模块、修改数据模型或持久化格式、修改协议/状态机/生命周期、多方案需取舍、可拆成 3 个以上任务 | **spec 路径**：spec → plan → execute |
 <!-- @endif -->
 | 低 | 单模块、方案唯一、需求能被一组测试用例说清（bugfix、小增强、纯函数逻辑） | **TDD**：测试清单 → 实现 |
 <!-- @if agent_canvas -->
@@ -95,7 +95,7 @@
 
 | 档 | 调用方 |
 |---|---|
-| 高 | `init-spec` 建档前、`develop-plan` 第 1 步（以 spec 路径为锚点复用）各自调用；当前 agent 不另行调用 |
+| 高 | `init-spec` 建档前、`develop-plan` 开工前（以 spec 路径为锚点复用）各自调用；当前 agent 不另行调用 |
 | 低、琐碎 | 当前 agent 在写测试清单或改动前直接调用 |
 
 检测有未通过项时不开工。
@@ -118,10 +118,10 @@ plan 确认后（闸门 3）再定。
 | 档 | 产物 | 落点 |
 |---|---|---|
 <!-- @if agent_canvas -->
-| 高（SDD） | spec，须含 `## 验收标准` 一节（与判据分开） | `@{spec_dir}/YYYY-MM-DD-<slug>-design.md` |
+| 高（spec 路径） | spec，须含 `## 验收标准` 一节（与判据分开） | `@{spec_dir}/YYYY-MM-DD-<slug>-design.md` |
 | 低（TDD） | 一页测试清单：一句话需求 + “输入 → 预期”用例 + 涉及文件，须含 `## 验收标准` 一节（与判据分开） | `@{spec_dir}/YYYY-MM-DD-<slug>-test-plan.md` |
 <!-- @else -->
-| 高（SDD） | spec，须含 `## 验收标准` 一节 | `@{spec_dir}/YYYY-MM-DD-<slug>-design.md` |
+| 高（spec 路径） | spec，须含 `## 验收标准` 一节 | `@{spec_dir}/YYYY-MM-DD-<slug>-design.md` |
 | 低（TDD） | 一页测试清单：一句话需求 + “输入 → 预期”用例 + 涉及文件，须含 `## 验收标准` 一节 | `@{spec_dir}/YYYY-MM-DD-<slug>-test-plan.md` |
 <!-- @endif -->
 | 高/低，涉及前端或由前端驱动 | 设计稿 | 与 spec / 测试清单同期完成并送审 |
@@ -194,7 +194,7 @@ plan 确认后（闸门 3）再定。
 
 | 档 | 做法 |
 |---|---|
-| 高（SDD） | 闸门 2 通过后用 `develop-plan` 写 plan 并提交，送用户确认（闸门 3），再按 5.3 本会话执行或交接 |
+| 高（spec 路径） | 闸门 2 通过后用 `develop-plan` 写 plan 并提交，送用户确认（闸门 3），再按 5.3 本会话执行或交接 |
 | 低（TDD） | 按已批准的测试清单实现 |
 | 琐碎 | 直接修改 |
 
@@ -202,14 +202,14 @@ plan 确认后（闸门 3）再定。
 
 高档 plan 经用户确认后，先询问用户“本会话执行，还是交接给其他执行方”：
 
-- **本会话执行**：按 plan 开头的 `REQUIRED SUB-SKILL` 执行，即
-  `superpowers:subagent-driven-development`。总控 agent 不得把 plan + execute 整包交给单个 subagent。
-- **交接**（计划后交接给执行模型）：不调用执行 skill。交出方先把 plan 开头的 `REQUIRED SUB-SKILL`
-  填为 `superpowers:subagent-driven-development` 并提交 plan，再走 `handoff` 的 author 阶段。一份
+- **本会话执行**：按 plan 开头的 `REQUIRED SUB-SKILL` 执行（由 `develop-plan` 按条件选定）。
+  总控 agent 不得把 plan + execute 整包交给单个 subagent。
+- **交接**（计划后交接给执行模型）：不调用执行 skill。交出方按 `develop-plan` 的条件（执行方为全新会话）选定执行 skill，
+  填入 plan 开头的 `REQUIRED SUB-SKILL` 并提交 plan，再走 `handoff` 的 author 阶段；交接文档写明所选 skill 及理由。一份
   plan 对应一次交接；交接文档把 spec 与 plan 列为权威依据；最小验收锚点写成“各 Task 的测试与 plan 写定的断言一致，并全部通过”，再加上
   spec 的 `## 验收标准`。其余按 4.4 的 handoff 特例。
 - **接手方的边界**：按 plan 执行，可自行决定函数内部实现；不得修改接口签名、测试名称与断言、
-  `Global Constraints`；plan 与代码库现状冲突或无法照做时，停止并打回交出方。
+  `Global Constraints`；plan 与代码库现状冲突或无法照做时，停止并打回交出方。执行 skill 要求的自行裁决只适用于上述不可修改项以外的问题；涉及不可修改项的冲突，包括任务审查者提出的，一律停止并打回。
 
 派发要在指定 worktree 里改文件或跑 git 的 subagent 时，prompt 第一段写目录守卫命令
 （`cd <绝对路径> && git rev-parse --show-toplevel && git branch --show-current`，结果不符就停）。

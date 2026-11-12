@@ -63,12 +63,12 @@ test('pack.json matches the spec declaration', () => {
   const p = JSON.parse(readFileSync(join(PACK, 'pack.json'), 'utf8'))
   assert.deepEqual(p.slots, ['flow-summary','instruction-sources','platform-fallbacks','flow-steps','release-acceptance'])
   assert.deepEqual(p.linked, [['flow-summary','flow-steps']])
-  assert.equal(readFileSync(join(PACK, 'VERSION'), 'utf8'), '2.0.0\n')
+  assert.equal(readFileSync(join(PACK, 'VERSION'), 'utf8'), '2.1.0\n')
 })
 test('pack.json no longer declares integration_branch or merge_command', () => {
   const p = JSON.parse(readFileSync(join(PACK, 'pack.json'), 'utf8'))
   assert.ok(!('integration_branch' in p.params)); assert.ok(!('merge_command' in p.params))
-  assert.equal(readFileSync(join(PACK, 'VERSION'), 'utf8'), '2.0.0\n')
+  assert.equal(readFileSync(join(PACK, 'VERSION'), 'utf8'), '2.1.0\n')
 })
 test('integration branch comes from resolved.env merge_target', () => {
   const text = generateWith(cfg, 'merge_target=develop\nmerge_script=scripts/merge-to-develop.sh\n')
@@ -119,4 +119,20 @@ test('compose sources never read workflow-config.yml', () => {
     const r = spawnSync('grep', ['-rn', 'workflow-config', join(skillDir, sub)], { encoding: 'utf8' })
     assert.equal(r.status, 1, r.stdout)
   }
+})
+test('execution step defers the skill choice to develop-plan and bounds self-rulings', () => {
+  const text = generateWith(cfg)
+  assert.ok(text.includes('按 plan 开头的 `REQUIRED SUB-SKILL` 执行（由 `develop-plan` 按条件选定）'))
+  assert.ok(text.includes('交出方按 `develop-plan` 的条件（执行方为全新会话）选定执行 skill'))
+  assert.doesNotMatch(text, /develop-plan`? ?第 ?\d+ ?步/)
+  assert.ok(text.includes('交接文档写明所选 skill 及理由'))
+  assert.ok(text.includes('执行 skill 要求的自行裁决只适用于上述不可修改项以外的问题；涉及不可修改项的冲突，包括任务审查者提出的，一律停止并打回'))
+  assert.ok(!text.includes('即\n  `superpowers:subagent-driven-development`'))
+  assert.ok(!text.includes('填为 `superpowers:subagent-driven-development`'))
+})
+test('high tier is named the spec path, not SDD', () => {
+  const text = generateWith(cfg)
+  assert.ok(text.includes('**spec 路径**：spec → plan → execute'))
+  assert.ok(text.includes('| 高（spec 路径） |'))
+  assert.doesNotMatch(text.replace('走 spec 路径（旧称 SDD）', ''), /\bSDD\b/)
 })

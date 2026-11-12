@@ -2,7 +2,7 @@
 name: manage-worktree
 description: "Prepare, enter, inspect, merge, or leave the git worktree a task works in — reuse the task's existing worktree or create one from an explicit, rule-derived base after one user confirmation, bind the session to it on Claude Code, Codex, or any other host, check it is a linked worktree on a named non-integration branch, and merge it into the repo's merge target through the repo's own merge script. Called by init-spec, develop-plan, and handoff; never pushes, removes worktrees, or deletes branches. Triggers: 'prepare a worktree', 'enter this worktree', 'check my worktree', 'merge this worktree'."
 user_invocable: true
-version: "0.2.0"
+version: "0.2.1"
 ---
 
 # 管理 worktree
@@ -15,7 +15,7 @@ version: "0.2.0"
 
 ## 触发条件
 
-- 调用方：init-spec 建档前、develop-plan 第 1 步、handoff 的 author 第 4 步调用「准备」；handoff 的 verify 与 accept 调用「进入」。
+- 调用方：init-spec 建档前、develop-plan 开工前、handoff 的 author 阶段起草交接文档前调用「准备」；handoff 的 verify 与 accept 调用「进入」。
 - 用户直接要求，例如“准备一个 worktree”“进入这个 worktree”“检查我的 worktree”“合并”。
 - 「合并」只在用户明确说“合并”，或项目指令规定时由调用方触发（见「合并」一节）。
 
