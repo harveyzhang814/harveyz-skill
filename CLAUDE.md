@@ -94,7 +94,7 @@ hskill CLI 行为（安装、交互、JSON 输出）+ 所有 skill 的 SKILL.md 
 
 **分支使用规范：** 一个功能或迭代使用一个分支，积累所有相关改动，只在用户明确说"合并"或"完成"时才 merge 到 staging。不要为每次 commit 单独创建新分支。
 
-**合并方式：** 仅在用户明确说"合并"或"完成"后，从 feature/fix/chore/doc 分支的 worktree 运行 `scripts/merge-to-staging.sh`。脚本用本地 `update-ref` 的 CAS 重试合并进 `staging`，会同步 checkout 该分支的工作树，但不会推送 `origin`。当前为 `staging`、`main` 或 detached HEAD 时脚本会拒绝执行；不要手动 `git checkout staging && git merge ...`，也不要直接提交到 `main` 或 `staging`。
+**合并方式：** 仅在用户明确说"合并"或"完成"后，在 feature/fix/chore/doc 分支的 worktree 里调用 manage-worktree「合并」；未安装带「合并」的版本时，在同一 worktree 直接运行 `scripts/merge-to-staging.sh`。两者走的是同一个脚本：它用本地 `update-ref` 的 CAS 重试合并进 `staging`，会同步 checkout 该分支的工作树，但不会推送 `origin`。当前为 `staging`、`main` 或 detached HEAD 时脚本会拒绝执行；不要手动 `git checkout staging && git merge ...`，也不要直接提交到 `main` 或 `staging`。
 
 **worktree 路径习惯：** 仓库内 `.worktrees/<分支名，/ 换成 +>`（例如 `feature/foo` → `.worktrees/feature+foo`），`.worktrees/` 已被 `.gitignore` 忽略。`.claude/worktrees/` 下已有的目录是历史遗留，不动。
 
@@ -117,7 +117,7 @@ hskill CLI 行为（安装、交互、JSON 输出）+ 所有 skill 的 SKILL.md 
 3. **交接文档 frontmatter 的 `branch` 与 `worktree` 成对，都由交出方填。** 分支名是权威载体，worktree 路径是那条分支当下的落脚点，必须写出来、不能让接手方去猜（本仓库多种路径习惯并存，见上——同一条分支由原生功能和手工建出来的目录名就不一样，规则推不出来）。路径万一失效，用 `git worktree list` 查这条分支现在挂在哪。
 4. 接手方**不建 worktree、不建分支**，按 `manage-worktree` 的「进入」进入文档里那个路径，核对当前分支与 `branch` 一致后开工。那条分支已经被这个工作区 checkout，`git worktree add` 会直接失败——这是提示，不是障碍。要离开只保留工作区，**绝不 `remove`**。
 5. **验收也在这个工作区里跑，不在主工作树、不在 staging/main 上跑。** 主工作树上根本没有接手方的改动（而且它未必停在你以为的分支上）；在那里跑出来的绿是别的代码的绿，比不跑更有害，因为它看起来像验过了。验收方按 `manage-worktree` 的「进入」回去，**先在那里重读一遍交接文档**——接手方的自测记录与 `status` 只存在于那一份里，你手上那份是 author 时的旧版。
-6. **只有交出方能合并。** 接手方与验收方都不合。验收通过后由交出方合并进 staging，**合并前先 `git rev-parse --abbrev-ref HEAD` 核对自己站在哪条分支上**——`staging` 若没被任何工作区 checkout，建个临时工作区在上面合、合完删掉，别去改别人主工作树的分支。合完再 `git worktree remove` 收掉交接工作区。
+6. **只有交出方能合并。** 接手方与验收方都不合。验收通过后由交出方在交接工作区里调用 manage-worktree「合并」合进 staging（未安装带「合并」的版本时在同一工作区运行 `scripts/merge-to-staging.sh`），**合并前先 `git rev-parse --abbrev-ref HEAD` 核对自己站在哪条分支上**——不要为合并另建 staging 工作区，也别去改别人主工作树的分支；手动 `git merge` 进 staging 缺 `Merge-Via` 标记，会被 hook 拒绝。合完再 `git worktree remove` 收掉交接工作区。
 7. **同一时刻只有一方在这个工作区里动手。** 交出方写完停手、接手方做完停手、再轮到验收方。两个 session 同时在一个工作区里跑 git 会互踩暂存区。
 
 ### 计划后交接给执行模型
