@@ -130,5 +130,5 @@ target_node: b3654081-a108-4549-820d-066b380e09e0
 - 把 staging（`bde620a`）并入本分支，合并提交 `c7a1d90`。冲突两处：
   - `CLAUDE.md`：staging 已删除并入 AGENTS.md，按 staging 删除；Task 9 的两处改动移植到 AGENTS.md「Git 与工作区」的合并一段（调用 manage-worktree「合并」，未安装时运行脚本；hooks 拦截说明）与「跨会话交接」第 6 条（在交接工作区里合并，不另建 staging 工作区）。
   - `.hskill/handoff/config.md`：合并写法取本分支版本；`authority.architecture` 取 staging 版本（不再指向已删除的 CLAUDE.md）。
-- 验收锚点 5 中“CLAUDE.md ≥ 1”随之改由 AGENTS.md 承担：`manage-worktree「合并」` 在 AGENTS.md 与 config.md 均出现。
+- 验收锚点 5 中“CLAUDE.md ≥ 1”随之改由 AGENTS.md 承担：`grep -c 'manage-worktree\`「合并」' AGENTS.md` 为 1（AGENTS.md 给 `manage-worktree` 加了反引号），`grep -c 'manage-worktree「合并」' .hskill/handoff/config.md` 为 1。
 - 合并后复验：`npm test` exit 0（471 pass / 0 fail / 7 skipped）；对真实最新 staging 不固定基线重跑走查 `clone`、`deploy-hs`、`exec-hs`：功能分支干净并入副本 staging，(i)–(iv) 结果与验收记录一致。
