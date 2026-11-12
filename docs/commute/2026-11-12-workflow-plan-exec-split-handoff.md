@@ -1,5 +1,5 @@
 ---
-status: 待验收
+status: 已验收
 date: 2026-11-12
 author_model: claude-opus-5-5
 acceptance: hard
@@ -106,3 +106,21 @@ target_node: b3654081-a108-4549-820d-066b380e09e0
    - 发版合并说明、生成文档中的合并规则表述、若干 SKILL.md 措辞随之修正，并重算了两个 SKILL.md 的 `contentHash`。
    若交出方不接受第二点对 Task 6 用例的改动，可单独回退提交 `137df93`。
 7. **已知的文档缺口与保留项：** 删除块外手写合并拦截时须重新生成 `commit-msg/format`（agent-canvas 部署会用到）已写进 init-workflow SKILL.md，并在 walkthrough §7 列为 Task 12 注意事项；`render_merge_script.py` 的占位符替换顺序、compose.mjs 对缺失 `merge_script` 的推导兜底，评审判定保留未改。
+
+## 交出方验收记录（2026-11-12，HEAD `bdbc0d2`）
+
+在交接工作区 `/Users/harveyzhang96/Projects/harveyz-skill/.worktrees/feature+workflow-plan-exec-split` 逐条重跑，不采信自测结论；判成败的命令均未接管道。
+
+1. **锚点 1 — 达成**：`bats skills/coding/init-workflow/tests` exit 0（16 条）；`python3 -m pytest skills/coding/init-workflow/tests -q` exit 0（52 passed）；`bats skills/devflow/manage-worktree/tests` exit 0（37 条）；四个 node 测试文件 exit 0（44 pass / 0 fail）。计划点名的 pytest、bats、node 测试名逐个 grep，无缺失。Task 0 三条全过，D25 由此实测证实。
+2. **锚点 2 — 达成**：`npm test` exit 0（node 478：471 pass / 0 fail / 7 skipped）。
+3. **锚点 3 — 达成**：
+   - 第 2 条 grep 无输出；第 4 条 `node scripts/verify-merge-to-staging-e2e.cjs` exit 0，9/9。
+   - 第 8 条：自测记录引用的走查是在 `80604bf` 上做的，早于整分支审查后的修复轮（`8760399`–`06e051f`），修复后的解析器、检测脚本、部署入口未经实走。验收时用当前代码重跑 `walkthrough.sh` 全部阶段：真实 harveyz-skill staging 在交接后已前进到 `bde620a`（另一会话合入 `doc/merge-claudemd-into-agentsmd`，删除 CLAUDE.md、改 `.hskill/handoff/config.md`），副本 `deploy-hs` 因此在这两个文件上冲突（exit 2）。为把“代码对不对”与“和新 staging 冲不冲突”分开，把副本 staging 固定回分支基线 `22a1c02` 后重跑：两份副本 (i) 建 worktree +「合并」exit 0、提交带 `Merge-Via`；(ii) 手动 `git merge` 与冲突后手动 commit 均被 commit-msg 拒绝，staging 不动；(iii) 重跑部署后自填区 sha256 前后一致；(iv) 四处取值一致（`merge_target=staging`、`worktree_dir=.worktrees`）；agent-canvas 副本 (v) 超预算「合并」exit 1（16984 > 5000），staging 不动。真实仓库只读：agent-canvas staging 仍为 `9d10e90`、工作树干净；两个真实仓库都没有 `feature/walk` 分支。
+4. **锚点 4 — 达成**：`contentVersion` 为 5.0.0 / 0.2.0 / 0.2.0，`contentHash` 由 `npm test` 内的 skill-portability 测试校验通过；devflow 包 `VERSION` 2.0.0。
+5. **锚点 5 — 达成**：`resolved.env` 与 Spec 5.3 键集合一致、`merge_target=staging`；`.claude/workflow-config.yml` 不存在；`manage-worktree「合并」` 在 CLAUDE.md 2 处、config.md 1 处；旧的“手动 git merge --no-ff 即可”无输出。
+
+**回归面核对**：改动面覆盖 init-workflow、manage-worktree、compose-agentsmd、CLAUDE.md、handoff config、hooks、合并脚本；对应既有测试均在 `npm test` 与上面四组测试内，全绿。
+
+**偏离裁决**：自测记录列出的 7 项全部接受。第 6 项（`137df93`）只新增用例 23–27，未改计划写定的断言；“缺 `base.<type>` 不兜底默认分支”符合 Spec 第 3 节，接受。第 1 项署名按实际执行模型写，属正确做法，计划的 Global Constraints 写法有误。
+
+**结论：已验收。** 合并前需交出方处理：本分支与当前 staging 在 `CLAUDE.md`（staging 已删除，内容并入 AGENTS.md）与 `.hskill/handoff/config.md` 冲突，需把 Task 9 的合并写法移植到 AGENTS.md 与新版 config.md 后再合并。
