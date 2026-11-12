@@ -1,5 +1,5 @@
 ---
-status: 待验收
+status: 已验收
 date: 2026-11-11
 author_model: claude-opus-5-5
 acceptance: hard
@@ -251,3 +251,40 @@ pack=devflow installed=1.0.0 generated=1.0.0
    - `merge_command` 不是脚本时，合并说明里仍写“该脚本”。按 S10 保留了原文措辞。
    - 兜底 #8 没有内联 §3.1 引导句里“格式固定，供程序解析”这一信息点。
    - SKILL.md 接入流程没写清原文件副本放在哪、何时清理。
+
+## 交出方验收记录（2026-11-11）
+
+在交接工作区实跑，HEAD 为 `7a4a043`，分支为 `feature/devflow-agents-snippet`。判断成败看退出码，没有经过管道。接手方自填的结论不作依据，以下各条都由交出方重跑。
+
+| # | 锚点 | 命令或做法 | 结果 |
+|---|---|---|---|
+| 0 | 机器校验 | `bash <handoff>/scripts/validate-handoff.sh docs/commute/2026-11-11-compose-agentsmd-handoff.md` | pass（退出码 0） |
+| 1 | 各 Task 测试 | `node --test tests/compose-agentsmd-*.test.mjs` | pass：退出码 0，64 个全部通过。用脚本从计划里提取 48 个测试名，在测试文件中逐个查找，缺失 0 个。抽查了 V10、V7 的断言和辅助函数：与补正后的计划一致，嵌套 `@if` 的辅助函数确实写成了嵌套。 |
+| 2 | 全量测试 | `npm test` | pass：退出码 0。Node 部分 464 个，457 通过，0 失败，7 跳过；bats 部分无失败。 |
+| 3 | Spec 第 7 节 V1–V11 | V1、V2、V4–V11 看对应的具名测试，已包含在第 1、2 条里。V3 由交出方独立重做，见下 | pass |
+| 4 | publish-skill | F1–F8：frontmatter 齐全，`description` 为英文，正文为中文，F8 哈希 `411304456391ad45` 与索引一致，`contentVersion` 为 0.1.0。R1–R4：已注册到 devflow，`bundleMeta` 已更新，`installScope` 为 global，`package.json` 的 `files` 已包含该 skill | pass。有 1 条 F9 警告：`compose` 不在动词词表里，不阻断 |
+
+**V3 独立重做：**
+
+- 做法：在 `/tmp/acc-v3` 里按接手方记录的行号，重新把 `14dbe3e0b:AGENTS.md` 拆成配置；只有 `other.md` 是按描述重新拼的。然后运行 `generate --force` 与 `check`。
+- 结果：`check` 输出 `status=ok`，退出码 0，`pack=devflow installed=1.0.0 generated=1.0.0`。
+- 对照：去掉生成标记行后，与原文 diff，每处差异都能归入下列某一类：
+  - 5.2 结构：分组标题去掉、层级 `###` 改为 `##`、各槽按骨架重新排序；
+  - 5.4 各行：项目内容移入描述槽，`sync-design` / `.design-scratch` / `AGENTS.pre-init-spec` 移出；
+  - Step 2 改用通用信号，后接 `complexity_signals`；
+  - Step 3、Step 7 去掉路径与链接（5.4 行及兜底 #4、#5）；
+  - 4.2 内联 V 格式（5.4a 及兜底 #6–#8）。
+  
+  无法归类的差异为 0。
+
+**回归面：** 自分叉点 `3493efb` 起，新增目录以外只改了 `package.json`（`files` 多一项）和 `skills-index.json`（新条目、`bundleMeta.devflow` 描述）。这两处由既有的 `tests/devflow-bundle.test.mjs`、`tests/skills.bats` 覆盖，都已在第 2 条里跑过，结果为绿。
+
+**对「需交出方知悉」的裁定：**
+
+1. 多出的那条 `m.md:2` 断言保留：它比计划更严，而且与接口说明一致。
+2. Step 7.2 第 4 条在 false 分支保留那两句原文：同意，符合 S10。
+3. `e2e` 为空时，句子指向的描述槽可能为空：问题成立。它不影响本次验收（Spec 5.3 写明了逐字要求），作为 Spec 后续修订项交给用户决定。
+4. 终审追加的校验：在 Spec 第 3、6 节范围内，每项都配了新测试，接受。
+5. 推迟处理的小问题：记为后续项，不阻断。
+
+**结论：** 四条锚点全部达成，`status` 置为「已验收」。
