@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { readFile } from 'node:fs/promises'
+import { readFile, access } from 'node:fs/promises'
 import { resolve, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -16,17 +16,20 @@ const RULE = [
   '执行技能要求的自行裁决只适用于上述不可修改项以外的问题；涉及不可修改项的冲突，包括任务审查者提出的，一律停止并打回',
 ]
 
-for (const file of ['AGENTS.md', 'CLAUDE.md']) {
-  test(`${file} carries the plan handoff rule and the unified worktree path`, async () => {
-    const body = await read(file)
-    for (const phrase of [...RULE, '`manage-worktree`', '`.worktrees/<分支名，/ 换成 +>`']) assert.ok(body.includes(phrase), `${file}: ${phrase}`)
-    assert.ok(!body.includes('填为 `superpowers:subagent-driven-development`'), `${file}: hard-coded execution skill`)
-  })
-}
+test('AGENTS.md carries the plan handoff rule and the unified worktree path', async () => {
+  const body = await read('AGENTS.md')
+  for (const phrase of [...RULE, '`manage-worktree`', '`.worktrees/<分支名，/ 换成 +>`']) assert.ok(body.includes(phrase), phrase)
+  assert.ok(!body.includes('填为 `superpowers:subagent-driven-development`'), 'hard-coded execution skill')
+})
+
+test('AGENTS.md is the only repo instruction file', async () => {
+  await assert.rejects(access(resolve(root, 'CLAUDE.md')), { code: 'ENOENT' })
+})
 
 test('old worktree recipes are gone from repo instructions', async () => {
-  assert.ok(!(await read('AGENTS.md')).includes('`.claude/worktrees/` 是本仓库现有的路径约定'))
-  assert.ok(!(await read('CLAUDE.md')).includes('git worktree add .claude/worktrees/feature+<slug>'))
+  const body = await read('AGENTS.md')
+  assert.ok(!body.includes('`.claude/worktrees/` 是本仓库现有的路径约定'))
+  assert.ok(!body.includes('git worktree add .claude/worktrees/feature+<slug>'))
 })
 
 test('handoff config no longer tells the receiver to re-plan', async () => {

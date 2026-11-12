@@ -40,7 +40,7 @@ verification: |
 
 authority:
   specs: docs/superpowers/specs/
-  architecture: AGENTS.md（跨宿主仓库定位与 skill 结构约定）；CLAUDE.md（Claude Code 补充约定）
+  architecture: AGENTS.md（仓库唯一 Agent 指令：仓库定位、skill 结构、Git 与交接约定）
   git_workflow: docs/reference/git-workflow.md
   testing: docs/reference/testing-guide.md
 ```
