@@ -1,6 +1,6 @@
 # compose-agentsmd 实施计划
 
-> **For agentic workers:** REQUIRED SUB-SKILL: 使用 [执行交接时确定的执行技能] 逐项实施；用 `- [ ]` 跟踪步骤。
+> **For agentic workers:** REQUIRED SUB-SKILL: 使用 superpowers:subagent-driven-development 逐项实施；用 `- [ ]` 跟踪步骤。
 
 **Goal:** 新增 devflow skill `compose-agentsmd`：按标准骨架，从项目配置（参数 + 描述槽 + 所选模块包）确定性地生成 AGENTS.md，并能检查手改、版本落后与未重新生成。
 
