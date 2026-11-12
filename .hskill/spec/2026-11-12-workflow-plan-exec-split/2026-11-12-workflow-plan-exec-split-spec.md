@@ -220,12 +220,13 @@ naming_exempt=main staging
 5. **hooks：** 在临时仓库中，手动 `git merge` 进合并目标被 commit-msg 拒绝；脚本合并通过；远端同步合并通过；推送含无标记 first-parent 提交被 pre-push 拒绝。两个仓库部署后各实测一次手动合并被拒。
 6. **manage-worktree：** bats 覆盖检测读取 `resolved.env`、以基线分支上已提交的那份为准（主工作树停在另一分支且其工作树中的文件取值不同时，输出仍为基线分支上的取值；目标工作区早于部署时「检测」照常）、集成分支上也没有时退出码 4、「合并」在集成分支 / detached HEAD / 非 worktree 根拒绝、缺脚本时停下、正常合并透传 0、冲突透传 2。`tests/manage-worktree-skill.test.mjs` 更新为新的短语与版本断言。
 7. **compose-agentsmd：** 从 `resolved.env` 取得集成分支并渲染；缺文件退出码 2；配置含 `merge_command` 报错；Step 7 文本为 manage-worktree「合并」。
-8. **两仓库实走（D14 第 5 条）：** 部署后在 harveyz-skill 与 agent-canvas 各用本分支的 manage-worktree 脚本建一个 worktree、提交改动、「合并」进本地 staging，全程成功；agent-canvas 改动超出 token 预算的文件时「合并」返回 1 且 staging 未移动；自填区内容重跑 init-workflow 后仍在；两仓库内 `resolved.env`、文档、hooks、脚本对合并目标与 worktree 目录取值一致。
-9. **`npm test` 通过**；`skills-index.json` 中三个 skill 的版本与 hash 已更新。
+8. **两仓库实走，合并前（D14 第 5 条、D36）：** 把 harveyz-skill 与 agent-canvas 各 `git clone` 一份到 `/tmp`，在副本的 staging 上用本分支的 init-workflow 部署后：用本分支的 manage-worktree 脚本建一个 worktree、提交改动、「合并」进副本的 staging，全程成功；agent-canvas 副本改动超出 token 预算的文件时「合并」返回 1 且 staging 未移动；手动 `git merge` 进 staging 被拒；自填区内容重跑 init-workflow 后仍在；`resolved.env`、文档、hooks、脚本对合并目标与 worktree 目录取值一致。不触碰真实仓库的 staging。
+9. **两仓库部署，合并后（D36）：** 功能分支合入 harveyz-skill staging 后，在真实仓库完成部署（agent-canvas 另取授权，用其自己的分支与合并流程）；只做不留痕的核对：一次手动 `git merge` 进 staging 被拒（拒绝后 `git merge --abort`），四类产物取值一致。
+10. **`npm test` 通过**；`skills-index.json` 中三个 skill 的版本与 hash 已更新。
 
 ## 8. 风险
 
-- **R1 装机即停（D31）：** 新版 manage-worktree 装到 `~/.claude/skills/` 后，未重新部署 init-workflow 的项目里 devflow 全部停下。本轮合并进 staging 后**不同步装机副本**；装机时机与 D27（批量部署）一起由用户决定。验收第 8 条用本分支内的脚本路径执行，不依赖装机。
+- **R1 装机即停（D31）：** 新版 manage-worktree 装到 `~/.claude/skills/` 后，未重新部署 init-workflow 的项目里 devflow 全部停下。本轮合并进 staging 后**不同步装机副本**；装机时机与 D27（批量部署）一起由用户决定。验收第 8、9 条用本分支内的脚本路径执行，不依赖装机。
 - **R2 标记可伪造：** 手写一行 `Merge-Via` 即可绕过拦截；目标是防误操作，接受（D34）。
 - **R3 hooks 由 agent 生成：** hooks 仍由 agent 按模板生成，取值须来自解释器输出；验收第 5 条在临时仓库按生成结果实测。
 
