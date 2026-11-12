@@ -1,6 +1,6 @@
 import sys, os
 sys.path.insert(0, os.path.dirname(__file__))
-from render_tree import parse_nodes, build_tree, find_current, Node
+from render_tree import parse_nodes, build_tree, find_current, render_html, Node
 
 SAMPLE = """\
 [goal:done]     id=G              将 tags 拆为 fixed_tags + candidate_tags
@@ -80,6 +80,28 @@ def test_build_tree_mutual_dep_not_lost():
         all_ids.add(n.node_id)
         stack.extend(n.children)
     assert {'A', 'B'}.issubset(all_ids), "Both nodes in mutual cycle must be reachable"
+
+def test_html_defaults_to_dark_theme():
+    html = render_html(SAMPLE)
+    assert '<html lang="zh" data-theme="dark">' in html
+    # 首次打开（localStorage 无记录）时脚本不得改成 light
+    assert "localStorage.getItem('question-me-theme')" in html
+
+def test_html_has_theme_toggle():
+    html = render_html(SAMPLE)
+    assert 'id="theme-toggle"' in html
+    assert "localStorage.setItem('question-me-theme'" in html
+
+def test_html_defines_both_palettes():
+    html = render_html(SAMPLE)
+    assert ':root[data-theme="dark"]' in html
+    assert ':root[data-theme="light"]' in html
+
+def test_card_bg_follows_theme():
+    # 卡片底色不能写死浅色，否则暗黑模式下卡片仍是白底
+    html = render_html(SAMPLE)
+    for light_bg in ('#f0fdf4', '#fffbeb', '#f8fafc'):
+        assert f'background:{light_bg}' not in html
 
 if __name__ == '__main__':
     import traceback

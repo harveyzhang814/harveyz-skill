@@ -93,16 +93,16 @@ def find_current(nodes: List[Node], id_map: dict) -> Optional[str]:
 
 
 STATUS_CFG = {
-    'done':  {'border': '#22c55e', 'bg': '#f0fdf4', 'icon': '✓'},
-    'open':  {'border': '#eab308', 'bg': '#fffbeb', 'icon': '?'},
-    'infer': {'border': '#94a3b8', 'bg': '#f8fafc', 'icon': '~'},
-    'skip':  {'border': '#e2e8f0', 'bg': '#f8fafc', 'icon': '-'},
+    'done':  {'border': '#22c55e', 'bg': 'var(--bg-done)', 'icon': '✓'},
+    'open':  {'border': '#eab308', 'bg': 'var(--bg-open)', 'icon': '?'},
+    'infer': {'border': '#94a3b8', 'bg': 'var(--bg-infer)', 'icon': '~'},
+    'skip':  {'border': 'var(--line)', 'bg': 'var(--bg-infer)', 'icon': '-'},
 }
 
 TERM_COLOR = {
     'done':  '#22c55e',
     'infer': '#94a3b8',
-    'skip':  '#cbd5e1',
+    'skip':  'var(--line)',
 }
 
 
@@ -168,54 +168,64 @@ def _render_card(node: Node, current_id: Optional[str], id_map: dict) -> str:
 
 
 CSS = """
+:root[data-theme="dark"]{--page:#0f172a;--surface:#1e293b;--border:#334155;
+  --line:#475569;--text:#e2e8f0;--strong:#f8fafc;--muted:#94a3b8;--faint:#64748b;
+  --icon:#cbd5e1;--ans:#86efac;--shadow:rgba(0,0,0,.4);
+  --bg-done:#132a22;--bg-open:#2a2414;--bg-infer:#1e293b}
+:root[data-theme="light"]{--page:#f1f5f9;--surface:#fff;--border:#e2e8f0;
+  --line:#cbd5e1;--text:#1e293b;--strong:#0f172a;--muted:#64748b;--faint:#94a3b8;
+  --icon:#475569;--ans:#166534;--shadow:rgba(0,0,0,.06);
+  --bg-done:#f0fdf4;--bg-open:#fffbeb;--bg-infer:#f8fafc}
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
-     background:#f1f5f9;min-height:100vh;padding-bottom:72px}
-.hdr{background:#fff;border-bottom:1px solid #e2e8f0;
+     background:var(--page);min-height:100vh;padding-bottom:72px}
+.hdr{background:var(--surface);border-bottom:1px solid var(--border);
      padding:12px 24px;display:flex;align-items:center;gap:12px}
-.htitle{font-weight:600;font-size:15px;color:#0f172a}
+.htitle{font-weight:600;font-size:15px;color:var(--strong)}
 .pw{display:flex;align-items:center;gap:8px;margin-left:auto}
-.pb{width:120px;height:6px;background:#e2e8f0;border-radius:3px}
+.pb{width:120px;height:6px;background:var(--border);border-radius:3px}
 .pf{height:100%;background:#22c55e;border-radius:3px}
-.pl{font-size:12px;color:#64748b}
+.pl{font-size:12px;color:var(--muted)}
+.tt{font-size:12px;color:var(--muted);background:none;cursor:pointer;
+    border:1px solid var(--border);border-radius:6px;padding:3px 8px}
 .tree{padding:32px 24px;overflow-x:auto;display:flex;justify-content:center}
 .nw{display:flex;flex-direction:column;align-items:center}
 .ch{display:flex;align-items:flex-start}
 .ch>.nw{padding:20px 16px 0;position:relative}
 .ch>.nw::before{content:'';position:absolute;top:0;left:0;right:0;
-                border-top:2px solid #cbd5e1}
+                border-top:2px solid var(--line)}
 .ch>.nw:first-child::before{left:50%}
 .ch>.nw:last-child::before{right:50%}
 .ch>.nw:only-child::before{display:none}
 .ch>.nw::after{content:'';position:absolute;top:0;left:50%;
-               transform:translateX(-1px);width:2px;height:20px;background:#cbd5e1}
-.stem{width:2px;height:20px;background:#cbd5e1;flex-shrink:0}
+               transform:translateX(-1px);width:2px;height:20px;background:var(--line)}
+.stem{width:2px;height:20px;background:var(--line);flex-shrink:0}
 .term-dot{width:10px;height:10px;border-radius:50%;margin:2px 0}
-.task-card{border:2px solid #334155;background:#fff;border-radius:8px;
-           padding:10px 20px;font-size:13px;font-weight:600;color:#1e293b;
+.task-card{border:2px solid var(--icon);background:var(--surface);border-radius:8px;
+           padding:10px 20px;font-size:13px;font-weight:600;color:var(--text);
            max-width:300px;text-align:center;
-           box-shadow:0 1px 3px rgba(0,0,0,.08)}
-.card{width:220px;border-radius:8px;padding:12px;border:1px solid #e2e8f0;
-      border-left-width:4px;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+           box-shadow:0 1px 3px var(--shadow)}
+.card{width:220px;border-radius:8px;padding:12px;border:1px solid var(--border);
+      border-left-width:4px;box-shadow:0 1px 3px var(--shadow)}
 .ct{display:flex;align-items:center;gap:8px;margin-bottom:8px}
-.ic{font-size:13px;font-weight:700;color:#475569}
-.nid{font-size:11px;font-weight:600;color:#94a3b8;font-family:monospace}
-.div{border:none;border-top:1px solid #e2e8f0;margin:6px 0}
+.ic{font-size:13px;font-weight:700;color:var(--icon)}
+.nid{font-size:11px;font-weight:600;color:var(--faint);font-family:monospace}
+.div{border:none;border-top:1px solid var(--border);margin:6px 0}
 .row{display:flex;gap:6px;align-items:flex-start;margin:3px 0}
 .lb{font-size:10px;font-weight:700;min-width:14px;margin-top:1px}
 .lb.q{color:#3b82f6}.lb.a{color:#10b981}
-.qt{font-size:12px;color:#1e293b;line-height:1.4}
+.qt{font-size:12px;color:var(--text);line-height:1.4}
 .a{font-size:12px;line-height:1.4}
-.a.done{color:#166534}
-.a.pending{color:#94a3b8;font-style:italic;border-bottom:1px dashed #cbd5e1}
-.a.locked{color:#94a3b8;font-style:italic}
-.a.infer{color:#64748b;font-style:italic}
-.a.skip{color:#94a3b8;text-decoration:line-through}
-.meta{font-size:10px;color:#94a3b8;font-family:monospace;margin-top:2px}
-.bar{position:fixed;bottom:0;left:0;right:0;background:#fff;
-     border-top:1px solid #e2e8f0;padding:12px 24px;
-     box-shadow:0 -2px 8px rgba(0,0,0,.06)}
-.bq{font-size:13px;color:#1e293b;font-weight:500}
+.a.done{color:var(--ans)}
+.a.pending{color:var(--faint);font-style:italic;border-bottom:1px dashed var(--line)}
+.a.locked{color:var(--faint);font-style:italic}
+.a.infer{color:var(--muted);font-style:italic}
+.a.skip{color:var(--faint);text-decoration:line-through}
+.meta{font-size:10px;color:var(--faint);font-family:monospace;margin-top:2px}
+.bar{position:fixed;bottom:0;left:0;right:0;background:var(--surface);
+     border-top:1px solid var(--border);padding:12px 24px;
+     box-shadow:0 -2px 8px var(--shadow)}
+.bq{font-size:13px;color:var(--text);font-weight:500}
 """
 
 
@@ -249,17 +259,28 @@ def render_html(tree_text: str) -> str:
         bar_html = f'<div class="bar"><div class="bq">当前问题：{_esc(cur.text)}</div></div>'
 
     return f'''<!DOCTYPE html>
-<html lang="zh"><head>
+<html lang="zh" data-theme="dark"><head>
 <meta charset="UTF-8">
 <meta http-equiv="refresh" content="3">
 <title>question-me</title>
 <style>{CSS}</style>
+<script>
+// 默认暗黑；用户切换后记在 localStorage，3 秒自动刷新后仍保持
+if (localStorage.getItem('question-me-theme') === 'light')
+  document.documentElement.dataset.theme = 'light';
+function toggleTheme() {{
+  var t = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
+  document.documentElement.dataset.theme = t;
+  localStorage.setItem('question-me-theme', t);
+}}
+</script>
 </head><body>
 <div class="hdr">
   <span class="htitle">question-me</span>
   <div class="pw">
     <div class="pb"><div class="pf" style="width:{pct}%"></div></div>
     <span class="pl">{done_count} / {total}</span>
+    <button id="theme-toggle" class="tt" onclick="toggleTheme()">明 / 暗</button>
   </div>
 </div>
 <div class="tree">{tree_html}</div>
