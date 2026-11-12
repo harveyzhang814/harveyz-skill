@@ -2,7 +2,7 @@
 name: manage-worktree
 description: "Prepare, enter, inspect, or leave the git worktree a task works in — reuse the task's existing worktree or create one from an explicit, rule-derived base after one user confirmation, bind the session to it on Claude Code, Codex, or any other host, and check it is a linked worktree on a named non-integration branch. Called by init-spec, develop-plan, and handoff; never merges, removes worktrees, or deletes branches. Triggers: 'prepare a worktree', 'enter this worktree', 'check my worktree'."
 user_invocable: true
-version: "0.1.4"
+version: "0.1.5"
 ---
 
 # 管理 worktree
@@ -15,7 +15,7 @@ version: "0.1.4"
 
 ## 触发条件
 
-- 调用方：init-spec 建档前、develop-plan 第 1 步、handoff 的 author 第 4 步调用「准备」；handoff 的 verify 与 accept 调用「进入」。
+- 调用方：init-spec 建档前、develop-plan 开工前、handoff 的 author 阶段起草交接文档前调用「准备」；handoff 的 verify 与 accept 调用「进入」。
 - 用户直接要求，例如“准备一个 worktree”“进入这个 worktree”“检查我的 worktree”。
 
 调用方约定：本技能不可用时，调用方停下，告诉用户需要安装 `devflow` bundle 中的 manage-worktree，不自行兜底建 worktree。

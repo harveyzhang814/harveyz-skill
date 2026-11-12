@@ -14,9 +14,9 @@ test('manage-worktree is registered in devflow with matching version and hash', 
   const index = JSON.parse(await readFile(resolve(root, 'skills-index.json'), 'utf8'))
   const entry = index.skills.find(s => s.path === 'devflow/manage-worktree')
   assert.match(body, /^name: manage-worktree$/m)
-  assert.match(body, /^version: ["']?0\.1\.4["']?$/m)
+  assert.match(body, /^version: ["']?0\.1\.5["']?$/m)
   assert.equal(entry.bundle, 'devflow')
-  assert.equal(entry.contentVersion, '0.1.4')
+  assert.equal(entry.contentVersion, '0.1.5')
   assert.equal(entry.contentHash, hash(body))
 })
 
@@ -34,6 +34,12 @@ test('manage-worktree states its actions, rules, hosts and boundaries', async ()
     '不合并、不清理 worktree、不删除分支', '绝不执行 `git worktree remove`',
     '非 git 目录', '不适用',
   ]) assert.ok(body.includes(phrase), phrase)
+})
+
+test('manage-worktree names its callers without pinning their step numbers', async () => {
+  const body = await readFile(resolve(root, PATH), 'utf8')
+  assert.ok(body.includes('调用方：init-spec 建档前、develop-plan 开工前、handoff 的 author 阶段起草交接文档前调用「准备」'))
+  assert.doesNotMatch(body, /(init-spec|develop-plan|handoff)[^。；\n]{0,12}第 ?\d+ ?步/)
 })
 
 test('manage-worktree tells Claude Code to leave the current worktree before entering one outside .claude/worktrees', async () => {
