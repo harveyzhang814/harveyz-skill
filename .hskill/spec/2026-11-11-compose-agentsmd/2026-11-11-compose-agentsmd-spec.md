@@ -1,6 +1,6 @@
 # Spec：compose-agentsmd —— AGENTS.md 标准骨架与生成
 
-- **版本：** v0.2，送审稿（未批准）；v0.2 按构建者检查补全 5.4 对照表与兜底规则，新增 5.4a
+- **版本：** v0.3，送审稿（未批准）；v0.2 按构建者检查补全 5.4 对照表与兜底规则；v0.3 写入 D21（5.4a）并收紧 V2
 - **决定记录：** `2026-11-11-compose-agentsmd-record.md`（下文以 D 编号引用）
 - **分支：** `feature/devflow-agents-snippet`
 - **未决事项：** 见第 9 节
@@ -153,9 +153,12 @@ flowchart LR
 
 `agent_canvas: false` 时流程为 7 步：`flow-summary` 的步数、闸门描述与“节点收尾”项随条件变化，正文不得残留“Step 8”引用。
 
-### 5.4a `## 验收标准` 随 `agent_canvas` 的处理（待用户决定，D21）
+### 5.4a `## 验收标准` 随 `agent_canvas` 的处理（D21）
 
-原文 Step 4 要求 spec 与测试清单含 `## 验收标准`，并称它是“第二道关（版本验收）”的依据；上游 skill 优先级第 5 条要求按 V 格式写。`agent_canvas: false` 时版本验收槽不生成，这些说法会指向不存在的内容。处理方式由用户在送审时决定，见 D21。
+原文 Step 4 要求 spec 与测试清单含 `## 验收标准`，并称它是“第二道关（版本验收）”的依据；上游 skill 优先级第 5 条要求按 V 格式写。
+
+- **`agent_canvas: true`：** 原样保留：V 格式（内联）、“第一道关 / 第二道关”与判据（J 编号）的区分、优先级第 5 条。
+- **`agent_canvas: false`：** 仍要求 spec 与测试清单含 `## 验收标准`，作为 handoff 验收与完成判定的依据，写法按 init-spec 的默认写法；不生成 V 格式、“第二道关 / 版本验收”、判据与验收标准分关的说法，优先级第 5 条不生成（其后条目不重新编号也不留空号：第 5 条本就是最后一条）。
 
 ### 5.5 模板语法（D18）
 
@@ -219,7 +222,7 @@ node <skill 目录>/scripts/compose-agentsmd.mjs <init|generate|check> [--root <
 ## 7. 验收标准
 
 1. **V1 确定性：** 同一配置连续 `generate` 两次，AGENTS.md 逐字节一致；随后 `check` 输出 `status=ok`，退出码 0。
-2. **V2 开关：** 用同一份最小配置，`agent_canvas: false` 生成的文件不含 `describe-node`、`capture-requirement`、`relate-node`、`observe-node-quality`、`judge-release`、`Agent Canvas`、`Step 8`；`agent_canvas: true` 生成的文件含 Step 8 与 `## 版本验收`。
+2. **V2 开关：** 用同一份最小配置，`agent_canvas: false` 生成的文件不含 `describe-node`、`capture-requirement`、`relate-node`、`observe-node-quality`、`judge-release`、`Agent Canvas`、`Step 8`、`画布`、`节点`、`第二道关`、`版本验收`、`V<n>｜`，但仍含 `## 验收标准` 的写作要求；`agent_canvas: true` 生成的文件含 Step 8、`## 版本验收` 与 V 格式说明。
 3. **V3 Agent Canvas 对照：** 按 5.8 把 Agent Canvas `AGENTS.md`（`14dbe3e0b`）拆成配置，在临时目录生成；逐节对照原文，每处差异都能归入 5.4 表中的某一行（项目内容移入描述槽或参数、措辞泛化），没有无法归类的丢失。对照结果写进实施汇报，不提交 Agent Canvas 的配置。
 4. **V4 标准模块洁净：** `assets/modules/` 下不出现 `Electron`、`simulate-user`、`sync-design`、`.design-scratch`、`staging`、`merge-to-staging`、`main↔renderer`、`.claude/worktrees`、`AGENTS.pre-init-spec`、`2026-10-13-requirement-acceptance`。
 5. **V5 拒绝覆盖：** 手改生成的 AGENTS.md 一个字后 `check` 报 `hand-edited`（退出码 1），`generate` 不加 `--force` 时退出码 1、文件不变。
