@@ -1,13 +1,13 @@
 ---
 name: init-workflow
-description: "Initialize or update git branch management standards: reads .hskill/init-workflow/workflow-config.yml, audits config, incrementally generates and deploys git hooks (pre-commit, commit-msg, pre-push, post-checkout), and generates workflow docs. Triggers: initializing a new git repo, first-time git setup, user asks to set/update branch protection or naming rules, reinstalling git hooks, or syncing after skill/template updates."
+description: "Initialize or update git branch management standards: reads .hskill/init-workflow/workflow-config.yml, audits config, incrementally generates and deploys git hooks (pre-commit, commit-msg, pre-push, post-checkout), and deploys resolved.env, the workflow doc and the standard merge script. Triggers: initializing a new git repo, first-time git setup, user asks to set/update branch protection or naming rules, reinstalling git hooks, or syncing after skill/template updates."
 user_invocable: true
-version: "4.1.5"
+version: "5.0.0"
 ---
 
 # Git 工作流初始化
 
-读取 `.hskill/init-workflow/workflow-config.yml`，审核配置，差量部署 git hooks。
+读取 `.hskill/init-workflow/workflow-config.yml`，审核配置，差量部署 git hooks、`resolved.env`、工作流文档和标准合并脚本。
 重新运行时自动检测配置变更、用户手改冲突、用户代码与新规则的交叉冲突，一次性汇总让用户决策后再写入。
 
 ---
@@ -36,6 +36,8 @@ git rev-parse --show-toplevel
 - 使用默认配置（从此 skill 的 `references/workflow-config.yml` 复制到 `.hskill/init-workflow/workflow-config.yml`）
 - 还是中止并自行创建后重新运行
 
+**配置的三级查找只在解释器 `references/workflow_resolve.py` 里实现**——`deploy_artifacts.py`（Step 7）与文档、合并脚本、`resolved.env` 都经它取值，本步骤的查找顺序只用于告知用户配置在哪、以及是否需要迁移，不要另写一套解析逻辑去生成产物。
+
 找到后读取并解析 YAML。若文件来自向后兼容路径（2 或 3），询问用户是否将其移动到 `.hskill/init-workflow/workflow-config.yml`；用户同意则执行移动，否则继续使用原位置（不影响本次运行）。
 
 ---
@@ -58,6 +60,10 @@ git rev-parse --show-toplevel
 ```bash
 echo "" | grep -E "<pattern>" > /dev/null 2>&1; echo $?
 ```
+
+**新增字段：**
+- `worktree.dir`（缺省 `.worktrees`）：worktree 所在目录，路径为 `<dir>/<分支名，/ 换成 +>`。旧配置没有此节时按缺省值解释，不报错。
+- `merge.pre_checks`（缺省 `[]`）：合并前依次执行的命令，`{target}` 替换为合并目标分支。**只支持块列表写法**（`- 命令` 逐行），**列表项后不得加行内注释**（解释器逐行取值，注释会被当作命令的一部分）。
 
 审核通过打印 `✅ 配置审核通过`，审核失败列出所有问题并停止。
 
@@ -101,6 +107,10 @@ echo "" | grep -E "<pattern>" > /dev/null 2>&1; echo $?
 mkdir -p .githooks
 ```
 
+#### 取值来源与顺序
+
+hooks 里用到的集成分支、合并目标、`merge_trailer`、`merge_script` 以及分支命名的**真实 ERE 模式**（`naming.<n>`、`naming_exempt`），一律取自 `.hskill/init-workflow/resolved.env`（或解释器输出），**不得**直接抄 `workflow-config.yml` 的原文——配置里的写法可能和解释后的有效模式不同。`resolved.env` 由 Step 7 的 `deploy_artifacts.py` 写出，因此**生成 hooks 之前先执行一次 Step 7 的命令**，保证取值是本次配置的最新结果；其输出留到 Step 9 汇报，不重复运行。
+
 #### 生成原则
 
 根据 Step 5 的决策结果，对每个 hook 文件按以下规则处理：
@@ -112,6 +122,10 @@ mkdir -p .githooks
 2. **用户代码区（MANAGED 块外）**：永远不覆盖，原样保留
 
 3. **差量写入**：生成全文后与磁盘文件对比——内容相同标记 `UNCHANGED`，不同标记 `UPDATED`，新建标记 `NEW`
+
+4. **`merge-via` 块仅在存在合并目标时生成**（`resolved.env` 有 `merge_target`，即配置有 `base.feature`）：`commit-msg/merge-via` 与 `pre-push/merge-via` 两个 MANAGED 块，并把合并目标分支的 `branches.protected/<merge_target>` 块换成专用变体（保留“禁止直接提交”，提示改用合并脚本）；其他受保护分支的块不变。没有合并目标时三者都不生成，`commit-msg` 仅因 `commit_message.enforce: true` 才生成。
+   - 提交标记是**绊线而非强制**：对远端同步合并（主题以 `Merge branch '<目标>' of ` 开头）放行，所以 `merge-via` 能拦住误操作，拦不住有意绕过。
+   - 合并目标分支**首次发布**（远端还没有该分支，此时只检查本地尖端提交）且尖端不是脚本产生的合并时，`pre-push/merge-via` 会拒绝，需要一次 `git push --no-verify`；之后的推送正常。
 
 各 hook 的触发条件、固定头部代码、MANAGED 块结构、块 ID 规范、hash 计算方式及多行内容写入技巧，见 `references/hook-templates.md`。
 
@@ -138,25 +152,24 @@ git config merge.ff false
 
 ---
 
-### Step 7 — 从配置渲染并写入工作流文档（差量）
+### Step 7 — 部署 resolved.env、工作流文档、合并脚本（差量）
 
-每次运行都根据当前 `.hskill/init-workflow/workflow-config.yml` 的最终状态重新渲染文档，确保文档与配置始终一致。
-
-#### 7a. 渲染文档
+每次运行都根据当前配置的最终状态一次性重新生成，确保各产物对同一策略给出相同取值：
 
 ```bash
-python3 <skill-path>/references/render_docs.py \
-  .hskill/init-workflow/workflow-config.yml \
-  <skill-path>/references/git-workflow-template.md \
-  docs/reference/git-workflow.md
-# 输出 NEW / UPDATED / UNCHANGED
+python3 <skill-path>/references/deploy_artifacts.py <仓库根>
 ```
 
-脚本自动处理所有占位符，渲染逻辑见 `references/render_docs.py`。
+脚本调用解释器，逐行输出 `<状态> <路径>`（`NEW` / `UPDATED` / `UNCHANGED`），**原样记录并在 Step 9 汇报**。写出的产物：
 
-#### 7b. 索引
+- `.hskill/init-workflow/resolved.env`：解释结果（格式与键集合见 `references/workflow_resolve.py`）；消费方逐行读取，不得 `source`。
+- `docs/reference/git-workflow.md`：工作流文档。文末 `<!-- BEGIN PROJECT NOTES -->` 与 `<!-- END PROJECT NOTES -->` 之间是**项目自填区**，重新渲染时原样保留；这对标记之外的内容以模板为准，不要手改。
+- `scripts/merge-to-<合并目标>.sh`：标准合并脚本，仅在有合并目标时部署；项目自己的合并前检查改配置里的 `merge.pre_checks`，不要改脚本。`pre_checks` 在“已包含 / 冲突”判断之前执行，任一失败退出码为 1、不合并。
+- `.gitignore`：`<worktree.dir>/` 未被忽略时追加一行。
 
-脚本已负责建目录、比对与写入（输出 NEW / UPDATED / UNCHANGED）。若 `docs/INDEX.md` 存在，追加索引行（已存在则跳过）。
+**`WARN` 行：** 现有文件没有生成标记（或自填区标记）、且内容与新渲染结果不同时，脚本照旧覆盖，并输出以 `WARN` 开头的一行，含被覆盖文件路径和找回命令（如 `git diff HEAD -- docs/reference/git-workflow.md`）。照录给用户，说明旧内容可用该命令找回、需要保留的部分手工并入自填区。无规则文件时脚本以退出码 2 结束，回到 Step 2。
+
+脚本不处理索引：若 `docs/INDEX.md` 存在，由你追加 `docs/reference/git-workflow.md` 的索引行（已存在则跳过）。
 
 ---
 
@@ -193,10 +206,14 @@ python3 <skill-path>/references/render_docs.py \
 .githooks/commit-msg               UNCHANGED
 .githooks/pre-push                 UNCHANGED
 .githooks/post-checkout            NEW
+.hskill/init-workflow/resolved.env UPDATED
+scripts/merge-to-<目标>.sh         NEW（无合并目标时写“不适用”）
+.gitignore                         UPDATED（追加 <worktree.dir>/；已忽略则 UNCHANGED）
 core.hooksPath                     = .githooks  ✅（或 ❌ 已修复 / ❌ 未修复）
 merge.ff                           = false      ✅（或 ❌ 已修复 / ❌ 未修复）
 docs/reference/git-workflow.md     UPDATED
 CLAUDE.md                          已有引用，跳过
+WARN                               （如有）照录 deploy_artifacts.py 的 WARN 行
 ─────────────────────────────────────────────────────
 冲突决策摘要：
   [1/3] branches.protected/main 手改块 → 用户选择保留修改
@@ -217,5 +234,8 @@ CLAUDE.md                          已有引用，跳过
 | `references/hook-templates.md` | 4 个 hook 的代码模板、块 ID 规范、hash 计算、多行写入技巧 | Step 6：生成 hooks 前 |
 | `references/acceptance-test.md` | 验收场景 bash 脚本、期望结果、结果表格格式 | Step 6.5：用户选 Y 时读取 |
 | `references/lock-file-format.md` | lock 文件 YAML 格式 | Step 9：写入 lock 文件前 |
-| `references/git-workflow-template.md` | 工作流文档模板（含占位符） | Step 7：由 render_docs.py 读取 |
-| `references/render_docs.py` | 文档渲染脚本 | Step 7：直接执行 |
+| `references/workflow_resolve.py` | 单一解释器（三级查找、推断、`resolved.env`） | Step 7：由 deploy_artifacts.py 调用 |
+| `references/deploy_artifacts.py` | 一次性部署入口 | Step 6 前 / Step 7：直接执行 |
+| `references/git-workflow-template.md` | 工作流文档模板（含占位符与自填区） | Step 7：由 render_docs.py 读取 |
+| `references/render_docs.py` | 文档渲染 | Step 7：由 deploy_artifacts.py 调用 |
+| `references/merge-script-template.sh` | 标准合并脚本模板 | Step 7：由 deploy_artifacts.py 调用 |
