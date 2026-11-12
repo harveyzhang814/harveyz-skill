@@ -1,4 +1,4 @@
-import sys, os
+import sys, os, subprocess
 sys.path.insert(0, os.path.dirname(__file__))
 from render_tree import parse_nodes, build_tree, find_current, render_html, Node
 
@@ -102,6 +102,41 @@ def test_card_bg_follows_theme():
     html = render_html(SAMPLE)
     for light_bg in ('#f0fdf4', '#fffbeb', '#f8fafc'):
         assert f'background:{light_bg}' not in html
+
+def _run_open_page(env, which, rc=0):
+    import render_tree
+    calls = []
+    def fake_run(cmd, check=False):
+        calls.append(cmd)
+        return subprocess.CompletedProcess(cmd, rc)
+    orig = (render_tree.subprocess.run, render_tree.shutil.which, dict(os.environ))
+    render_tree.subprocess.run = fake_run
+    render_tree.shutil.which = lambda name: which
+    os.environ.pop('AGENT_CANVAS_NODE_TOKEN', None)
+    os.environ.update(env)
+    try:
+        render_tree.open_page('/tmp/t.html')
+    finally:
+        render_tree.subprocess.run, render_tree.shutil.which = orig[0], orig[1]
+        os.environ.clear(); os.environ.update(orig[2])
+    return calls
+
+def test_open_page_uses_canvas_panel_inside_canvas():
+    calls = _run_open_page({'AGENT_CANVAS_NODE_TOKEN': 'x'}, '/bin/agent-canvas-ctl')
+    assert calls == [['/bin/agent-canvas-ctl', 'open-browser', '/tmp/t.html']]
+
+def test_open_page_uses_system_open_outside_canvas():
+    calls = _run_open_page({}, '/bin/agent-canvas-ctl')
+    assert calls == [['open', '/tmp/t.html']]
+
+def test_open_page_no_double_open_when_canvas_fell_back():
+    # 退出码 3：画布已自行退回系统浏览器，不应再 open 一次
+    calls = _run_open_page({'AGENT_CANVAS_NODE_TOKEN': 'x'}, '/bin/agent-canvas-ctl', rc=3)
+    assert len(calls) == 1
+
+def test_open_page_falls_back_when_canvas_cmd_fails():
+    calls = _run_open_page({'AGENT_CANVAS_NODE_TOKEN': 'x'}, '/bin/agent-canvas-ctl', rc=1)
+    assert calls[-1] == ['open', '/tmp/t.html']
 
 if __name__ == '__main__':
     import traceback

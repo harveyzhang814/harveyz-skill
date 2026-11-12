@@ -2,7 +2,7 @@
 name: question-me
 description: "Pre-task requirement clarification — clarifies what the user wants before execution through one-question-at-a-time Q&A with a live decision tree, switching between exploring and defining modes, and ends with a self-contained summary for the user to confirm. After confirmation, routes the task by explicit criteria: stop, execute directly (no behavior change), execute test-first (small behavior change), or propose handing off to init-spec. Triggers: '/question-me', 'help me clarify this', 'question me before starting', 'let's define this first', 'clarify the requirements', 'help me think this through'. The current agent may propose it for ambiguous or complex requests (multiple conflicting goals, vague keywords like 'optimize/refactor/clean up', missing success criteria, unstated context assumptions), then wait for user confirmation."
 user_invocable: true
-version: "4.2.0"
+version: "4.3.0"
 ---
 
 # question-me — 执行前需求澄清
@@ -221,4 +221,4 @@ dep 已满足的 `open` 节点必须问答或当场评估 infer，不能以「�
 echo '<决策树文本>' | python3 SKILL_DIR/scripts/render_tree.py /tmp/question-me-tree.html [--open]
 ```
 
-`SKILL_DIR` 是本 SKILL.md 所在的目录。页面默认暗黑模式，右上角按钮可切到明亮模式，选择保存在浏览器里，自动刷新后保持。
+`SKILL_DIR` 是本 SKILL.md 所在的目录。`--open` 在 Agent Canvas 节点里用画布面板打开页面，其他环境用系统浏览器。页面默认暗黑模式，右上角按钮可切到明亮模式，选择保存在浏览器里，自动刷新后保持。

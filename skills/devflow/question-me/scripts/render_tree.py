@@ -8,7 +8,9 @@ Optional: include "# task description" as the first comment line to label the ro
 
 import sys
 import re
+import os
 import argparse
+import shutil
 import subprocess
 from dataclasses import dataclass, field
 from typing import Optional, List
@@ -288,6 +290,16 @@ function toggleTheme() {{
 </body></html>'''
 
 
+def open_page(path):
+    """在 Agent Canvas 节点里用画布面板打开，否则用系统浏览器。"""
+    ctl = shutil.which('agent-canvas-ctl')
+    if os.environ.get('AGENT_CANVAS_NODE_TOKEN') and ctl:
+        # 退出码 3 表示画布已自行退回系统浏览器
+        if subprocess.run([ctl, 'open-browser', path], check=False).returncode in (0, 3):
+            return
+    subprocess.run(['open', path], check=False)
+
+
 def main():
     ap = argparse.ArgumentParser(description='Render question-me tree to HTML')
     ap.add_argument('output', help='Output HTML file path')
@@ -301,7 +313,7 @@ def main():
         f.write(html)
 
     if args.open:
-        subprocess.run(['open', args.output], check=False)
+        open_page(os.path.abspath(args.output))
 
 
 if __name__ == '__main__':
