@@ -6,7 +6,10 @@ init-workflow Step 7 渲染器
 import sys, re, os
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from workflow_resolve import load_config  # noqa: E402
+from workflow_resolve import load_config, resolve  # noqa: E402
+
+NOTES_BEGIN = '<!-- BEGIN PROJECT NOTES -->'
+NOTES_END = '<!-- END PROJECT NOTES -->'
 
 def branch_purpose(name):
     mapping = {
@@ -39,7 +42,7 @@ def pattern_purpose(prefix):
     return mapping.get(prefix, ('—', f'{prefix}example'))
 
 
-def render(config, template):
+def render(config, resolved, template):
     c = config
     protected = c['protected']
 
@@ -110,9 +113,57 @@ def render(config, template):
     # ── WORKFLOW EXAMPLES ─────────────────────────────────────────
     integration = next((b['name'] for b in protected if b['name'] not in roots), roots[0] if roots else 'staging')
     main_branch = roots[0] if roots else 'main'
-    checkout_ex = f'git checkout {integration}'
-    merge_ex     = f'git checkout {integration}\ngit merge feature/my-feature'
-    release_ex   = f'git checkout {main_branch}\ngit merge {integration}       # 或：git merge release/x.y.z\ngit push'
+    wt_dir = resolved['worktree_dir']
+
+    # 开始新工作：manage-worktree「准备」+ 未安装时的兜底命令（按基线分支分组）
+    by_base = {}
+    for t, base_branch in resolved['base'].items():
+        by_base.setdefault(base_branch, []).append(f'{t}/')
+    if not by_base:
+        by_base[integration] = []
+    fallback_lines = []
+    for base_branch, prefixes in by_base.items():
+        line = f'git worktree add {wt_dir}/<分支名，/ 换成 +> -b <分支> {base_branch}'
+        if prefixes:
+            line += '   # ' + ' '.join(prefixes)
+        fallback_lines.append(line)
+    start_section = (
+        '调用 `manage-worktree「准备」`建立并进入本任务的 worktree。'
+        '不要在主工作树里切换分支。\n\n'
+        '未安装 `manage-worktree` 时的兜底命令（基线分支按分支类型而定）：\n\n'
+        '```bash\n' + '\n'.join(fallback_lines) + '\n```'
+    )
+
+    # 合并到集成分支：有合并目标 → 合并脚本；否则保留通用 git merge
+    target = resolved['merge_target']
+    if target:
+        if resolved['pre_checks']:
+            checks = '\n'.join(f'{i}. `{cmd}`' for i, cmd in enumerate(resolved['pre_checks'], 1))
+            checks_text = (f'合并前依次执行以下检查（在被合并分支的 worktree 根目录运行，'
+                           f'`{{target}}` 即 `{target}`），任一失败即中止、不合并：\n\n{checks}')
+        else:
+            checks_text = '合并前检查：未配置（`merge.pre_checks` 为空）。'
+        merge_section = (
+            f'调用 `manage-worktree「合并」`，或在被合并分支的 worktree 里直接运行 '
+            f'`{resolved["merge_script"]}`。\n\n'
+            f'- 只更新本地 `{target}`，不会推送；`git push` 另行进行。\n'
+            f'- 禁止手动切到 `{target}` 再 `git merge`：合并提交必须带 '
+            f'`{resolved["merge_trailer"]}` 标记，缺少该标记的手动合并会被 hook 拒绝。\n\n'
+            + checks_text
+        )
+    else:
+        merge_section = (
+            f'在 `{integration}` 所在的工作区里合并（不要在主工作树里切换分支）：\n\n'
+            f'```bash\ngit merge <分支>\ngit push\n```'
+        )
+
+    # 发布到主分支：不切换主工作树，交给项目自己的发布流程
+    if integration != main_branch:
+        release_section = (f'把 `{integration}` 发布到 `{main_branch}` 由项目自己的发布流程负责'
+                           f'（如 `release-project`），不要为此在主工作树里切换分支。')
+    else:
+        release_section = ('发布由项目自己的发布流程负责（如 `release-project`），'
+                           '不要为此在主工作树里切换分支。')
 
     # ── NAMING_TABLE ──────────────────────────────────────────────
     naming_rows = ['| 前缀 | 适用场景 | 示例 |', '|------|---------|------|']
@@ -168,14 +219,38 @@ def render(config, template):
     result = result.replace('{{BRANCH_TOPOLOGY_ASCII}}',    topology_ascii)
     result = result.replace('{{BRANCH_TABLE}}',             branch_table)
     result = result.replace('{{PROTECTION_RULES}}',         protection_rules)
-    result = result.replace('{{WORKFLOW_CHECKOUT_EXAMPLE}}', checkout_ex)
-    result = result.replace('{{WORKFLOW_MERGE_EXAMPLE}}',   merge_ex)
-    result = result.replace('{{WORKFLOW_RELEASE_EXAMPLE}}', release_ex)
+    result = result.replace('{{WORKFLOW_START_SECTION}}',   start_section)
+    result = result.replace('{{WORKFLOW_MERGE_SECTION}}',   merge_section)
+    result = result.replace('{{WORKFLOW_RELEASE_SECTION}}', release_section)
     result = result.replace('{{NAMING_TABLE}}',             naming_table)
     result = result.replace('{{NAMING_EXEMPT}}',            naming_exempt)
     result = result.replace('{{COMMIT_FORMAT_SECTION}}',    commit_section)
     result = result.replace('{{FAQ_SECTION}}',              faq_section + '\n\n' if faq_section else '')
     return result
+
+
+def _notes_span(text):
+    """返回 (标记之间内容的起点, 终点)；缺任一标记或顺序颠倒返回 None。"""
+    b = text.find(NOTES_BEGIN)
+    if b == -1:
+        return None
+    start = b + len(NOTES_BEGIN)
+    e = text.find(NOTES_END, start)
+    return None if e == -1 else (start, e)
+
+
+def carry_notes(existing, rendered):
+    """把现有文档自填区标记之间的内容逐字节搬入新渲染结果。
+
+    返回 (最终文本, 是否需要 WARN)。现有文件没有（完整的）标记且内容与新渲染不同
+    → 照旧覆盖并要求 WARN。
+    """
+    if existing is None:
+        return rendered, False
+    old, new = _notes_span(existing), _notes_span(rendered)
+    if old and new:
+        return rendered[:new[0]] + existing[old[0]:old[1]] + rendered[new[1]:], False
+    return rendered, existing != rendered
 
 
 if __name__ == '__main__':
@@ -184,14 +259,24 @@ if __name__ == '__main__':
     output_path   = sys.argv[3]
 
     config   = load_config(config_path)
-    template = open(template_path).read()
-    rendered = render(config, template)
+    resolved = resolve(config, config_path)
+    with open(template_path, encoding='utf-8') as f:
+        template = f.read()
+    rendered = render(config, resolved, template)
 
-    # 差量写入
-    existing = open(output_path).read() if os.path.exists(output_path) else None
-    if existing == rendered:
+    # 差量写入（newline='' 保持字节原样，自填区内容不被换行转换）
+    existing = None
+    if os.path.exists(output_path):
+        with open(output_path, encoding='utf-8', newline='') as f:
+            existing = f.read()
+    final, warn = carry_notes(existing, rendered)
+    if warn:
+        print(f'WARN {output_path} 没有项目自填区标记，现有内容已被覆盖；'
+              f'找回手改内容：git diff HEAD -- {output_path}')
+    if existing == final:
         print('UNCHANGED')
     else:
-        os.makedirs(os.path.dirname(output_path), exist_ok=True)
-        open(output_path, 'w').write(rendered)
-        print('UPDATED' if existing else 'NEW')
+        os.makedirs(os.path.dirname(output_path) or '.', exist_ok=True)
+        with open(output_path, 'w', encoding='utf-8', newline='') as f:
+            f.write(final)
+        print('UPDATED' if existing is not None else 'NEW')
