@@ -27,7 +27,7 @@ workflow: |
   worktree 路径习惯：仓库内 .worktrees/<分支名，/ 换成 +>。.claude/worktrees/ 下已有的目录是
   历史遗留，不动。
   **完工前不要合并到 staging**，最后一次性合并；**合并只由交出方做**，接手方与验收方都不合。
-  本仓库没有合并脚本，交出方手动 git merge --no-ff 即可。
+  交出方从交接分支的 worktree 运行 scripts/merge-to-staging.sh 合并，不手动 git merge 到 staging。
   同一时刻只有一方在这个工作区里动手——你做完就停手，交出方才进来验收。
   计划由交出方在交接前用 develop-plan 写好并经用户确认；接手方按计划开头的 `REQUIRED SUB-SKILL` 执行，不重写计划。执行技能若建议新建 worktree，一律跳过：工作区已经建好。
 
@@ -40,7 +40,7 @@ verification: |
 
 authority:
   specs: docs/superpowers/specs/
-  architecture: AGENTS.md（跨宿主仓库定位与 skill 结构约定）；CLAUDE.md（Claude Code 补充约定）
+  architecture: AGENTS.md（仓库唯一 Agent 指令：仓库定位、skill 结构、Git 与交接约定）
   git_workflow: docs/reference/git-workflow.md
   testing: docs/reference/testing-guide.md
 ```
