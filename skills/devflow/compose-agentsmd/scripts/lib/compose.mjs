@@ -5,7 +5,7 @@ import { join, resolve } from 'node:path'
 import { createHash } from 'node:crypto'
 import { fileURLToPath } from 'node:url'
 import { ConfigError, loadSkeleton, loadPacks, resolveConfig } from './config.mjs'
-import { renderTemplate, TemplateError } from './template.mjs'
+import { renderTemplate } from './template.mjs'
 
 const CONFIG_TEMPLATE = fileURLToPath(new URL('../../assets/config.template.json', import.meta.url))
 const HEADER = /^<!-- compose-agentsmd: packs=(\S*) sha256=([0-9a-f]{64}); generated from \.hskill\/compose-agentsmd\/, do not edit -->$/
@@ -108,51 +108,55 @@ function compareVersions(a, b) {
   return 0
 }
 
-const isInputError = e => e instanceof ConfigError || e instanceof TemplateError
-const failed = e => ({ code: 2, lines: [], errors: [e.message] })
+// 配置/模板错误与意外的 I/O 错误一律归为退出码 2（不写文件，消息进 errors），不抛堆栈；退出码 1 只留给「已存在 / 拒绝覆盖 / 状态非 ok」。
+const failed = e => ({ code: 2, lines: [], errors: [e instanceof Error ? e.message : String(e)] })
 
 export function runInit({ root }) {
   const p = paths(root)
   if (existsSync(p.dir)) {
     return { code: 1, lines: ['status=exists', `path=${p.dir}`] }
   }
-  mkdirSync(p.slots, { recursive: true })
-  writeFileSync(p.config, readFileSync(CONFIG_TEMPLATE))
-  for (const s of loadSkeleton()) {
-    if (s.kind === 'description') writeFileSync(join(p.slots, `${s.id}.md`), '')
+  try {
+    mkdirSync(p.slots, { recursive: true })
+    writeFileSync(p.config, readFileSync(CONFIG_TEMPLATE))
+    for (const s of loadSkeleton()) {
+      if (s.kind === 'description') writeFileSync(join(p.slots, `${s.id}.md`), '')
+    }
+  } catch (e) {
+    return failed(e)
   }
   return { code: 0, lines: ['status=created', `path=${p.dir}`] }
 }
 
 export function runGenerate({ root, packsDir, force = false }) {
   const p = paths(root)
-  let composed
   try {
-    composed = composeText({ root, packsDir })
-  } catch (e) {
-    if (isInputError(e)) return failed(e)
-    throw e
-  }
-  if (existsSync(p.agents) && isHandEdited(readFileSync(p.agents)) && !force) {
-    return {
-      code: 1,
-      lines: ['status=hand-edited', `path=${p.agents}`],
-      errors: [`${p.agents} 无生成标记或已被手改，拒绝覆盖；确认要覆盖请加 --force`, ...composed.warnings],
+    const composed = composeText({ root, packsDir })
+    if (existsSync(p.agents) && isHandEdited(readFileSync(p.agents)) && !force) {
+      return {
+        code: 1,
+        lines: ['status=hand-edited', `path=${p.agents}`],
+        errors: [`${p.agents} 无生成标记或已被手改，拒绝覆盖；确认要覆盖请加 --force`, ...composed.warnings],
+      }
     }
+    writeFileSync(p.agents, composed.text)
+    return { code: 0, lines: ['status=written', `path=${p.agents}`], errors: composed.warnings }
+  } catch (e) {
+    return failed(e)
   }
-  writeFileSync(p.agents, composed.text)
-  return { code: 0, lines: ['status=written', `path=${p.agents}`], errors: composed.warnings }
 }
 
 export function runCheck({ root, packsDir }) {
-  const p = paths(root)
-  let composed
   try {
-    composed = composeText({ root, packsDir })
+    return checkOnce({ root, packsDir })
   } catch (e) {
-    if (isInputError(e)) return failed(e)
-    throw e
+    return failed(e)
   }
+}
+
+function checkOnce({ root, packsDir }) {
+  const p = paths(root)
+  const composed = composeText({ root, packsDir })
   const shipped = composed.packs.filter(k => k.source === 'shipped')
   let generated = new Map()
   const status = []

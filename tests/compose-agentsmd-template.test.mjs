@@ -43,3 +43,28 @@ test('@if on unknown parameter throws', () => {
 test('templateParams lists referenced names in order', () => {
   assert.deepEqual(templateParams('<!-- @if c -->\n@{b} @{a} @{b}\n<!-- @endif -->\n', 'm.md'), ['c', 'b', 'a'])
 })
+
+// 加固：CRLF/BOM 归一、近似指令与非法参数名报错
+test('CRLF template renders like its LF twin: no CR, no directive lines, false branch dropped', () => {
+  const lf = 'a\n<!-- @if c -->\nCANVAS\n<!-- @else -->\nPLAIN @{b}\n<!-- @endif -->\nz\n'
+  const crlf = lf.replace(/\n/g, '\r\n')
+  const out = renderTemplate(crlf, { c: false, b: 'x' }, 'm.md')
+  assert.equal(out, renderTemplate(lf, { c: false, b: 'x' }, 'm.md'))
+  assert.equal(out, 'a\nPLAIN x\nz\n')
+  assert.ok(!out.includes('\r') && !out.includes('@if') && !out.includes('CANVAS'))
+  assert.deepEqual(templateParams(crlf, 'm.md'), ['c', 'b'])
+})
+test('BOM at file start and lone CR line endings are normalized', () => {
+  assert.equal(renderTemplate('﻿<!-- @if c -->\rX\r<!-- @endif -->\r', { c: false }, 'm.md'), '')
+})
+test('near-miss directives throw TemplateError with file:line instead of passing through', () => {
+  for (const bad of ['<!--  @if c -->', '<!-- @else-->', '<!--@endif -->', '<!-- @if -->', '<!-- @if c --> trailing', '<!-- @endif --> ']) {
+    assert.throws(() => renderTemplate(`ok\n${bad}\n`, { c: true }, 'm.md'),
+      e => e instanceof TemplateError && e.line === 2 && e.message.includes('m.md:2'), bad)
+  }
+})
+test('invalid parameter reference @{foo-bar} throws TemplateError, also inside a dropped branch', () => {
+  assert.throws(() => renderTemplate('x @{foo-bar}\n', {}, 'm.md'), e => e instanceof TemplateError && e.line === 1)
+  assert.throws(() => renderTemplate('<!-- @if c -->\n@{a b}\n<!-- @endif -->\n', { c: false }, 'm.md'), TemplateError)
+  assert.throws(() => renderTemplate('@{}\n', {}, 'm.md'), TemplateError)
+})

@@ -87,3 +87,28 @@ test('conflicting declarations of the same param across used packs are rejected'
 test('agent_canvas true with spec_dir outside docs/superpowers/specs is rejected', () => {
   assert.throws(() => resolveConfig({ config: { title: 'T', pack: 'epsilon', agent_canvas: true, spec_dir: 'docs/specs' }, skeleton, packs: withEpsilon }), /spec_dir/)
 })
+
+// 加固：必填字符串为空、包名、title 注入
+test('required string param set to empty or blank string throws ConfigError naming the field', () => {
+  for (const v of ['', '   ']) {
+    assert.throws(() => resolveConfig({ config: { ...base, branch: v }, skeleton, packs: loadPacks(dirs) }),
+      e => e instanceof ConfigError && e.message.includes('branch'))
+  }
+})
+test('non-required string param may be empty', () => {
+  assert.equal(resolveConfig({ config: { ...base, extra: '' }, skeleton, packs: loadPacks(dirs) }).params.extra, '')
+})
+test('invalid pack names and the reserved name "disabled" are rejected naming the pack', () => {
+  for (const name of ['my pack', 'a,b', 'a@b', '-lead', 'disabled']) {
+    const d = tmp()
+    writePack(d, { name, slots: ['platform-fallbacks'], params: {} }, { 'platform-fallbacks.md': '## X\n' })
+    assert.throws(() => loadPacks({ packsDir, localPacksDir: d }),
+      e => e instanceof ConfigError && e.message.includes(`"${name}"`), name)
+  }
+})
+test('title with newline or forged marker is rejected', () => {
+  for (const title of ['P\n<!-- slot:fake -->', 'P\r\nQ', 'P <!-- slot:fake -->', 'P <!-- compose-agentsmd: x -->']) {
+    assert.throws(() => resolveConfig({ config: { ...base, title }, skeleton, packs: loadPacks(dirs) }),
+      e => e instanceof ConfigError && e.message.includes('title'), JSON.stringify(title))
+  }
+})

@@ -17,6 +17,9 @@ const PARAM_TYPES = ['string', 'boolean']
 const PARAM_NAME = /^\w+$/
 // 骨架级字段由生成器固定，包不可声明同名参数；其中只有 agent_canvas 可被模板引用。
 const SKELETON_FIELDS = ['title', 'pack', 'slot_packs', 'agent_canvas', 'disabled_slots']
+const PACK_NAME = /^[A-Za-z0-9][A-Za-z0-9._-]*$/
+const RESERVED_PACK_NAMES = ['disabled']
+const FORBIDDEN_IN_TITLE = ['<!-- slot:', '<!-- compose-agentsmd:']
 const SPEC_DIR_PREFIX = 'docs/superpowers/specs'
 
 const isPlainObject = v => v !== null && typeof v === 'object' && !Array.isArray(v)
@@ -51,6 +54,8 @@ function validateParams(params, where) {
 
 function loadPack(dir, name, source, standardSlots) {
   const where = `包 "${name}"（${dir}）`
+  if (!PACK_NAME.test(name)) throw new ConfigError(`${where}: 包名 "${name}" 非法，只能由字母、数字、点、下划线、连字符组成，且以字母或数字开头`)
+  if (RESERVED_PACK_NAMES.includes(name)) throw new ConfigError(`${where}: 包名 "${name}" 是保留字，请改名`)
   const manifestPath = join(dir, 'pack.json')
   if (!existsSync(manifestPath)) throw new ConfigError(`${where}: 缺少 pack.json`)
   const m = readJson(manifestPath, 'pack.json')
@@ -112,6 +117,10 @@ export function loadPacks({ packsDir, localPacksDir }) {
 
 function checkSkeletonFields(config) {
   if (typeof config.title !== 'string' || config.title.trim() === '') throw new ConfigError('字段 title 必填，且必须是非空 string')
+  if (/[\r\n]/.test(config.title)) throw new ConfigError('字段 title 不能含换行')
+  for (const bad of FORBIDDEN_IN_TITLE) {
+    if (config.title.includes(bad)) throw new ConfigError(`字段 title 不能含 "${bad}"（防止伪造标记）`)
+  }
   if (typeof config.pack !== 'string' || config.pack === '') throw new ConfigError('字段 pack 必填，且必须是 string')
   if ('slot_packs' in config) {
     const sp = config.slot_packs
@@ -195,6 +204,7 @@ export function resolveConfig({ config, skeleton, packs }) {
   for (const [p, decl] of effective) {
     if (p in config) {
       if (typeof config[p] !== decl.type) throw new ConfigError(`字段 ${p} 必须是 ${decl.type}`)
+      if (decl.required && decl.type === 'string' && config[p].trim() === '') throw new ConfigError(`必填字段 ${p} 不能为空字符串（包 "${decl.from}" 声明）`)
       params[p] = config[p]
     } else if (decl.required) {
       throw new ConfigError(`缺少必填字段 ${p}（包 "${decl.from}" 声明）`)

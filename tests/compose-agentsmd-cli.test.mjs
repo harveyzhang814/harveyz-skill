@@ -175,3 +175,44 @@ test('CLI init prints key=value lines', () => {
   assert.equal(out.status, 0)
   for (const l of out.stdout.trim().split('\n')) assert.match(l, /^\w+=/)
 })
+
+// 加固：CRLF 模板、近似指令、必填空串、意外错误归 2、CLI 原型键
+test('CRLF local template generates the same output as its LF twin', () => {
+  const lf = '<!-- @if agent_canvas -->\nCANVAS\n<!-- @else -->\nPLAIN\n<!-- @endif -->\n'
+  const r1 = freshRoot(); addLocalPack(r1, lf); assert.equal(runGenerate({ root: r1, packsDir }).code, 0)
+  const r2 = freshRoot(); addLocalPack(r2, lf.replace(/\n/g, '\r\n')); assert.equal(runGenerate({ root: r2, packsDir }).code, 0)
+  const a = readFileSync(join(r1, 'AGENTS.md'), 'utf8')
+  assert.ok(a.includes('PLAIN') && !a.includes('CANVAS'))
+  assert.equal(readFileSync(join(r2, 'AGENTS.md'), 'utf8').replace(/sha256=\w+/, ''), a.replace(/sha256=\w+/, ''))
+  assert.ok(!readFileSync(join(r2, 'AGENTS.md'), 'utf8').includes('\r'))
+})
+test('near-miss directives and invalid @{} in a local template exit 2 and write nothing', () => {
+  for (const bad of ['<!--  @if agent_canvas -->\nx\n<!-- @endif -->\n', '<!-- @if agent_canvas -->\nx\n<!-- @else-->\ny\n<!-- @endif -->\n', 'x @{foo-bar}\n']) {
+    const r = freshRoot(); addLocalPack(r, bad)
+    const g = runGenerate({ root: r, packsDir })
+    assert.equal(g.code, 2, bad); assert.match(g.errors[0], /instruction-sources\.md:\d+/)
+    assert.equal(existsSync(join(r, 'AGENTS.md')), false)
+    assert.equal(runCheck({ root: r, packsDir }).code, 2)
+  }
+})
+test('init then setting only title: generate exits 2 naming the empty required field and writes nothing', () => {
+  const r = tmp(); runInit({ root: r })
+  const file = join(cfgDir(r), 'config.json')
+  writeFileSync(file, JSON.stringify({ ...JSON.parse(readFileSync(file, 'utf8')), title: 'Proj' }))
+  const g = runGenerate({ root: r, packsDir: fileURLToPath(new URL('../skills/devflow/compose-agentsmd/assets/packs', import.meta.url)) })
+  assert.equal(g.code, 2); assert.match(g.errors[0], /integration_branch/)
+  assert.equal(existsSync(join(r, 'AGENTS.md')), false)
+})
+test('unexpected I/O errors map to exit 2 with a message, not a thrown stack', () => {
+  mkdirSync(agents) // AGENTS.md 是目录：读取时 EISDIR
+  const g = runGenerate({ root, packsDir, force: true }); assert.equal(g.code, 2); assert.ok(g.errors[0].length > 0)
+  assert.equal(runCheck({ root, packsDir }).code, 2)
+  const r = tmp(); writeFileSync(join(r, '.hskill'), 'file blocks mkdir')
+  assert.equal(runInit({ root: r }).code, 2)
+})
+test('CLI treats Object prototype keys as unknown commands (exit 2)', () => {
+  for (const cmd of ['constructor', 'toString', '__proto__', 'hasOwnProperty']) {
+    const r = spawnSync(process.execPath, [CLI, cmd], { encoding: 'utf8' })
+    assert.equal(r.status, 2, cmd); assert.match(r.stderr, /usage/)
+  }
+})

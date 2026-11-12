@@ -24,7 +24,7 @@ const commands = {
   generate: o => runGenerate({ root: o.root, packsDir, force: o.force }),
   check: o => runCheck({ root: o.root, packsDir }),
 }
-if (!args || !commands[args.command]) {
+if (!args || !Object.hasOwn(commands, args.command)) {
   console.error(USAGE)
   process.exit(2)
 }

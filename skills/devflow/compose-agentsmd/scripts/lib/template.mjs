@@ -3,6 +3,9 @@
 
 const DIRECTIVE = /^<!-- @(if \w+|else|endif) -->$/
 const PARAM = /@\{(\w+)\}/g
+// 近似指令：不满足 DIRECTIVE 却像指令（多空格、缺空格、行内夹杂等）或参数名非法，一律报错，不原样放行。
+const NEAR_DIRECTIVE = /<!--\s*@\s*(if|else|endif)\b/
+const BAD_PARAM = /@\{(?!\w+\})[^}]*\}/
 
 export class TemplateError extends Error {
   constructor(file, line, detail) {
@@ -20,7 +23,7 @@ function scan(text, file, onParam, onLine) {
   let state = null
   let cond = null
   let openLine = 0
-  text.split('\n').forEach((raw, i) => {
+  text.replace(/^\uFEFF/, '').replace(/\r\n?/g, '\n').split('\n').forEach((raw, i) => {
     const no = i + 1
     const m = DIRECTIVE.exec(raw)
     if (m) {
@@ -38,6 +41,9 @@ function scan(text, file, onParam, onLine) {
       }
       return
     }
+    if (NEAR_DIRECTIVE.test(raw)) throw new TemplateError(file, no, `疑似条件指令写法不规范：${raw.trim()}（指令须独占一行，严格写成 <!-- @if 名 --> / <!-- @else --> / <!-- @endif -->）`)
+    const bad = BAD_PARAM.exec(raw)
+    if (bad) throw new TemplateError(file, no, `参数引用 ${bad[0]} 非法，参数名只能由字母、数字、下划线组成`)
     for (const p of raw.matchAll(PARAM)) onParam(p[1], no)
     onLine(raw, state && { state, cond })
   })
