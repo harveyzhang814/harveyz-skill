@@ -107,6 +107,44 @@ YML
   [ "$(git -C "$HUB" rev-list --parents -n1 staging | wc -w)" -eq 3 ]
 }
 
+# helper_next_to_script：在 hub 的 scripts/ 放一个辅助脚本，被调用时把参数写进 $TMP/marker
+helper_next_to_script() {
+  mkdir -p "$HUB/scripts"
+  printf '#!/bin/sh\necho "$1" > "%s/marker"\n' "$TMP" > "$HUB/scripts/helper.sh"
+}
+
+@test "{script_dir} pre_check runs a helper next to the merge script" {
+  helper_next_to_script
+  deploy_with "\"sh {script_dir}/helper.sh {target}\""
+  echo feat > "$WT/b.txt" && git -C "$WT" add b.txt && git -C "$WT" commit -qm feat
+  cd "$WT"
+  run bash scripts/merge-to-staging.sh
+  [ "$status" -eq 0 ]
+  [ "$(cat "$TMP/marker")" = "staging" ]
+}
+
+@test "{script_dir} resolves when invoked by a relative path from a subdirectory" {
+  helper_next_to_script
+  deploy_with "\"sh {script_dir}/helper.sh {target}\""
+  echo feat > "$WT/b.txt" && git -C "$WT" add b.txt && git -C "$WT" commit -qm feat
+  mkdir "$WT/sub" && cd "$WT/sub"
+  run bash ../scripts/merge-to-staging.sh
+  [ "$status" -eq 0 ]
+  [ "$(cat "$TMP/marker")" = "staging" ]
+}
+
+@test "{script_dir} survives a repository path with spaces" {
+  mv "$TMP/hub" "$TMP/with space"
+  HUB="$TMP/with space"; WT="$TMP/with space wt"
+  helper_next_to_script
+  deploy_with "\"sh {script_dir}/helper.sh {target}\""
+  echo feat > "$WT/b.txt" && git -C "$WT" add b.txt && git -C "$WT" commit -qm feat
+  cd "$WT"
+  run bash scripts/merge-to-staging.sh
+  [ "$status" -eq 0 ]
+  [ "$(cat "$TMP/marker")" = "staging" ]
+}
+
 @test "refuses to run on any integration branch" {
   deploy_with ""
   git -C "$HUB" worktree add -q "$TMP/mainwt" main

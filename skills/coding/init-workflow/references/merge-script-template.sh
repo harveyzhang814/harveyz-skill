@@ -16,6 +16,9 @@
 
 set -euo pipefail
 
+# 本脚本所在目录的绝对路径；在任何 cd 之前求值，供 merge.pre_checks 的 {script_dir} 使用
+MERGE_SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd -P)"
+
 TARGET_BRANCH="{{TARGET_BRANCH}}"
 INTEGRATION_BRANCHES="{{INTEGRATION_BRANCHES}}"
 TARGET_REF="refs/heads/${TARGET_BRANCH}"

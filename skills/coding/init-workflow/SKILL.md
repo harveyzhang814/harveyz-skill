@@ -2,7 +2,7 @@
 name: init-workflow
 description: "Initialize or update git branch management standards: reads .hskill/init-workflow/workflow-config.yml, audits config, incrementally generates and deploys git hooks (pre-commit, commit-msg, pre-push, post-checkout), and deploys resolved.env, the workflow doc and the standard merge script. Triggers: initializing a new git repo, first-time git setup, user asks to set/update branch protection or naming rules, reinstalling git hooks, or syncing after skill/template updates."
 user_invocable: true
-version: "5.0.1"
+version: "5.0.2"
 ---
 
 # Git 工作流初始化
@@ -64,7 +64,7 @@ echo "" | grep -E "<pattern>" > /dev/null 2>&1; echo $?
 
 **新增字段：**
 - `worktree.dir`（缺省 `.worktrees`）：worktree 所在目录，路径为 `<dir>/<分支名，/ 换成 +>`。旧配置没有此节时按缺省值解释，不报错。
-- `merge.pre_checks`（缺省 `[]`）：合并前依次执行的命令，`{target}` 替换为合并目标分支。**只支持块列表写法**（`- 命令` 逐行），**列表项后不得加行内注释**（解释器逐行取值，注释会被当作命令的一部分）。
+- `merge.pre_checks`（缺省 `[]`）：合并前依次执行的命令，在被合并分支的 worktree 根目录执行。占位符：`{target}` 替换为合并目标分支；`{script_dir}` 替换为合并脚本所在目录的绝对路径（已带引号，路径含空格也安全，不要再给它加引号），用于调用放在合并脚本旁边的检查脚本，例如 `- node {script_dir}/check-file-token-budget.js --changed-since {target}`。**只支持块列表写法**（`- 命令` 逐行），**列表项后不得加行内注释**（解释器逐行取值，注释会被当作命令的一部分）。
 
 审核通过打印 `✅ 配置审核通过`，审核失败列出所有问题并停止。
 
