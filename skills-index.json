@@ -37,7 +37,7 @@
     "mint": "Skill 生命周期工具（init-skill + publish-skill + archive-skill + dedup-skill + simplify-skill + contribute-skill + fix-skill + runby-opencode + scout-philosophy + learn-skill）",
     "devops": "项目运维工具（clean-git + release-project + sync-hotfix + sync-agent）",
     "agent-canvas": "Agent Canvas 内置 skill（agent-canvas-control — 节点与画布操控；describe-node/relate-node/capture-requirement/relation-review/close-node — 画布节点生命周期治理；capture-intent — 随口需求立成需求节点；judge-release — 对照验收标准逐条取证并写结论；external-closeout — 从外部会话不唤醒目标节点完成收尾）",
-    "devflow": "开发流程（question-me — 执行前需求澄清；init-spec — 从初步想法到获批 Spec；develop-plan — 制定实施计划；manage-worktree — 建立或复用、进出与检测 worktree）"
+    "devflow": "开发流程（question-me — 执行前需求澄清；init-spec — 从初步想法到获批 Spec；develop-plan — 制定实施计划；manage-worktree — 建立或复用、进出与检测 worktree；compose-agentsmd — 从标准骨架生成 AGENTS.md）"
   },
   "skills": [
     {
@@ -480,6 +480,13 @@
       "installScope": "global",
       "contentHash": "6ebf189a111b524c",
       "contentVersion": "0.1.4"
+    },
+    {
+      "path": "devflow/compose-agentsmd",
+      "bundle": "devflow",
+      "installScope": "global",
+      "contentHash": "77b1b6e7443c7a3b",
+      "contentVersion": "0.1.0"
     }
   ],
   "hooks": [
