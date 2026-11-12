@@ -74,7 +74,7 @@ mk_merge() {
   before="$(git rev-parse staging)"
   run git merge --no-ff -m "Merge branch 'topic'" topic
   [ "$status" -ne 0 ]
-  [[ "$output" == *"scripts/merge-to-staging.sh"* ]]
+  [[ "$output" == *"scripts/merge-to-staging.sh"* ]] || false
   [ "$(git rev-parse staging)" = "$before" ]
 }
 
@@ -87,7 +87,7 @@ mk_merge() {
   echo resolved > a.txt && git add a.txt
   run git commit -q --no-edit
   [ "$status" -ne 0 ]
-  [[ "$output" == *"scripts/merge-to-staging.sh"* ]]
+  [[ "$output" == *"scripts/merge-to-staging.sh"* ]] || false
   [ "$(git rev-parse staging)" = "$before" ]
 }
 
@@ -111,7 +111,7 @@ mk_merge() {
   mk_merge "Merge branch 'topic'"
   run git push origin staging
   [ "$status" -ne 0 ]
-  [[ "$output" == *"scripts/merge-to-staging.sh"* ]]
+  [[ "$output" == *"scripts/merge-to-staging.sh"* ]] || false
   [ "$(git -C "$TMP/remote.git" rev-parse staging)" != "$(git rev-parse staging)" ]
   # 一个带标记的合并盖在上面也救不了范围内的无标记提交
   git checkout -q -b topic2 topic
@@ -145,7 +145,7 @@ mk_merge() {
   before="$(git rev-parse staging)"
   run git commit -qm "feat: direct"
   [ "$status" -ne 0 ]
-  [[ "$output" == *"scripts/merge-to-staging.sh"* ]]
+  [[ "$output" == *"scripts/merge-to-staging.sh"* ]] || false
   [ "$(git rev-parse staging)" = "$before" ]
   # 其他分支不受影响
   git checkout -q topic
