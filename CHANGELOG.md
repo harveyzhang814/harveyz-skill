@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- `sync-design` 5.4.0：`designSystem` 新增可选字段 `screenshot`（截图命令，占位符 `{url}`、`{out}`，可选 `{height}`）。生成后检查看主题时，对每个主题运行它截图再读图检查，截图只放临时目录；没登记时仍用宿主的浏览器或截图能力。在 agent-canvas 实测中，截图查出了守卫查不到的导航被截断、提示条压住模态边缘
 - `sync-design` 5.3.0：可选接入项目设计系统。manifest 登记 `config.designSystem`（目录、标准、令牌、组件样式、共用脚本、主题列表与切换方式、守卫命令、对比稿临时目录、缺口清单、`modes`），且本次模式在 `modes` 里时启用：稿子用相对路径引用令牌、组件样式和脚本，不再内联拷贝；每份稿子能切到每个主题，且每个主题都要看过；对本次写过的稿子跑项目守卫，0 违规才算完成；局部取舍先在临时目录做小对比视图请用户确认；标准里没有的规则登记到缺口清单，不在稿里自创。旧写法的稿子改到哪份就先转换哪份。未登记的项目行为不变。manifest 升到 version 6（只问一次是否登记设计系统），新增「配置设计系统」入口；`design_html.py check` 新增对相对路径 `<link>` / `<script src>` 指不到文件的报告
 
 ### Fixed

@@ -1,7 +1,7 @@
 ---
 name: sync-design
 description: Use after any UI source file change — detects changed view/component files via git diff and syncs them to high-fidelity HTML design backups. Also supports pre-development design phase: creates or updates design draft HTML based on user feature descriptions. Maintains a manifest as the source-of-truth mapping between source files, design drafts, and HTML previews. Trigger when user says "sync design", "update HTML preview", "design changed", "create design", "design this", "migrate design drafts", "configure design system", or the Chinese equivalents, or after UI code edits.
-version: "5.3.2"
+version: "5.4.0"
 user_invocable: true
 ---
 
@@ -204,7 +204,7 @@ user_invocable: true
 
 1. **引用：** `python3 SKILL_DIR/scripts/design_html.py check <manifest>` 不报这些稿子「引用的文件不存在」。
 2. **守卫：** 在项目根运行 `designSystem.guard`，`{files}` 替换为这些稿子相对项目根的路径（逐个加引号，空格分隔）。有违规就当场修，重跑到 0 违规；修不了的（要标准没有的规则，或守卫误报）停下报告，并按上一节登记缺口。没登记 `guard` 时跳过，在摘要里写明「未跑守卫」。
-3. **主题：** 每份稿子在 `themes` 的每个主题下都打开看一遍（稿子路径后接该主题的 `query`），确认样式加载、文字可读、画面没有缺块。用宿主能渲染本地网页的能力看（浏览器或截图工具）；自己看不了时打开给用户看，等用户确认。
+3. **主题：** 每份稿子在 `themes` 的每个主题下都看一遍渲染出来的画面，确认样式加载、文字可读、画面没有被截断或互相压住。登记了 `designSystem.screenshot` 时，在项目根对每个主题运行它：`{url}` 换成稿子的 `file://` 绝对地址接该主题的 `query`，`{out}` 换成临时目录里的图片路径，命令含 `{height}` 时按稿子长度给一个高度（截出来底部被截断就加大重截）；退出码 0 且图片存在才算截到，再读图片看。没登记时用宿主能渲染本地网页的能力看（浏览器或截图工具）。自己看不了时打开给用户看，等用户确认。截图只放临时目录，不入库。
 
 ### 4. 写回与摘要
 
