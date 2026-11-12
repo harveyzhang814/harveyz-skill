@@ -1,0 +1,14 @@
+{
+  "name": "devflow",
+  "slots": ["flow-summary", "instruction-sources", "platform-fallbacks", "flow-steps", "release-acceptance"],
+  "linked": [["flow-summary", "flow-steps"]],
+  "params": {
+    "integration_branch": { "type": "string", "required": true },
+    "merge_command":      { "type": "string", "required": true },
+    "e2e":                { "type": "string", "default": "" },
+    "complexity_signals": { "type": "string", "default": "" },
+    "spec_dir":           { "type": "string", "default": "docs/superpowers/specs" },
+    "plan_dir":           { "type": "string", "default": "docs/superpowers/plans" },
+    "record_dir":         { "type": "string", "default": ".hskill/spec" }
+  }
+}
