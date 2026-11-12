@@ -101,7 +101,17 @@ echo "" | grep -E "<pattern>" > /dev/null 2>&1; echo $?
 
 ---
 
-### Step 6 — 差量生成并部署 hooks
+### Step 6 — 解释与部署，再差量生成 hooks
+
+#### 6.0 先解释并部署（本步唯一一次运行）
+
+hooks 的取值来自 `resolved.env`，而 `resolved.env` 由部署脚本写出，所以**先**运行：
+
+```bash
+python3 <skill-path>/references/deploy_artifacts.py <仓库根>
+```
+
+这一次运行同时写出 Step 7 列出的全部产物。**整次 skill 执行只运行这一次，Step 7 不再运行**：重跑时文件已是新内容，输出全变成 `UNCHANGED`，首次运行的 `NEW` / `UPDATED` 行和 `WARN` 行（用户手改被覆盖的唯一提示）就丢了。把这次的 stdout 与 stderr 完整保存，Step 7 和 Step 9 都用它。
 
 ```bash
 mkdir -p .githooks
@@ -109,7 +119,10 @@ mkdir -p .githooks
 
 #### 取值来源与顺序
 
-hooks 里用到的集成分支、合并目标、`merge_trailer`、`merge_script` 以及分支命名的**真实 ERE 模式**（`naming.<n>`、`naming_exempt`），一律取自 `.hskill/init-workflow/resolved.env`（或解释器输出），**不得**直接抄 `workflow-config.yml` 的原文——配置里的写法可能和解释后的有效模式不同。`resolved.env` 由 Step 7 的 `deploy_artifacts.py` 写出，因此**生成 hooks 之前先执行一次 Step 7 的命令**，保证取值是本次配置的最新结果；其输出留到 Step 9 汇报，不重复运行。
+hooks 里用到的集成分支、合并目标、`merge_trailer`、`merge_script` 以及分支命名的**真实 ERE 模式**，一律取自 `.hskill/init-workflow/resolved.env`（或解释器输出），**不得**直接抄 `workflow-config.yml` 的原文——配置里的写法可能和解释后的有效模式不同。映射：
+
+- `hook-templates.md` 里的 `<allowed_patterns>`（`post-checkout/branch-naming`）= `resolved.env` 的 `naming.1` … `naming.n`，按编号顺序；exempt 列表 = `naming_exempt`（空格分隔，生成 `case` 时改用 `|` 连接）。
+- 例外：`pre-push/tags` 块里的 `<allowed_patterns>` 是 **tag** 命名模式，`resolved.env` 不含，取配置 `tags.allowed_patterns`（经解释器读到的配置）。
 
 #### 生成原则
 
@@ -152,22 +165,16 @@ git config merge.ff false
 
 ---
 
-### Step 7 — 部署 resolved.env、工作流文档、合并脚本（差量）
+### Step 7 — resolved.env、工作流文档、合并脚本（已在 Step 6.0 部署）
 
-每次运行都根据当前配置的最终状态一次性重新生成，确保各产物对同一策略给出相同取值：
-
-```bash
-python3 <skill-path>/references/deploy_artifacts.py <仓库根>
-```
-
-脚本调用解释器，逐行输出 `<状态> <路径>`（`NEW` / `UPDATED` / `UNCHANGED`），**原样记录并在 Step 9 汇报**。写出的产物：
+**不要在这里重跑 `deploy_artifacts.py`**，使用 Step 6.0 那次运行的输出（`NEW` / `UPDATED` / `UNCHANGED` 逐行与 `WARN`），照录到 Step 9 汇报。每次运行都根据当前配置的最终状态一次性重新生成，确保各产物对同一策略给出相同取值。脚本逐行输出 `<状态> <路径>`，写出的产物：
 
 - `.hskill/init-workflow/resolved.env`：解释结果（格式与键集合见 `references/workflow_resolve.py`）；消费方逐行读取，不得 `source`。
 - `docs/reference/git-workflow.md`：工作流文档。文末 `<!-- BEGIN PROJECT NOTES -->` 与 `<!-- END PROJECT NOTES -->` 之间是**项目自填区**，重新渲染时原样保留；这对标记之外的内容以模板为准，不要手改。
 - `scripts/merge-to-<合并目标>.sh`：标准合并脚本，仅在有合并目标时部署；项目自己的合并前检查改配置里的 `merge.pre_checks`，不要改脚本。`pre_checks` 在“已包含 / 冲突”判断之前执行，任一失败退出码为 1、不合并。
-- `.gitignore`：`<worktree.dir>/` 未被忽略时追加一行。
+- `.gitignore`：`<worktree.dir>/` 未被忽略时追加一行（状态：文件原不存在为 `NEW`，追加了一行为 `UPDATED`，已忽略则 `UNCHANGED`）。
 
-**`WARN` 行：** 现有文件没有生成标记（或自填区标记）、且内容与新渲染结果不同时，脚本照旧覆盖，并输出以 `WARN` 开头的一行，含被覆盖文件路径和找回命令（如 `git diff HEAD -- docs/reference/git-workflow.md`）。照录给用户，说明旧内容可用该命令找回、需要保留的部分手工并入自填区。无规则文件时脚本以退出码 2 结束，回到 Step 2。
+**`WARN` 行：** 现有文件没有生成标记（或自填区标记）、且内容与新渲染结果不同时，脚本照旧覆盖，并输出 `WARN`：stdout 里是 `WARN <路径>`，紧挨在该文件的 `UPDATED` 行之前；找回命令（如 `git diff HEAD -- docs/reference/git-workflow.md`）的说明文字走 **stderr**。所以运行时 stdout 与 stderr 都要捕获并照录给用户，说明旧内容可用该命令找回、需要保留的部分手工并入自填区。无规则文件时脚本以退出码 2 结束，回到 Step 2。
 
 脚本不处理索引：若 `docs/INDEX.md` 存在，由你追加 `docs/reference/git-workflow.md` 的索引行（已存在则跳过）。
 
@@ -208,12 +215,12 @@ python3 <skill-path>/references/deploy_artifacts.py <仓库根>
 .githooks/post-checkout            NEW
 .hskill/init-workflow/resolved.env UPDATED
 scripts/merge-to-<目标>.sh         NEW（无合并目标时写“不适用”）
-.gitignore                         UPDATED（追加 <worktree.dir>/；已忽略则 UNCHANGED）
+.gitignore                         NEW（原无该文件）/ UPDATED（追加 <worktree.dir>/）/ UNCHANGED（已忽略）
 core.hooksPath                     = .githooks  ✅（或 ❌ 已修复 / ❌ 未修复）
 merge.ff                           = false      ✅（或 ❌ 已修复 / ❌ 未修复）
 docs/reference/git-workflow.md     UPDATED
 CLAUDE.md                          已有引用，跳过
-WARN                               （如有）照录 deploy_artifacts.py 的 WARN 行
+WARN <路径>                        （如有）照录 stdout 的 WARN 行，并附 stderr 的找回命令
 ─────────────────────────────────────────────────────
 冲突决策摘要：
   [1/3] branches.protected/main 手改块 → 用户选择保留修改
@@ -234,8 +241,9 @@ WARN                               （如有）照录 deploy_artifacts.py 的 WA
 | `references/hook-templates.md` | 4 个 hook 的代码模板、块 ID 规范、hash 计算、多行写入技巧 | Step 6：生成 hooks 前 |
 | `references/acceptance-test.md` | 验收场景 bash 脚本、期望结果、结果表格格式 | Step 6.5：用户选 Y 时读取 |
 | `references/lock-file-format.md` | lock 文件 YAML 格式 | Step 9：写入 lock 文件前 |
-| `references/workflow_resolve.py` | 单一解释器（三级查找、推断、`resolved.env`） | Step 7：由 deploy_artifacts.py 调用 |
-| `references/deploy_artifacts.py` | 一次性部署入口 | Step 6 前 / Step 7：直接执行 |
-| `references/git-workflow-template.md` | 工作流文档模板（含占位符与自填区） | Step 7：由 render_docs.py 读取 |
-| `references/render_docs.py` | 文档渲染 | Step 7：由 deploy_artifacts.py 调用 |
-| `references/merge-script-template.sh` | 标准合并脚本模板 | Step 7：由 deploy_artifacts.py 调用 |
+| `references/workflow_resolve.py` | 单一解释器（三级查找、推断、`resolved.env`） | 由 deploy_artifacts.py 调用 |
+| `references/deploy_artifacts.py` | 一次性部署入口 | Step 6.0：直接执行（仅此一次，Step 7 沿用其输出） |
+| `references/git-workflow-template.md` | 工作流文档模板（含占位符与自填区） | 由 deploy_artifacts.py 经 render_docs.render 读取 |
+| `references/render_docs.py` | 文档渲染 | 由 deploy_artifacts.py 调用 |
+| `references/render_merge_script.py` | 合并脚本渲染 | 由 deploy_artifacts.py 调用 |
+| `references/merge-script-template.sh` | 标准合并脚本模板 | 由 render_merge_script.py 读取 |

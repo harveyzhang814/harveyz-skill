@@ -201,6 +201,7 @@ while IFS=' ' read -r local_ref local_sha remote_ref remote_sha; do
 ```
 
 **tag 检查 MANAGED 块（`pre-push/tags`，仅当 `tags.enforce: true`）：**
+此块的 `<allowed_patterns>` 是 tag 命名模式，取配置 `tags.allowed_patterns`（`resolved.env` 不含）。
 ```sh
 # --- BEGIN MANAGED: pre-push/tags (hash:<hash>) ---
         refs/tags/*)
@@ -277,6 +278,8 @@ if [ "$MATCHED" -eq 0 ]; then
 fi
 # --- END MANAGED: post-checkout/branch-naming ---
 ```
+
+占位映射：`<allowed_patterns>` = `resolved.env` 的 `naming.1..n`（按编号）；exempt 列表 = `naming_exempt`（空格分隔）。
 
 `exempt` 列表生成 case 模式（`|` 分隔）；`allowed_patterns` 逐条 grep。post-checkout 仅警告不阻断（`exit 0`，不 `exit 1`）。
 
