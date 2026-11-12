@@ -1,7 +1,5 @@
 {
   "title": "",
   "pack": "devflow",
-  "agent_canvas": false,
-  "integration_branch": "",
-  "merge_command": ""
+  "agent_canvas": false
 }

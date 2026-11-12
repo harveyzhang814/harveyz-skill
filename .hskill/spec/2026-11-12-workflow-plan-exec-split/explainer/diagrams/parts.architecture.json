@@ -1,0 +1,33 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "谁解释 git 策略，谁只读结果",
+    "output": "diagrams/parts.html",
+    "locale": "zh-CN",
+    "quality_profile": "showcase"
+  },
+  "components": [
+    { "id": "config", "type": "database", "label": "workflow-config.yml", "sublabel": "人写的规矩", "pos": [40, 250], "size": [170, 64] },
+    { "id": "interp", "type": "backend", "label": "init-workflow", "sublabel": "唯一解释者", "tag": "部署时运行一次", "pos": [300, 236], "size": [170, 92] },
+    { "id": "doc", "type": "frontend", "label": "git-workflow.md", "sublabel": "给人看", "pos": [580, 60], "size": [170, 60] },
+    { "id": "resolved", "type": "database", "label": "resolved.env", "sublabel": "解释结果", "pos": [580, 190], "size": [170, 60] },
+    { "id": "hooks", "type": "security", "label": "git hooks", "sublabel": "拦截手动合并", "pos": [580, 320], "size": [170, 60] },
+    { "id": "script", "type": "backend", "label": "合并脚本", "sublabel": "merge-to-<目标>.sh", "pos": [580, 450], "size": [170, 60] },
+    { "id": "compose", "type": "backend", "label": "compose-agentsmd", "sublabel": "生成 AGENTS.md", "pos": [880, 120], "size": [170, 60] },
+    { "id": "mw", "type": "backend", "label": "manage-worktree", "sublabel": "按任务执行", "pos": [880, 320], "size": [170, 60] }
+  ],
+  "boundaries": [
+    { "kind": "region", "label": "仓库内产物（同一次部署生成，提交入库）", "wraps": ["doc", "resolved", "hooks", "script"] }
+  ],
+  "connections": [
+    { "id": "parse", "from": "config", "to": "interp", "label": "只有它解析", "variant": "emphasis" },
+    { "id": "gen-doc", "from": "interp", "to": "doc" },
+    { "id": "gen-env", "from": "interp", "to": "resolved", "variant": "emphasis" },
+    { "id": "gen-hooks", "from": "interp", "to": "hooks" },
+    { "id": "gen-script", "from": "interp", "to": "script" },
+    { "id": "read-compose", "from": "resolved", "to": "compose", "label": "只读", "variant": "dashed" },
+    { "id": "read-mw", "from": "resolved", "to": "mw", "label": "只读", "variant": "dashed" },
+    { "id": "call-script", "from": "mw", "to": "script", "label": "「合并」调用", "variant": "emphasis" }
+  ]
+}

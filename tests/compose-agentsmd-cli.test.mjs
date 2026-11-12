@@ -195,12 +195,12 @@ test('near-miss directives and invalid @{} in a local template exit 2 and write 
     assert.equal(runCheck({ root: r, packsDir }).code, 2)
   }
 })
-test('init then setting only title: generate exits 2 naming the empty required field and writes nothing', () => {
+test('init then setting only title: generate exits 2 telling to run init-workflow (no resolved.env) and writes nothing', () => {
   const r = tmp(); runInit({ root: r })
   const file = join(cfgDir(r), 'config.json')
   writeFileSync(file, JSON.stringify({ ...JSON.parse(readFileSync(file, 'utf8')), title: 'Proj' }))
   const g = runGenerate({ root: r, packsDir: fileURLToPath(new URL('../skills/devflow/compose-agentsmd/assets/packs', import.meta.url)) })
-  assert.equal(g.code, 2); assert.match(g.errors[0], /integration_branch/)
+  assert.equal(g.code, 2); assert.match(g.errors[0], /先运行 init-workflow/)
   assert.equal(existsSync(join(r, 'AGENTS.md')), false)
 })
 test('unexpected I/O errors map to exit 2 with a message, not a thrown stack', () => {

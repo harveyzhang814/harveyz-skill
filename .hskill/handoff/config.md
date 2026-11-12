@@ -11,7 +11,7 @@ workflow: |
   - commit-msg hook 强制 Conventional Commits：
     feat | fix | chore | docs | refactor | test | style | perf
     （注意是 docs 不是 doc——doc(...) 会被 hook 拒绝。）
-  - 规范全文：docs/reference/git-workflow.md（自动生成，勿手改）
+  - 规范全文：docs/reference/git-workflow.md（自动生成，自填区以外勿手改）
   工作区已经建好（frontmatter 的 workspace_mode 为 shared-worktree 或 same-workspace，
   两种模式都带 worktree 绝对路径与 branch 分支名）。**不建 worktree、不建分支**，按 `manage-worktree` 的「进入」进入这个已有路径。
   到位后核对：
@@ -27,7 +27,8 @@ workflow: |
   worktree 路径习惯：仓库内 .worktrees/<分支名，/ 换成 +>。.claude/worktrees/ 下已有的目录是
   历史遗留，不动。
   **完工前不要合并到 staging**，最后一次性合并；**合并只由交出方做**，接手方与验收方都不合。
-  交出方从交接分支的 worktree 运行 scripts/merge-to-staging.sh 合并，不手动 git merge 到 staging。
+  合并时交出方在交接工作区里调用 manage-worktree「合并」；未安装带「合并」的版本时，在同一工作区运行
+  scripts/merge-to-staging.sh。不要手动 git checkout staging && git merge——缺 Merge-Via 标记的合并会被 hook 拒绝。
   同一时刻只有一方在这个工作区里动手——你做完就停手，交出方才进来验收。
   计划由交出方在交接前用 develop-plan 写好并经用户确认；接手方按计划开头的 `REQUIRED SUB-SKILL` 执行，不重写计划。执行技能若建议新建 worktree，一律跳过：工作区已经建好。
 

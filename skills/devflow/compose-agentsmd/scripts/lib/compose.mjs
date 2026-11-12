@@ -4,8 +4,8 @@ import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { createHash } from 'node:crypto'
 import { fileURLToPath } from 'node:url'
-import { ConfigError, loadSkeleton, loadPacks, resolveConfig } from './config.mjs'
-import { renderTemplate } from './template.mjs'
+import { ConfigError, INJECTED_PARAMS, loadSkeleton, loadPacks, resolveConfig, readResolvedEnv } from './config.mjs'
+import { renderTemplate, templateParams } from './template.mjs'
 
 const CONFIG_TEMPLATE = fileURLToPath(new URL('../../assets/config.template.json', import.meta.url))
 const HEADER = /^<!-- compose-agentsmd: packs=(\S*) sha256=([0-9a-f]{64}); generated from \.hskill\/compose-agentsmd\/, do not edit -->$/
@@ -45,6 +45,20 @@ export function composeText({ root, packsDir }) {
   const packs = loadPacks({ packsDir, localPacksDir: p.localPacks })
   const { params, slots } = resolveConfig({ config, skeleton, packs })
   const disabled = new Set(config.disabled_slots ?? [])
+
+  // 只有被采用的模板引用了注入名时才要求 resolved.env（Spec 5.6）；缺失或无 merge_target 抛 ConfigError
+  const needsResolved = slots.some(s => {
+    if (s.kind !== 'standard' || !s.pack || (s.id === 'release-acceptance' && !params.agent_canvas)) return false
+    const file = join(packs.get(s.pack).dir, `${s.id}.md`)
+    return templateParams(readFileSync(file, 'utf8'), file).some(n => INJECTED_PARAMS.includes(n))
+  })
+  if (needsResolved) {
+    const env = readResolvedEnv(resolve(root))
+    const target = (env.get('merge_target') ?? '').trim()
+    if (target === '') throw new ConfigError('resolved.env 没有 merge_target，无法确定集成分支；请先运行 init-workflow（并确认规则里有可合并的 base.feature）')
+    params.integration_branch = target
+    params.merge_script = (env.get('merge_script') ?? '').trim() || `scripts/merge-to-${target}.sh`
+  }
 
   const blocks = []
   const used = new Map()

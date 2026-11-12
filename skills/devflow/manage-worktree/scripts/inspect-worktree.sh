@@ -3,21 +3,37 @@
 #
 # 用法：inspect-worktree.sh [--path <目录>] [--type <分支类型>] [--branch <分支名>]
 #   --path    待检测目录，默认当前目录
-#   --type    要开的分支类型，默认 feature（用来从规则文件里推出基线分支）
+#   --type    要开的分支类型，默认 feature（用来从 resolved.env 取基线分支）
 #   --branch  要为之建 worktree 的分支名，只用来算 default_path；不给时 default_path 为空
 #
 # stdout 每行一个 key=value，键依次为：
-#   root linked branch detached rule_file integration is_integration base default_path
-#   hooks reusable verdict
+#   root linked branch detached resolved integration is_integration base merge_target
+#   merge_script default_path hooks reusable verdict
+# resolved 是 resolved.env 的相对路径，未部署时为 missing；merge_target / merge_script 在
+# resolved.env 没有这两个键（未配置合并目标）时为空。
 # reusable=yes 表示除 hooks 外全部通过（可直接复用为任务工作区）。
 # 每个未通过的项另起一行 reason=<代码>，代码取
 #   not-root | not-linked | detached | integration-branch | hooks-missing
 #
-# 退出码：0 pass / 1 fail / 2 用法错误 / 3 目标不是 git 目录（此时 verdict=n/a）
+# base 取自 resolved.env 的 base.<--type>；该键不存在时为空（不退回默认分支），
+# 调用方据此不新建 worktree。
+#
+# 退出码：0 pass / 1 fail / 2 用法错误 / 3 目标不是 git 目录（此时 verdict=n/a）/
+#         4 resolved.env 不可用，只输出三行 resolved、verdict=n/a、reason：
+#           reason=workflow-not-deployed  仓库未部署（resolved=missing）
+#           reason=resolved-invalid       文件在但缺 integration_branches 或其值为空
+#                                         （resolved=<相对路径>）
+# 非 git 先于退出码 4 判断。
+#
+# 策略来源：两步读取 resolved.env，不解析任何规则文件、不 source 它（逐行读取）。
+#   ① 引导：依次取目标工作区根、主工作树根下的 resolved.env，用第一份得到 base.<--type>
+#      （没有则 base.feature，再没有则第一个集成分支，只用于定位②）；
+#   ② 权威：git show <基线分支>:.hskill/init-workflow/resolved.env 的内容为准。
+# 主工作树停在别的分支、或目标工作区早于部署，都不影响取值。
 #
 # 只读：不建、不删、不改任何 worktree、分支或配置。
-# 纯 bash + git + awk + coreutils，无外部依赖——这个脚本要在任意仓库里能跑
-# （兼容 macOS 自带的 bash 3.2 与 BSD awk）。
+# 纯 bash + git + coreutils，无外部依赖——这个脚本要在任意仓库里能跑
+# （兼容 macOS 自带的 bash 3.2）。
 
 set -uo pipefail
 
@@ -54,117 +70,74 @@ common_dir="$(cd "$root" && cd "$(git rev-parse --git-common-dir)" && pwd -P)"
 if [[ "$git_dir" != "$common_dir" ]]; then linked="yes"; else linked="no"; fi
 main_root="$(dirname "$common_dir")"   # 主工作树的根，不是当前链接 worktree 的根
 
-# ── default_path：<主工作树根>/.worktrees/<分支名，/ 换成 +> ─────────────────
-default_path=""
-[[ -n "$want_branch" ]] && default_path="$main_root/.worktrees/${want_branch//\//+}"
-
 # ── 当前分支；detached 时 branch 为空 ───────────────────────────────────────
 branch="$(git -C "$root" symbolic-ref --short -q HEAD 2>/dev/null || true)"
 if [[ -z "$branch" ]]; then detached="yes"; else detached="no"; fi
 
-# ── 默认分支：origin/HEAD 指向的分支，否则依次取存在的 main、master，都没有则为空 ──
-default_branch=""
-origin_head="$(git -C "$root" symbolic-ref -q refs/remotes/origin/HEAD 2>/dev/null || true)"
-if [[ -n "$origin_head" ]]; then
-  default_branch="${origin_head#refs/remotes/origin/}"
-else
-  for cand in main master; do
-    if git -C "$root" show-ref --verify --quiet "refs/heads/$cand"; then
-      default_branch="$cand"
-      break
-    fi
-  done
-fi
-
-# ── 规则文件：按顺序取第一个存在的 ──────────────────────────────────────────
-rule_file="none"
-for cand in .hskill/init-workflow/workflow-config.yml workflow-config.yml .claude/workflow-config.yml; do
-  if [[ -f "$root/$cand" ]]; then rule_file="$cand"; break; fi
-done
-
-# 按缩进解析 branches: → protected: 下的 "- name:" 与其后的 merge_from 列表。
-# 只认条目这一层的 name / merge_from 键（iind 为条目短横线的缩进，kind 为条目内键的缩进），
-# 条目下更深层的 name:（如 reviewers 列表）不当作分支名。
-# mode=names 逐行输出受保护分支名；mode=base 输出第一个 merge_from 含 <type>/* 的分支名。
-parse_rules() { # parse_rules <names|base> <文件>
-  awk -v mode="$1" -v want="$type/*" '
-    function clean(s) {
-      sub(/\r$/, "", s)
-      sub(/[ \t]+#.*$/, "", s)
-      sub(/^[ \t]+/, "", s)
-      sub(/[ \t]+$/, "", s)
-      gsub(/"/, "", s)
-      gsub(/\047/, "", s)
-      return s
-    }
-    function item(v) {
-      if (mode == "base" && !done && cur != "" && v == want) { print cur; done = 1 }
-    }
-    {
-      line = $0
-      sub(/\r$/, "", line)
-      if (line ~ /^[ \t]*(#|$)/) next
-      match(line, /^[ \t]*/); ind = RLENGTH
-      text = substr(line, ind + 1)
-      if (ind == 0 && text !~ /^-/) {
-        inb = (text ~ /^branches:/); inprot = 0; inmf = 0
-        next
-      }
-      if (!inb) next
-      if (!inprot) {
-        if (text ~ /^protected:/) { inprot = 1; pind = ind; iind = -1; kind = -1 }
-        next
-      }
-      if (ind <= pind && text !~ /^-/) { inprot = 0; inmf = 0; next }
-      if (text ~ /^-/ && (iind < 0 || ind == iind)) {   # 新的受保护分支条目
-        iind = ind
-        match(text, /^-[ \t]*/)
-        kind = ind + RLENGTH
-        text = substr(text, RLENGTH + 1)
-        ind = kind; cur = ""; inmf = 0
-      }
-      if (ind == kind && text ~ /^name:/) {
-        sub(/^name:/, "", text)
-        cur = clean(text); inmf = 0
-        if (mode == "names" && cur != "") print cur
-        next
-      }
-      if (ind == kind && text ~ /^merge_from:/) {
-        sub(/^merge_from:/, "", text)
-        text = clean(text)
-        if (text ~ /^\[.*\]$/) {            # 行内写法 [a, "b/*"]
-          inmf = 0
-          text = substr(text, 2, length(text) - 2)
-          n = split(text, parts, ",")
-          for (i = 1; i <= n; i++) item(clean(parts[i]))
-        } else {
-          inmf = 1
-        }
-        next
-      }
-      if (inmf && text ~ /^-/) {
-        sub(/^-[ \t]*/, "", text)
-        item(clean(text))
-        next
-      }
-      inmf = 0
-    }
-  ' "$2"
+# ── resolved.env 的逐行读取：env_get <键> <文本>，键不存在返回 1 ───────────────
+# 只认行首 key=value（第一个 = 切分），# 开头为注释；不 source、不 eval。
+env_get() {
+  local key="$1" line
+  while IFS= read -r line; do
+    line="${line%$'\r'}"
+    case "$line" in ''|'#'*) continue ;; esac
+    if [[ "${line%%=*}" == "$key" ]]; then printf '%s' "${line#*=}"; return 0; fi
+  done <<< "$2"
+  return 1
 }
 
-# ── integration / base ─────────────────────────────────────────────────────
-integration=""
-base=""
-if [[ "$rule_file" != "none" ]]; then
-  while IFS= read -r name; do
-    [[ -z "$name" ]] && continue
-    integration="${integration:+$integration }$name"
-  done < <(parse_rules names "$root/$rule_file")
-  base="$(parse_rules base "$root/$rule_file" | head -1)"
+resolved_rel=".hskill/init-workflow/resolved.env"
+
+# ── ① 引导：目标工作区根、主工作树根下第一份 resolved.env → 基线分支名 ──────────
+boot=""
+for dir in "$root" "$main_root"; do
+  if [[ -f "$dir/$resolved_rel" ]]; then boot="$(cat "$dir/$resolved_rel")"; break; fi
+done
+# 定位用的分支只取自这份文件：base.<--type>，没有则 base.feature，再没有则第一个集成分支；
+# 不按默认分支猜。文件在、却连集成分支都没有 → 视为无效。
+invalid() {
+  echo "resolved=$resolved_rel"
+  echo "verdict=n/a"
+  echo "reason=resolved-invalid"
+  exit 4
+}
+boot_base=""
+if [[ -n "$boot" ]]; then
+  boot_base="$(env_get "base.$type" "$boot" || true)"
+  [[ -z "$boot_base" ]] && boot_base="$(env_get base.feature "$boot" || true)"
+  if [[ -z "$boot_base" ]]; then
+    boot_int="$(env_get integration_branches "$boot" || true)"
+    boot_base="${boot_int%% *}"
+  fi
+  [[ -z "$boot_base" ]] && invalid
 fi
-# 没有规则文件（或规则文件里解析不出受保护分支）时，保守地把默认分支当作集成分支
-[[ -z "$integration" ]] && integration="$default_branch"
-[[ -z "$base" ]] && base="$default_branch"
+
+# ── ② 权威：基线分支上已提交的那份；取不到视为未部署 ─────────────────────────
+env_text=""
+if [[ -n "$boot" && -n "$boot_base" ]]; then
+  env_text="$(git -C "$root" show "$boot_base:$resolved_rel" 2>/dev/null || true)"
+fi
+if [[ -z "$env_text" ]]; then
+  echo "resolved=missing"
+  echo "verdict=n/a"
+  echo "reason=workflow-not-deployed"
+  exit 4
+fi
+
+# ── integration / base / merge / default_path：全部来自权威那份 ───────────────
+# 没有集成分支就判断不了 is_integration，整份视为无效；base.<--type> 缺失时 base 为空
+# （调用方据此不新建），绝不退回默认分支。
+integration="$(env_get integration_branches "$env_text" || true)"
+[[ -z "${integration// /}" ]] && invalid
+base="$(env_get "base.$type" "$env_text" || true)"
+merge_target="$(env_get merge_target "$env_text" || true)"
+merge_script="$(env_get merge_script "$env_text" || true)"
+worktree_dir="$(env_get worktree_dir "$env_text" || true)"
+worktree_dir="${worktree_dir:-.worktrees}"
+
+# default_path：<主工作树根>/<worktree_dir>/<分支名，/ 换成 +>；不给 --branch 时为空
+default_path=""
+[[ -n "$want_branch" ]] && default_path="$main_root/$worktree_dir/${want_branch//\//+}"
 
 is_integration="no"
 if [[ -n "$branch" ]]; then
@@ -204,10 +177,12 @@ echo "root=$root"
 echo "linked=$linked"
 echo "branch=$branch"
 echo "detached=$detached"
-echo "rule_file=$rule_file"
+echo "resolved=$resolved_rel"
 echo "integration=$integration"
 echo "is_integration=$is_integration"
 echo "base=$base"
+echo "merge_target=$merge_target"
+echo "merge_script=$merge_script"
 echo "default_path=$default_path"
 echo "hooks=$hooks"
 echo "reusable=$reusable"
