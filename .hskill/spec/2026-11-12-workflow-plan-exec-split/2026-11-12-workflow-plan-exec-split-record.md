@@ -160,6 +160,45 @@
 - **决定：** pre-commit 靠解析 `MERGE_MSG` 判断合并来源；标准脚本用 `update-ref`。方案审查前先核实两者关系，结果可能影响 hook 设计。
 - **状态：** 已批准（question-me 摘要确认）
 - **来源：** Agent 推断。
+- **核实结果：** 标准脚本以 `commit-tree` + `update-ref` 生成合并提交，不触发任何 hook，提交信息带 `Merge-Via: merge-to-staging.sh`（读代码，`scripts/merge-to-staging.sh:317`）。依 git 文档（未实测）：干净的 `git merge` 运行 `commit-msg`，`pre-commit` 只在存在 `pre-merge-commit` 时被连带运行；各项目都没有该 hook，故生成的 pre-commit 合并来源检查只在冲突后手动 commit 时生效。本会话处于 worktree 隔离，无法在 `/tmp` 实测，实测排入计划首个任务并写进验收标准。
+
+### D30 解释结果在部署时写成文件
+
+- **决定：** init-workflow 部署时把解释结果写入仓库内固定文件 `.hskill/init-workflow/resolved.env`（`key=value`，提交入库）；文档、hooks、标准合并脚本与该文件出自同一次解释；manage-worktree 只读该文件，不再解析配置。
+- **状态：** 已批准
+- **来源：** 用户选择——方案 C1：a 部署时写成文件 / b 运行时调用规划侧解析脚本。答复：“C1：a”。批准依据：本条答复。
+
+### D31 没有解释结果文件时 manage-worktree 停下
+
+- **决定：** 仓库没有 `resolved.env` 时，manage-worktree 停下并提示先运行 init-workflow，不保留旧解析作过渡。
+- **状态：** 已批准
+- **来源：** 用户选择——方案 C1b：a 过渡期保留旧解析并警告 / b 直接停下。答复：“C1b：b”。
+- **代价（已告知）：** 新版 manage-worktree 装机后，未重新部署 init-workflow 的项目中 devflow 全部停下，直到重新部署；装机时机须与 D27 一并安排。
+
+### D32 项目自填区为文档内保留块
+
+- **决定：** 生成的 `git-workflow.md` 末尾设 `<!-- BEGIN PROJECT NOTES -->` / `<!-- END PROJECT NOTES -->`，重新渲染时原样保留两标记之间的内容。
+- **状态：** 已批准
+- **来源：** 用户选择——方案 C2：a 文档内保留块 / b 单独手写文件。答复：“C2：a”。
+
+### D33 合并前项目检查在配置中声明
+
+- **决定：** 配置新增 `merge.pre_checks`（命令列表，`{target}` 占位），部署时渲染进标准脚本的 MANAGED 块，按序执行，任一失败即不合并。
+- **状态：** 已批准
+- **来源：** 用户选择——方案 C3：a 配置声明 / b 约定目录。答复：“C3a”。
+
+### D34 以提交标记拦截不经脚本的合并
+
+- **决定：** 由配置生成 commit-msg 与 pre-push 拦截：在合并目标分支上做合并而提交信息没有 `Merge-Via: <脚本名>` 即拒绝；推送合并目标分支时检查同一标记。pre-commit 按来源检查合并的逻辑只保留给不走脚本的受保护分支。
+- **状态：** 已批准
+- **来源：** 用户选择——方案 C4：a 认标记行 / b 拦截所有手动合并。答复：“C4a”。
+
+### D35 compose-agentsmd 不再手填集成分支与合并方式
+
+- **决定：** compose-agentsmd 的 devflow 包删除 `merge_command` 参数，合并写法固定为“调用 manage-worktree「合并」”；`integration_branch` 改为生成时从 `resolved.env` 读取，文件缺失时报错并提示先运行 init-workflow。
+- **状态：** 已批准
+- **来源：** 用户选择——问题：“compose-agentsmd 这两个参数怎么处理？”选项：A 本轮一起改 / B 只改合并写法 / C 不动。答复：“A”。
+- **依据：** compose-agentsmd 0.1.0 已合入 staging，两个必填参数是集成分支与合并方式的第三处手填副本；harveyz-skill 与 agent-canvas 都尚未部署它。
 
 ## 未决事项
 
