@@ -1,0 +1,7 @@
+{
+  "name": "beta",
+  "slots": ["flow-steps"],
+  "params": {
+    "branch": { "type": "string", "required": true }
+  }
+}

@@ -1,0 +1,12 @@
+[
+  { "id": "overview", "kind": "description", "heading": null },
+  { "id": "flow-summary", "kind": "standard", "heading": null },
+  { "id": "principles", "kind": "description", "heading": "## 项目原则" },
+  { "id": "instruction-sources", "kind": "standard", "heading": null },
+  { "id": "platform-fallbacks", "kind": "standard", "heading": null },
+  { "id": "platform-adaptation", "kind": "description", "heading": "## 平台适配" },
+  { "id": "repo-env", "kind": "description", "heading": "## 仓库环境" },
+  { "id": "flow-steps", "kind": "standard", "heading": null },
+  { "id": "release-acceptance", "kind": "standard", "heading": null },
+  { "id": "other", "kind": "description", "heading": "## 其他约定" }
+]
