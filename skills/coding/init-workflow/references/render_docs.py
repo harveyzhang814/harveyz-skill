@@ -5,72 +5,11 @@ init-workflow Step 7 渲染器
 """
 import sys, re, os
 
-def load_config(path):
-    """简单 YAML 解析（只处理此 skill 使用的字段，无需完整 YAML 库）"""
-    content = open(path).read()
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from workflow_resolve import load_config, resolve  # noqa: E402
 
-    def extract_list_under(key, text):
-        """提取某个 key 下的列表项（- value 或 - "value"）"""
-        pattern = rf'{re.escape(key)}:\s*\n((?:[ \t]+- .+\n?)+)'
-        m = re.search(pattern, text)
-        if not m:
-            # 尝试行内列表 [a, b, c]
-            m2 = re.search(rf'{re.escape(key)}:\s*\[([^\]]+)\]', text)
-            if m2:
-                return [v.strip().strip('"') for v in m2.group(1).split(',')]
-            return []
-        return [re.sub(r'^[ \t]+- ', '', l).strip().strip('"')
-                for l in m.group(1).splitlines() if l.strip().startswith('- ')]
-
-    # 提取 branches.protected
-    protected = []
-    in_protected = False
-    current = None
-    for line in content.splitlines():
-        if re.match(r'\s+protected:', line):
-            in_protected = True
-            continue
-        if in_protected:
-            m = re.match(r'\s{4}- name:\s+(\S+)', line)
-            if m:
-                if current:
-                    protected.append(current)
-                current = {'name': m.group(1), 'allow_direct_commit': False, 'merge_from': []}
-            elif current and re.match(r'\s+allow_direct_commit:\s*(true|false)', line):
-                current['allow_direct_commit'] = 'true' in line
-            elif current and re.match(r'\s+merge_from:', line):
-                pass  # next lines are the list
-            elif current and re.match(r'\s{8}- ', line):
-                val = line.strip().lstrip('- ').strip('"')
-                current['merge_from'].append(val)
-            elif line.strip() and not line.startswith(' '):
-                in_protected = False
-    if current:
-        protected.append(current)
-
-    # branch_naming
-    naming_patterns = extract_list_under('allowed_patterns', content)
-    naming_exempt   = extract_list_under('exempt', content)
-
-    # commit_message
-    fmt_m = re.search(r'format:\s*(\S+)', content)
-    fmt = fmt_m.group(1) if fmt_m else 'none'
-    types = extract_list_under('types', content)
-    pattern_m = re.search(r'pattern:\s*"([^"]+)"', content)
-    regex_pattern = pattern_m.group(1) if pattern_m else ''
-    max_len_m = re.search(r'max_subject_length:\s*(\d+)', content)
-    max_len = int(max_len_m.group(1)) if max_len_m else 72
-
-    return {
-        'protected': protected,
-        'naming_patterns': naming_patterns,
-        'naming_exempt': naming_exempt,
-        'commit_format': fmt,
-        'commit_types': types,
-        'commit_regex': regex_pattern,
-        'max_subject_length': max_len,
-    }
-
+NOTES_BEGIN = '<!-- BEGIN PROJECT NOTES -->'
+NOTES_END = '<!-- END PROJECT NOTES -->'
 
 def branch_purpose(name):
     mapping = {
@@ -103,7 +42,7 @@ def pattern_purpose(prefix):
     return mapping.get(prefix, ('—', f'{prefix}example'))
 
 
-def render(config, template):
+def render(config, resolved, template):
     c = config
     protected = c['protected']
 
@@ -118,35 +57,22 @@ def render(config, template):
             if base in all_names:
                 merge_targets.add(base)
 
-    # 拓扑：逐级展开
-    def build_tree(root, depth=0):
-        b = next((x for x in protected if x['name'] == root), None)
-        if not b:
-            return ''
-        indent = '  ' * depth
-        lines = [indent + root]
-        for src in b['merge_from']:
+    # 拓扑：每个根分支写一次，来源逐级缩进展开；受保护分支的来源对齐在它名字下方
+    def build_tree(name, indent, seen):
+        lines = []
+        for src in next(x for x in protected if x['name'] == name)['merge_from']:
             src_base = src.rstrip('/*')
-            if src_base in all_names:
-                lines.append(build_tree(src_base, depth + 1))
+            if src_base in all_names and src_base not in seen:
+                lines.append(f'{indent}<- {src_base}')
+                lines += build_tree(src_base, indent + ' ' * 5, seen | {src_base})
             else:
-                lines.append('  ' * (depth + 1) + f'<- {src}')
-        return '\n'.join(l for l in lines if l)
+                lines.append(f'{indent}<- {src}')
+        return lines
 
     roots = [b['name'] for b in protected if b['name'] not in merge_targets]
     ascii_lines = []
     for r in roots:
-        for src in next(x for x in protected if x['name'] == r)['merge_from']:
-            src_base = src.rstrip('/*')
-            if src_base in all_names:
-                sub = next((x for x in protected if x['name'] == src_base), None)
-                ascii_lines.append(f'{r}')
-                ascii_lines.append(f'  <- {src_base}')
-                for subsrc in (sub['merge_from'] if sub else []):
-                    ascii_lines.append(f'        <- {subsrc}')
-            else:
-                ascii_lines.append(f'{r}')
-                ascii_lines.append(f'  <- {src}')
+        ascii_lines += [r] + build_tree(r, '  ', {r})
     topology_ascii = '\n'.join(ascii_lines) if ascii_lines else ' <- '.join(b['name'] for b in protected)
 
     # ── BRANCH_TABLE ───────────────────────────────────────────────
@@ -157,15 +83,27 @@ def render(config, template):
     for p in c['naming_patterns']:
         prefix = pattern_to_prefix(p)
         purpose, _ = pattern_purpose(prefix)
-        target_branch = next((b['name'] for b in protected if b['name'] not in roots), roots[0] if roots else '—')
+        # 与 resolved.env 一致：分支类型并入 base.<类型>；解释器没给出时不猜
+        target_branch = resolved['base'].get(prefix.rstrip('/'), '—')
         rows.append(f'| `{prefix}<名称>` | {purpose} | `{target_branch}` |')
     branch_table = '\n'.join(rows)
 
     # ── PROTECTION_RULES ──────────────────────────────────────────
     rule_lines = []
+    target = resolved['merge_target']
     for b in protected:
         sources = '、'.join(f'`{s}`' for s in b['merge_from'])
-        if b['allow_direct_commit']:
+        if b['name'] == target:
+            # 合并目标：pre-commit 只管直接提交；合并来源不再检查，只认合并脚本留下的标记
+            direct = ('直接提交时发出警告（不阻断）' if b['allow_direct_commit']
+                      else '禁止直接提交')
+            rule_lines.append(
+                f'- **`{target}`** — {direct}（`.githooks/pre-commit`）。'
+                f'合并只经 `{resolved["merge_script"]}` 进行，任何非集成分支都用它合并进来；'
+                f'合并提交须带 `{resolved["merge_trailer"]}` 行，缺少该行的合并提交由 '
+                f'`.githooks/commit-msg` 拒绝，推送时由 `.githooks/pre-push` 拒绝'
+                f'（远端同步合并 `Merge branch \'{target}\' of …` 除外）。')
+        elif b['allow_direct_commit']:
             rule_lines.append(f'- **`{b["name"]}`** — 直接提交时发出警告（不阻断）。合并来源建议为 {sources}。')
         else:
             rule_lines.append(f'- **`{b["name"]}`** — 禁止直接提交。只接受来自 {sources} 的合并。')
@@ -174,9 +112,56 @@ def render(config, template):
     # ── WORKFLOW EXAMPLES ─────────────────────────────────────────
     integration = next((b['name'] for b in protected if b['name'] not in roots), roots[0] if roots else 'staging')
     main_branch = roots[0] if roots else 'main'
-    checkout_ex = f'git checkout {integration}'
-    merge_ex     = f'git checkout {integration}\ngit merge feature/my-feature'
-    release_ex   = f'git checkout {main_branch}\ngit merge {integration}       # 或：git merge release/x.y.z\ngit push'
+    wt_dir = resolved['worktree_dir']
+
+    # 开始新工作：manage-worktree「准备」+ 未安装时的兜底命令（按基线分支分组）
+    by_base = {}
+    for t, base_branch in resolved['base'].items():
+        by_base.setdefault(base_branch, []).append(f'{t}/')
+    if not by_base:
+        by_base[integration] = []
+    fallback_lines = []
+    for base_branch, prefixes in by_base.items():
+        line = f'git worktree add {wt_dir}/<分支名，/ 换成 +> -b <分支> {base_branch}'
+        if prefixes:
+            line += '   # ' + ' '.join(prefixes)
+        fallback_lines.append(line)
+    start_section = (
+        '调用 `manage-worktree「准备」`建立并进入本任务的 worktree。'
+        '不要在主工作树里切换分支。\n\n'
+        '未安装 `manage-worktree` 时的兜底命令（基线分支按分支类型而定）：\n\n'
+        '```bash\n' + '\n'.join(fallback_lines) + '\n```'
+    )
+
+    # 合并到集成分支：有合并目标 → 合并脚本；否则保留通用 git merge
+    if target:
+        if resolved['pre_checks']:
+            checks = '\n'.join(f'{i}. `{cmd}`' for i, cmd in enumerate(resolved['pre_checks'], 1))
+            checks_text = (f'合并前依次执行以下检查（在被合并分支的 worktree 根目录运行，'
+                           f'`{{target}}` 即 `{target}`），任一失败即中止、不合并：\n\n{checks}')
+        else:
+            checks_text = '合并前检查：未配置（`merge.pre_checks` 为空）。'
+        merge_section = (
+            f'调用 `manage-worktree「合并」`，或在被合并分支的 worktree 里直接运行 '
+            f'`{resolved["merge_script"]}`。\n\n'
+            f'- 只更新本地 `{target}`，不会推送；`git push` 另行进行。\n'
+            f'- 禁止手动切到 `{target}` 再 `git merge`：合并提交必须带 '
+            f'`{resolved["merge_trailer"]}` 标记，缺少该标记的手动合并会被 hook 拒绝。\n\n'
+            + checks_text
+        )
+    else:
+        merge_section = (
+            f'在 `{integration}` 所在的工作区里合并（不要在主工作树里切换分支）：\n\n'
+            f'```bash\ngit merge <分支>\ngit push\n```'
+        )
+
+    # 发布到主分支：不切换主工作树，交给项目自己的发布流程
+    if integration != main_branch:
+        release_section = (f'把 `{integration}` 发布到 `{main_branch}` 由项目自己的发布流程负责'
+                           f'（如 `release-project`），不要为此在主工作树里切换分支。')
+    else:
+        release_section = ('发布由项目自己的发布流程负责（如 `release-project`），'
+                           '不要为此在主工作树里切换分支。')
 
     # ── NAMING_TABLE ──────────────────────────────────────────────
     naming_rows = ['| 前缀 | 适用场景 | 示例 |', '|------|---------|------|']
@@ -222,9 +207,38 @@ def render(config, template):
         faq.append(f'**Q：在 {integration} 上提交被拒绝怎么办？**\n'
                    f'A：你正在直接向 {integration} 提交。请新建分支，在新分支提交后再合并回 {integration}。')
     release_p = [p for p in c['naming_patterns'] if 'release' in p]
-    if release_p:
+    if release_p and target and target != main_branch:
+        faq.append(f'**Q：需要紧急热修复直接上 {main_branch} 怎么办？**\n'
+                   f'A：从 {main_branch} 切一个 `release/*` 分支，修复后按项目发布流程合并到 {main_branch}；'
+                   f'再在这个 `release/*` 分支的 worktree 里调用 `manage-worktree「合并」`'
+                   f'（或直接运行 `{resolved["merge_script"]}`）把修复带回 {target}，'
+                   f'不要手动 `git merge` 进 {target}。')
+    elif release_p and target:
+        faq.append(f'**Q：需要紧急热修复直接上 {main_branch} 怎么办？**\n'
+                   f'A：从 {main_branch} 切一个 `release/*` 分支，修复后在它的 worktree 里调用 '
+                   f'`manage-worktree「合并」`（或直接运行 `{resolved["merge_script"]}`）合并到 {main_branch}。')
+    elif release_p:
         faq.append(f'**Q：需要紧急热修复直接上 {main_branch} 怎么办？**\n'
                    f'A：从 {main_branch} 切一个 `release/*` 分支，修复后合并到 {main_branch}，再反向合并到 {integration}。')
+    if target:
+        faq.append(f'**Q：怎么把远端的 {target} 同步到本地？**\n'
+                   f'A：用快进同步：`git pull --ff-only`（或 `git merge --ff-only origin/{target}`）。'
+                   f'本仓库设置了 `merge.ff=false`，直接 `git merge origin/{target}` 会生成一个 '
+                   f'"Merge remote-tracking branch …" 合并提交，它不带 `{resolved["merge_trailer"]}` 行，'
+                   f'会被 commit-msg 拒绝（只放行 `Merge branch \'{target}\' of …` 形式的远端同步合并）。')
+        faq.append(f'**Q：手动合并被拒后怎么办？**\n'
+                   f'A：被 commit-msg 拒绝后合并仍处于进行中，先 `git merge --abort` 撤销，'
+                   f'再到被合并分支的 worktree 里运行 `{resolved["merge_script"]}`。'
+                   f'`git merge --ff-only <功能分支>` 这类快进不产生提交，本地不会被拦，'
+                   f'要到推送 {target} 时才被 pre-push 拒绝；快进只用于同步远端 {target}。')
+        faq.append(f'**Q：第一次推送 {target} 被拒怎么办？**\n'
+                   f'A：远端还没有 {target} 时，pre-push 只检查它的尖端；尖端若不是合并脚本产生的合并'
+                   f'（例如刚初始化、还没合并过任何分支），就会被拒。先用 `{resolved["merge_script"]}` '
+                   f'合并一个分支再推送即可；确认要原样发布时，执行一次 `git push --no-verify -u origin {target}`。')
+        faq.append(f'**Q：合并后 worktree 和分支怎么处理？**\n'
+                   f'A：确认不再需要后，在主工作树执行 `git worktree remove <worktree 路径>` 收掉工作区，'
+                   f'再 `git branch -d <分支>` 删除已合并的分支（`-d` 会拒绝删除尚未合并进当前分支的分支）。'
+                   f'交接中的工作区要等验收、合并都完成后再收。')
     faq_section = '\n\n'.join(faq)
 
     # ── 替换占位符 ─────────────────────────────────────────────────
@@ -232,14 +246,38 @@ def render(config, template):
     result = result.replace('{{BRANCH_TOPOLOGY_ASCII}}',    topology_ascii)
     result = result.replace('{{BRANCH_TABLE}}',             branch_table)
     result = result.replace('{{PROTECTION_RULES}}',         protection_rules)
-    result = result.replace('{{WORKFLOW_CHECKOUT_EXAMPLE}}', checkout_ex)
-    result = result.replace('{{WORKFLOW_MERGE_EXAMPLE}}',   merge_ex)
-    result = result.replace('{{WORKFLOW_RELEASE_EXAMPLE}}', release_ex)
+    result = result.replace('{{WORKFLOW_START_SECTION}}',   start_section)
+    result = result.replace('{{WORKFLOW_MERGE_SECTION}}',   merge_section)
+    result = result.replace('{{WORKFLOW_RELEASE_SECTION}}', release_section)
     result = result.replace('{{NAMING_TABLE}}',             naming_table)
     result = result.replace('{{NAMING_EXEMPT}}',            naming_exempt)
     result = result.replace('{{COMMIT_FORMAT_SECTION}}',    commit_section)
     result = result.replace('{{FAQ_SECTION}}',              faq_section + '\n\n' if faq_section else '')
     return result
+
+
+def _notes_span(text):
+    """返回 (标记之间内容的起点, 终点)；缺任一标记或顺序颠倒返回 None。"""
+    b = text.find(NOTES_BEGIN)
+    if b == -1:
+        return None
+    start = b + len(NOTES_BEGIN)
+    e = text.find(NOTES_END, start)
+    return None if e == -1 else (start, e)
+
+
+def carry_notes(existing, rendered):
+    """把现有文档自填区标记之间的内容逐字节搬入新渲染结果。
+
+    返回 (最终文本, 是否需要 WARN)。现有文件没有（完整的）标记且内容与新渲染不同
+    → 照旧覆盖并要求 WARN。
+    """
+    if existing is None:
+        return rendered, False
+    old, new = _notes_span(existing), _notes_span(rendered)
+    if old and new:
+        return rendered[:new[0]] + existing[old[0]:old[1]] + rendered[new[1]:], False
+    return rendered, existing != rendered
 
 
 if __name__ == '__main__':
@@ -248,14 +286,24 @@ if __name__ == '__main__':
     output_path   = sys.argv[3]
 
     config   = load_config(config_path)
-    template = open(template_path).read()
-    rendered = render(config, template)
+    resolved = resolve(config, config_path)
+    with open(template_path, encoding='utf-8') as f:
+        template = f.read()
+    rendered = render(config, resolved, template)
 
-    # 差量写入
-    existing = open(output_path).read() if os.path.exists(output_path) else None
-    if existing == rendered:
+    # 差量写入（newline='' 保持字节原样，自填区内容不被换行转换）
+    existing = None
+    if os.path.exists(output_path):
+        with open(output_path, encoding='utf-8', newline='') as f:
+            existing = f.read()
+    final, warn = carry_notes(existing, rendered)
+    if warn:
+        print(f'WARN {output_path} 没有项目自填区标记，现有内容已被覆盖；'
+              f'找回手改内容：git diff HEAD -- {output_path}')
+    if existing == final:
         print('UNCHANGED')
     else:
-        os.makedirs(os.path.dirname(output_path), exist_ok=True)
-        open(output_path, 'w').write(rendered)
-        print('UPDATED' if existing else 'NEW')
+        os.makedirs(os.path.dirname(output_path) or '.', exist_ok=True)
+        with open(output_path, 'w', encoding='utf-8', newline='') as f:
+            f.write(final)
+        print('UPDATED' if existing is not None else 'NEW')

@@ -2,7 +2,7 @@
 name: question-me
 description: "Pre-task requirement clarification — clarifies what the user wants before execution through one-question-at-a-time Q&A with a live decision tree, switching between exploring and defining modes, and ends with a self-contained summary for the user to confirm. After confirmation, routes the task by explicit criteria: stop, execute directly (no behavior change), execute test-first (small behavior change), or propose handing off to init-spec. Triggers: '/question-me', 'help me clarify this', 'question me before starting', 'let's define this first', 'clarify the requirements', 'help me think this through'. The current agent may propose it for ambiguous or complex requests (multiple conflicting goals, vague keywords like 'optimize/refactor/clean up', missing success criteria, unstated context assumptions), then wait for user confirmation."
 user_invocable: true
-version: "4.1.2"
+version: "4.3.2"
 ---
 
 # question-me — 执行前需求澄清
@@ -31,11 +31,8 @@ version: "4.1.2"
 - 需要成文 Spec 的任务 → 见「确认后的路由」，不自动交棒
 - 方案层面的比较（架构、核心机制）不在此做；被 init-spec 发起时留给其方案审查
 - 跨会话保存问答历史（每次会话独立）
-- 强制跑完全部 open 节点（用户可随时打断）
 - 问答结果写入文件（只在会话内输出摘要）
 - 子节点超过 1 层的预生成（孙节点等父节点答完再评估）
-- 跨分支远端节点的自动扫描（只扫同级兄弟）
-
 ---
 
 ## 初始化（run first）
@@ -43,7 +40,7 @@ version: "4.1.2"
 在问用户之前，先：
 1. 读取任务中提到的文件/目录，推断上下文
 2. 查 `git status`、近期 commit，了解当前进展
-3. 对能从代码/文档直接确认的问题，自行解答——不占用用户的问答配额
+3. 能从代码或文档直接确认的问题自行解答，不问用户
 4. 查看当前项目以外的个人文件、数据或网络之前，说明范围并由用户决定
 5. 调用方带来已知信息（如用户贴入的摘要）时，先按「结束摘要」的七个字段对照：已覆盖的不再提问，只补缺口；已知信息随新摘要一起请用户确认
 
@@ -133,18 +130,13 @@ C. 自定义...
 **用户原始需求：** 用户最初的请求原话，以及用户不在回答问题时主动提出的要求或修正（各附原话）
 **任务定位：** 探索 / 定义；路由：结束 / 直接执行 / TDD 执行 / 转 init-spec，附命中的判据（被 init-spec 发起时固定为交回）
 **澄清标准：** 六项各自的状态（已明确 / 待确认 / 不适用 + 原因）
-**决定：** 每条一项——节点 id、问题、提供过的选项、用户答复（保留原话）、来源；来源为 Agent 推断时附依据
+**决定：** 每条一项——节点 id、问题、提供过的选项、用户答复（保留原话）、来源（内容出自用户原始需求的标“用户原始需求”，其余 done 节点标“用户选择”，infer 节点标“Agent 推断”并附依据）
 **已查明事实：** 自查得到、构成决定依据的事实，附出处（路径或命令）
 **假设：** 未核实、由当前 agent 默认的前提
 **未决：** 用户明确留待以后的事项
 
 [确认请求]
 ```
-
-来源对应关系：
-- 「用户原始需求」字段的内容 → **用户原始需求**
-- `done` 节点 → **用户选择**
-- `infer` 节点 → **Agent 推断**
 
 摘要后以一句确认请求收尾；被 init-spec 发起时，写明确认后交回 init-spec。用户对摘要提出修改 → 继续澄清、更新摘要再请确认。
 
@@ -201,7 +193,7 @@ C. 自定义...
 | status | 含义 | 子节点 |
 |--------|------|--------|
 | `done` | 已答 | 可有可无；无子节点即为叶子 |
-| `open` | 待问（dep 已满足或无 dep） | 答完后评估 |
+| `open` | 待问 | 答完后评估 |
 | `infer` | 当前 agent 填默认值，不追问 | 无；在摘要中透明列出 |
 | `skip` | 兄弟答案使其无关，跳过 | 无 |
 
@@ -214,11 +206,11 @@ C. 自定义...
 **选题逻辑（每轮使用）：**
 > 从所有 `dep` 已满足（或无 `dep`）的 `open` 节点中，选被其他节点依赖次数最多的（影响面最大）；并列时按树中出现顺序选最早的
 
-dep 已满足的 `open` 节点必须问答或当场评估 infer，不能以「其他节点的答案已覆盖」为由跳过。
+dep 已满足的 `open` 节点必须问答或当场评估：答案已被其他节点覆盖的标 `infer`，并注明出自哪个节点；`skip` 只在兄弟扫描时标。
 
 **每次树更新后**立即重新渲染；首次渲染（第一问答完后）加 `--open`：
 ```bash
 echo '<决策树文本>' | python3 SKILL_DIR/scripts/render_tree.py /tmp/question-me-tree.html [--open]
 ```
 
-`SKILL_DIR` 是本 SKILL.md 所在的目录。
+`SKILL_DIR` 是本 SKILL.md 所在的目录。`--open` 在 Agent Canvas 节点里用画布面板打开，其他环境用系统浏览器；页面默认暗黑，右上角按钮切换明暗。

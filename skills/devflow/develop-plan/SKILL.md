@@ -2,7 +2,7 @@
 name: develop-plan
 description: "Turn an approved Spec or clear requirements into a multi-step implementation plan with exact files, interfaces, tests, and task dependencies, before coding. Use after init-spec approves a software Spec. Triggers: 'write an implementation plan', 'break this into tasks', 'make a plan for this spec'."
 user_invocable: true
-version: "0.5.0"
+version: "0.6.0"
 ---
 
 # 制定实施计划
@@ -166,4 +166,9 @@ git commit -m "feat: add specific feature"
 
 ### 5. 执行交接
 
-保存并自查后，提供计划链接，请用户确认计划符合意图，并在审阅完成前等待实施。确认后，项目指令对计划确认后的执行方式另有规定时按项目指令，否则直接使用 `superpowers:subagent-driven-development` 执行；仅当用户显式要求原生执行时，改用 `superpowers:executing-plans`。将所用技能写入计划开头的 `REQUIRED SUB-SKILL`，再调用它。
+保存并自查后，提供计划链接，请用户确认计划符合意图，并在审阅完成前等待实施。确认后先确定执行方：项目指令对此有规定时按项目指令，否则由本会话执行。再选定执行技能，写入计划开头的 `REQUIRED SUB-SKILL`：用户指定时按用户；否则按下列条件选择，并向用户说明依据。
+
+- `superpowers:subagent-driven-development`：由本会话执行（会话里已装着 Spec 与计划讨论）；或多数任务要读大量与后续任务无关的代码或输出；或存在较长的前置依赖链，且链上任务的测试不足以判定对错（如 skill 语义、安全、对外文案）。
+- `superpowers:executing-plans`：其余情况，典型是交给全新会话执行。
+
+由本会话执行时，写入后调用该技能。

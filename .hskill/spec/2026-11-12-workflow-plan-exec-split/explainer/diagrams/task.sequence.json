@@ -1,0 +1,43 @@
+{
+  "schema_version": 1,
+  "diagram_type": "sequence",
+  "meta": {
+    "title": "一个任务里，谁在什么时候调用 manage-worktree",
+    "output": "diagrams/task.html",
+    "locale": "zh-CN",
+    "column_fit": "spread",
+    "quality_profile": "showcase"
+  },
+  "participants": [
+    { "id": "user", "type": "external", "label": "用户", "sublabel": "做决定" },
+    { "id": "skills", "type": "backend", "label": "devflow skills", "sublabel": "规划与交接" },
+    { "id": "mw", "type": "backend", "label": "manage-worktree", "sublabel": "执行侧" },
+    { "id": "env", "type": "database", "label": "resolved.env", "sublabel": "基线分支上那份" },
+    { "id": "script", "type": "backend", "label": "合并脚本", "sublabel": "仓库内" },
+    { "id": "hooks", "type": "security", "label": "git hooks", "sublabel": "仓库内" }
+  ],
+  "segments": [
+    { "from": 150, "to": 380, "label": "建档与计划" },
+    { "from": 390, "to": 420, "label": "交接" },
+    { "from": 440, "to": 600, "label": "合并" },
+    { "from": 610, "to": 670, "label": "误操作" }
+  ],
+  "messages": [
+    { "id": "start", "from": "user", "to": "skills", "y": 160, "label": "要做新需求" },
+    { "id": "prepare", "from": "skills", "to": "mw", "y": 190, "label": "「准备」init-spec 建档前", "variant": "emphasis" },
+    { "id": "read-env", "from": "mw", "to": "env", "y": 220, "label": "读基线分支上的取值" },
+    { "id": "env-values", "from": "env", "to": "mw", "y": 248, "label": "基线 / worktree 目录", "variant": "return" },
+    { "id": "confirm-ask", "from": "mw", "to": "user", "y": 278, "label": "新建前确认一次" },
+    { "id": "confirm", "from": "user", "to": "mw", "y": 306, "label": "确认", "variant": "return" },
+    { "id": "path", "from": "mw", "to": "skills", "y": 336, "label": "工作区路径", "variant": "return" },
+    { "id": "prepare-again", "from": "skills", "to": "mw", "y": 366, "label": "「准备」develop-plan，锚点复用" },
+    { "id": "enter", "from": "skills", "to": "mw", "y": 404, "label": "「进入」handoff verify / accept" },
+    { "id": "say-merge", "from": "user", "to": "skills", "y": 452, "label": "说“合并”" },
+    { "id": "merge", "from": "skills", "to": "mw", "y": 482, "label": "「合并」", "variant": "emphasis" },
+    { "id": "run", "from": "mw", "to": "script", "y": 512, "label": "执行脚本" },
+    { "id": "result", "from": "script", "to": "mw", "y": 542, "label": "0 合并 / 1 出错 / 2 冲突", "variant": "return" },
+    { "id": "report", "from": "mw", "to": "user", "y": 576, "label": "报告结果", "variant": "return" },
+    { "id": "manual", "from": "user", "to": "hooks", "y": 622, "label": "手动 git merge 进 staging", "variant": "dashed" },
+    { "id": "reject", "from": "hooks", "to": "user", "y": 652, "label": "commit-msg 拒绝", "variant": "security" }
+  ]
+}

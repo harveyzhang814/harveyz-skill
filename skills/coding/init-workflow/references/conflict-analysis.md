@@ -47,15 +47,13 @@ for line in content.splitlines():
 # --- END MANAGED: <block-id> ---
 ```
 
-### Hash 计算
+### Hash 校验
 
 ```bash
-actual_hash=$(printf '%s' "<block_content>" | git hash-object --stdin | cut -c1-8)
+python3 <skill-path>/references/block_hash.py check .githooks/<hook>...
 ```
 
-`<block_content>` = BEGIN/END 标记之间的内容，去首尾空白。
-
-若 `actual_hash` 与标记里记录的 hash 不一致 → 用户手改了此块，记录为类型 C 冲突：
+hash 的定义见 `hook-templates.md`「MANAGED 块 hash 计算」，不要手算。输出 `MODIFIED <块 ID> <记录的 hash> <实际 hash>` 的块 → 用户手改了此块，记录为类型 C 冲突：
 
 ```
 [手改冲突] .githooks/pre-commit 的 MANAGED 块 branches.protected/main 被手动修改

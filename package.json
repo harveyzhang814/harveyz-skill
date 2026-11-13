@@ -1,6 +1,6 @@
 {
   "name": "harveyz-skill",
-  "version": "0.44.0",
+  "version": "0.45.0",
   "description": "Skill manager for Claude Code, Cursor, Codex, OpenClaw, Hermes, OpenCode, and Pi",
   "type": "module",
   "bin": {
@@ -27,6 +27,7 @@
     "skills/research/extract-cognition/",
     "skills/research/probe-session/",
     "skills/research/pdf-math-translate/",
+    "skills/research/translate-pdf/",
     "skills/research/clip-url/",
     "skills/research/explain-design/",
     "skills/feed/sync-xtimeline/",
@@ -80,6 +81,7 @@
     "skills/devflow/init-spec/",
     "skills/devflow/develop-plan/",
     "skills/devflow/manage-worktree/",
+    "skills/devflow/compose-agentsmd/",
     "tools/hub/",
     "tools/sync-agent/",
     "tools/browser-fetch/",

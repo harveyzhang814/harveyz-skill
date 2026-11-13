@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.45.0] - 2026-11-13
+
+### Changed
+- `compose-agentsmd` 0.2.1（devflow 模块包 2.1.0）：Step 5.3 不再把执行 skill 写死为 `superpowers:subagent-driven-development`，本会话执行与交接都改为按 `develop-plan` 的条件选定，交接文档写明所选 skill 及理由；接手方边界补充自行裁决只适用于不可修改项以外的问题。引用 `develop-plan` 时不再写死步骤号；高档路径名由“SDD”改为“spec 路径”，避免与 subagent-driven-development 的缩写混淆。已用旧包生成 AGENTS.md 的项目需重新生成
+- `manage-worktree` 0.2.1：列出调用方时不再写死它们的步骤号（原“develop-plan 第 1 步”“handoff 的 author 第 4 步”），改为按时机描述，调用方调整步骤编号时不会悄悄指错
+- `develop-plan` 0.6.0：计划确认后先按项目指令确定执行方（默认本会话），再按条件选执行技能并说明依据。本会话执行、多数任务要读大量与后续无关的代码或输出、或前置依赖链长且测试不足以判定对错时选 `superpowers:subagent-driven-development`；其余情况（典型是交给全新会话）选 `superpowers:executing-plans`。用户指定时按用户，不再只在用户显式要求时才用 `executing-plans`
+- 仓库 `CLAUDE.md` / `AGENTS.md`：交接时不再固定填 `superpowers:subagent-driven-development`，改为交出方按 develop-plan 的条件为全新会话选定执行技能，并在交接文档写明理由；补充执行技能的自行裁决只适用于不可修改项以外的问题，涉及接口签名、测试名称与断言、`Global Constraints` 的冲突一律停止并打回。取代 2026-11-08 决定记录中 D16 的“否则直接使用 SDD”与 D19 的“交接时同样使用 SDD”
+
+### Added
+- `sync-design` 5.4.0：`designSystem` 新增可选字段 `screenshot`（截图命令，占位符 `{url}`、`{out}`，可选 `{height}`）。生成后检查看主题时，对每个主题运行它截图再读图检查，截图只放临时目录；没登记时仍用宿主的浏览器或截图能力。在 agent-canvas 实测中，截图查出了守卫查不到的导航被截断、提示条压住模态边缘
+- `sync-design` 5.3.0：可选接入项目设计系统。manifest 登记 `config.designSystem`（目录、标准、令牌、组件样式、共用脚本、主题列表与切换方式、守卫命令、对比稿临时目录、缺口清单、`modes`），且本次模式在 `modes` 里时启用：稿子用相对路径引用令牌、组件样式和脚本，不再内联拷贝；每份稿子能切到每个主题，且每个主题都要看过；对本次写过的稿子跑项目守卫，0 违规才算完成；局部取舍先在临时目录做小对比视图请用户确认；标准里没有的规则登记到缺口清单，不在稿里自创。旧写法的稿子改到哪份就先转换哪份。未登记的项目行为不变。manifest 升到 version 6（只问一次是否登记设计系统），新增「配置设计系统」入口；`design_html.py check` 新增对相对路径 `<link>` / `<script src>` 指不到文件的报告
+
+### Fixed
+- `sync-design` 5.3.1：直接说“配置设计系统”时，manifest 的 `version` 没有升到 6，下次运行还会再问一次是否登记设计系统；现在配置写回时一并补上
+- `sync-design` 5.3.2：在 agent-canvas 首次实测后修两处。设计系统的标准、组件样式文件超过 4 万字符时，先列目录，再读通用规则和与本页面有关的章节，不再要求全量读（实测标准约 12 万字符）；登记标准缺口时，编号取本地所有分支上的最大号加一，避免和在自己分支上维护缺口清单的设计系统撞号；现有界面的做法与标准冲突、标准又没给替代时，同样按缺口处理，整页依赖缺口时不出稿
+- `capture-intent` 1.3.2：`skills-index.json` 里记录的 contentHash 与 SKILL.md 的任何历史内容都对不上，发版检查报 F8；升版本并写入真实 hash。同时刷新 `clean-git`、`release-project`、`sync-agent`、`sync-hotfix` 已落后于版本号的 contentHash/contentVersion，SKILL.md 内容不变
+
 ## [0.44.0] - 2026-11-09
 
 ### Added

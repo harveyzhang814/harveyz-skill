@@ -1,0 +1,9 @@
+{
+  "name": "alpha",
+  "slots": ["flow-summary", "instruction-sources", "flow-steps"],
+  "linked": [["flow-summary", "flow-steps"]],
+  "params": {
+    "branch": { "type": "string", "required": true },
+    "extra": { "type": "string", "default": "" }
+  }
+}

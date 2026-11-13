@@ -97,3 +97,22 @@ push_rules:
   block_force_push:
     - main
     - staging
+
+# ── 工作区（供 manage-worktree 与解释器使用）─────────────────────────────────
+#
+# dir: worktree 所在目录（相对主工作树根），路径为 <dir>/<分支名，/ 换成 +>
+# 缺省 = .worktrees；旧配置没有此节时按缺省值解释
+worktree:
+  dir: .worktrees
+
+# ── 合并（生成合并脚本 scripts/merge-to-<合并目标>.sh）───────────────────────
+#
+# 合并目标 = 第一个 merge_from 含 feature/* 的受保护分支（见 branches），无需在此配置
+# pre_checks: 合并前依次执行的命令，任一失败即中止；{target} 替换为合并目标分支；
+#             {script_dir} 替换为合并脚本所在目录（已带引号），用于调用放在合并脚本旁边的检查脚本
+#             在被合并分支的工作树根执行；[] = 不做合并前检查
+# 缺省 = []；旧配置没有此节时按缺省值解释
+merge:
+  pre_checks: []
+  # pre_checks:
+  #   - node {script_dir}/check-file-token-budget.js --changed-since {target}

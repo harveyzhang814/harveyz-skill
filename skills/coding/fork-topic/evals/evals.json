@@ -101,6 +101,102 @@
         { "id": "no-irrelevant", "source": "reply", "text": "prompt 中没有告警阈值、#ops 频道、仪表盘拆分这类与支线无关的主讨论内容" },
         { "id": "no-extrapolation", "source": "reply", "text": "prompt 中没有对话里不存在的约束、结论或推论" }
       ]
+    },
+    {
+      "id": 3,
+      "name": "fork-canvas-routes-think",
+      "prompt": "先运行 `bash <skill 目录>/../handoff/evals/fixtures/canvas-stub/setup.sh routed`（<skill 目录> 指本 skill 所在目录，handoff 是它的同级目录），它会打印三行：STUB_BIN、STUB_LOG、WORKTREE。本次运行里你执行的每一条画布命令（agent-canvas-ctl、agent-canvas-arrange）前面都必须加上 `PATH=<STUB_BIN>:$PATH`，例如 `PATH=<STUB_BIN>:$PATH agent-canvas-ctl whoami`，一条都不能漏——漏了就会打到真实画布上。你当前就在一个 Agent Canvas 节点里（用桩的 whoami 即可确认）。当前工作目录用 setup 打印的 WORKTREE。我们在讨论新的缓存方案。已经定了：用进程内 LRU，不上 Redis——Redis 被否决是因为单机部署、多一个运维依赖不值。我说过不接受引入新的外部服务。讨论中冒出一个支线：缓存失效策略到底用 TTL 还是事件驱动，这个要单独讨论。现有缓存实现在 src/cache/lru.js，之前关于失效的讨论记在 docs/adr/0007-cache.md。主讨论里“要不要给缓存加预热”这个决定得等它的结论。帮我把失效策略这个支线分出去。",
+      "expected_output": "在画布里：先 list-node-route-categories，再 describe-node-route-category think，然后 create-routed-pty-node --category think，--params 恰好含 describe 列出的全部字段，--description 按 describe 的段落写，不带 --message；put 新节点；把 prompt 写进仓库之外的临时文件后 send <新节点> --file；不调用 link-nodes；发出的 prompt 要求交回可贴回主讨论的结论；回复说明派给了哪个节点与 messageId。断言全部走 transcript：这条 eval 测的是调用了哪些命令、传了什么参数，证据在执行轨迹里。画布命令全部由桩应答，桩的调用日志（STUB_LOG）可作旁证。",
+      "files": [
+        "../handoff/evals/fixtures/canvas-stub/setup.sh"
+      ],
+      "frozen": "2026-11-11",
+      "assertions": [
+        {
+          "id": "routed-create",
+          "source": "transcript",
+          "text": "调用了 create-routed-pty-node 且带 --category think"
+        },
+        {
+          "id": "params-complete",
+          "source": "transcript",
+          "text": "--params 恰好包含 describe-node-route-category think 列出的全部字段"
+        },
+        {
+          "id": "sent-prompt",
+          "source": "transcript",
+          "text": "调用 send --file 把 prompt 发给新节点，临时文件不在当前仓库目录内"
+        },
+        {
+          "id": "no-link",
+          "source": "transcript",
+          "text": "没有调用 link-nodes"
+        },
+        {
+          "id": "return-requested",
+          "source": "transcript",
+          "text": "发出的 prompt 要求接手方交回可贴回主讨论的结论"
+        },
+        {
+          "id": "reports-node",
+          "source": "transcript",
+          "text": "回复说明派给了哪个节点与 messageId"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "name": "fork-canvas-old-app-fallback",
+      "prompt": "先运行 `bash <skill 目录>/../handoff/evals/fixtures/canvas-stub/setup.sh old-app`（<skill 目录> 指本 skill 所在目录，handoff 是它的同级目录），它会打印三行：STUB_BIN、STUB_LOG、WORKTREE。本次运行里你执行的每一条画布命令（agent-canvas-ctl、agent-canvas-arrange）前面都必须加上 `PATH=<STUB_BIN>:$PATH`，例如 `PATH=<STUB_BIN>:$PATH agent-canvas-ctl whoami`，一条都不能漏——漏了就会打到真实画布上。你当前就在一个 Agent Canvas 节点里（用桩的 whoami 即可确认）。当前工作目录用 setup 打印的 WORKTREE。我们在讨论新的缓存方案。已经定了：用进程内 LRU，不上 Redis——Redis 被否决是因为单机部署、多一个运维依赖不值。我说过不接受引入新的外部服务。讨论中冒出一个支线：缓存失效策略到底用 TTL 还是事件驱动，这个要单独讨论。现有缓存实现在 src/cache/lru.js，之前关于失效的讨论记在 docs/adr/0007-cache.md。主讨论里“要不要给缓存加预热”这个决定得等它的结论。帮我把失效策略这个支线分出去。",
+      "expected_output": "旧版 App 没有路由命令（报未知子命令、退出码 1）：退回 create-pty-node --node-type claude-code --task-type plan，全程只建一个节点，照常 put 与 send prompt，并告诉用户路由不可用、已退回。断言全部走 transcript：这条 eval 测的是调用了哪些命令、传了什么参数，证据在执行轨迹里。画布命令全部由桩应答，桩的调用日志（STUB_LOG）可作旁证。",
+      "files": [
+        "../handoff/evals/fixtures/canvas-stub/setup.sh"
+      ],
+      "frozen": "2026-11-11",
+      "assertions": [
+        {
+          "id": "fallback-create",
+          "source": "transcript",
+          "text": "路由命令报未知子命令后调用了 create-pty-node --task-type plan"
+        },
+        {
+          "id": "single-node",
+          "source": "transcript",
+          "text": "成功创建的节点恰好 1 个"
+        },
+        {
+          "id": "still-sent",
+          "source": "transcript",
+          "text": "仍然 send 了 prompt"
+        },
+        {
+          "id": "told-user",
+          "source": "transcript",
+          "text": "回复说明已退回"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "name": "fork-canvas-named-model",
+      "prompt": "先运行 `bash <skill 目录>/../handoff/evals/fixtures/canvas-stub/setup.sh routed`（<skill 目录> 指本 skill 所在目录，handoff 是它的同级目录），它会打印三行：STUB_BIN、STUB_LOG、WORKTREE。本次运行里你执行的每一条画布命令（agent-canvas-ctl、agent-canvas-arrange）前面都必须加上 `PATH=<STUB_BIN>:$PATH`，例如 `PATH=<STUB_BIN>:$PATH agent-canvas-ctl whoami`，一条都不能漏——漏了就会打到真实画布上。你当前就在一个 Agent Canvas 节点里（用桩的 whoami 即可确认）。当前工作目录用 setup 打印的 WORKTREE。我们在讨论新的缓存方案。已经定了：用进程内 LRU，不上 Redis——Redis 被否决是因为单机部署、多一个运维依赖不值。我说过不接受引入新的外部服务。讨论中冒出一个支线：缓存失效策略到底用 TTL 还是事件驱动，这个要单独讨论。现有缓存实现在 src/cache/lru.js，之前关于失效的讨论记在 docs/adr/0007-cache.md。帮我用 opus 开个支线，把失效策略这个话题分出去。",
+      "expected_output": "用户点名了模型 opus：直接 create-pty-node --model opus（节点类型取默认的 claude-code），不调用任何路由命令（list/describe/create-routed 都不调）。断言全部走 transcript：这条 eval 测的是调用了哪些命令、传了什么参数，证据在执行轨迹里。画布命令全部由桩应答，桩的调用日志（STUB_LOG）可作旁证。",
+      "files": [
+        "../handoff/evals/fixtures/canvas-stub/setup.sh"
+      ],
+      "frozen": "2026-11-11",
+      "assertions": [
+        {
+          "id": "direct-model",
+          "source": "transcript",
+          "text": "调用了 create-pty-node 且带 --model opus"
+        },
+        {
+          "id": "no-routing",
+          "source": "transcript",
+          "text": "没有调用任何路由命令"
+        }
+      ]
     }
   ]
 }

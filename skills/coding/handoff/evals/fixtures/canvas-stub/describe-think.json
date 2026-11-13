@@ -1,0 +1,66 @@
+{
+  "configSource": "builtin",
+  "category": {
+    "name": "think",
+    "description": "思考：调研、对比方案、做决定、写 spec（产出是结论、对比或 spec）",
+    "taskType": "plan",
+    "notes": [
+      "任务含多个子问题时，每个字段按最难的那部分填。"
+    ],
+    "fields": [
+      {
+        "name": "openness",
+        "label": "开放程度",
+        "summary": "目标和方案有多确定",
+        "levels": [
+          { "value": "constrained", "criterion": "在给定的选项或约束内做判断" },
+          { "value": "bounded", "criterion": "目标明确，但方案要自己构造" },
+          { "value": "open", "criterion": "目标或方向本身待定，需要先发散" }
+        ]
+      },
+      {
+        "name": "informationGap",
+        "label": "信息完备度",
+        "summary": "需要的事实掌握了多少",
+        "levels": [
+          { "value": "complete", "criterion": "需要的事实都已掌握，或有成熟做法可以直接参考" },
+          { "value": "partial", "criterion": "要补查少量事实" },
+          { "value": "unknown", "criterion": "关键事实不明，要先调研或实测" }
+        ]
+      },
+      {
+        "name": "reasoningDepth",
+        "label": "推演深度",
+        "summary": "得出结论要推演多深",
+        "levels": [
+          { "value": "shallow", "criterion": "结论直接，推一两步就到" },
+          { "value": "moderate", "criterion": "要权衡几个因素" },
+          { "value": "deep", "criterion": "多个约束互相冲突，或推导链很长" }
+        ]
+      },
+      {
+        "name": "impact",
+        "label": "影响面",
+        "summary": "结论会影响多大范围",
+        "levels": [
+          { "value": "local", "criterion": "单个模块或实现细节" },
+          { "value": "system", "criterion": "跨模块架构、对外契约" },
+          { "value": "product", "criterion": "产品方向、用户可见行为、长期路线" }
+        ]
+      }
+    ],
+    "evidence": [
+      { "name": "source", "summary": "已掌握的资料，如 spec、调研文档、代码文件", "requiredIf": { "informationGap": ["complete"] }, "min": 1 }
+    ],
+    "descriptionFormat": {
+      "maxLength": 2500,
+      "sections": [
+        { "name": "问题", "guide": "要回答或决定什么，1–2 句" },
+        { "name": "已知", "guide": "已掌握的事实和资料，支撑信息完备度" },
+        { "name": "约束或选项", "guide": "必须满足的约束或待选方案；开放式发散写“无”；openness=constrained 时不能写“无”" },
+        { "name": "期望产出", "guide": "结论、对比表还是 spec，交给谁用" },
+        { "name": "影响", "guide": "结论会影响的范围，支撑影响面" }
+      ]
+    }
+  }
+}

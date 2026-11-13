@@ -2,7 +2,7 @@
 name: agent-canvas-control
 description: Control Agent Canvas node entities and layout from claude-code/codex/pi nodes — create, query, update, delete nodes, put or hide them on the canvas, and send messages or slash commands to other claude-code/codex nodes (dispatch work to a new node, or to one already running) and get their replies back; also usable from shell/hermes-tui nodes or terminals outside the canvas via `--canvas`/`resolve-canvas`/`resolve`.
 user_invocable: true
-version: "1.3.2"
+version: "1.4.0"
 ---
 
 # 操控节点与画布（agent-canvas-control）
@@ -30,8 +30,9 @@ version: "1.3.2"
 ## 两个二进制的分工
 
 - `agent-canvas-ctl` 管**节点实体与关系**：建、查、改、归档、删除节点，建/查/删关系，
-  Agent Profile，通知，本节点自述；以及给其他 agent 节点**发消息**（见下方「给其他 agent 发消息」）。
-- `agent-canvas-arrange` 管**画布摆放**：放上、收起、移动节点，分组的成员与配色。
+  工作区（建、加入 / 移出成员、解散），Agent Profile，通知，本节点自述；以及给其他 agent 节点
+  **发消息**（见下方「给其他 agent 发消息」）。
+- `agent-canvas-arrange` 管**画布摆放**：放上、收起、移动节点，工作区框的配色。
 
 两边互不重叠，在 arrange 上找实体或关系命令会直接报错并指回 ctl。`help`、`whoami`、
 `list-actions`、`describe-action` 两边都有。
@@ -194,16 +195,21 @@ agent-canvas-arrange put <nodeId>
 第一条返回 `{nodeId}`。`put` 不带 `--position` 时用自动布局位；要精确定位写
 `agent-canvas-arrange put <nodeId> --position 400,200`（只能对单个 id）。
 
-**2. 建分组并把节点放进去**
+**2. 建工作区并把节点加进去**
 
 ```
-agent-canvas-ctl create-group --title 认证改造
-agent-canvas-arrange put <groupId> --position 0,0
-agent-canvas-arrange group-add <groupId> <nodeId1>,<nodeId2>
-agent-canvas-arrange group-color <groupId> blue
+agent-canvas-ctl create-workspace --title 认证改造
+agent-canvas-ctl workspace-add <workspaceId> <nodeId1>,<nodeId2>
+agent-canvas-arrange put <workspaceId> --position 0,0
+agent-canvas-arrange workspace-color <workspaceId> blue
 ```
 
-分组必须先放上画布才能加成员——没放上时 `group-add` 会响亮报错，不是静默失败。
+工作区是编辑器里的标签页、画布上的框，一个节点最多属于一个工作区：`workspace-add` 会把原属别的
+工作区的节点挪过来（回执列出原属工作区）。加成员不要求框已在画布上——框隐藏或没放上时，成员随之隐藏；
+`workspace-color` 则要求框已放上画布。移出用 `workspace-remove`，解散用 `dissolve-workspace`（会弹审批，
+成员节点与进程不受影响）；工作区不能归档或删除。旧的 `create-group`、`group-add`、`group-remove`、
+`group-color` 已退役，调用会报错并指向新命令；若 `agent-canvas-ctl help` 里还没有 `create-workspace`，
+说明装的是旧版 App，按 `help` 列出的分组命令办。
 
 **3. 在画布外操作某个项目的画布**
 
