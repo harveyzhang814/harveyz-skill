@@ -57,35 +57,22 @@ def render(config, resolved, template):
             if base in all_names:
                 merge_targets.add(base)
 
-    # 拓扑：逐级展开
-    def build_tree(root, depth=0):
-        b = next((x for x in protected if x['name'] == root), None)
-        if not b:
-            return ''
-        indent = '  ' * depth
-        lines = [indent + root]
-        for src in b['merge_from']:
+    # 拓扑：每个根分支写一次，来源逐级缩进展开；受保护分支的来源对齐在它名字下方
+    def build_tree(name, indent, seen):
+        lines = []
+        for src in next(x for x in protected if x['name'] == name)['merge_from']:
             src_base = src.rstrip('/*')
-            if src_base in all_names:
-                lines.append(build_tree(src_base, depth + 1))
+            if src_base in all_names and src_base not in seen:
+                lines.append(f'{indent}<- {src_base}')
+                lines += build_tree(src_base, indent + ' ' * 5, seen | {src_base})
             else:
-                lines.append('  ' * (depth + 1) + f'<- {src}')
-        return '\n'.join(l for l in lines if l)
+                lines.append(f'{indent}<- {src}')
+        return lines
 
     roots = [b['name'] for b in protected if b['name'] not in merge_targets]
     ascii_lines = []
     for r in roots:
-        for src in next(x for x in protected if x['name'] == r)['merge_from']:
-            src_base = src.rstrip('/*')
-            if src_base in all_names:
-                sub = next((x for x in protected if x['name'] == src_base), None)
-                ascii_lines.append(f'{r}')
-                ascii_lines.append(f'  <- {src_base}')
-                for subsrc in (sub['merge_from'] if sub else []):
-                    ascii_lines.append(f'        <- {subsrc}')
-            else:
-                ascii_lines.append(f'{r}')
-                ascii_lines.append(f'  <- {src}')
+        ascii_lines += [r] + build_tree(r, '  ', {r})
     topology_ascii = '\n'.join(ascii_lines) if ascii_lines else ' <- '.join(b['name'] for b in protected)
 
     # ── BRANCH_TABLE ───────────────────────────────────────────────
@@ -239,6 +226,19 @@ def render(config, resolved, template):
                    f'本仓库设置了 `merge.ff=false`，直接 `git merge origin/{target}` 会生成一个 '
                    f'"Merge remote-tracking branch …" 合并提交，它不带 `{resolved["merge_trailer"]}` 行，'
                    f'会被 commit-msg 拒绝（只放行 `Merge branch \'{target}\' of …` 形式的远端同步合并）。')
+        faq.append(f'**Q：手动合并被拒后怎么办？**\n'
+                   f'A：被 commit-msg 拒绝后合并仍处于进行中，先 `git merge --abort` 撤销，'
+                   f'再到被合并分支的 worktree 里运行 `{resolved["merge_script"]}`。'
+                   f'`git merge --ff-only <功能分支>` 这类快进不产生提交，本地不会被拦，'
+                   f'要到推送 {target} 时才被 pre-push 拒绝；快进只用于同步远端 {target}。')
+        faq.append(f'**Q：第一次推送 {target} 被拒怎么办？**\n'
+                   f'A：远端还没有 {target} 时，pre-push 只检查它的尖端；尖端若不是合并脚本产生的合并'
+                   f'（例如刚初始化、还没合并过任何分支），就会被拒。先用 `{resolved["merge_script"]}` '
+                   f'合并一个分支再推送即可；确认要原样发布时，执行一次 `git push --no-verify -u origin {target}`。')
+        faq.append(f'**Q：合并后 worktree 和分支怎么处理？**\n'
+                   f'A：确认不再需要后，在主工作树执行 `git worktree remove <worktree 路径>` 收掉工作区，'
+                   f'再 `git branch -d <分支>` 删除已合并的分支（`-d` 会拒绝删除尚未合并进当前分支的分支）。'
+                   f'交接中的工作区要等验收、合并都完成后再收。')
     faq_section = '\n\n'.join(faq)
 
     # ── 替换占位符 ─────────────────────────────────────────────────

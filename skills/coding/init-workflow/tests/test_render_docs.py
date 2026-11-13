@@ -246,6 +246,46 @@ def test_faq_explains_remote_sync_by_fast_forward(tmp_path):
     assert "Merge-Via: merge-to-staging.sh" in faq
 
 
+def test_topology_lists_each_branch_once_as_a_tree(tmp_path):
+    model = h2_section(render_cfg(tmp_path, STAGING_CFG), "分支模型")
+    block = model[model.index("```\n") + 4:]
+    block = block[:block.index("```")].rstrip("\n")
+    assert block == "\n".join([
+        "main",
+        "  <- staging",
+        "       <- feature/*",
+        "       <- fix/*",
+        "       <- chore/*",
+        "       <- doc/*",
+        "  <- release/*",
+    ])
+
+
+def test_faq_explains_first_push_of_merge_target(tmp_path):
+    faq = h2_section(render_cfg(tmp_path, STAGING_CFG), "常见问题")
+    item = faq[faq.index("第一次推送 staging"):]
+    item = item[:item.index("\n\n")]
+    assert "scripts/merge-to-staging.sh" in item
+    assert "--no-verify" in item
+
+
+def test_faq_explains_worktree_cleanup_after_merge(tmp_path):
+    faq = h2_section(render_cfg(tmp_path, STAGING_CFG), "常见问题")
+    item = faq[faq.index("合并后"):]
+    item = item[:item.index("\n\n")]
+    assert "git worktree remove" in item
+    assert "git branch -d" in item
+
+
+def test_faq_explains_rejected_manual_merge_and_fast_forward(tmp_path):
+    faq = h2_section(render_cfg(tmp_path, STAGING_CFG), "常见问题")
+    item = faq[faq.index("手动合并被拒"):]
+    item = item[:item.index("\n\n")]
+    assert "git merge --abort" in item
+    assert "pre-push" in item
+    assert "scripts/merge-to-staging.sh" in item
+
+
 def test_no_merge_target_faq_has_no_merge_via_items(tmp_path):
     faq = h2_section(render_cfg(tmp_path, NO_FEATURE_CFG), "常见问题")
     assert "merge-to-" not in faq

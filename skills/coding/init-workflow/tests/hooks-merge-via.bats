@@ -75,6 +75,7 @@ mk_merge() {
   run git merge --no-ff -m "Merge branch 'topic'" topic
   [ "$status" -ne 0 ]
   [[ "$output" == *"scripts/merge-to-staging.sh"* ]] || false
+  [[ "$output" == *"git merge --abort"* ]] || false
   [ "$(git rev-parse staging)" = "$before" ]
 }
 
