@@ -261,6 +261,14 @@ def test_topology_lists_each_branch_once_as_a_tree(tmp_path):
     ])
 
 
+def test_faq_explains_first_push_of_merge_target(tmp_path):
+    faq = h2_section(render_cfg(tmp_path, STAGING_CFG), "常见问题")
+    item = faq[faq.index("第一次推送 staging"):]
+    item = item[:item.index("\n\n")]
+    assert "scripts/merge-to-staging.sh" in item
+    assert "--no-verify" in item
+
+
 def test_faq_explains_worktree_cleanup_after_merge(tmp_path):
     faq = h2_section(render_cfg(tmp_path, STAGING_CFG), "常见问题")
     item = faq[faq.index("合并后"):]

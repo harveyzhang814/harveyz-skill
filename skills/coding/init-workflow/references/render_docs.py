@@ -231,6 +231,10 @@ def render(config, resolved, template):
                    f'再到被合并分支的 worktree 里运行 `{resolved["merge_script"]}`。'
                    f'`git merge --ff-only <功能分支>` 这类快进不产生提交，本地不会被拦，'
                    f'要到推送 {target} 时才被 pre-push 拒绝；快进只用于同步远端 {target}。')
+        faq.append(f'**Q：第一次推送 {target} 被拒怎么办？**\n'
+                   f'A：远端还没有 {target} 时，pre-push 只检查它的尖端；尖端若不是合并脚本产生的合并'
+                   f'（例如刚初始化、还没合并过任何分支），就会被拒。先用 `{resolved["merge_script"]}` '
+                   f'合并一个分支再推送即可；确认要原样发布时，执行一次 `git push --no-verify -u origin {target}`。')
         faq.append(f'**Q：合并后 worktree 和分支怎么处理？**\n'
                    f'A：确认不再需要后，在主工作树执行 `git worktree remove <worktree 路径>` 收掉工作区，'
                    f'再 `git branch -d <分支>` 删除已合并的分支（`-d` 会拒绝删除尚未合并进当前分支的分支）。'

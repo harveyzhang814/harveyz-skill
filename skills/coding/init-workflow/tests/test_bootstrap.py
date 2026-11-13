@@ -129,7 +129,8 @@ FRESH_FILES = sorted([
     "docs/reference/git-workflow.md", "scripts/merge-to-staging.sh", "src/app.sh",
 ])
 FRESH_PLAN = ([("ROOT-COMMIT", "main")] + [("FILE", p) for p in FRESH_FILES]
-              + [("CREATE", "staging", "main"), ("SWITCH", "staging")])
+              + [("CREATE", "staging", "main"), ("SWITCH", "staging"),
+                 ("WARN", "first-publish", "staging")])
 
 
 def test_fresh_repo_root_commit_and_branches(tmp_path):
@@ -158,10 +159,11 @@ def test_dry_run_changes_nothing(tmp_path):
     assert git(repo, "ls-files") == ""
 
 
-def test_rerun_after_bootstrap_is_noop(tmp_path):
+def test_rerun_after_bootstrap_only_repeats_the_warning(tmp_path):
     repo = fresh_deployed(tmp_path)
     bb.bootstrap(str(repo))
-    assert bb.bootstrap(str(repo)) == [("EXISTS", "main"), ("EXISTS", "staging")]
+    assert bb.bootstrap(str(repo)) == [
+        ("EXISTS", "main"), ("EXISTS", "staging"), ("WARN", "first-publish", "staging")]
 
 
 # ---- 已有提交的仓库 ----
@@ -171,7 +173,8 @@ def test_existing_repo_creates_missing_integration_branch(tmp_path):
     commit_file(repo, "a.txt", "seed")
     write_cfg(repo)
     main_before = git(repo, "rev-parse", "main")
-    assert bb.bootstrap(str(repo)) == [("EXISTS", "main"), ("CREATE", "staging", "main")]
+    assert bb.bootstrap(str(repo)) == [
+        ("EXISTS", "main"), ("CREATE", "staging", "main"), ("WARN", "first-publish", "staging")]
     assert git(repo, "rev-parse", "main") == main_before
     assert git(repo, "rev-parse", "staging") == main_before
 
@@ -236,11 +239,32 @@ def test_warns_first_publish_when_target_not_on_remote(tmp_path):
         ("EXISTS", "main"), ("EXISTS", "staging"), ("WARN", "first-publish", "staging")]
 
 
-def test_no_push_warning_without_remote(tmp_path):
+def test_first_publish_warned_even_without_remote(tmp_path):
+    # 还没加远端时也提醒：加上远端后第一次推送合并目标同样会被拒
     repo = make_repo(tmp_path / "proj", "main")
     commit_file(repo, "a.txt", "seed")
     write_cfg(repo)
-    assert ("WARN", "first-publish", "staging") not in bb.bootstrap(str(repo))
+    assert ("WARN", "first-publish", "staging") in bb.bootstrap(str(repo))
+
+
+def test_no_first_publish_warning_after_a_script_merge(tmp_path):
+    repo = make_repo(tmp_path / "proj", "main")
+    commit_file(repo, "a.txt", "seed")
+    git(repo, "branch", "staging")
+    git(repo, "checkout", "-q", "staging")
+    git(repo, "commit", "-q", "--allow-empty", "--no-verify", "-m", f"merge: x\n\n{TRAILER}")
+    write_cfg(repo)
+    assert bb.bootstrap(str(repo)) == [("EXISTS", "main"), ("EXISTS", "staging")]
+
+
+def test_warns_when_new_branch_inherits_unpushed_commits(tmp_path):
+    repo = repo_with_remote(tmp_path)
+    git(repo, "branch", "-D", "staging")
+    git(repo, "push", "-q", "-u", "origin", "main")
+    commit_file(repo, "local.txt", "local only")
+    assert bb.bootstrap(str(repo), dry_run=True) == [
+        ("EXISTS", "main"), ("CREATE", "staging", "main"),
+        ("WARN", "ahead", "main", "1", "staging"), ("WARN", "first-publish", "staging")]
 
 
 # ---- CLI ----

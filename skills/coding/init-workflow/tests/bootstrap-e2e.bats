@@ -58,12 +58,14 @@ setup() {
 teardown() { [[ -n "${TMP:-}" && "$TMP" == /*/* ]] && rm -rf "$TMP"; }
 
 @test "fresh repo: bootstrap commits everything on main, creates staging and rests on it" {
-  run python3 "$REFS/bootstrap_branches.py" .
+  run --separate-stderr python3 "$REFS/bootstrap_branches.py" .
   [ "$status" -eq 0 ]
   [ "${lines[0]}" = "ROOT-COMMIT main" ]
   [[ "$output" == *"FILE README.md"* ]] || false
-  [ "${lines[${#lines[@]}-2]}" = "CREATE staging main" ]
-  [ "${lines[${#lines[@]}-1]}" = "SWITCH staging" ]
+  [ "${lines[${#lines[@]}-3]}" = "CREATE staging main" ]
+  [ "${lines[${#lines[@]}-2]}" = "SWITCH staging" ]
+  [ "${lines[${#lines[@]}-1]}" = "WARN first-publish staging" ]
+  [[ "$stderr" == *"合并脚本合并一次"* ]] || false
   [ "$(git symbolic-ref --short HEAD)" = "staging" ]
   [ "$(git rev-parse staging)" = "$(git rev-parse main)" ]
   git ls-tree -r --name-only main | grep -qx '.githooks/pre-commit'

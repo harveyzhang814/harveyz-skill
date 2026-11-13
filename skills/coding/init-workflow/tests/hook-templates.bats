@@ -79,6 +79,7 @@ push_line() { printf '%s %s %s %s\n' "$1" "$2" "$1" "$3" | sh "$TMP/pre-push"; }
   run push_line refs/tags/v1.0.1 "$(git rev-parse v1.0.1)" "$ZERO"
   [ "$status" -eq 1 ]
   [[ "$output" == *"git tag -a"* ]] || false
+  [[ "$output" == *"git tag -d v1.0.1"* ]] || false
 }
 
 @test "badly named tag is rejected" {

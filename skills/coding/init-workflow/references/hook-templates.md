@@ -135,6 +135,7 @@ if [ -f "$(git rev-parse --git-dir)/MERGE_HEAD" ] \
             "Merge branch '<merge_target>' of "*) ;;
             *)
                 echo "❌ 禁止手动合并进 <merge_target>。请改用 <merge_script>。"
+                echo "   这次合并仍处于进行中，先执行 git merge --abort 撤销。"
                 exit 1
                 ;;
         esac
@@ -155,7 +156,7 @@ if ! printf '%s\n' "$SUBJECT" | grep -qE '<pattern>'; then
 fi
 # --- END MANAGED: commit-msg/format ---
 ```
-- `format: conventional`：`<pattern>` 由 `types` 拼成 `^(feat|fix|...)(\(.+\))?: .+`（`require_scope: true` 时 scope 部分为必填 `\(.+\)`）；`<format_hint>` 写 `格式：<type>(<scope>): <描述>，type 取 feat、fix、…`，`require_scope: true` 时加“，scope 必填”。
+- `format: conventional`：`<pattern>` 由 `types` 拼成 `^(feat|fix|...)(\(.+\))?: .+`（`require_scope: true` 时 scope 部分为必填 `\(.+\)`）；`<format_hint>` 写 `格式：<type>(<scope>): <描述>，type 取 ` 加全部 `types`（以 `、` 连接，不省略），`require_scope: true` 时再加“，scope 必填”。
 - `format: regex`：`<pattern>` 用配置的 `pattern` 字段；`<format_hint>` 写 `须匹配：<pattern>`。
 - `<pattern>` 与 `<format_hint>` 都放在单引号里，内容含单引号时写成 `'\''`。
 
@@ -239,6 +240,7 @@ while IFS=' ' read -r local_ref local_sha remote_ref remote_sha; do
             fi
             if [ "$(git cat-file -t "$local_sha" 2>/dev/null)" != "tag" ]; then
                 echo "❌ $TAG 是轻量 tag，请用 git tag -a 创建附注 tag"
+                echo "   改正：git tag -d ${TAG}，再 git tag -a ${TAG} -m <说明> <提交>"
                 exit 1
             fi
             ;;
@@ -304,12 +306,12 @@ for PATTERN in '<pattern 1>' '<pattern 2>' ...; do
 done
 if [ "$MATCHED" -eq 0 ]; then
     echo "⚠️ 分支命名不符合规范：$BRANCH"
-    echo "   允许的格式：<allowed_patterns 列表>"
+    echo '   允许的格式：<allowed_patterns 列表>'
 fi
 # --- END MANAGED: post-checkout/branch-naming ---
 ```
 
-占位映射：`'<pattern 1>' '<pattern 2>' ...` = `resolved.env` 的 `naming.1..n`（按编号），**每条单独加单引号**——模式里的 `(`、`)`、`$`、`|` 不加引号会让 sh 报语法错误或被展开；exempt 列表 = `naming_exempt`（空格分隔）。
+占位映射：`'<pattern 1>' '<pattern 2>' ...` = `resolved.env` 的 `naming.1..n`（按编号），**每条单独加单引号**——模式里的 `(`、`)`、`$`、`|` 不加引号会让 sh 报语法错误或被展开；`<allowed_patterns 列表>` = 同一组模式原样以 `、` 连接（整行已在单引号里，不再加引号）；exempt 列表 = `naming_exempt`（空格分隔）。
 
 `exempt` 列表生成 case 模式（`|` 分隔）；`allowed_patterns` 逐条 grep。post-checkout 仅警告不阻断（`exit 0`，不 `exit 1`）。
 

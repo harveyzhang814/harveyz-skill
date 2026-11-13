@@ -8,7 +8,8 @@ init-workflow 起步引导（Step 9，写完 lock 文件之后）
 
 用法：python3 bootstrap_branches.py <repo_root> [--dry-run]
 stdout 逐行：ROOT-COMMIT <分支>（随后每个将提交的文件一行 FILE <路径>）/ CREATE <分支> <来源> /
-             EXISTS <分支> / SWITCH <分支> / WARN unpushed <分支> <数量> / WARN first-publish <分支>；--dry-run 时末行 DRY-RUN
+             EXISTS <分支> / SWITCH <分支> / WARN ahead <来源> <数量> <新分支> /
+             WARN unpushed <分支> <数量> / WARN first-publish <分支>；--dry-run 时末行 DRY-RUN
 退出码：0 正常；2 找不到规则文件；3 配置推不出分支顺序；4 已有提交的仓库缺根集成分支
 """
 import os
@@ -65,19 +66,39 @@ def _marked(message, target, trailer):
 
 
 def _push_warning(repo, target, trailer, tip):
-    """合并目标推送时 pre-push/merge-via 会拒绝的情况；没有远端或无需提醒时返回 None。"""
-    if not _git(repo, 'remote', check=False).stdout.strip():
-        return None
-    up = _git(repo, 'rev-parse', '-q', '--verify', f'{target}@{{upstream}}', check=False)
-    remote = up.stdout.strip() if up.returncode == 0 else None
-    if remote is None and _has_ref(repo, f'refs/remotes/origin/{target}'):
-        remote = f'refs/remotes/origin/{target}'
+    """合并目标推送时 pre-push/merge-via 会拒绝的情况；无需提醒时返回 None。
+    还没有远端也照样判断：加上远端后第一次推送面对的是同一个尖端。"""
+    remote = _remote_of(repo, target)
     if remote is None:
         tip_msg = _git(repo, 'log', '-1', '--format=%B', tip).stdout if tip else ''
         return None if tip and _marked(tip_msg.strip(), target, trailer) else ('WARN', 'first-publish', target)
     log = _git(repo, 'log', '--first-parent', '--format=%B%x1e', f'{remote}..{tip}').stdout
     n = sum(1 for m in log.split('\x1e') if m.strip() and not _marked(m.strip(), target, trailer))
     return ('WARN', 'unpushed', target, str(n)) if n else None
+
+
+def _remote_of(repo, branch):
+    """分支对应的远端引用：先取 upstream，再取 origin/<分支>；都没有返回 None。"""
+    up = _git(repo, 'rev-parse', '-q', '--verify', '--symbolic-full-name', f'{branch}@{{upstream}}',
+              check=False)
+    if up.returncode == 0 and up.stdout.strip():
+        return up.stdout.strip()
+    return f'refs/remotes/origin/{branch}' if _has_ref(repo, f'refs/remotes/origin/{branch}') else None
+
+
+def _ahead_warnings(repo, plan):
+    """从本地分支新建集成分支时，来源若领先它的远端，这些提交会随新分支一起发布。"""
+    out = []
+    for step in plan:
+        if step[0] != 'CREATE' or step[2].startswith('origin/'):
+            continue
+        remote = _remote_of(repo, step[2])
+        if remote is None:
+            continue
+        n = _git(repo, 'rev-list', '--count', f'{remote}..refs/heads/{step[2]}').stdout.strip()
+        if n != '0':
+            out.append(('WARN', 'ahead', step[2], n, step[1]))
+    return out
 
 
 def _root_files(repo_root):
@@ -120,11 +141,13 @@ def bootstrap(repo_root, dry_run=False):
     target = resolved['merge_target']
     if plan[0][0] == 'ROOT-COMMIT' and target and target != order[0][0]:
         plan.append(('SWITCH', target))  # 与根分支同一提交，只改 HEAD 指向
+    warnings = _ahead_warnings(repo_root, plan)
     warning = _push_warning(repo_root, target, resolved['merge_trailer'], tips.get(target)) \
         if target and target in tips else None
+    warnings += [warning] if warning else []
 
     if dry_run:
-        return plan + ([warning] if warning else [])
+        return plan + warnings
 
     # 2. 按计划执行；根提交绕过已生效的 hooks（它们禁止在集成分支上直接提交）
     for step in plan:
@@ -137,15 +160,17 @@ def bootstrap(repo_root, dry_run=False):
             _git(repo_root, 'branch', step[1], step[2])
         elif step[0] == 'SWITCH':
             _git(repo_root, 'symbolic-ref', 'HEAD', f'refs/heads/{step[1]}')
-    return plan + ([warning] if warning else [])
+    return plan + warnings
 
 
 WARN_HELP = {
     'unpushed': '{0} 有 {1} 个未推送、不带合并标记行的提交，推送时会被 pre-push/merge-via 拒绝；'
                 '确认它们应发布后执行一次 git push --no-verify origin {0}',
-    'first-publish': '{0} 还没发布到远端，且尖端不是合并脚本产生的合并，现在推送会被 pre-push/merge-via 拒绝；'
-                     '先用合并脚本合并一次（如部署产物所在的 chore 分支）再推送即可，'
-                     '或确认后执行一次 git push --no-verify -u origin {0}',
+    'first-publish': '{0} 还没发布到远端，且尖端不是合并脚本产生的合并，第一次推送会被 pre-push/merge-via 拒绝'
+                     '（还没加远端也一样）；先用合并脚本合并一次（如部署产物所在的 chore 分支或第一个功能分支）'
+                     '再推送即可，或确认后执行一次 git push --no-verify -u origin {0}',
+    'ahead': '{0} 有 {1} 个提交还没推送到远端；从它建出的 {2} 带着这些提交，推送 {2} 时会一并发布。'
+             '确认它们应发布，或先处理（推送 {0}、或改为从远端的 {0} 建出 {2}）再继续',
 }
 
 if __name__ == '__main__':
