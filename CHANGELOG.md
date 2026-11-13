@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.45.0] - 2026-11-13
+
 ### Changed
 - `compose-agentsmd` 0.2.1（devflow 模块包 2.1.0）：Step 5.3 不再把执行 skill 写死为 `superpowers:subagent-driven-development`，本会话执行与交接都改为按 `develop-plan` 的条件选定，交接文档写明所选 skill 及理由；接手方边界补充自行裁决只适用于不可修改项以外的问题。引用 `develop-plan` 时不再写死步骤号；高档路径名由“SDD”改为“spec 路径”，避免与 subagent-driven-development 的缩写混淆。已用旧包生成 AGENTS.md 的项目需重新生成
 - `manage-worktree` 0.2.1：列出调用方时不再写死它们的步骤号（原“develop-plan 第 1 步”“handoff 的 author 第 4 步”），改为按时机描述，调用方调整步骤编号时不会悄悄指错
@@ -20,6 +22,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - `sync-design` 5.3.1：直接说“配置设计系统”时，manifest 的 `version` 没有升到 6，下次运行还会再问一次是否登记设计系统；现在配置写回时一并补上
 - `sync-design` 5.3.2：在 agent-canvas 首次实测后修两处。设计系统的标准、组件样式文件超过 4 万字符时，先列目录，再读通用规则和与本页面有关的章节，不再要求全量读（实测标准约 12 万字符）；登记标准缺口时，编号取本地所有分支上的最大号加一，避免和在自己分支上维护缺口清单的设计系统撞号；现有界面的做法与标准冲突、标准又没给替代时，同样按缺口处理，整页依赖缺口时不出稿
+- `capture-intent` 1.3.2：`skills-index.json` 里记录的 contentHash 与 SKILL.md 的任何历史内容都对不上，发版检查报 F8；升版本并写入真实 hash。同时刷新 `clean-git`、`release-project`、`sync-agent`、`sync-hotfix` 已落后于版本号的 contentHash/contentVersion，SKILL.md 内容不变
 
 ## [0.44.0] - 2026-11-09
 
