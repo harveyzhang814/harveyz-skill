@@ -82,7 +82,7 @@ echo "" | grep -E "<pattern>" > /dev/null 2>&1; echo $?
 读取 `.githooks/.workflow-config.lock.yml`（不存在则视为全量新增，跳过）。对比上次配置与当前配置，生成 +/~/- 变更摘要。**提取 YAML 分支名时必须用 python3 精确解析，不得用 `grep "name:"`**（见 reference 中的脚本）。
 
 #### 4b. MANAGED 块 hash 校验
-读取每个 hook 的 `BEGIN MANAGED`/`END MANAGED` 块，重新计算 hash，与块头标记对比。不一致 → 用户手改，记录为类型 C 冲突（附 diff）。
+运行 `python3 <skill-path>/references/block_hash.py check .githooks/<hook>...`，输出 `MODIFIED` 的块 → 用户手改，记录为类型 C 冲突（附 diff）。不要手算 hash。
 
 #### 4c. 外部代码扫描
 提取每个 hook 中 MANAGED 块外的用户手写代码，识别其中引用的分支名、提交类型、pattern、外部脚本调用。
@@ -138,7 +138,7 @@ mkdir -p .githooks
 
 根据 Step 5 的决策结果，对每个 hook 文件按以下规则处理：
 
-1. **MANAGED 块**：根据当前配置重新生成内容，更新块内容及 hash
+1. **MANAGED 块**：根据当前配置重新生成内容，块标记先写 `(hash:PLACEHOLDER)`，全部写完后用 `block_hash.py stamp` 填入 hash；块的先后顺序与插入点按 `hook-templates.md`「块顺序」
    - 若 Step 5 中用户选择"保留用户修改"→ 跳过此块，保持现有内容和 hash 不变
    - 若配置中某节 `enforce: false` 且对应 MANAGED 块存在 → 删除该块（保留块外用户代码）
 
@@ -151,7 +151,7 @@ mkdir -p .githooks
    - 合并目标分支**首次发布**（远端还没有该分支，此时只检查本地尖端提交）且尖端不是脚本产生的合并时，`pre-push/merge-via` 会拒绝，需要一次 `git push --no-verify`；之后的推送正常。Step 9 的起步引导会用 `WARN first-publish` / `WARN unpushed` 提前指出。
    - 快进合并（`git merge --ff-only <功能分支>`）不产生提交，本地不触发任何 hook，只在推送时被 `pre-push/merge-via` 拦下。
 
-各 hook 的触发条件、固定头部代码、MANAGED 块结构、块 ID 规范、hash 计算方式及多行内容写入技巧，见 `references/hook-templates.md`。
+各 hook 的触发条件、固定头部代码、MANAGED 块结构与顺序、块 ID 规范、hash 计算方式及多行内容写入技巧，见 `references/hook-templates.md`。
 
 #### 设置权限和 hooksPath
 
@@ -286,4 +286,5 @@ WARN <路径>                        （如有）照录 stdout 的 WARN 行，�
 | `references/render_docs.py` | 文档渲染 | 由 deploy_artifacts.py 调用 |
 | `references/render_merge_script.py` | 合并脚本渲染 | 由 deploy_artifacts.py 调用 |
 | `references/merge-script-template.sh` | 标准合并脚本模板 | 由 render_merge_script.py 读取 |
+| `references/block_hash.py` | MANAGED 块 hash 的唯一实现：`check` 校验、`stamp` 填 PLACEHOLDER | Step 4b、Step 6 |
 | `references/bootstrap_branches.py` | 起步引导：根提交、补建集成分支、推送提醒 | Step 9：写完 lock 文件后执行（先 `--dry-run`） |

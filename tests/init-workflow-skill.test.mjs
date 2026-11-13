@@ -72,6 +72,6 @@ test('hook templates quote every naming pattern', async () => {
 
 test('init-workflow wires the bootstrap step', async () => {
   const body = await readFile(resolve(root, PATH), 'utf8')
-  for (const phrase of ['bootstrap_branches.py', '--dry-run', 'ROOT-COMMIT', 'SWITCH', '主工作树常驻合并目标', 'first-publish', 'unpushed'])
+  for (const phrase of ['block_hash.py', 'PLACEHOLDER', 'bootstrap_branches.py', '--dry-run', 'ROOT-COMMIT', 'SWITCH', '主工作树常驻合并目标', 'first-publish', 'unpushed'])
     assert.ok(body.includes(phrase), phrase)
 })

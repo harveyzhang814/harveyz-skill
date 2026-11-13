@@ -25,6 +25,7 @@ branch_naming:
 tags:
   enforce: true
   allowed_patterns: ["^v[0-9]+\\.[0-9]+\\.[0-9]+$"]
+  push_guard: true
   require_annotated: true
 push_rules:
   enforce: true

@@ -3,14 +3,12 @@
 init-workflow 标准合并脚本渲染器
 把 merge-script-template.sh 的占位符替换为解释器（workflow_resolve.resolve）给出的取值。
 """
-import hashlib
+import os
 import shlex
+import sys
 
-
-def _block_hash(content):
-    """与 hook-templates.md 一致：去首尾空白后的 git blob hash 前 8 位。"""
-    data = content.strip().encode('utf-8')
-    return hashlib.sha1(b'blob %d\0' % len(data) + data).hexdigest()[:8]
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from block_hash import block_hash as _block_hash  # noqa: E402,F401  与 hooks 同一实现
 
 
 def render_merge_script(resolved, template, version):

@@ -89,7 +89,26 @@ output=$(printf "refs/tags/invalid-tag-format abc1234 refs/tags/invalid-tag-form
 exit_code=$?
 ```
 
-**期望：** `exit_code = 1`。
+**期望：** `exit_code = 1`（`tags.push_guard: false` 时为 0，output 含 `⚠️`）。
+
+---
+
+### pre-push — 轻量 tag（仅当 `tags.enforce: true` 且 `tags.require_annotated: true`）
+
+`VALID_TAG` 取一个符合 `tags.allowed_patterns` 的名字（默认配置用 `v0.0.0`）。用当前提交冒充轻量 tag 推送（轻量 tag 推送时 `local_sha` 就是提交），不真正建 tag。仓库还没有提交时跳过此场景。
+
+```bash
+if git rev-parse -q --verify HEAD >/dev/null 2>&1; then
+    output=$(printf "refs/tags/%s %s refs/tags/%s 0000000000000000000000000000000000000000\n" \
+        "$VALID_TAG" "$(git rev-parse HEAD)" "$VALID_TAG" | sh .githooks/pre-push 2>&1)
+    exit_code=$?
+    SKIPPED=0
+else
+    SKIPPED=1
+fi
+```
+
+**期望：** `exit_code = 1`，output 含 `git tag -a`（`tags.push_guard: false` 时为 0，output 含 `⚠️`）；没有提交时标记为 SKIP。
 
 ---
 
@@ -118,6 +137,7 @@ pre-commit    直接提交到 <branch>（应拒绝）           PASS ✅
 commit-msg    格式违规消息（应拒绝）                   PASS ✅
 pre-push      force push 到 <branch>（应拒绝）         PASS ✅
 pre-push      非法 tag 推送（应拒绝）                  PASS ✅
+pre-push      轻量 tag 推送（应拒绝）                  PASS ✅
 post-checkout 不合规分支名（应有 ⚠️ 警告）             PASS ✅
 ──────────────────────────────────────────────────────
 ✅ 全部通过（N/N，SKIP 不计入分母）。继续 Step 7...
@@ -128,6 +148,8 @@ post-checkout 不合规分支名（应有 ⚠️ 警告）             PASS ✅
 ```
 pre-push      force push 到 <branch>（应拒绝）         SKIP ⏭️（仓库提交数 < 2，无法构造历史）
 ```
+
+轻量 tag 场景因仓库还没有提交被跳过时同样显示 `SKIP ⏭️（仓库还没有提交）`。
 
 若有失败：
 
