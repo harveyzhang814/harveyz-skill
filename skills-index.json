@@ -401,7 +401,7 @@
       "path": "agent-canvas/dispatch-agent",
       "bundle": "agent-canvas",
       "installScope": "global",
-      "contentHash": "53fd338dc92add22",
+      "contentHash": "c93b72795255e079",
       "contentVersion": "1.0.0"
     },
     {
@@ -422,8 +422,8 @@
       "path": "agent-canvas/capture-requirement",
       "bundle": "agent-canvas",
       "installScope": "project",
-      "contentHash": "ffbe32aaf50ae05a",
-      "contentVersion": "2.1.1"
+      "contentHash": "5c61259950a022cc",
+      "contentVersion": "2.1.2"
     },
     {
       "path": "agent-canvas/capture-intent",
@@ -450,8 +450,8 @@
       "path": "agent-canvas/judge-release",
       "bundle": "agent-canvas",
       "installScope": "project",
-      "contentHash": "f77c808cfabf232c",
-      "contentVersion": "1.1.0"
+      "contentHash": "0a1ee1eb715d6ff6",
+      "contentVersion": "1.1.1"
     },
     {
       "path": "agent-canvas/external-closeout",
