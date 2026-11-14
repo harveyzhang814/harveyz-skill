@@ -36,7 +36,7 @@
     "design": "设计工具（scout-brand + build-style + sync-design）",
     "mint": "Skill 生命周期工具（init-skill + publish-skill + archive-skill + dedup-skill + simplify-skill + contribute-skill + fix-skill + runby-opencode + scout-philosophy + learn-skill）",
     "devops": "项目运维工具（clean-git + release-project + sync-hotfix + sync-agent）",
-    "agent-canvas": "Agent Canvas 内置 skill（agent-canvas-control — 节点与画布操控；dispatch-agent — 派活给另一个 agent 并取回结果；describe-node/relate-node/capture-requirement/relation-review/close-node — 画布节点生命周期治理；capture-intent — 随口需求立成需求节点；judge-release — 对照验收标准逐条取证并写结论；external-closeout — 从外部会话不唤醒目标节点完成收尾）",
+    "agent-canvas": "Agent Canvas 内置 skill（agent-canvas-control — 节点与画布操控（已弃用，由画布工具与 dispatch-agent 取代，待新版 App 稳定后删除）；dispatch-agent — 派活给另一个 agent 并取回结果；describe-node/relate-node/capture-requirement/relation-review/close-node — 画布节点生命周期治理；capture-intent — 随口需求立成需求节点；judge-release — 对照验收标准逐条取证并写结论；external-closeout — 从外部会话不唤醒目标节点完成收尾）",
     "devflow": "开发流程（question-me — 执行前需求澄清；init-spec — 从初步想法到获批 Spec；develop-plan — 制定实施计划；manage-worktree — 建立或复用、进出与检测 worktree；compose-agentsmd — 从标准骨架生成 AGENTS.md）"
   },
   "skills": [
@@ -394,8 +394,8 @@
       "path": "agent-canvas/agent-canvas-control",
       "bundle": "agent-canvas",
       "installScope": "global",
-      "contentHash": "f3eb49e7376d0bd2",
-      "contentVersion": "1.4.0"
+      "contentHash": "0231a5a74e27e757",
+      "contentVersion": "1.5.0"
     },
     {
       "path": "agent-canvas/dispatch-agent",
@@ -429,8 +429,8 @@
       "path": "agent-canvas/capture-intent",
       "bundle": "agent-canvas",
       "installScope": "global",
-      "contentHash": "b0e2d31760877e45",
-      "contentVersion": "1.3.2"
+      "contentHash": "001fde067ce79517",
+      "contentVersion": "1.3.3"
     },
     {
       "path": "agent-canvas/relation-review",
