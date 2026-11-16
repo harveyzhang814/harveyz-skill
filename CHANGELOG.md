@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- `manage-worktree` 0.3.0：在 Agent Canvas 节点内（`AGENT_CANVAS_NODE_TOKEN` 非空且 `agent-canvas-ctl` 在 PATH 中），「进入」完成后补调 `agent-canvas-ctl claim-worktree --path <绝对路径>`，「离开」完成后补调 `agent-canvas-ctl exit-worktree --path <绝对路径>`，让节点的 worktree 租约与实际进出一致；各宿主用同一条 CLI，不分支到 MCP。补调失败（如 `lease-service-unavailable`、`not-ready`、`no-node-identity`）只写入动作报告，不影响进入、离开的结果；画布外完全不调用，其他项目与宿主行为不变
+
 ## [0.45.0] - 2026-11-13
 
 ### Changed

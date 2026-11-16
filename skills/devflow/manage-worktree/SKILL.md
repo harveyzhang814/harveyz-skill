@@ -1,8 +1,8 @@
 ---
 name: manage-worktree
-description: "Prepare, enter, inspect, merge, or leave the git worktree a task works in — reuse the task's existing worktree or create one from an explicit, rule-derived base after one user confirmation, bind the session to it on Claude Code, Codex, or any other host, check it is a linked worktree on a named non-integration branch, and merge it into the repo's merge target through the repo's own merge script. Called by init-spec, develop-plan, and handoff; never pushes, removes worktrees, or deletes branches. Triggers: 'prepare a worktree', 'enter this worktree', 'check my worktree', 'merge this worktree'."
+description: "Prepare, enter, inspect, merge, or leave the git worktree a task works in — reuse the task's existing worktree or create one from an explicit, rule-derived base after one user confirmation, bind the session to it on Claude Code, Codex, or any other host, check it is a linked worktree on a named non-integration branch, inside an Agent Canvas node also report enter/leave to the node's worktree lease (optional, harmless elsewhere), and merge it into the repo's merge target through the repo's own merge script. Called by init-spec, develop-plan, and handoff; never pushes, removes worktrees, or deletes branches. Triggers: 'prepare a worktree', 'enter this worktree', 'check my worktree', 'merge this worktree'."
 user_invocable: true
-version: "0.2.1"
+version: "0.3.0"
 ---
 
 # 管理 worktree
@@ -39,6 +39,29 @@ version: "0.2.1"
 2. 权威：`git show <该基线分支>:.hskill/init-workflow/resolved.env`，以它的取值输出。这一份读不到（基线分支上没有此文件）→ 退出码 4。
 
 因此主工作树停在别的会话的分支上，或目标工作区是部署前建的分支，都不影响取值。任何取值都不按默认分支猜：`resolved.env` 没有 `base.<类型>` 时 `base` 为空；没有集成分支（`integration_branches` 缺失或为空）时整份视为无效，退出码 4。退出码 4 时各动作停下，提示先在该仓库（重新）部署 init-workflow。
+
+## 画布节点内补调租约
+
+Agent Canvas 会记录每个节点占用哪个 worktree（租约），清理 worktree 时靠它避开仍在使用的目录。这一节是可选的补充，只在 Agent Canvas 的节点里生效；其他环境（普通终端、别的项目与宿主）完全不受影响，照旧只做「进入」「离开」本身。
+
+**什么时候算「在画布节点内」：** 环境变量 `AGENT_CANVAS_NODE_TOKEN` 非空，**且** `command -v agent-canvas-ctl` 有结果。只看环境，不调用 App。不满足就是画布外：画布外不调用任何 `agent-canvas-ctl` 命令，也不提示、不报错。
+
+- **「进入」完成后**（含「准备」复用或新建后的进入），在画布节点内执行一次：
+
+  ```bash
+  agent-canvas-ctl claim-worktree --path <工作区绝对路径>
+  ```
+
+  - 必须传绝对路径：opencode、Pi 等宿主的节点一般停在启动目录，不传 `--path` 会领用错目录。
+  - Claude Code 的 `EnterWorktree` 已经自动领用，再补调一次只是幂等刷新，照样执行，不按宿主区分。
+- **「离开」完成后**，在画布节点内执行一次：
+
+  ```bash
+  agent-canvas-ctl exit-worktree --path <工作区绝对路径>
+  ```
+
+- **失败不阻断：** 补调的退出码非零时，只把错误原文写进本动作的报告，不影响「进入」「离开」本身的结果，也不重试、不改走别的路径。常见错误：`lease-service-unavailable`（App 未在线、不是租约的写者，或版本不带租约）、`not-ready`（服务还没就绪）、`no-node-identity`（当前进程拿不到节点身份）。
+- **各宿主写法一致：** 一律用这条 CLI，不按宿主改用 MCP；前提是该宿主的工具 shell 能拿到 token 和 PATH，拿不到时按画布外处理。
 
 ## 「检测」
 
@@ -137,13 +160,14 @@ bash <skill 目录>/scripts/merge-worktree.sh
 
 ### 收尾
 
-复用当前目录时，开头那次检测就是结果。其他情况按「进入」进入找到或建好的工作区。返回工作区绝对路径、分支名、基线（仅新建时）和检测结果。
+复用当前目录时，开头那次检测就是结果。其他情况按「进入」进入找到或建好的工作区。无论哪种，工作区就绪后都按「画布节点内补调租约」补调一次（经「进入」的情况已含在其第 4 步，不重复）。返回工作区绝对路径、分支名、基线（仅新建时）和检测结果。
 
 ## 「进入」
 
 1. 对目标路径检测一次：`--path <工作区绝对路径>`。退出码 3，或结果含 `not-root`、`not-linked` → 报告不通过，不进入，也不在当前目录继续；由调用方按自己的规则打回或重建，本技能不自行修复。
 2. 按「按宿主进出」进入，核对后续命令的工作目录确实是该工作区。第 1 步的检测就是结果，进入后不重跑。
 3. 给了期望分支名而 `branch` 与之不符 → 报告不通过，不切换分支。
+4. 进入完成且上面都通过后，按「画布节点内补调租约」补调 `claim-worktree`；失败只记入报告。
 
 ## 按宿主进出
 
@@ -182,3 +206,5 @@ Codex 没有 `EnterWorktree` / `ExitWorktree` 工具。进入已建好的工作�
 - 读写、搜索文件一律用工作区内的绝对路径——相对路径按会话当前目录解析，会静默改到另一份同名文件。
 
 离开时停止指向该工作区即可，工作区保留。
+
+无论哪个宿主，「进入」「离开」完成后都按「画布节点内补调租约」补调；它不属于上面任何宿主的专属手段。
