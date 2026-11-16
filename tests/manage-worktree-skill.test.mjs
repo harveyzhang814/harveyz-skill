@@ -78,6 +78,10 @@ test('inside a canvas node, leave releases the lease', async () => {
   assert.ok(leaseSection(body).includes('agent-canvas-ctl exit-worktree --path <工作区绝对路径>'))
   const hosts = body.slice(body.indexOf('## 按宿主进出'))
   assert.ok(hosts.includes('画布节点内补调租约'))
+  const row = body.split('\n').find(l => l.startsWith('| 「离开」 |'))
+  assert.ok(row.includes('exit-worktree') && row.includes('画布节点内补调租约'))
+  const intro = hosts.slice(0, hosts.indexOf('### Claude Code'))
+  assert.ok(intro.includes('画布节点内补调租约') && intro.includes('exit-worktree'))
 })
 
 test('lease call failures never fail enter or leave', async () => {
