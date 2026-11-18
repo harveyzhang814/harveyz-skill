@@ -163,3 +163,27 @@ git -C /Users/harveyzhang96/Projects/feedr <命令>
 ### 推迟未修的 Minor（终审分级为“可不修”，详见账本）
 
 非 UTF-8/损坏之外的边角：`browser_dir()` 并发首次运行竞态、sync commit 先读 stdin 后过初始化门槛（stdin 非法 JSON 退出码 2）、golden 不比字段顺序、两个 init 之外的门槛测试没做 `~/.hskill` 快照、`bool` 被当作 int 退出码、clip-url `SKILL.md:178` 仍写“四份副本”、41efc5e 单独检出时 `npm test` 因版本钉未改而失败（86ce0bb 已修，仅影响 bisect）。
+
+## 交出方验收记录（2026-11-18，第 1 轮，未完结）
+
+在交接工作区（`feature/feedr-split` @ `2f69a7e`）与 feedr（`feature/initial-split` @ `2c379b3`）上逐条自己重跑，不采信自测结论。
+
+| 锚点 | 结果 | 实跑 |
+|---|---|---|
+| 1 | pass | feedr `.venv/bin/pytest -q`：退出码 0，`550 passed`，无 xfail/skip；交接工作区 `npm test`：退出码 0，490 tests / 483 pass / 0 fail / 7 skipped（既有跳过）。计划写定的 10 个关键测试名逐个 grep 存在，`test_fetch_without_archive_root_calls_no_fetch` 断言 `stub_fetch.calls == []` |
+| 2 | 部分完成：AC1–6、9–11 pass；AC7 待重跑 | AC2：全局 `feedr --version` 为 0.1.0，`--help` 列出 5 个命令组。AC4：golden 共 18 个场景（x 5 / youtube 5 / website 8），由 pytest 通过证明。AC6：在真实数据上用旧 `~/.local/bin/roster`、`browser-fetch` 与 `feedr` 对比 `registry list`、`profile get`、`articles-rule list`，三组 `diff` 均无差异；`diff -rq ~/.hskill/roster ~/.feedr/roster` 无差异。AC10：`npm pack --dry-run` 匹配数为 0，`tools/` 只剩 archived/hub/skill-harness/sync-agent，`skills-index.json` 无 `research-tools`。**AC7 未重跑**：重跑会触发钥匙串授权弹窗，需要用户在场，见下 |
+| 3 | 不在范围 | — |
+| 4 | 字面未达成，按例外接受 | `git grep` 有 6 行命中，分布在 4 个文件；在分叉点 `fd60ab4` 上同样命中同样的行（已实跑）。归因：计划要求 `store_config.py` 不动、hub 和 sync-agent 不在范围，这与「grep 无输出」冲突，是交出方写锚点时的遗漏，不是接手方的问题。按 Spec AC9「其他例外逐条说明」接受，不打回 |
+| 5 | pass | `main` 上只有 `6275064`（仅 `.gitignore`）；`main..feature/initial-split` 共 14 个提交；没有 remote；全部历史中没有 `skills/`、`tools/`、`docs/`、`.hskill/`、`SKILL.md` 路径 |
+| 6 | pass | 没有 remote，没有执行推送 |
+
+**回归面：** 改动面是 `fd60ab4..HEAD` 共 17 个提交，涉及 6 个 skill、`tools/`、`skills-index.json`、`package.json`、`tests/`。`npm test`（含 `run-skill-tests.sh` 中各 skill 的 pytest、`skill-portability` 测试）已覆盖。hub、sync-agent 没有改动。未发现锚点以外的回归。
+
+**交出方对接手方送验事项的裁定：**
+- AC1 删减的测试超出了「只删 launcher 测试」的字面：被删的用例对应的层已按已批准的决定移除（S3 移除 `roster init`/`migrate`；D4、S6 去掉 subprocess 和 locate 层）。接受，不打回；Spec 写法过窄，责任在交出方。
+- R1（提交署名改为 Sonnet）：接受，署名与实际执行模型一致。
+- R5（website 遇到坏游标时改为按渠道记入失败，旧版会整轮崩溃）：接受，只影响失败路径，并已写入 README。
+- R7（clip-url 自我优化流程需要本地 feedr checkout 路径）：**产品行为，交给用户裁定。**
+- 误写真实摘要文件的事件：已核对，`~/knowledge/feeds/tweets/digest/` 现有 53 个文件，与接手方的陈述一致。
+
+**未完结项（status 暂不改）：** AC7 重跑（需要用户在钥匙串弹窗中授权）；R7 由用户裁定。
