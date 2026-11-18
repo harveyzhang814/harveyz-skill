@@ -380,15 +380,15 @@
       "path": "feed/manage-creators",
       "bundle": "feed",
       "installScope": "project",
-      "contentHash": "9223f347f35b52f8",
-      "contentVersion": "0.3.2"
+      "contentHash": "7ae825b4b72a5734",
+      "contentVersion": "0.4.0"
     },
     {
       "path": "feed/capture-opinion",
       "bundle": "feed",
       "installScope": "project",
-      "contentHash": "3ce558dc5fd6ea78",
-      "contentVersion": "0.2.1"
+      "contentHash": "8914431e8baa346d",
+      "contentVersion": "0.3.0"
     },
     {
       "path": "agent-canvas/agent-canvas-control",
