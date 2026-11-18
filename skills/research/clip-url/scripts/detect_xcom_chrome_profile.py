@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """
 Detect which Chrome profile(s) are logged into X.com (Twitter), via
-browser-fetch's `profile list` subcommand — no direct sqlite access here
+`feedr fetch profile list` — no direct sqlite access here
 anymore; the cookie-scanning logic now lives in
-tools/browser-fetch/browser_fetch/profiles.py.
+feedr's feedr/fetch/profiles.py.
 
 Usage: python3 detect_xcom_chrome_profile.py
 Prints a human-readable comparison table, then one line:

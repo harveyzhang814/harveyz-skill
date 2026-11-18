@@ -1,13 +1,13 @@
 ---
 name: clip-url
-version: "0.9.4"
-description: "Use this the instant a URL is shared with any intent to save, archive, clip, or translate-and-keep it in Obsidian — a bare link with no comment, \"save this\", \"archive this\", \"clip this\", \"add to obsidian\", \"save it\", \"save to vault/obsidian\", \"keep a record of this\", \"translate and save\", \"help me save/grab this link\", or a request to fetch a page via browser-fetch — including these requests phrased in Chinese. Covers arXiv papers, WeChat official account posts, X/Twitter threads, Hacker News links, blog posts, news articles, and general webpages — including sites needing special handling (login walls, images, JS-rendered content). Do not use for translate-or-summarize-only requests with no save intent, in-page actions like clicking buttons or filling forms, retagging or fixing metadata on an article already saved, links shared purely for reaction or jokes, or topic searches with no specific URL given."
+version: "0.10.0"
+description: "Use this the instant a URL is shared with any intent to save, archive, clip, or translate-and-keep it in Obsidian — a bare link with no comment, \"save this\", \"archive this\", \"clip this\", \"add to obsidian\", \"save it\", \"save to vault/obsidian\", \"keep a record of this\", \"translate and save\", \"help me save/grab this link\", or a request to fetch a page via feedr — including these requests phrased in Chinese. Covers arXiv papers, WeChat official account posts, X/Twitter threads, Hacker News links, blog posts, news articles, and general webpages — including sites needing special handling (login walls, images, JS-rendered content). Do not use for translate-or-summarize-only requests with no save intent, in-page actions like clicking buttons or filling forms, retagging or fixing metadata on an article already saved, links shared purely for reaction or jokes, or topic searches with no specific URL given."
 user_invocable: true
 ---
 
 # clip-url
 
-这是 [browser-fetch](../../../tools/browser-fetch/) 的消费者，做"抓取（CLI，经 browser-fetch article 做站点感知抽取）→ 打标 + 翻译 → 存文件"两阶段流程。下文脚本路径均相对本 SKILL.md 所在目录。
+这是 `feedr fetch` 的消费者，做"抓取（CLI，经 `feedr fetch article` 做站点感知抽取）→ 打标 + 翻译 → 存文件"两阶段流程。下文脚本路径均相对本 SKILL.md 所在目录。
 
 ## 初始化（run first）
 
@@ -24,7 +24,7 @@ user_invocable: true
 
 以下流程中凡标注「**补丁①**」处，均使用对应平台补丁中定义的派发与完成等待方式。
 
-文章存储路径由 `store_config.py` 从 `knowledgeRoot` 计算，固定词表读 `~/.hskill/url-extract/fixed_tags.txt`，默认 Chrome profile 由 browser-fetch 持久化，均无需 agent 传参；补丁②只提供 `SKILL_DIR`。
+文章存储路径由 `store_config.py` 从 `knowledgeRoot` 计算，固定词表读 `~/.hskill/url-extract/fixed_tags.txt`，默认 Chrome profile 由 feedr 持久化（`feedr fetch profile get/set`），均无需 agent 传参；补丁②只提供 `SKILL_DIR`。
 
 **② 检查共享配置**
 
@@ -61,12 +61,14 @@ import re
 url_safe = re.sub(r'[\x00-\x1f\x7f]', '', url).strip()[:2048]
 ```
 
-### 步骤 1.5：确认 browser-fetch 可用
+### 步骤 1.5：确认 feedr 可用
 
-运行 `python3 scripts/browser_fetch_locate.py`。
+运行 `command -v feedr`。
 
-- 若输出 `FOUND: <path>`：继续步骤 2。
-- 若输出 `NOT_FOUND: <error>`（exit code 1）：向用户报告"browser-fetch 未安装或未找到：{error}。若在本仓库 checkout 内运行，请确认 `tools/browser-fetch/browser-fetch.sh` 存在；若是通过 `hskill install` 安装的 skill 副本，请先运行 `hskill install --tool browser-fetch`"，流程终止，不再执行后续步骤。
+- 若有输出（feedr 路径）：继续步骤 2。
+- 若无输出：向用户报告并终止流程，不再执行后续步骤：
+
+> feedr 未安装：uv tool install git+https://github.com/harveyzhang96/feedr && feedr fetch install-browser
 
 ### 步骤 2：确认默认 chrome_profile（只在第一次使用本 skill 时问一次，之后不再询问）
 
@@ -172,11 +174,11 @@ url_safe = re.sub(r'[\x00-\x1f\x7f]', '', url).strip()[:2048]
 | `references/subagent1-fetch-prompt.md` | Subagent 1（CLI 抓取）派发 prompt 模板，含去重检查 |
 | `references/subagent2-tag-translate-prompt.md` | Subagent 2（两阶段打标 + 翻译）派发 prompt 模板 |
 | `references/subagent-self-optimize-prompt.md` | Subagent 3（自优化，抓取失败/过薄时触发）派发 prompt 模板 |
-| `scripts/browser_fetch_locate.py` | 步骤 1.5 前置检测：定位 browser-fetch launcher（dev-mode 优先，已安装模式兜底） |
+| `scripts/browser_fetch_cli.py` | 四个 client 脚本共用的 `feedr fetch` 调用层；`feedr` 不在 PATH 上时抛 `RuntimeError`，消息即安装提示 |
 | `scripts/store_config.py` | 读共享 `knowledgeRoot`（`~/.hskill/config.json`），四个入范围 skill 各存一份内容相同的副本 |
 | `scripts/dedup_check.py` | URL 去重检查（读 `<hash8>/meta.json`） |
 | `scripts/write_meta_and_separate.py` | Subagent 2 用的 CLI 包装，调用 `article_meta` 写 meta.json + 移位 |
-| `scripts/mcp_fetch_client.py` | 核心脚本：调用 browser-fetch 的 `article` 子命令，`fetch_and_report` 额外返回诊断字段 |
-| `scripts/mcp_debug_client.py` | 自优化 subagent 用的调试客户端，包装 browser-fetch 的 `page`/`eval` 子命令 |
-| `scripts/detect_xcom_chrome_profile.py` | 通过 browser-fetch 的 `profile list` 子命令检测哪些 Chrome profile 登录了 x.com，仅供用户确认用，不自动使用检测结果 |
-| `scripts/chrome_profile_config.py` | 读写 browser-fetch 持久化的默认 chrome_profile（`get`/`set` 子命令，对应 browser-fetch 的 `profile get`/`profile set`），以及本地记录"是否已问过一次"的标记（`prompted`/`mark-prompted` 子命令） |
+| `scripts/mcp_fetch_client.py` | 核心脚本：调用 `feedr fetch article`，`fetch_and_report` 额外返回诊断字段 |
+| `scripts/mcp_debug_client.py` | 自优化 subagent 用的调试客户端，包装 `feedr fetch page`/`feedr fetch eval` |
+| `scripts/detect_xcom_chrome_profile.py` | 通过 `feedr fetch profile list` 检测哪些 Chrome profile 登录了 x.com，仅供用户确认用，不自动使用检测结果 |
+| `scripts/chrome_profile_config.py` | 读写 feedr 持久化的默认 chrome_profile（`get`/`set` 子命令，对应 `feedr fetch profile get`/`profile set`），以及本地记录"是否已问过一次"的标记（`prompted`/`mark-prompted` 子命令） |

@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""Thin CLI wrapper for reading/writing browser-fetch's persisted default
-Chrome profile (`profile get` / `profile set` subcommands). Written from
+"""Thin CLI wrapper for reading/writing feedr's persisted default
+Chrome profile (`feedr fetch profile get` / `profile set` subcommands). Written from
 scratch, same browser_fetch_cli.call() pattern as mcp_fetch_client.py and
 detect_xcom_chrome_profile.py.
 
-Also tracks, purely locally (no browser-fetch call involved), whether
+Also tracks, purely locally (no feedr call involved), whether
 clip-url has already asked the user about chrome_profile once — so
 SKILL.md's step 2 only prompts on the very first run, regardless of
 whether the user set a profile or declined, instead of re-prompting on
