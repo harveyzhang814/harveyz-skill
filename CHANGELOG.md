@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.46.0] - 2026-11-18
+
 ### Added
 - `init-workflow` 5.1.0：新增 `merge.post_steps`（缺省 `[]`），合并脚本在合并成功后依次在后台启动配置的命令，不等待、不影响退出码与 stdout，用来在合并后自动跑全量测试之类的耗时检查，与 `merge.pre_checks` 对称。命令在被合并分支的 worktree 根目录用 `nohup sh -c` 脱离启动，只在 `update-ref` 成功并同步完目标分支工作树之后启动，“已包含”、冲突、重试耗尽、出错都不启动；占位符 `{target}`、`{script_dir}`、`{merge_commit}`、`{base_commit}`、`{feature_branch}`，并导出 `MERGE_COMMIT`、`MERGE_BASE_COMMIT`、`MERGE_FEATURE_BRANCH`、`MERGE_TARGET`。未配置时生成的合并脚本与 5.0.3 只差版本号一行，不影响其他项目；已部署的项目重新运行 init-workflow 才会更新脚本与 hooks 头部的版本号
 
