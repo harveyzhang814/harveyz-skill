@@ -1,5 +1,5 @@
 ---
-status: 执行中
+status: 待验收
 date: 2026-11-18
 author_model: claude-opus-5-5
 acceptance: hard
@@ -84,3 +84,27 @@ agent-canvas 那边怎么使用这个扩展点（后台运行器、通知等）�
 6. `git diff --check fd60ab4..HEAD` 没有输出；`git status --short` 为空。
 
 **自测要求**：自测记录逐条列出上面 1–6 条的结果并附命令。按 handoff skill 的 Phase 2.5 执行。完成后用 `agent-canvas-ctl send e5fda1ce-857b-4f9e-97b3-c407d3e61768` 回报。
+
+## 接手方自测记录（2026-11-18）
+
+实现提交 `823a195`。以下命令均在交接工作区内直接运行，判成败的命令不接管道。
+
+| # | 锚点 | 命令 | 结果 |
+|---|---|---|---|
+| 1 | J5a/J5b/J5c 三条 bats 均在 skill 测试里且通过 | `bats skills/coding/init-workflow/tests/merge-script.bats` | pass：14/14，`ok 10 J5a…`、`ok 11 J5b…`、`ok 12 J5c…` |
+| 2 | 另加 J5d（占位符、四个 `MERGE_*` 环境变量、“无需合并”不执行） | 同上 | pass：`ok 13 J5d…`；另加 `ok 14 J5e`（真实冲突不执行步骤） |
+| 3 | `npm test` 退出码为 0 | `npm test` | pass：第二次运行 exit 0；第一次运行见下方「带红说明」 |
+| 4 | 既有 bats 与 pytest 全部通过 | `bats skills/coding/init-workflow/tests`；`python3 -m pytest skills/coding/init-workflow/tests -q` | pass：bats 37/37（含既有 24 条）；pytest 90 passed |
+| 5 | 版本与索引 | `grep '^version:' skills/coding/init-workflow/SKILL.md`；读 `skills-index.json` | pass：`version: "5.1.0"`；`contentHash` 由 `150676ddb3caabde` 改为 `a96a825be7a7e144`，`contentVersion` 为 `5.1.0`（`tests/init-workflow-skill.test.mjs` 按 SKILL.md 重算 hash 并比对，已过） |
+| 6 | 无空白错误、工作区干净 | `git diff --check fd60ab4..HEAD`；`git status --short` | pass：两者都无输出（`status` 在提交本记录之后核对） |
+
+**测试先红后绿：** J5a（版本号未改时两个脚本完全相同，“恰好 2 行不同”不成立）、J5b（`sleep 30` 的步骤尚未被启动，标记不出现）、J5d（输出文件不出现）实现前都是红的，原因都是功能缺失；pytest 新增 6 条同样先红后绿。J5c、J5e 在实现前就是绿的（没有这个功能时本来就满足），它们是守护用例，不是先红的证据。
+
+**带红说明：** 第一次 `npm test` 退出码 1，唯一失败的是 `skills/feed/sync-xtimeline/tests/test_store_config.py::test_check_downstream_reports_partial_scholia_drift`（`subprocess.run` 超时）。该测试与本次改动无关（只涉及 sync-xtimeline）。单独运行该文件 15 passed，随后重跑整套 `npm test` exit 0。我判断是机器负载造成的超时，没有在分叉点 `fd60ab4` 上复现比对，这一点未确认。
+
+**实现中的两个选择，供验收参考：**
+- bats 的测试名只用 ASCII（`J5a …` 起头，后半段是英文）：本机 bash 3.2 下 bats 1.13 解析不了非 ASCII 的测试名（实测 `unknown test name`），交接文档里的中文描述改成了英文。
+- 第一版实现把 `cd && 命令 &` 整条放进后台，子 shell 一直握着调用方的 stdout 管道，任何捕获合并脚本输出的调用方都会被卡住直到后台步骤结束（J5b 实测 30 秒）。已改成只后台化 `nohup` 那一条，J5b 实测 2 秒内返回。
+
+**改动范围之外的连带修改（均为让既有断言保持成立）：** `tests/init-workflow-skill.test.mjs` 里写死的 `5.0.3` 改为 `5.1.0`；`references/hook-templates.md` 的四处 hooks 头部版本串与 `references/lock-file-format.md` 的示例版本同步为 `5.1.0`（既有测试强制它们与 SKILL.md 版本一致）；`references/render_docs.py` 在配置了 `post_steps` 时才往生成的 `git-workflow.md` 里多写一段，未配置时文档不变。
+
