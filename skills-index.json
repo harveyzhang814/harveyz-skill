@@ -117,21 +117,21 @@
       "path": "feed/sync-xtimeline",
       "bundle": "feed",
       "installScope": "project",
-      "contentHash": "bfc20e8016717bb9",
+      "contentHash": "984bb4a36a09eae0",
       "contentVersion": "0.9.0"
     },
     {
       "path": "feed/sync-ytchannel",
       "bundle": "feed",
       "installScope": "project",
-      "contentHash": "3670443fdc40c00f",
+      "contentHash": "c9a78eb4248b8bd3",
       "contentVersion": "0.8.0"
     },
     {
       "path": "feed/sync-website",
       "bundle": "feed",
       "installScope": "project",
-      "contentHash": "54f3125d7a63464a",
+      "contentHash": "0ca195779c026fc3",
       "contentVersion": "0.3.0"
     },
     {

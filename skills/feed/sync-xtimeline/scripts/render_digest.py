@@ -81,6 +81,9 @@ def main():
         print("EMPTY")
         return
 
+    if "archive_dir" not in report:
+        print("render_digest.py: report 缺少 archive_dir（应来自 feedr sync fetch x）", file=sys.stderr)
+        sys.exit(1)
     digests_dir = Path(report["archive_dir"]) / "digest"
     digests_dir.mkdir(parents=True, exist_ok=True)
     run_time = datetime.fromisoformat(report["run_time"])

@@ -207,3 +207,12 @@ def test_cli_digest_lands_under_archive_dir_digest(tmp_path):
     written_path = Path(result.stdout.strip().split("WRITTEN: ", 1)[1])
     assert written_path.parent == archive_dir / "digest"
     assert list((archive_dir / "digest").glob("digest-*.md")) == [written_path]
+
+
+def test_cli_nonempty_report_without_archive_dir_exits_1_with_message():
+    report = {"run_time": "2026-08-15T09:00:00+00:00", "new": {}, "baselines": {"carol": 3}, "failures": {}}
+    result = _run(report)
+    assert result.returncode == 1
+    assert "archive_dir" in result.stderr
+    assert "Traceback" not in result.stderr
+    assert result.stdout.strip() == ""

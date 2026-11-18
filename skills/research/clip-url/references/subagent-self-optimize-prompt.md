@@ -93,8 +93,11 @@ git checkout -b fix/<site-slug>-extraction
 为改动补测试，风格和位置参照 `<FEEDR_REPO>/tests/fetch/test_extractors.py`（dispatch/抽取逻辑单测）、`<FEEDR_REPO>/tests/fetch/test_fetch_article.py`（端到端真实网络，thin-retry 等重试/编排逻辑的覆盖也在这里，命中候选 4 且改动落在 `core.py` 时同样参照这个）现有模式。跑：
 
 ```bash
-cd <FEEDR_REPO> && .venv/bin/pytest tests/fetch -q
+cd <FEEDR_REPO>
+if [ -x .venv/bin/pytest ]; then .venv/bin/pytest tests/fetch -q; else python3 -m pytest tests/fetch -q; fi
 ```
+
+（`<FEEDR_REPO>` 下有 `.venv` 就用其中的 pytest，没有就用 `python3 -m pytest`；两种都要在 `<FEEDR_REPO>` 目录里跑。）
 
 必须全绿才能进入 Step 5。若跑不绿，回到 Step 2/3 调整，不要带着失败的测试提交。
 

@@ -37,7 +37,7 @@ command -v feedr
 `feedr sync` 在 stderr 第一行用固定标记报告初始化状态：
 
 - ``NOT_INITIALIZED: run `feedr init` ``：名册从未初始化过。让用户先跑一次 [manage-creators](../manage-creators/)，然后终止。
-- `MISSING_ARCHIVE_ROOT`：未配置存档根。询问用户"抓取产物统一存到哪个目录？（直接回车使用默认：`~/knowledge`）"，然后运行 `feedr config set archive-root <目录>`。默认值不选 `~/Documents`、`~/Desktop`、`~/Downloads`（macOS TCC 保护，无 Full Disk Access 时写入被拒）。
+- `MISSING_ARCHIVE_ROOT`：未配置存档根。询问用户"抓取产物统一存到哪个目录？（直接回车使用默认：`~/knowledge`）"，然后运行 `feedr config set archive-root <目录>`，设置好后重新运行第 1 步的抓取命令继续。默认值不选 `~/Documents`、`~/Desktop`、`~/Downloads`（macOS TCC 保护，无 Full Disk Access 时写入被拒）。
 
 所有产物（`digest/`、`creators/<handle>.json`）落在存档根下的 `feeds/youtube/` 子目录里（`<archive_root>/feeds/youtube/`），跟 sync-xtimeline 共用同一份存档根（各自渠道各占 `feeds/` 下一个子目录）。
 
