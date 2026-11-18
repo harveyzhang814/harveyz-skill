@@ -111,8 +111,18 @@ worktree:
 # pre_checks: 合并前依次执行的命令，任一失败即中止；{target} 替换为合并目标分支；
 #             {script_dir} 替换为合并脚本所在目录（已带引号），用于调用放在合并脚本旁边的检查脚本
 #             在被合并分支的工作树根执行；[] = 不做合并前检查
+# post_steps: 合并成功后依次在后台启动的命令，不等待结束，失败也不影响合并的退出码与输出；
+#             写法参照 pre_checks（块列表，每项一条命令，列表项后不要加行内注释）；
+#             在被合并分支的工作树根执行，只在本次真正产生了合并提交时启动（“已包含”、冲突、出错都不启动）；
+#             占位符：{target} 合并目标分支，{script_dir} 合并脚本所在目录，{merge_commit} 新的合并提交，
+#             {base_commit} 合并前目标分支指向的提交，{feature_branch} 被合并的分支（都已转义，不要再加引号）；
+#             同时导出环境变量 MERGE_COMMIT、MERGE_BASE_COMMIT、MERGE_FEATURE_BRANCH、MERGE_TARGET；
+#             [] = 不做合并后步骤（生成的合并脚本与没有这个功能时一致）
 # 缺省 = []；旧配置没有此节时按缺省值解释
 merge:
   pre_checks: []
   # pre_checks:
   #   - node {script_dir}/check-file-token-budget.js --changed-since {target}
+  post_steps: []
+  # post_steps:
+  #   - sh {script_dir}/after-merge.sh {merge_commit}

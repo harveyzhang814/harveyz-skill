@@ -175,6 +175,32 @@ merge:
     assert r["pre_checks"] == cfg["pre_checks"]
 
 
+def test_post_steps_default_empty_and_parsed_separately_from_pre_checks(tmp_path):
+    cfg = wr.load_config(write(tmp_path, STAGING_CFG))
+    assert cfg["post_steps"] == []
+    assert wr.resolve(cfg, RULE)["post_steps"] == []
+    text = STAGING_CFG + """
+merge:
+  pre_checks:
+    - "make lint"
+  post_steps:
+    - "sh {script_dir}/after.sh {merge_commit}"
+    - "echo {feature_branch} {base_commit} {target}"
+"""
+    cfg = wr.load_config(write(tmp_path, text))
+    assert cfg["pre_checks"] == ["make lint"]
+    assert cfg["post_steps"] == [
+        "sh {script_dir}/after.sh {merge_commit}",
+        "echo {feature_branch} {base_commit} {target}",
+    ]
+    assert wr.resolve(cfg, RULE)["post_steps"] == cfg["post_steps"]
+
+
+def test_post_steps_inline_empty_list_is_empty(tmp_path):
+    cfg = wr.load_config(write(tmp_path, STAGING_CFG + "\nmerge:\n  pre_checks: []\n  post_steps: []\n"))
+    assert cfg["post_steps"] == []
+
+
 def test_no_base_feature_omits_merge_keys(tmp_path):
     r = resolved_from(tmp_path, NO_FEATURE_CFG)
     assert r["merge_target"] is None

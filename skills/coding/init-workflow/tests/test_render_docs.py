@@ -116,6 +116,14 @@ def test_merge_section_points_to_script_and_lists_pre_checks(tmp_path):
     assert PRE_CHECK_2 in merge
 
 
+def test_merge_section_lists_post_steps_only_when_configured(tmp_path):
+    base = section(render_cfg(tmp_path, STAGING_CFG), "合并到集成分支")
+    assert "合并后" not in base
+    doc = render_cfg(tmp_path, STAGING_CFG + "  post_steps:\n    - make after-merge\n")
+    merge = section(doc, "合并到集成分支")
+    assert "合并后" in merge and "make after-merge" in merge
+
+
 def test_no_merge_target_keeps_generic_merge(tmp_path):
     doc = render_cfg(tmp_path, NO_FEATURE_CFG)
     assert "git merge" in section(doc, "合并到集成分支")

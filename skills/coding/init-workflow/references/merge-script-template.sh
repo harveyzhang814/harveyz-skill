@@ -58,6 +58,7 @@ run_pre_check() {
 {{PRE_CHECKS}}
 # --- END MANAGED: merge/pre-checks ---
 
+{{POST_STEPS_DEF}}
 # 找到当前 checkout 着 目标分支 的 worktree（如果有）。干不干净的判断挪到
 # sync_staging_worktree() 拿到互斥锁之后现读现算（见下），这里只需要知道
 # 这个 worktree 在哪、存不存在。
@@ -347,6 +348,7 @@ while [ "$attempt" -lt "$MAX_RETRIES" ]; do
         if git update-ref "$TARGET_REF" "$new_commit" "$staging_head" 2>/dev/null; then
             echo "✅ 已将 ${feature_branch} 合并进本地 ${TARGET_BRANCH}（${new_commit}）"
             sync_staging_worktree "$staging_head" || true
+{{POST_STEPS_CALL}}
             exit 0
         fi
 

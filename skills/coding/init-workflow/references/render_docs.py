@@ -141,6 +141,10 @@ def render(config, resolved, template):
                            f'`{{target}}` 即 `{target}`），任一失败即中止、不合并：\n\n{checks}')
         else:
             checks_text = '合并前检查：未配置（`merge.pre_checks` 为空）。'
+        if resolved['post_steps']:
+            steps = '\n'.join(f'{i}. `{cmd}`' for i, cmd in enumerate(resolved['post_steps'], 1))
+            checks_text += (f'\n\n合并后步骤：合并成功后依次在后台启动以下命令（在被合并分支的 worktree 根目录运行，'
+                            f'不等待结束，失败不影响合并的退出码；`{{target}}` 即 `{target}`）：\n\n{steps}')
         merge_section = (
             f'调用 `manage-worktree「合并」`，或在被合并分支的 worktree 里直接运行 '
             f'`{resolved["merge_script"]}`。\n\n'
