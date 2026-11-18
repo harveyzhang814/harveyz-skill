@@ -6,7 +6,7 @@ acceptance: hard
 workspace_mode: shared-worktree
 branch: feature/init-workflow-post-steps
 worktree: /Users/harveyzhang96/Projects/harveyz-skill/.worktrees/feature+init-workflow-post-steps
-base_commit: fd60ab4
+base_commit: fd60ab4e389ded0430d39be83c7de17aa9ec8c15
 source_node: e5fda1ce-857b-4f9e-97b3-c407d3e61768
 target_node: 9afed50d-7b62-4ba0-80ff-d128083a4bf7
 ---
