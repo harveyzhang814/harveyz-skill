@@ -1,5 +1,5 @@
 ---
-status: 待验收
+status: 已验收
 date: 2026-11-18
 author_model: claude-opus-5-5
 acceptance: hard
@@ -187,3 +187,10 @@ git -C /Users/harveyzhang96/Projects/feedr <命令>
 - 误写真实摘要文件的事件：已核对，`~/knowledge/feeds/tweets/digest/` 现有 53 个文件，与接手方的陈述一致。
 
 **未完结项（status 暂不改）：** AC7 重跑（需要用户在钥匙串弹窗中授权）；R7 由用户裁定。
+
+### 第 1 轮补完（2026-11-18）
+
+- **AC7：pass。** 用户在钥匙串弹窗中授权后，交出方重跑 `feedr fetch timeline https://x.com/trq212 --max 5`：退出码 0，返回 5 条推文（最新一条 id 为 `2122438328079524159`），stderr 为空，没有要求重新登录。
+- **R7：** 用户选择「接受现状」。
+- **结论：锚点 1、2、4、5、6 全部达成（锚点 4 按例外接受），锚点 3 不在范围。status 置「已验收」。**
+- **留给交出方：** 合并到 `staging`、部署 6 个 skill、AC8（Task 14 Step 5、7）、Task 7 Step 7（GitHub 公开建仓，需用户确认）。
