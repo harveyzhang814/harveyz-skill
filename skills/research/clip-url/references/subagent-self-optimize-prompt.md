@@ -7,6 +7,7 @@
 - `<ERROR>`：Subagent 1 报告的 ERROR 字段（若 RESULT 是 OK 则替换为空字符串）
 - `<CHROME_PROFILE>`：已持久化的默认 chrome_profile 路径（没有则替换为空字符串，不留任何字符）
 - `<FEEDR_REPO>`：feedr 仓库 checkout 的绝对路径（自优化要改 feedr 的抽取代码）。主 session 向用户询问；用户给不出路径时不派发 Subagent 3，按 `GAVE_UP` 处理，`DIAGNOSIS` 写明缺少 feedr 源码
+- `SKILL_DIR`：平台补丁②提供的 clip-url 安装目录（含 `scripts/` 的那一级）的绝对路径字符串，下文 `SKILL_DIR/scripts/...` 直接替换为该值
 
 ---
 
@@ -23,13 +24,13 @@ Subagent 1 的诊断信息：
 - THIN_RETRY_USED: <THIN_RETRY_USED>
 - ERROR: <ERROR>
 
-改动对象是 feedr 的抽取代码，位于 feedr 仓库的 checkout `<FEEDR_REPO>`（主 session 已替换为绝对路径）。工作目录：`<FEEDR_REPO>` 根目录。**不要新建 git worktree**，直接在当前 checkout 上切分支——紧接着主流程要立刻重试抓取，用的就是这里改动后的代码（`feedr` 须是 editable 安装才会立即生效；否则改完后需 `uv tool install --force --editable <FEEDR_REPO>` 重装）。
+改动对象是 feedr 的抽取代码，位于 feedr 仓库的 checkout `<FEEDR_REPO>`（主 session 已替换为绝对路径）。工作目录：`<FEEDR_REPO>` 根目录。**不要新建 git worktree**，直接在当前 checkout 上切分支。动手前先核对：`<FEEDR_REPO>` 是 git 仓库，且根目录 `pyproject.toml` 里有 `name = "feedr"`；不符则不要改任何文件，直接按「放弃汇报」报告 `GAVE_UP`。**不要运行 `uv tool install` 或改动用户全局安装的 feedr**——你的工作到提交修复分支并报告 `BRANCH` 为止；是否重装、是否重试由主 session/用户决定（立即重试只有在用户的 feedr 是 editable 安装，或已从该分支重装时才会用上这次修复）。
 
-调用 `feedr fetch` 用这个已存在的调试客户端（不需要新建，位于 harveyz-skill 仓库，不在 `<FEEDR_REPO>` 里）：`skills/research/clip-url/scripts/mcp_debug_client.py`，提供 `call_fetch_page(url, use_auth=False, chrome_profile=None) -> dict` 和 `call_evaluate_js(url, js_code, chrome_profile=None) -> dict` 两个同步函数（`call_fetch_page` 返回里 `payload["html"]` 是原始 HTML；`call_evaluate_js` 返回里 `payload["result"]` 是 `js_code` 求值结果）。用法示例：
+调用 `feedr fetch` 用这个已存在的调试客户端（不需要新建，位于 harveyz-skill 仓库，不在 `<FEEDR_REPO>` 里）：`SKILL_DIR/scripts/mcp_debug_client.py`，提供 `call_fetch_page(url, use_auth=False, chrome_profile=None) -> dict` 和 `call_evaluate_js(url, js_code, chrome_profile=None) -> dict` 两个同步函数（`call_fetch_page` 返回里 `payload["html"]` 是原始 HTML；`call_evaluate_js` 返回里 `payload["result"]` 是 `js_code` 求值结果）。用法示例：
 
 ```python
 import sys
-sys.path.insert(0, "skills/research/clip-url/scripts")
+sys.path.insert(0, "SKILL_DIR/scripts")
 from mcp_debug_client import call_fetch_page, call_evaluate_js
 
 html_payload = call_fetch_page("<URL>")

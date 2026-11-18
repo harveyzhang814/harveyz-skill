@@ -106,9 +106,9 @@ url_safe = re.sub(r'[\x00-\x1f\x7f]', '', url).strip()[:2048]
 
 ### 步骤 4.5：派发 Subagent 3（自优化，仅在步骤 4 判定需要时执行）
 
-读取 `references/subagent-self-optimize-prompt.md`，按其头部的占位符规则（Subagent 1 报告的字段原样传入）替换后，按**补丁①**派发。
+读取 `references/subagent-self-optimize-prompt.md`，按其头部的占位符规则（Subagent 1 报告的字段原样传入）替换后，按**补丁①**派发。派发前先向用户询问本机 feedr 仓库 checkout 的路径（`<FEEDR_REPO>`）；用户给不出路径就不派发，直接按 `RESULT: GAVE_UP` 处理（`DIAGNOSIS` 记为缺少 feedr 源码）。
 
-- Subagent 3 报告 `RESULT: SOLIDIFIED`：记下 `BRANCH:` 的值（步骤 6 汇报要用），重新派发 Subagent 1（同一个 url_safe），回到步骤 4 重新判断一次——若此次判断仍然需要自优化，直接终止并向用户输出「失败」卡片，不再进入步骤 4.5。
+- Subagent 3 报告 `RESULT: SOLIDIFIED`：记下 `BRANCH:` 的值（步骤 6 汇报要用），重新派发 Subagent 1（同一个 url_safe；重试只有在用户的 feedr 是 editable 安装、或已从该分支重装时才会用上这次修复，Subagent 3 自己不重装 feedr），回到步骤 4 重新判断一次——若此次判断仍然需要自优化，直接终止并向用户输出「失败」卡片，不再进入步骤 4.5。
 - Subagent 3 报告 `RESULT: GAVE_UP`，或重试后 Subagent 1 仍然满足步骤 4 的自优化触发条件：向用户输出「失败」卡片（步骤 6 卡片格式，原因附上 Subagent 1 最新的诊断信息，以及 Subagent 3 报告里的 `ATTEMPTS`/`DIAGNOSIS`，如果有），流程终止，不再派发 Subagent 2。
 
 ### 步骤 5：派发 Subagent 2（打标 + 翻译）
@@ -160,7 +160,7 @@ url_safe = re.sub(r'[\x00-\x1f\x7f]', '', url).strip()[:2048]
 ──────────────────────────────────────
 ```
 
-任意状态下，若本次运行中步骤 4.5 曾经出现过 `RESULT: SOLIDIFIED`，在卡片后额外报告一行：本次抓取新增了未合并分支 `<BRANCH>`，需要用户决定后续（合并/PR/保留）。
+任意状态下，若本次运行中步骤 4.5 曾经出现过 `RESULT: SOLIDIFIED`，在卡片后额外报告一行：本次抓取在 feedr 仓库（`<FEEDR_REPO>`，不是本仓库）新增了未合并分支 `<BRANCH>`，需要用户决定后续（合并/PR/保留）。
 
 ## 边界
 
