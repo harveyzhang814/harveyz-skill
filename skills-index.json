@@ -135,8 +135,8 @@
       "path": "feed/sync-ytchannel",
       "bundle": "feed",
       "installScope": "project",
-      "contentHash": "5454a9384f114dca",
-      "contentVersion": "0.7.5"
+      "contentHash": "3670443fdc40c00f",
+      "contentVersion": "0.8.0"
     },
     {
       "path": "feed/sync-website",
