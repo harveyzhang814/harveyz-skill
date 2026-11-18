@@ -2,7 +2,7 @@
 name: init-workflow
 description: "Initialize or update git branch management standards: reads .hskill/init-workflow/workflow-config.yml, audits config, incrementally generates and deploys git hooks (pre-commit, commit-msg, pre-push, post-checkout), deploys resolved.env, the workflow doc and the standard merge script, and bootstraps the first commit and missing integration branches. Triggers: initializing a new git repo, first-time git setup, user asks to set/update branch protection or naming rules, reinstalling git hooks, or syncing after skill/template updates."
 user_invocable: true
-version: "5.0.3"
+version: "5.1.0"
 ---
 
 # Git 工作流初始化
@@ -67,6 +67,7 @@ echo "" | grep -E "<pattern>" > /dev/null 2>&1; echo $?
 **新增字段：**
 - `worktree.dir`（缺省 `.worktrees`）：worktree 所在目录，路径为 `<dir>/<分支名，/ 换成 +>`。旧配置没有此节时按缺省值解释，不报错。
 - `merge.pre_checks`（缺省 `[]`）：合并前依次执行的命令，在被合并分支的 worktree 根目录执行。占位符：`{target}` 替换为合并目标分支；`{script_dir}` 替换为合并脚本所在目录的绝对路径（已带引号，路径含空格也安全，不要再给它加引号），用于调用放在合并脚本旁边的检查脚本，例如 `- node {script_dir}/check-file-token-budget.js --changed-since {target}`。**只支持块列表写法**（`- 命令` 逐行），**列表项后不得加行内注释**（解释器逐行取值，注释会被当作命令的一部分）。
+- `merge.post_steps`（缺省 `[]`）：合并成功后依次启动的命令，在被合并分支的 worktree 根目录用 `nohup sh -c` 在后台脱离启动，不等待结束；启动失败只在 stderr 打一行警告，合并脚本的退出码与 stdout 不变。只在 `update-ref` 成功并同步完 `staging` 工作树之后启动，“已包含”、冲突、重试耗尽、出错这些路径都不启动。占位符：`{target}`、`{script_dir}`（同 `pre_checks`），另有 `{merge_commit}`（新的合并提交）、`{base_commit}`（合并前目标分支指向的提交）、`{feature_branch}`（被合并的分支），都已按 shell 转义，不要再给它们加引号；每条命令同时拿到环境变量 `MERGE_COMMIT`、`MERGE_BASE_COMMIT`、`MERGE_FEATURE_BRANCH`、`MERGE_TARGET`。写法同 `pre_checks`（块列表、不加行内注释）。为空或没有这个键时，生成的合并脚本与 5.0.3 逐行一致（只差版本号那一行）。
 
 审核通过打印 `✅ 配置审核通过`，审核失败列出所有问题并停止。
 
@@ -182,7 +183,7 @@ git config merge.ff false
 
 - `.hskill/init-workflow/resolved.env`：解释结果（格式与键集合见 `references/workflow_resolve.py`）；消费方逐行读取，不得 `source`。
 - `docs/reference/git-workflow.md`：工作流文档。文末 `<!-- BEGIN PROJECT NOTES -->` 与 `<!-- END PROJECT NOTES -->` 之间是**项目自填区**，重新渲染时原样保留；这对标记之外的内容以模板为准，不要手改。
-- `scripts/merge-to-<合并目标>.sh`：标准合并脚本，仅在有合并目标时部署；项目自己的合并前检查改配置里的 `merge.pre_checks`，不要改脚本。`pre_checks` 在“已包含 / 冲突”判断之前执行，任一失败退出码为 1、不合并。
+- `scripts/merge-to-<合并目标>.sh`：标准合并脚本，仅在有合并目标时部署；项目自己的合并前检查改配置里的 `merge.pre_checks`，不要改脚本。`pre_checks` 在“已包含 / 冲突”判断之前执行，任一失败退出码为 1、不合并。合并后要做的事（如后台跑测试）写在 `merge.post_steps`，同样不要改脚本。
 - `.gitignore`：`<worktree.dir>/` 未被忽略时追加一行（状态：文件原不存在为 `NEW`，追加了一行为 `UPDATED`，已忽略则 `UNCHANGED`）。
 
 **`WARN` 行：** 现有文件没有生成标记（或自填区标记）、且内容与新渲染结果不同时，脚本照旧覆盖，并输出 `WARN`：stdout 里是 `WARN <路径>`，紧挨在该文件的 `UPDATED` 行之前；找回命令（如 `git diff HEAD -- docs/reference/git-workflow.md`）的说明文字走 **stderr**。所以运行时 stdout 与 stderr 都要捕获并照录给用户，说明旧内容可用该命令找回、需要保留的部分手工并入自填区。非 0 退出码的处理见 Step 6.0。

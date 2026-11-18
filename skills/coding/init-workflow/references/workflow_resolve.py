@@ -7,7 +7,7 @@ init-workflow 单一解释器
 import os
 import re
 
-INIT_WORKFLOW_VERSION = "5.0.3"
+INIT_WORKFLOW_VERSION = "5.1.0"
 RULE_FILE_CANDIDATES = (
     ".hskill/init-workflow/workflow-config.yml",
     "workflow-config.yml",
@@ -157,12 +157,13 @@ def load_config(path):
     max_len_m = re.search(r'max_subject_length:\s*(\d+)', content)
     max_len = int(max_len_m.group(1)) if max_len_m else 72
 
-    # worktree.dir / merge.pre_checks（旧配置没有这两节时取默认值）
+    # worktree.dir / merge.pre_checks / merge.post_steps（旧配置没有这几节时取默认值）
     wt_m = re.search(r'^worktree:[ \t]*(?:#[^\n]*)?\n((?:[ \t]+.*\n?|[ \t]*\n)*)', content, re.M)
     dir_m = re.search(r'^[ \t]+dir:[ \t]*["\']?([^\s"\'#]+)', wt_m.group(1), re.M) if wt_m else None
     worktree_dir = dir_m.group(1) if dir_m else '.worktrees'
     merge_m = re.search(r'^merge:[ \t]*(?:#[^\n]*)?\n((?:[ \t]+.*\n?|[ \t]*\n)*)', content, re.M)
     pre_checks = extract_list_under('pre_checks', merge_m.group(1)) if merge_m else []
+    post_steps = extract_list_under('post_steps', merge_m.group(1)) if merge_m else []
 
     return {
         'protected': protected,
@@ -174,6 +175,7 @@ def load_config(path):
         'max_subject_length': max_len,
         'worktree_dir': worktree_dir,
         'pre_checks': pre_checks,
+        'post_steps': post_steps,
     }
 
 def _branch_types(patterns):
@@ -217,6 +219,7 @@ def resolve(config, rule_file):
         'naming': [p.replace('\\\\', '\\') for p in config['naming_patterns']],
         'naming_exempt': list(config['naming_exempt']),
         'pre_checks': list(config.get('pre_checks', [])),
+        'post_steps': list(config.get('post_steps', [])),
     }
     return resolved
 

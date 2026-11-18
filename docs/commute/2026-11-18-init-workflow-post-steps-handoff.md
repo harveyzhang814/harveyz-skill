@@ -1,0 +1,133 @@
+---
+status: 已验收
+date: 2026-11-18
+author_model: claude-opus-5-5
+acceptance: hard
+workspace_mode: shared-worktree
+branch: feature/init-workflow-post-steps
+worktree: /Users/harveyzhang96/Projects/harveyz-skill/.worktrees/feature+init-workflow-post-steps
+base_commit: fd60ab4e389ded0430d39be83c7de17aa9ec8c15
+source_node: e5fda1ce-857b-4f9e-97b3-c407d3e61768
+target_node: 9afed50d-7b62-4ba0-80ff-d128083a4bf7
+---
+
+# 交接：init-workflow 5.1.0，新增 `merge.post_steps`（合并后步骤）
+
+**交接目的**：接手方在 harveyz-skill 仓库里，用 TDD 给 init-workflow 增加一个"合并成功后，在后台执行配置好的命令"的扩展点，版本升到 5.1.0。完成后交回交出方验收和合并。
+
+---
+
+## 背景
+
+agent-canvas 仓库正在改造测试运行方式：合并进 `staging` 之后，要在后台自动跑一轮全量测试，跑完立即返回，不阻塞合并。合并脚本 `scripts/merge-to-staging.sh` 由 init-workflow 生成，目前只有 `merge.pre_checks`（合并前检查）这一个扩展点，所以需要在 init-workflow 里新增一个合并后的对称扩展点。
+
+agent-canvas 那边怎么使用这个扩展点（后台运行器、通知等），**不在本次范围内**。
+
+## 相关文档索引（权威依据）
+
+本任务的 spec 和计划都在 **agent-canvas 仓库**里。请按提交号读取，不要去那个仓库的工作区里找：
+
+- spec §5.2（接口约定）和判据 J5：
+  `git -C /Users/harveyzhang96/Projects/agent-canvas show e058b324:docs/superpowers/specs/2026-11-18-test-run-strategy-design.md`
+- 计划 Task 0：
+  `git -C /Users/harveyzhang96/Projects/agent-canvas show e058b324:docs/superpowers/plans/2026-11-18-test-run-strategy.md`
+
+如有冲突，以这两份为准。下面「接口约定」一节是从中摘出的开工必需内容。
+
+**执行技能**：`superpowers:test-driven-development`。计划里 Task 0 只有一个任务，用不上按任务派 subagent 的执行方式。
+
+## 接口约定（不可修改）
+
+- **配置项**：`workflow-config.yml` 新增 `merge.post_steps: string[]`，默认值 `[]`。要在 `references/workflow-config.yml` 的注释里说明，写法参照 `pre_checks`。
+- **默认关闭**：`post_steps` 为空或者没有这个键时，生成的合并脚本与改动前的行为完全一致。不能影响其他使用 init-workflow 的项目。
+- **占位符**：沿用 `{script_dir}`、`{target}`，再新增三个：
+  - `{merge_commit}`：新的合并提交；
+  - `{base_commit}`：合并前 target 指向的提交；
+  - `{feature_branch}`：被合并的分支名。
+- **环境变量**：每一项命令执行时，都导出 `MERGE_COMMIT`、`MERGE_BASE_COMMIT`、`MERGE_FEATURE_BRANCH`、`MERGE_TARGET`。
+- **执行时机**：`git update-ref` 成功，并且 `sync_staging_worktree` 返回之后才执行。"已经包含在 target 里、无需合并"、冲突、重试耗尽这几条退出路径**都不执行**。
+- **执行方式**：
+  - 每一项都在本次合并的 worktree 根目录下，用 `nohup sh -c '<命令>' >/dev/null 2>&1 &` 脱离启动，不等它结束；
+  - 启动本身失败时，只往 stderr 打一行警告；
+  - 合并脚本的**退出码和原有 stdout 输出都不变**。
+- **版本**：`SKILL.md` 的 `version` 改为 `"5.1.0"`；同步更新 `skills-index.json` 里这个 skill 的 `contentHash` 和 `contentVersion`，规则见 `AGENTS.md`；在 CHANGELOG 里记一笔，写法按本仓库的惯例。
+
+## 范围铁律
+
+- **做**：`skills/coding/init-workflow/` 下的模板（`references/merge-script-template.sh`）、配置参考（`references/workflow-config.yml`）、渲染与解析脚本（`references/workflow_resolve.py`、`references/render_docs.py`，按实际需要改）、`SKILL.md`、该 skill 的 `tests/`，以及 `skills-index.json` 和 CHANGELOG。
+- **不做**：
+  - 把 skill 部署到 `~/.claude/skills` 或其他宿主目录。部署由交出方在合并后从 `staging` 提取；
+  - 改 agent-canvas 仓库的任何文件；
+  - 合并到 `staging`；
+  - `git worktree remove`；
+  - 修改上面「接口约定」里的任何一项。约定与代码现状冲突、或者无法照做时，停下来打回交出方。
+
+## 工作流约定
+
+按 `.hskill/handoff/config.md` 的 `workflow` 段执行，要点如下：
+- 用 `manage-worktree` 的「进入」进入 frontmatter 里的 `worktree`，核对 `branch`；确认 `core.hooksPath` 为 `.githooks`、`merge.ff` 为 `false`。
+- 提交信息遵循 Conventional Commits，类型写 `docs` 而不是 `doc`，首行不超过 80 个字符，末尾带 `Co-Authored-By` trailer。
+- 写新测试之前，先读 `docs/reference/testing-guide.md`。
+
+## 最小验收锚点
+
+以下全部满足才算达成，验收方会逐条重跑：
+
+1. **J5 的三条 bats 用例都在这个 skill 的测试里，并且全部通过**。测试名分别以 `J5a`、`J5b`、`J5c` 开头：
+   - `J5a post_steps 为空时生成的合并脚本与改动前一致`：用同一份不含 `post_steps` 的配置，分别以 `fd60ab4` 版本和新版本的模板生成脚本，两者的差异**只在版本号所在的行**；
+   - `J5b 后台步骤 sleep 30 后 touch 标记，合并 2 秒内返回且退出码为 0，约 30 秒后标记出现`：标记出现的等待上限可以放宽到 40 秒；
+   - `J5c 后台步骤执行失败不改变合并的退出码`：退出码为 0，stdout 与无步骤时一致。
+2. 另外加一条 `J5d 占位符与环境变量都按约定传入后台步骤`：步骤把 `{merge_commit}`、`{base_commit}`、`{feature_branch}`、`{target}` 和四个 `MERGE_*` 环境变量写进一个文件，断言取值都正确。还要验证"无需合并"那条路径不会执行步骤。
+3. `npm test` 退出码为 0。
+4. 这个 skill 自带的既有测试（`skills/coding/init-workflow/tests/` 下的 bats 与 pytest）全部通过，自测记录里写明实际执行的命令。
+5. `grep '^version:' skills/coding/init-workflow/SKILL.md` 输出 `version: "5.1.0"`；`skills-index.json` 里这个 skill 的 `contentHash` 和 `contentVersion` 已更新。
+6. `git diff --check fd60ab4..HEAD` 没有输出；`git status --short` 为空。
+
+**自测要求**：自测记录逐条列出上面 1–6 条的结果并附命令。按 handoff skill 的 Phase 2.5 执行。完成后用 `agent-canvas-ctl send e5fda1ce-857b-4f9e-97b3-c407d3e61768` 回报。
+
+## 接手方自测记录（2026-11-18）
+
+实现提交 `823a195`。以下命令均在交接工作区内直接运行，判成败的命令不接管道。
+
+| # | 锚点 | 命令 | 结果 |
+|---|---|---|---|
+| 1 | J5a/J5b/J5c 三条 bats 均在 skill 测试里且通过 | `bats skills/coding/init-workflow/tests/merge-script.bats` | pass：14/14，`ok 10 J5a…`、`ok 11 J5b…`、`ok 12 J5c…` |
+| 2 | 另加 J5d（占位符、四个 `MERGE_*` 环境变量、“无需合并”不执行） | 同上 | pass：`ok 13 J5d…`；另加 `ok 14 J5e`（真实冲突不执行步骤） |
+| 3 | `npm test` 退出码为 0 | `npm test` | pass：第二次运行 exit 0；第一次运行见下方「带红说明」 |
+| 4 | 既有 bats 与 pytest 全部通过 | `bats skills/coding/init-workflow/tests`；`python3 -m pytest skills/coding/init-workflow/tests -q` | pass：bats 37/37（含既有 24 条）；pytest 90 passed |
+| 5 | 版本与索引 | `grep '^version:' skills/coding/init-workflow/SKILL.md`；读 `skills-index.json` | pass：`version: "5.1.0"`；`contentHash` 由 `150676ddb3caabde` 改为 `a96a825be7a7e144`，`contentVersion` 为 `5.1.0`（`tests/init-workflow-skill.test.mjs` 按 SKILL.md 重算 hash 并比对，已过） |
+| 6 | 无空白错误、工作区干净 | `git diff --check fd60ab4..HEAD`；`git status --short` | pass：两者都无输出（`status` 在提交本记录之后核对） |
+
+**测试先红后绿：** J5a（版本号未改时两个脚本完全相同，“恰好 2 行不同”不成立）、J5b（`sleep 30` 的步骤尚未被启动，标记不出现）、J5d（输出文件不出现）实现前都是红的，原因都是功能缺失；pytest 新增 6 条同样先红后绿。J5c、J5e 在实现前就是绿的（没有这个功能时本来就满足），它们是守护用例，不是先红的证据。
+
+**带红说明：** 第一次 `npm test` 退出码 1，唯一失败的是 `skills/feed/sync-xtimeline/tests/test_store_config.py::test_check_downstream_reports_partial_scholia_drift`（`subprocess.run` 超时）。该测试与本次改动无关（只涉及 sync-xtimeline）。单独运行该文件 15 passed，随后重跑整套 `npm test` exit 0。我判断是机器负载造成的超时，没有在分叉点 `fd60ab4` 上复现比对，这一点未确认。
+
+**实现中的两个选择，供验收参考：**
+- bats 的测试名只用 ASCII（`J5a …` 起头，后半段是英文）：本机 bash 3.2 下 bats 1.13 解析不了非 ASCII 的测试名（实测 `unknown test name`），交接文档里的中文描述改成了英文。
+- 第一版实现把 `cd && 命令 &` 整条放进后台，子 shell 一直握着调用方的 stdout 管道，任何捕获合并脚本输出的调用方都会被卡住直到后台步骤结束（J5b 实测 30 秒）。已改成只后台化 `nohup` 那一条，J5b 实测 2 秒内返回。
+
+**改动范围之外的连带修改（均为让既有断言保持成立）：** `tests/init-workflow-skill.test.mjs` 里写死的 `5.0.3` 改为 `5.1.0`；`references/hook-templates.md` 的四处 hooks 头部版本串与 `references/lock-file-format.md` 的示例版本同步为 `5.1.0`（既有测试强制它们与 SKILL.md 版本一致）；`references/render_docs.py` 在配置了 `post_steps` 时才往生成的 `git-workflow.md` 里多写一段，未配置时文档不变。
+
+## 交出方验收记录（2026-11-18）
+
+在交接工作区 `feature/init-workflow-post-steps`（接手方 HEAD `50f984e`）逐条重跑，不采信自测结论。
+
+1. **pass** `bats skills/coding/init-workflow/tests/merge-script.bats` 退出码 0：`ok 10 J5a`、`ok 11 J5b`、`ok 12 J5c` 都通过。
+2. **pass** 同一条命令里 `ok 13 J5d` 通过；接手方另外补的 `ok 14 J5e`（真实冲突时不执行步骤）也通过。
+3. **pass** `npm test` 退出码 0，第一次就通过。接手方首轮遇到的 sync-xtimeline 超时这次没有出现，不需要再归因。
+4. **pass** `bats skills/coding/init-workflow/tests` 共 37 条全部 ok；`python3 -m pytest skills/coding/init-workflow/tests -q` 90 passed。
+5. **pass** `version: "5.1.0"`；`skills-index.json` 里 `contentHash` 从 `150676ddb3caabde` 改为 `a96a825be7a7e144`，`contentVersion` 为 `5.1.0`。
+6. **pass** `git diff --check fd60ab4..HEAD` 无输出；`git status --short` 为空。
+
+**实现核对**：
+- 没有配置 `post_steps` 时，两个占位符所在的行会被整行删掉，生成的脚本与原来逐字节一致（J5a 守住这一点）；
+- 后台只启动 `nohup` 那一条命令，不会拖住调用方的 stdout；
+- 合并后步骤只在 `update-ref` 成功并完成 `sync_staging_worktree` 之后才执行；
+- 运行时的占位符用 `printf %q` 转义，所以配置里的命令**不能再给占位符加引号**。这条约束会影响 agent-canvas Task 11 的配置写法，已经记下。
+
+**偏差裁决**：
+- bats 测试名只用 ASCII，以 `J5x` 开头：**接受**。原因是 bats 1.13 在 bash 3.2 下不能解析非 ASCII 的测试名。
+- 为了让既有的版本一致性断言继续成立，连带改了几处版本串：**接受**。
+- `render_docs.py` 只在配置了 `post_steps` 时才往文档里多写一段：**接受**。
+
+结论：**达成**，`status` 置「已验收」。
