@@ -37,9 +37,9 @@ _run_bats() {
 
 # 每个 tool/skill 目录优先用自己的 .venv 解释器（若存在），否则退回系统
 # python3。原因：工具会用 uv/venv 钉住自己的依赖版本，这些版本可能与系统
-# site-packages 不兼容（实例：tools/browser-fetch 靠自己 venv 里钉住的
-# playwright 版本运行，系统 python3 没装 playwright，直接用系统 python3 跑
-# 会得到一堆和代码无关的 ImportError；用它自己的 .venv 跑是全绿）。优先用 .venv 能让
+# site-packages 不兼容（例如某个 tool 靠自己 venv 里钉住的第三方库版本运行，
+# 系统 python3 没装该库，直接用系统 python3 跑会得到一堆和代码无关的
+# ImportError；用它自己的 .venv 跑是全绿）。优先用 .venv 能让
 # 这类套件按其真实状态被评估，而不是被解释器不匹配误报成失败。
 _run_pytest_dir() {
   local dir="$1"
@@ -49,7 +49,7 @@ _run_pytest_dir() {
   local python_bin="python3"
   local label=""
   # 只有当 .venv 自己装了 pytest 才用它。有些工具的 dev venv 只装了运行时依赖
-  # （tools/roster 的 roster.sh 就是 pip install -e . 不带 dev extra），那种情况
+  # （例如启动脚本只 pip install -e . 而不带 dev extra），那种情况
   # 退回系统 python3——venv 优先是为了拿到正确的依赖，不是让一个跑不了 pytest
   # 的 venv 把整个套件卡住。
   if [ -x "${tool_dir}/.venv/bin/python" ] \

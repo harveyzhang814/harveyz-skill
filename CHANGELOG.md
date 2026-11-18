@@ -10,6 +10,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - `manage-worktree` 0.3.0：在 Agent Canvas 节点内（`AGENT_CANVAS_NODE_TOKEN` 非空且 `agent-canvas-ctl` 在 PATH 中），「进入」完成后补调 `agent-canvas-ctl claim-worktree --path <绝对路径>`，「离开」完成后补调 `agent-canvas-ctl exit-worktree --path <绝对路径>`，让节点的 worktree 租约与实际进出一致；各宿主用同一条 CLI，不分支到 MCP。补调失败（如 `lease-service-unavailable`、`not-ready`、`no-node-identity`）只写入动作报告，不影响进入、离开的结果；画布外完全不调用，其他项目与宿主行为不变
 
+### Removed
+- 移除 `tools/browser-fetch` 与 `tools/roster`：两者迁出为独立产品 `feedr`（`uv tool install git+https://github.com/harveyzhang96/feedr`，首次使用另需 `feedr fetch install-browser`）。`sync-xtimeline`、`sync-ytchannel`、`sync-website`、`manage-creators`、`capture-opinion`、`clip-url` 已改为调用 `feedr`。同时从 `package.json` 的 `files`、`skills-index.json` 的 `tools` 与 `toolBundleMeta`（`research-tools`）、`tests/install.bats`（roster 安装用例）中去掉对应登记；`scripts/migrate-store.sh` 保留不动
+
 ## [0.45.0] - 2026-11-13
 
 ### Changed

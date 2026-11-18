@@ -1,7 +1,6 @@
 {
   "toolBundleMeta": {
-    "tools": "开发者 OS 工具（hub — 项目管理 + git 状态 + 任务跟踪；sync — Syncthing 守护进程管理）",
-    "research-tools": "研究抓取后端（browser-fetch — clip-url/sync-* 共用的认证浏览器抓取 CLI；roster — sync-* 共用的人与渠道名册）"
+    "tools": "开发者 OS 工具（hub — 项目管理 + git 状态 + 任务跟踪；sync — Syncthing 守护进程管理）"
   },
   "tools": [
     {
@@ -15,16 +14,6 @@
       "path": "tools/sync-agent",
       "bundle": "tools",
       "installScope": "global"
-    },
-    {
-      "name": "browser-fetch",
-      "path": "tools/browser-fetch",
-      "bundle": "research-tools"
-    },
-    {
-      "name": "roster",
-      "path": "tools/roster",
-      "bundle": "research-tools"
     }
   ],
   "bundleMeta": {
