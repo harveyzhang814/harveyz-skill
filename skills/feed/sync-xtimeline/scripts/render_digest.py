@@ -1,19 +1,18 @@
 #!/usr/bin/env python3
 """Stage 2 for sync-xtimeline: renders a Markdown digest from a translated report
-(fetch_new_tweets.py's JSON, with the orchestrating skill having added a
+(`feedr sync fetch x`'s JSON, with the orchestrating skill having added a
 "translated" field to each tweet in report["new"][handle]) and writes it
 to disk — but only when there's something to report (new tweets, freshly-
 established baselines, or failures).
 
 Usage: python3 render_digest.py < report.json
-Prints EMPTY, or WRITTEN: <path>.
+The digest is written to <report["archive_dir"]>/digest/ (archive_dir comes
+from `feedr sync fetch x`). Prints EMPTY, or WRITTEN: <path>.
 """
 import json
 import sys
 from datetime import datetime
 from pathlib import Path
-
-from config import get_data_dir
 
 
 def has_content(report: dict) -> bool:
@@ -82,7 +81,7 @@ def main():
         print("EMPTY")
         return
 
-    digests_dir = Path(get_data_dir()) / "digest"
+    digests_dir = Path(report["archive_dir"]) / "digest"
     digests_dir.mkdir(parents=True, exist_ok=True)
     run_time = datetime.fromisoformat(report["run_time"])
     timestamp = run_time.strftime("%Y%m%dT%H%M%S")

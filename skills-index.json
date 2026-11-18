@@ -128,8 +128,8 @@
       "path": "feed/sync-xtimeline",
       "bundle": "feed",
       "installScope": "project",
-      "contentHash": "22b6559b8a7a3d96",
-      "contentVersion": "0.8.5"
+      "contentHash": "bfc20e8016717bb9",
+      "contentVersion": "0.9.0"
     },
     {
       "path": "feed/sync-ytchannel",
