@@ -1,6 +1,6 @@
 ---
 name: capture-opinion
-version: "0.2.1"
+version: "0.3.0"
 description: "Record your own judgment about a specific creator already on the roster. You say what you think of them, this skill tidies it into points, stamps it with the current time, shows it back for confirmation, then appends it to that creator's profile. Trigger phrases: '/capture-opinion <name>', '/capture-opinion', 'I have a take on this blogger', 'let me note down what I think of <name>', 'what do I think of <name>', 'show me my profile of <name>'. Scoped to people on the roster — a standalone insight not tied to a watched creator is capture-insight, and adding or removing a watched channel is manage-creators. Running an incremental fetch is sync-xtimeline / sync-ytchannel / sync-website. Never saves to Obsidian and never tags — saving an article or tweet is clip-url."
 user_invocable: true
 ---
@@ -17,21 +17,24 @@ user_invocable: true
 ## 初始化（run first）
 
 ```bash
-python3 scripts/roster_locate.py
+command -v feedr
 ```
 
-若输出 `NOT_FOUND: <error>`（exit 1），向用户报告"roster tool 未安装：{error}"，流程终止。
+若找不到，向用户报告并终止流程：
 
-若从未初始化过名册（`~/.hskill/roster/config.json` 不存在），让用户先跑一次 [manage-creators](../manage-creators/)，流程终止。
+> feedr 未安装：uv tool install git+https://github.com/harveyzhang96/feedr && feedr fetch install-browser
 
-`<roster>` 指 `roster_locate.py` 输出的路径。
+若找到，直接运行下文的 `feedr roster` 命令。命令在 stderr 第一行用固定标记报告初始化状态：
+
+- ``NOT_INITIALIZED: run `feedr init` ``：名册从未初始化过。先运行 `feedr init`（有旧数据时是纯迁移，不需要问用户），然后重跑原命令。
+- 若 `feedr init` 返回 `MISSING_ROSTER_DIR`（exit 2）：feedr 推不出名册目录，需要用户提供。询问用户名册数据要存在哪个目录（必须由用户手动提供，不得猜测；可建议默认值 `~/.feedr/roster`，并提醒这个目录里的画像文件删了长不回来，值得跟笔记一样对待），然后运行 `feedr init --roster-dir <目录>`，再重跑原命令。
 
 ## 记一笔（默认动作）
 
 ### 1. 确定是谁
 
 ```bash
-<roster> registry list
+feedr roster registry list
 ```
 
 从用户提到的名字或 handle 里找 `creator_id`（每人一行，行首那个词就是 id）。
@@ -64,7 +67,7 @@ date "+%Y-%m-%d %H:%M"
 ```
 
 ```bash
-<roster> profile append <creator_id> --date "<YYYY-MM-DD HH:MM>" <<'EOF'
+feedr roster profile append <creator_id> --date "<YYYY-MM-DD HH:MM>" <<'EOF'
 <整理后的正文>
 EOF
 ```
@@ -78,7 +81,7 @@ EOF
 ## 看画像
 
 ```bash
-<roster> profile show <creator_id>
+feedr roster profile show <creator_id>
 ```
 
 `EMPTY` 表示这人还没有画像。原样展示，不要替用户总结。
@@ -101,4 +104,4 @@ EOF
 
 | 文件 | 用途 |
 |------|------|
-| `scripts/roster_locate.py` | 定位 roster launcher（跟 manage-creators 同款，独立副本） |
+| [feedr](https://github.com/harveyzhang96/feedr)（外部 CLI） | 画像命令 `feedr roster profile ...` 与初始化 `feedr init` 都由它提供 |

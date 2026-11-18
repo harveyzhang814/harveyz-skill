@@ -1,5 +1,4 @@
 import json
-import os
 import subprocess
 import sys
 from pathlib import Path
@@ -7,7 +6,6 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
 
 import digest
-from conftest import HSKILL_CONFIG_ENV, write_config
 
 SCRIPT = Path(__file__).resolve().parent.parent / "scripts" / "digest.py"
 
@@ -92,34 +90,46 @@ def test_render_digest_omits_empty_sections():
     assert "## 已建立追踪基线" not in out
 
 
-def _run(report: dict, root: Path) -> subprocess.CompletedProcess:
-    config_path = root.parent / "config.json"
-    write_config(config_path, root)
+def _run(report: dict) -> subprocess.CompletedProcess:
     return subprocess.run(
         [sys.executable, str(SCRIPT)],
         input=json.dumps(report),
-        env={**os.environ, HSKILL_CONFIG_ENV: str(config_path)},
         capture_output=True, text=True, timeout=10,
     )
 
 
+def _archive_dir(tmp_path: Path) -> Path:
+    return tmp_path / "somewhere" / "feeds" / "youtube"
+
+
 def test_cli_empty_report_prints_empty_and_writes_no_file(tmp_path):
-    root = tmp_path / "knowledge"
-    report = {"run_time": "2026-08-15T09:00:00+00:00", "new": {}, "baselines": {}, "failures": {}}
-    result = _run(report, root)
+    archive_dir = _archive_dir(tmp_path)
+    report = {"run_time": "2026-08-15T09:00:00+00:00", "new": {}, "baselines": {}, "failures": {},
+              "archive_dir": str(archive_dir)}
+    result = _run(report)
     assert result.returncode == 0, result.stderr
     assert result.stdout.strip() == "EMPTY"
-    assert not (root / "feeds" / "youtube" / "digest").exists()
+    assert not (archive_dir / "digest").exists()
 
 
-def test_cli_nonempty_report_writes_timestamped_file(tmp_path):
-    root = tmp_path / "knowledge"
-    report = {"run_time": "2026-08-15T09:00:00+00:00", "new": {}, "baselines": {"a": 3}, "failures": {}}
-    result = _run(report, root)
+def test_cli_digest_lands_under_archive_dir_digest(tmp_path):
+    archive_dir = _archive_dir(tmp_path)
+    report = {"run_time": "2026-08-15T09:00:00+00:00", "new": {}, "baselines": {"a": 3}, "failures": {},
+              "archive_dir": str(archive_dir)}
+    result = _run(report)
     assert result.returncode == 0, result.stderr
     assert "WRITTEN:" in result.stdout
     written_path = Path(result.stdout.strip().split("WRITTEN: ", 1)[1])
     assert written_path.exists()
     assert written_path.name == "digest-20260815T090000.md"
-    assert written_path.parent == root / "feeds" / "youtube" / "digest"
+    assert written_path.parent == archive_dir / "digest"
+    assert list((archive_dir / "digest").glob("*")) == [written_path]
 
+
+def test_cli_nonempty_report_without_archive_dir_exits_1_with_message(tmp_path):
+    report = {"run_time": "2026-08-15T09:00:00+00:00", "new": {}, "baselines": {"a": 3}, "failures": {}}
+    result = _run(report)
+    assert result.returncode == 1
+    assert "archive_dir" in result.stderr
+    assert "Traceback" not in result.stderr
+    assert result.stdout.strip() == ""

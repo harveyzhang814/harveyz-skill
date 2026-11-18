@@ -1,15 +1,15 @@
 #!/usr/bin/env python3
 """Debug client for clip-url's self-optimization subagent: thin wrappers
-around browser-fetch's `page` and `eval` subcommands, used to iterate
+around `feedr fetch`'s `page` and `eval` subcommands, used to iterate
 candidate extraction logic against a real page before solidifying a fix
-into browser-fetch/browser_fetch/extractors.py.
+into feedr's feedr/fetch/extractors.py.
 
 Written from scratch, sibling to mcp_fetch_client.py — does not import or
 reuse extract-url's scripts.
 
 NOTE ON MODULE NAME: the `mcp_` prefix is historical — this script was
 originally an MCP client (see git history). It now shells out to the
-browser-fetch CLI via browser_fetch_cli.call() instead of speaking MCP.
+`feedr fetch` CLI via browser_fetch_cli.call() instead of speaking MCP.
 The prefix is kept because renaming would touch SKILL.md, references/
 subagent prompt templates, and this file's own test module — out of
 scope for this internal-implementation-only migration.

@@ -1,10 +1,12 @@
-"""Stage 3 validation test: real network, real browser-fetch CLI subprocess,
+"""Stage 3 validation test: real network, real `feedr fetch` CLI subprocess,
 real fetch_article (site-aware extraction with image download) — no mocks.
 
 Run: python3 -m pytest skills/research/clip-url/tests/ -v
 (ambient system Python — matches how mcp_fetch_client.py itself runs)
 """
 import json
+import shutil
+import subprocess
 import sys
 from pathlib import Path
 
@@ -17,14 +19,13 @@ from vault_config import get_url_hash  # noqa: E402
 
 
 @pytest.fixture(autouse=True)
-def isolated_data_dir(isolated_store_config, tmp_path, monkeypatch):
-    """fetch_and_save spawns browser-fetch with env=dict(os.environ), so the
-    CLI subprocess inherits this. Point it at a per-test data dir so tests
-    never read or write the real ~/.hskill/browser-fetch/ state (fetch_article
-    consults the persisted default chrome_profile). Also write a valid
+def isolated_knowledge_root(isolated_store_config, tmp_path):
+    """fetch_and_save spawns `feedr fetch` with env=dict(os.environ); the
+    conftest autouse fixture already points HOME and FEEDR_HOME at tmp_path, so
+    the subprocess never reads or writes the real ~/.feedr state (fetch_article
+    consults the persisted default chrome_profile). Here we only write a valid
     knowledgeRoot into the conftest-provided shared config.json so tests
     never touch the real ~/.hskill/config.json or a real Obsidian Vault."""
-    monkeypatch.setenv("BROWSER_FETCH_DATA_DIR", str(tmp_path / "data"))
     root = tmp_path / "knowledge"
     isolated_store_config.write_text(json.dumps({"knowledgeRoot": str(root)}), encoding="utf-8")
 
@@ -77,3 +78,17 @@ def test_fetch_and_report_returns_diagnostics(tmp_path, local_article_url):
     assert payload["thin_retry_used"] is False
     assert isinstance(payload["code_block_count"], int)
     assert payload["image_count"] == 0
+
+
+def test_cli_missing_feedr_raises_install_hint(monkeypatch):
+    """feedr 不在 PATH 上时，必须在起子进程之前抛 RuntimeError 并带安装提示。"""
+    monkeypatch.setattr(shutil, "which", lambda name, *a, **k: None)
+
+    def _no_subprocess(*a, **k):
+        raise AssertionError("feedr 缺失时不应启动任何子进程")
+
+    monkeypatch.setattr(subprocess, "run", _no_subprocess)
+
+    with pytest.raises(RuntimeError) as exc_info:
+        fetch_and_report("https://example.com/post")
+    assert "uv tool install git+https://github.com/harveyzhang96/feedr" in str(exc_info.value)

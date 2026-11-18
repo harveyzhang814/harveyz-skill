@@ -1,5 +1,4 @@
 import json
-import os
 import subprocess
 import sys
 from pathlib import Path
@@ -7,18 +6,14 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
 
 from render_digest import has_content, render_digest
-from conftest import write_config
 
 SCRIPT = Path(__file__).resolve().parent.parent / "scripts" / "render_digest.py"
 
 
-def _run(report: dict, root: Path) -> subprocess.CompletedProcess:
-    config_path = root.parent / "config.json"
-    write_config(config_path, root)
+def _run(report: dict) -> subprocess.CompletedProcess:
     return subprocess.run(
         [sys.executable, str(SCRIPT)],
         input=json.dumps(report),
-        env={**os.environ, "HSKILL_CONFIG": str(config_path)},
         capture_output=True, text=True, timeout=10,
     )
 
@@ -174,21 +169,23 @@ def test_render_digest_includes_failures_and_baselines_sections():
 
 
 def test_cli_empty_report_prints_empty_and_writes_no_file(tmp_path):
-    root = tmp_path / "knowledge"
-    report = {"run_time": "2026-08-15T09:00:00+00:00", "new": {}, "baselines": {}, "failures": {}}
-    result = _run(report, root)
+    archive_dir = tmp_path / "feeds" / "tweets"
+    report = {"run_time": "2026-08-15T09:00:00+00:00", "new": {}, "baselines": {}, "failures": {},
+              "archive_dir": str(archive_dir)}
+    result = _run(report)
     assert result.returncode == 0, result.stderr
     assert result.stdout.strip() == "EMPTY"
-    assert not (root / "feeds" / "tweets" / "digest").exists()
+    assert not (archive_dir / "digest").exists()
 
 
 def test_cli_nonempty_report_writes_timestamped_file(tmp_path):
-    root = tmp_path / "knowledge"
+    archive_dir = tmp_path / "feeds" / "tweets"
     report = {
         "run_time": "2026-08-15T09:00:00+00:00",
         "new": {}, "baselines": {"carol": 3}, "failures": {},
+        "archive_dir": str(archive_dir),
     }
-    result = _run(report, root)
+    result = _run(report)
     assert result.returncode == 0, result.stderr
     assert "WRITTEN:" in result.stdout
     written_path = Path(result.stdout.strip().split("WRITTEN: ", 1)[1])
@@ -197,15 +194,25 @@ def test_cli_nonempty_report_writes_timestamped_file(tmp_path):
     assert "@carol" in written_path.read_text(encoding="utf-8")
 
 
-def test_cli_digest_lands_under_the_feeds_subdirectory(tmp_path):
-    """两个 sync skill 共用同一份 knowledgeRoot 配置，渠道各有自己的子目录。"""
-    root = tmp_path / "knowledge"
+def test_cli_digest_lands_under_archive_dir_digest(tmp_path):
+    """摘要写到报告 archive_dir 下的 digest/，不读任何配置文件。"""
+    archive_dir = tmp_path / "somewhere" / "feeds" / "tweets"
     report = {
         "run_time": "2026-08-15T09:00:00+00:00",
         "new": {}, "baselines": {"carol": 3}, "failures": {},
+        "archive_dir": str(archive_dir),
     }
-    result = _run(report, root)
+    result = _run(report)
     assert result.returncode == 0, result.stderr
     written_path = Path(result.stdout.strip().split("WRITTEN: ", 1)[1])
-    assert written_path.parent == root / "feeds" / "tweets" / "digest"
+    assert written_path.parent == archive_dir / "digest"
+    assert list((archive_dir / "digest").glob("digest-*.md")) == [written_path]
 
+
+def test_cli_nonempty_report_without_archive_dir_exits_1_with_message():
+    report = {"run_time": "2026-08-15T09:00:00+00:00", "new": {}, "baselines": {"carol": 3}, "failures": {}}
+    result = _run(report)
+    assert result.returncode == 1
+    assert "archive_dir" in result.stderr
+    assert "Traceback" not in result.stderr
+    assert result.stdout.strip() == ""

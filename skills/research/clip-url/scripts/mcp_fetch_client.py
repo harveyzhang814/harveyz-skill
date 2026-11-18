@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Stage 3 fetch script for clip-url: calls browser-fetch's `article`
+"""Stage 3 fetch script for clip-url: calls feedr's `fetch article`
 subcommand (site-aware extraction: generic/wechat/arxiv/xcom), which
 already assembles the Markdown Origin file itself (--format defaults
 to "path") and returns its path — this script's only remaining job is
@@ -10,7 +10,7 @@ Written from scratch — does not import or reuse extract-url's scripts.
 
 NOTE ON MODULE NAME: the `mcp_` prefix is historical — this script was
 originally an MCP client (see git history). It now shells out to the
-browser-fetch CLI via browser_fetch_cli.call() instead of speaking MCP.
+`feedr fetch` CLI via browser_fetch_cli.call() instead of speaking MCP.
 The prefix is kept because renaming would touch SKILL.md, references/
 subagent prompt templates, and this file's own test module — out of
 scope for this internal-implementation-only migration.

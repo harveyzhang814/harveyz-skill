@@ -1,6 +1,6 @@
 """Tests for the CLI-backed detect_xcom_chrome_profile.py — real
-browser-fetch CLI subprocess, fixture Chrome profile dirs via
-BROWSER_FETCH_CHROME_BASE (never touches a real Chrome install).
+`feedr fetch` CLI subprocess, fixture Chrome profile dirs via
+FEEDR_CHROME_BASE (never touches a real Chrome install).
 
 Run: python3 -m pytest skills/research/clip-url/tests/ -v
 """
@@ -26,8 +26,8 @@ def _run(chrome_base: Path, data_dir: Path) -> str:
         [sys.executable, str(SCRIPT)],
         env={
             **os.environ,
-            "BROWSER_FETCH_CHROME_BASE": str(chrome_base),
-            "BROWSER_FETCH_DATA_DIR": str(data_dir),
+            "FEEDR_CHROME_BASE": str(chrome_base),
+            "FEEDR_HOME": str(data_dir),
         },
         capture_output=True, text=True, timeout=30,
     )

@@ -84,8 +84,6 @@
     "skills/devflow/compose-agentsmd/",
     "tools/hub/",
     "tools/sync-agent/",
-    "tools/browser-fetch/",
-    "tools/roster/",
     "hooks/check-similar-branch/"
   ],
   "engines": {

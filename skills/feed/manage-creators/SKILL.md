@@ -1,6 +1,6 @@
 ---
 name: manage-creators
-version: "0.3.2"
+version: "0.4.0"
 description: "Maintain the roster of watched creators and their channels — the shared watchlist behind sync-xtimeline, sync-ytchannel and sync-website. Add a channel URL, merge two handles that turn out to be the same person, rename a placeholder, view the roster with cursor state. Trigger phrases: '/manage-creators add <url>', '/manage-creators list', '/manage-creators merge <a> <b>', '/manage-creators rename <id> <name>', '/manage-creators remove <id>', 'watch this X account', 'watch this YouTube channel', 'who am I following'. Does not fetch anything — running an incremental fetch is sync-xtimeline / sync-ytchannel / sync-website; writing a creator's profile is the cognition layer."
 user_invocable: true
 ---
@@ -16,37 +16,32 @@ user_invocable: true
 ## 初始化（run first）
 
 ```bash
-python3 scripts/roster_locate.py
+command -v feedr
 ```
 
-若输出 `NOT_FOUND: <error>`（exit 1），向用户报告"roster tool 未安装：{error}"，流程终止。
+若找不到，向用户报告并终止流程：
 
-若输出 `FOUND: <path>`，检查配置：
+> feedr 未安装：uv tool install git+https://github.com/harveyzhang96/feedr && feedr fetch install-browser
 
-```bash
-ls ~/.hskill/roster/config.json 2>/dev/null && echo "EXISTS" || echo "NOT_FOUND"
-```
+若找到，直接运行下文的 `feedr roster` 命令。命令在 stderr 第一行用固定标记报告初始化状态：
 
-**若 `NOT_FOUND`：**
+- ``NOT_INITIALIZED: run `feedr init` ``：名册从未初始化过。先运行 `feedr init`（有旧数据时是纯迁移，不需要问用户），然后重跑原命令。
+- 若 `feedr init` 返回 `MISSING_ROSTER_DIR`（exit 2）：feedr 推不出名册目录，需要用户提供。
+  1. 询问用户名册数据要存在哪个目录（必须由用户手动提供，不得猜测）。可建议默认值 `~/.feedr/roster`。提醒用户：这个目录里的画像文件是累积出来的、删了长不回来，值得跟笔记一样对待（`registry.json` 和 `state.json` 都可重建，画像不能）。
+  2. 运行 `feedr init --roster-dir <目录>`，然后重跑原命令。
 
-1. 询问用户名册数据要存在哪个目录（`DATA_DIR`，必须由用户手动提供，不得猜测）。可建议默认值 `~/.hskill/roster`。提醒用户：这个目录里的画像文件是累积出来的、删了长不回来，值得跟笔记一样对待（`registry.json` 和 `state.json` 都可重建，画像不能）。
-2. 运行 `<roster_path> init <DATA_DIR>`。
-3. 若 `~/.hskill/sync-xtimeline/config.json` 或 `~/.hskill/sync-ytchannel/config.json` 存在（旧版关注列表），问用户一次是否迁移；同意就读 `references/migration.md` 执行。迁移后**不要自己替用户 `merge`**，只列出名字相近的候选对，交给用户确认。
-
-**roster 命令报「名册数据是旧 schema」时**，运行 `<roster_path> migrate-schema`（幂等），然后重跑原命令。
+**`feedr roster` 命令报「名册数据是旧 schema」时**，运行 `feedr roster migrate-schema`（幂等），然后重跑原命令。
 
 ## 用法
 
-`<roster>` 指 `roster_locate.py` 输出的路径。
-
 | 用户说 | 运行 | 报告 |
 |---|---|---|
-| `add <url>` | `<roster> registry add <url>` | `OK <id> <platform>:<handle>` → 告知已加入，并提示这是占位人、可用 `rename` 填正式名字。支持 X、YouTube、网站列表页 URL（后者 `platform` 为 `website`）。渠道按归一 key（去 `@`、trim、小写）去重，重复时报"已在名册中"。 |
-| `list` | `<roster> registry list` | 原样展示。`EMPTY` 表示还没关注任何人 |
-| `merge <a> <b>` | `<roster> registry merge <a> <b>` | `OK merged b into a` → 告知 b 的 id 已进 aliases，旧引用仍可查到 |
-| `rename <id> <name>` | `<roster> registry rename <id> <name>` | `OK` |
-| `remove <id>` | `<roster> registry remove <id>` | 输出里带画像归档路径时，**必须把这个路径转告用户**——画像没被删，只是移走了 |
-| `remove <platform>:<handle>` | `<roster> registry remove <platform>:<handle>` | `OK removed ...`。人还留着 |
+| `add <url>` | `feedr roster registry add <url>` | `OK <id> <platform>:<handle>` → 告知已加入，并提示这是占位人、可用 `rename` 填正式名字。支持 X、YouTube、网站列表页 URL（后者 `platform` 为 `website`）。渠道按归一 key（去 `@`、trim、小写）去重，重复时报"已在名册中"。 |
+| `list` | `feedr roster registry list` | 原样展示。`EMPTY` 表示还没关注任何人 |
+| `merge <a> <b>` | `feedr roster registry merge <a> <b>` | `OK merged b into a` → 告知 b 的 id 已进 aliases，旧引用仍可查到 |
+| `rename <id> <name>` | `feedr roster registry rename <id> <name>` | `OK` |
+| `remove <id>` | `feedr roster registry remove <id>` | 输出里带画像归档路径时，**必须把这个路径转告用户**——画像没被删，只是移走了 |
+| `remove <platform>:<handle>` | `feedr roster registry remove <platform>:<handle>` | `OK removed ...`。人还留着 |
 
 所有失败原样把 stderr 报给用户，不要自行改写或重试。
 
@@ -60,5 +55,5 @@ ls ~/.hskill/roster/config.json 2>/dev/null && echo "EXISTS" || echo "NOT_FOUND"
 
 | 文件 | 用途 |
 |------|------|
-| `scripts/roster_locate.py` | 定位 roster launcher（跟 `browser_fetch_locate.py` 同款，独立副本） |
-| `references/migration.md` | 从旧版 sync-xtimeline / sync-ytchannel 关注列表迁移 |
+| `references/migration.md` | 旧版 sync-xtimeline / sync-ytchannel 关注列表（watchlist.json）：feedr 不再迁移 |
+| [feedr](https://github.com/harveyzhang96/feedr)（外部 CLI） | 名册命令 `feedr roster ...` 与初始化 `feedr init` 都由它提供 |
