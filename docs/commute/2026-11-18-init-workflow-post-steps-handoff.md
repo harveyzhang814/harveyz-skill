@@ -107,4 +107,3 @@ agent-canvas 那边怎么使用这个扩展点（后台运行器、通知等）�
 - 第一版实现把 `cd && 命令 &` 整条放进后台，子 shell 一直握着调用方的 stdout 管道，任何捕获合并脚本输出的调用方都会被卡住直到后台步骤结束（J5b 实测 30 秒）。已改成只后台化 `nohup` 那一条，J5b 实测 2 秒内返回。
 
 **改动范围之外的连带修改（均为让既有断言保持成立）：** `tests/init-workflow-skill.test.mjs` 里写死的 `5.0.3` 改为 `5.1.0`；`references/hook-templates.md` 的四处 hooks 头部版本串与 `references/lock-file-format.md` 的示例版本同步为 `5.1.0`（既有测试强制它们与 SKILL.md 版本一致）；`references/render_docs.py` 在配置了 `post_steps` 时才往生成的 `git-workflow.md` 里多写一段，未配置时文档不变。
-
