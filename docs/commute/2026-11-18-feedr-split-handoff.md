@@ -1,5 +1,5 @@
 ---
-status: 执行中
+status: 待验收
 date: 2026-11-18
 author_model: claude-opus-5-5
 acceptance: hard
@@ -90,3 +90,76 @@ git -C /Users/harveyzhang96/Projects/feedr <命令>
 4. **Task 13 Step 1 的 grep 没有输出；Task 13 Step 5 的 `npm pack --dry-run` 过滤结果为空。**
 5. **feedr 仓库：** 首个提交在 `main` 上，只包含 `.gitignore`；其余提交都在 `feature/initial-split` 上；没有 harveyz-skill 的历史（`git -C /Users/harveyzhang96/Projects/feedr log --all --oneline` 中看不到 harveyz-skill 的提交）。
 6. **Task 7 Step 7：** 要么没有执行，自测记录写明「待用户确认」；要么附上用户确认的原话后才执行。
+
+---
+
+## 接手方自测记录（2026-11-18）
+
+被验代码：feedr `feature/initial-split` @ `2c379b3`；harveyz-skill `feature/feedr-split` @ `3895ec5`（自测前最后一个提交）。执行技能 `superpowers:subagent-driven-development`：每个 Task 一个实施子代理 + 一次任务审查（规格+质量），全部 Task 完成后一次全分支终审（opus）和一次范围受限的修补复审。逐锚点实跑如下，判成败的命令均未接管道。
+
+### 锚点 1　各 Task 的测试
+
+| 命令 | 结果 |
+|---|---|
+| `cd /Users/harveyzhang96/Projects/feedr && .venv/bin/pytest -q` | **pass**，退出码 0，`550 passed in 71.81s`，无 xfail、无 skip |
+| `cd <交接工作区> && npm test` | **pass**，退出码 0，490 个测试：483 pass / 0 fail / 7 skipped（这 7 个是仓库既有的跳过，与本分支无关） |
+
+### 锚点 2　Spec 第 12 节 AC1–AC7、AC9–AC11
+
+| AC | 结论 | 证据 |
+|---|---|---|
+| 1 | pass，带说明 | feedr 为独立仓库，无 harveyz-skill 历史（见锚点 5）；pytest 全绿。**删减的用例不止 launcher 类**（roster 的 `test_migrate.py` 与 init 相关用例、sync 子进程/参数拼装断言、`probe_articles/set_rule` 模式白名单 4 例），理由与清单在 feedr `README.md`「迁移说明」；S12 要求的旧编排测试已逐个迁移或标注由 golden 覆盖（见各 Task 报告）。**这超出了 S11 只许删 launcher 测试的字面规定，需要交出方/用户签认。** |
+| 2 | pass | `feedr --help` 列 init/config/fetch/roster/sync；`feedr fetch --help` 列 9 个旧子命令 + `install-browser`；`feedr --version` = 0.1.0（`tests/test_cli_surface.py`） |
+| 3 | pass | §6.2 每条分支及 S13 两种情况、`NOT_INITIALIZED`、`MISSING_ARCHIVE_ROOT` 均有测试；init 测试带 `~/.hskill` 快照断言。遗留：roster/sync 的 `NOT_INITIALIZED` 门槛测试未加快照（只断言不建目录） |
+| 4 | pass | 18 个 golden 场景（x 5、youtube 5、website 8）全部逐字段/逐字节通过。终审发现计划的 Task 4 清单漏了 website 的 `handle_not_on_roster`（Spec S15 要求每个平台都有），已补上，并用从 `a7bf7f8` 导出的旧脚本生成，原 17 个场景字节不变 |
+| 5 | pass | 只执行 fetch 游标不动、重复 commit 幂等、存档写失败游标不动，均有测试；隔离环境下实测一遍 |
+| 6 | pass | Task 14 Step 3：`registry list`、`profile get`、`articles-rule list` 与旧工具基线逐字节无差异，名册目录 `diff -rq` 无差异（记录见 cutover.md） |
+| 7 | pass，带前置条件 | Task 14 Step 4：`feedr fetch timeline https://x.com/trq212 --max 5` 退出码 0，返回 5 条推文，没有要求重新登录。**未单独验证该账号有登录墙内容。** 另见下面「钥匙串授权」 |
+| 9 | pass，带 4 处说明 | `npm test` 通过；残留检查见锚点 4 |
+| 10 | pass | `npm pack --dry-run` 无 `tools/browser-fetch`、`tools/roster`；`skills-index.json` 无 `research-tools`；两个 tools 目录已删除，`tools/` 其余内容未动 |
+| 11 | pass | 六个 skill（sync-xtimeline/ytchannel/website、clip-url、manage-creators、capture-opinion）的检查步骤都是 `command -v feedr`，找不到时给出 `feedr 未安装：uv tool install git+https://github.com/harveyzhang96/feedr && feedr fetch install-browser` 并终止；`env PATH=/usr/bin:/bin sh -c 'command -v feedr \|\| echo MISSING'` 输出 `MISSING` |
+
+### 锚点 3　AC8
+
+不在本次交接范围，未做。
+
+### 锚点 4　Task 13 的 grep 与 `npm pack`
+
+- **`npm pack --dry-run` 过滤结果为空：pass**（退出码 0，匹配数 0）。
+- **Task 13 Step 1 的 grep 没有输出：未达成，带着这条红送验。** 用只扫已跟踪文件的 `git grep`（macOS 的 BSD grep 的 `--exclude-dir` 不可靠，会扫进 `.hskill/` 文档）复跑，共 6 行命中、分布在 4 个文件：
+  - `skills/research/clip-url/scripts/store_config.py:4`、`skills/research/learn-video/scripts/store_config.py:4`：注释里提到 `browser_fetch_locate.py`（“四份内容相同的副本”那句历史说明）。
+  - `tools/hub/tests/test_launcher_python_version.py:3,9`、`tools/sync-agent/tests/test_launcher_python_version.py:3,9`：文档字符串写“在 browser-fetch 上复现并修复”。
+  - **归因证据：** 这 4 个文件在分叉点 `a7bf7f8` 上同样命中同样的行（`git grep` 两边结果逐行相同），不是本分支引入。
+  - **为什么没改：** 计划 Task 12 明确写 `store_config.py` “不动”（Spec S5/§8 同），hub 与 sync-agent 不在迁出范围（D3）。这与 Task 13 Step 3 “没有输出”的预期在计划内部冲突；Spec AC9 允许“其他例外须逐条说明”，故逐条说明而不是改文件。**请交出方裁定是接受这 4 处例外，还是授权改注释。**
+- 另：`scripts/migrate-store.sh`、`tests/migrate-store.bats`、`CHANGELOG.md` 按 S14 不动，按计划被排除在 grep 之外。
+
+### 锚点 5　feedr 仓库结构
+
+- `main` 只有一个提交 `6275064 chore: init repo`，只含 `.gitignore`；其余 14 个提交都在 `feature/initial-split` 上；没有 remote。
+- 任何提交都没有 `skills/`、`tools/`、`docs/`、`.hskill/` 或 `SKILL.md` 路径，提交主题里的 `hskill` 字样只出现在 `~/.hskill` 目录名里：没有 harveyz-skill 的历史。
+
+### 锚点 6　Task 7 Step 7
+
+**未执行，待用户确认。** 没有运行 `gh`，没有 `git push`，feedr 没有 remote；README 里的 GitHub owner 与安装文案是占位，建仓时确认（S9、D23）。
+
+### 需要交出方/用户知道或决定的事
+
+1. **钥匙串授权会让命令卡住（Task 14 Step 4 发现，影响 AC8）。** 读 Chrome cookie 前，`pycookiecheat` 要读钥匙串 “Chrome Safe Storage”；新的 `~/.local/share/uv/tools/feedr/bin/python3` 是另一个可执行文件，需要重新授权。第二次抓取时进程在弹窗前挂住（已观察到 `SecurityAgent` 进程，CPU 0%，无子进程），第一次的约 16 分钟等待同因（推断）。我没有替用户点击弹窗，已结束测试进程。AC8 与任何定时运行之前，需要用户先手动跑一次 `feedr fetch timeline …` 并选「始终允许」；重装 feedr 是否再次触发**未核实**。系统里可能还留着一个钥匙串弹窗，取消即可。详见 cutover.md。
+2. **产品决定 R7（超出 Spec 字面）：** clip-url 的自我优化流程原来改的是本仓库里的 browser-fetch 代码，现在代码在 feedr 仓库，所以主会话要向用户要一份本地 feedr checkout 路径（`<FEEDR_REPO>`），没有路径就放弃（`GAVE_UP`）；子代理只提交分支并回报，不重装全局 feedr；修复只在 editable 安装或用户重装后才对重试生效。需要确认这个产品行为。
+3. **计划与 Spec 的偏差及处理（已写入各任务审查记录）：**
+   - R1：计划要求提交署名 `Claude Opus 5.5`，实际执行模型是 Sonnet，署名改为 `Claude Sonnet 5.5`（含 Global Constraints 里这一条的改动，请确认）。
+   - R3：补迁 golden 未覆盖的旧编排测试（Spec S12）。
+   - R4：计划断言 `main(["roster","init","x"]) == 2`，起初实现是抛 `SystemExit`；按计划字面修成让 `feedr.cli.main` 总是返回 int。
+   - R5：website 的坏游标/缺 `url` 条目现在按渠道记 `failures`（旧版会让整轮崩溃）；README「刻意的差异」已写。
+   - R9：`tests/skill-portability.test.mjs` 钉死三个 sync-* 旧版本号，计划漏了，已更新三处。
+   - R10：补 website `handle_not_on_roster` golden（Spec S15）。
+4. **安全事件披露：** Task 8 的实施子代理在红灯阶段先删掉了测试隔离，导致一个测试摘要 `digest-20260815T090000.md` 被写进**真实**的 `~/knowledge/feeds/tweets/digest/`，随后它只删了这一个文件（文件名与测试夹具写死的 `run_time` 吻合，目录里其余 53 个真实摘要未动）。此后所有任务的测试都在临时 HOME 下运行。
+5. **进程内追更与旧版的差异（自动测试覆盖不到，AC8 人工验收时留意）：** sync 现在在一个进程里依次跑所有渠道，共用同一个 Playwright persistent context；`run_fetch` 开头读一次 state，失败时整份写回，运行期间若有并发的名册修改可能被覆盖。
+6. **全局 feedr 是非 editable 快照：** `~/.local/bin/feedr` 是 `2c379b3` 的构建，feedr 代码再改要 `uv tool install --force --reinstall /Users/harveyzhang96/Projects/feedr`（只 `--force` 会复用缓存的旧 wheel，已踩过）。
+7. **过渡期风险（Spec §9）：** `~/.feedr` 已初始化；skill 部署前不要运行旧版 sync-*、manage-creators、capture-opinion，否则 `~/.hskill/roster` 与 `~/.feedr/roster` 的游标会分叉。
+8. **留给交出方的步骤：** Task 14 Step 5 与 Step 7（合并、部署 6 个 skill、核对版本、手动跑一轮并记入 cutover.md）、AC8、合并到 `staging`、Task 7 Step 7；`tools/browser-fetch-mcp/`（未被跟踪，不在本工作区）未动。
+9. **SDD 暂存目录保留：** `.superpowers/sdd/2026-11-17-feedr-split-plan/`（被 git 忽略）里有每个 Task 的简报、报告、审查包和账本（含全部裁定与推迟的 Minor）。验收前我没有删它，方便验收方查证；验收后可 `rm -rf`。
+
+### 推迟未修的 Minor（终审分级为“可不修”，详见账本）
+
+非 UTF-8/损坏之外的边角：`browser_dir()` 并发首次运行竞态、sync commit 先读 stdin 后过初始化门槛（stdin 非法 JSON 退出码 2）、golden 不比字段顺序、两个 init 之外的门槛测试没做 `~/.hskill` 快照、`bool` 被当作 int 退出码、clip-url `SKILL.md:178` 仍写“四份副本”、41efc5e 单独检出时 `npm test` 因版本钉未改而失败（86ce0bb 已修，仅影响 bisect）。
