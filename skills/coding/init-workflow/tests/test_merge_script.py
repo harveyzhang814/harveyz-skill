@@ -148,6 +148,52 @@ def test_script_dir_placeholder_rendered_quoted(tmp_path):
         "run_pre_check 'node \"$MERGE_SCRIPT_DIR\"/check.js --changed-since main'"
 
 
+def post_steps_block(script):
+    m = re.search(r"# --- BEGIN MANAGED: merge/post-steps \(hash:[0-9a-f]{8}\) ---\n(.*?)# --- END MANAGED: merge/post-steps ---",
+                  script, re.S)
+    assert m, "merge/post-steps MANAGED block missing"
+    return m.group(1)
+
+
+def test_empty_post_steps_renders_nothing_extra(tmp_path):
+    for cfg in (MAIN_CFG, STAGING_CFG, MAIN_CFG + "\nmerge:\n  post_steps: []\n"):
+        script = render_cfg(tmp_path, cfg)
+        assert "post-steps" not in script and "post_step" not in script
+        assert "nohup" not in script
+
+
+def test_post_steps_block_rendered_in_order_and_after_sync(tmp_path):
+    cfg = MAIN_CFG + "\nmerge:\n  post_steps:\n    - echo one {target}\n    - echo two\n"
+    script = render_cfg(tmp_path, cfg)
+    block = post_steps_block(script)
+    assert block.index("run_post_step 'echo one main'") < block.index("run_post_step 'echo two'")
+    assert "{{" not in script
+    # 只在 update-ref 成功并 sync 之后调用一次；"已包含"、冲突、重试耗尽的路径上没有调用
+    lines = [l.strip() for l in script.split("\n")]
+    assert sum(l.startswith("run_post_steps ") for l in lines) == 1
+    i = lines.index('sync_staging_worktree "$staging_head" || true')
+    assert lines[i + 1].startswith("run_post_steps ")
+    assert lines[i + 2] == "exit 0"
+    f = tmp_path / "m.sh"
+    f.write_text(script)
+    assert subprocess.run(["bash", "-n", str(f)]).returncode == 0
+
+
+def test_post_step_single_quote_is_quoted_safely(tmp_path):
+    cfg = MAIN_CFG + "\nmerge:\n  post_steps:\n    - \"echo 'a b' && true\"\n"
+    script = render_cfg(tmp_path, cfg)
+    f = tmp_path / "m.sh"
+    f.write_text(script)
+    assert subprocess.run(["bash", "-n", str(f)]).returncode == 0
+    assert "run_post_step 'echo '\"'\"'a b'\"'\"' && true'" in post_steps_block(script)
+
+
+def test_post_steps_leave_pre_checks_block_untouched(tmp_path):
+    base = render_cfg(tmp_path, STAGING_CFG)
+    with_post = render_cfg(tmp_path, STAGING_CFG + "  post_steps:\n    - echo y\n")
+    assert pre_checks_block(with_post) == pre_checks_block(base)
+
+
 def test_merge_script_dir_defined_before_any_cd(tmp_path):
     script = render_cfg(tmp_path, MAIN_CFG)
     line = 'MERGE_SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd -P)"'

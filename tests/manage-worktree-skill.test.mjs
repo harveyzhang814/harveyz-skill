@@ -14,9 +14,9 @@ test('manage-worktree is registered in devflow with matching version and hash', 
   const index = JSON.parse(await readFile(resolve(root, 'skills-index.json'), 'utf8'))
   const entry = index.skills.find(s => s.path === 'devflow/manage-worktree')
   assert.match(body, /^name: manage-worktree$/m)
-  assert.match(body, /^version: ["']?0\.2\.1["']?$/m)
+  assert.match(body, /^version: ["']?0\.3\.0["']?$/m)
   assert.equal(entry.bundle, 'devflow')
-  assert.equal(entry.contentVersion, '0.2.1')
+  assert.equal(entry.contentVersion, '0.3.0')
   assert.equal(entry.contentHash, hash(body))
 })
 
@@ -55,4 +55,45 @@ test('manage-worktree tells Claude Code to leave the current worktree before ent
   const section = body.slice(body.indexOf('### Claude Code'), body.indexOf('### Codex'))
   assert.ok(section.includes('Switching from this session is limited to worktrees managed by Claude Code'))
   assert.ok(section.includes('先 `ExitWorktree(action: "keep")` 回到启动目录，再 `EnterWorktree(path:)`'))
+})
+
+const leaseSection = body => body.slice(body.indexOf('## 画布节点内补调租约'), body.indexOf('## 「检测」'))
+
+test('inside a canvas node, enter claims the worktree lease with an absolute path', async () => {
+  const body = await readFile(resolve(root, PATH), 'utf8')
+  const section = leaseSection(body)
+  assert.ok(section.length > 0, 'lease section exists before 「检测」')
+  for (const phrase of [
+    'AGENT_CANVAS_NODE_TOKEN', 'command -v agent-canvas-ctl',
+    'agent-canvas-ctl claim-worktree --path <工作区绝对路径>',
+  ]) assert.ok(section.includes(phrase), phrase)
+  const enter = body.slice(body.indexOf('## 「进入」'), body.indexOf('## 按宿主进出'))
+  assert.ok(enter.includes('画布节点内补调租约'))
+  const prepare = body.slice(body.indexOf('### 收尾'), body.indexOf('## 「进入」'))
+  assert.ok(prepare.includes('画布节点内补调租约'))
+})
+
+test('inside a canvas node, leave releases the lease', async () => {
+  const body = await readFile(resolve(root, PATH), 'utf8')
+  assert.ok(leaseSection(body).includes('agent-canvas-ctl exit-worktree --path <工作区绝对路径>'))
+  const hosts = body.slice(body.indexOf('## 按宿主进出'))
+  assert.ok(hosts.includes('画布节点内补调租约'))
+  const row = body.split('\n').find(l => l.startsWith('| 「离开」 |'))
+  assert.ok(row.includes('exit-worktree') && row.includes('画布节点内补调租约'))
+  const intro = hosts.slice(0, hosts.indexOf('### Claude Code'))
+  assert.ok(intro.includes('画布节点内补调租约') && intro.includes('exit-worktree'))
+})
+
+test('lease call failures never fail enter or leave', async () => {
+  const body = await readFile(resolve(root, PATH), 'utf8')
+  const section = leaseSection(body)
+  assert.ok(section.includes('不影响「进入」「离开」本身的结果'))
+  for (const code of ['lease-service-unavailable', 'not-ready', 'no-node-identity']) assert.ok(section.includes(code), code)
+})
+
+test('outside a canvas node nothing is called', async () => {
+  const body = await readFile(resolve(root, PATH), 'utf8')
+  const section = leaseSection(body)
+  assert.ok(section.includes('画布外'))
+  assert.ok(section.includes('不调用'))
 })

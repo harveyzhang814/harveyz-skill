@@ -1,4 +1,4 @@
-"""Real network, real browser-fetch CLI subprocess tests for the debug
+"""Real network, real `feedr fetch` CLI subprocess tests for the debug
 client used by clip-url's self-optimization subagent to iterate
 candidate extraction logic against a real page (fetch_page for static HTML
 inspection, evaluate_js for testing candidate extraction JS).
@@ -14,11 +14,6 @@ import pytest
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
 
 from mcp_debug_client import call_evaluate_js, call_fetch_page  # noqa: E402
-
-
-@pytest.fixture(autouse=True)
-def isolated_data_dir(tmp_path, monkeypatch):
-    monkeypatch.setenv("BROWSER_FETCH_DATA_DIR", str(tmp_path / "data"))
 
 
 def test_call_fetch_page_returns_html(local_article_url):

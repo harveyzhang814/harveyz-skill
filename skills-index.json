@@ -1,7 +1,6 @@
 {
   "toolBundleMeta": {
-    "tools": "开发者 OS 工具（hub — 项目管理 + git 状态 + 任务跟踪；sync — Syncthing 守护进程管理）",
-    "research-tools": "研究抓取后端（browser-fetch — clip-url/sync-* 共用的认证浏览器抓取 CLI；roster — sync-* 共用的人与渠道名册）"
+    "tools": "开发者 OS 工具（hub — 项目管理 + git 状态 + 任务跟踪；sync — Syncthing 守护进程管理）"
   },
   "tools": [
     {
@@ -15,16 +14,6 @@
       "path": "tools/sync-agent",
       "bundle": "tools",
       "installScope": "global"
-    },
-    {
-      "name": "browser-fetch",
-      "path": "tools/browser-fetch",
-      "bundle": "research-tools"
-    },
-    {
-      "name": "roster",
-      "path": "tools/roster",
-      "bundle": "research-tools"
     }
   ],
   "bundleMeta": {
@@ -114,8 +103,8 @@
       "path": "research/clip-url",
       "bundle": "research",
       "installScope": "project",
-      "contentHash": "4a7b3afe8889411f",
-      "contentVersion": "0.9.4"
+      "contentHash": "1308110742c6a874",
+      "contentVersion": "0.10.0"
     },
     {
       "path": "research/explain-design",
@@ -128,22 +117,22 @@
       "path": "feed/sync-xtimeline",
       "bundle": "feed",
       "installScope": "project",
-      "contentHash": "22b6559b8a7a3d96",
-      "contentVersion": "0.8.5"
+      "contentHash": "984bb4a36a09eae0",
+      "contentVersion": "0.9.0"
     },
     {
       "path": "feed/sync-ytchannel",
       "bundle": "feed",
       "installScope": "project",
-      "contentHash": "5454a9384f114dca",
-      "contentVersion": "0.7.5"
+      "contentHash": "c9a78eb4248b8bd3",
+      "contentVersion": "0.8.0"
     },
     {
       "path": "feed/sync-website",
       "bundle": "feed",
       "installScope": "project",
-      "contentHash": "3bff4f0e0f682803",
-      "contentVersion": "0.2.4"
+      "contentHash": "0ca195779c026fc3",
+      "contentVersion": "0.3.0"
     },
     {
       "path": "creative/capture-todo",
@@ -163,8 +152,8 @@
       "path": "coding/init-workflow",
       "bundle": "coding",
       "installScope": "essential",
-      "contentHash": "150676ddb3caabde",
-      "contentVersion": "5.0.3"
+      "contentHash": "a96a825be7a7e144",
+      "contentVersion": "5.1.0"
     },
     {
       "path": "coding/setup-debug",
@@ -380,15 +369,15 @@
       "path": "feed/manage-creators",
       "bundle": "feed",
       "installScope": "project",
-      "contentHash": "9223f347f35b52f8",
-      "contentVersion": "0.3.2"
+      "contentHash": "7ae825b4b72a5734",
+      "contentVersion": "0.4.0"
     },
     {
       "path": "feed/capture-opinion",
       "bundle": "feed",
       "installScope": "project",
-      "contentHash": "3ce558dc5fd6ea78",
-      "contentVersion": "0.2.1"
+      "contentHash": "8914431e8baa346d",
+      "contentVersion": "0.3.0"
     },
     {
       "path": "agent-canvas/agent-canvas-control",
@@ -478,8 +467,8 @@
       "path": "devflow/manage-worktree",
       "bundle": "devflow",
       "installScope": "global",
-      "contentHash": "5f9d56e8db796def",
-      "contentVersion": "0.2.1"
+      "contentHash": "c8a8e1605f69522f",
+      "contentVersion": "0.3.0"
     },
     {
       "path": "devflow/compose-agentsmd",
