@@ -1,5 +1,5 @@
 ---
-status: 待验收
+status: 已验收
 date: 2026-11-18
 author_model: claude-opus-5-5
 acceptance: hard
@@ -107,3 +107,27 @@ agent-canvas 那边怎么使用这个扩展点（后台运行器、通知等）�
 - 第一版实现把 `cd && 命令 &` 整条放进后台，子 shell 一直握着调用方的 stdout 管道，任何捕获合并脚本输出的调用方都会被卡住直到后台步骤结束（J5b 实测 30 秒）。已改成只后台化 `nohup` 那一条，J5b 实测 2 秒内返回。
 
 **改动范围之外的连带修改（均为让既有断言保持成立）：** `tests/init-workflow-skill.test.mjs` 里写死的 `5.0.3` 改为 `5.1.0`；`references/hook-templates.md` 的四处 hooks 头部版本串与 `references/lock-file-format.md` 的示例版本同步为 `5.1.0`（既有测试强制它们与 SKILL.md 版本一致）；`references/render_docs.py` 在配置了 `post_steps` 时才往生成的 `git-workflow.md` 里多写一段，未配置时文档不变。
+
+## 交出方验收记录（2026-11-18）
+
+在交接工作区 `feature/init-workflow-post-steps`（接手方 HEAD `50f984e`）逐条重跑，不采信自测结论。
+
+1. **pass** `bats skills/coding/init-workflow/tests/merge-script.bats` 退出码 0：`ok 10 J5a`、`ok 11 J5b`、`ok 12 J5c` 都通过。
+2. **pass** 同一条命令里 `ok 13 J5d` 通过；接手方另外补的 `ok 14 J5e`（真实冲突时不执行步骤）也通过。
+3. **pass** `npm test` 退出码 0，第一次就通过。接手方首轮遇到的 sync-xtimeline 超时这次没有出现，不需要再归因。
+4. **pass** `bats skills/coding/init-workflow/tests` 共 37 条全部 ok；`python3 -m pytest skills/coding/init-workflow/tests -q` 90 passed。
+5. **pass** `version: "5.1.0"`；`skills-index.json` 里 `contentHash` 从 `150676ddb3caabde` 改为 `a96a825be7a7e144`，`contentVersion` 为 `5.1.0`。
+6. **pass** `git diff --check fd60ab4..HEAD` 无输出；`git status --short` 为空。
+
+**实现核对**：
+- 没有配置 `post_steps` 时，两个占位符所在的行会被整行删掉，生成的脚本与原来逐字节一致（J5a 守住这一点）；
+- 后台只启动 `nohup` 那一条命令，不会拖住调用方的 stdout；
+- 合并后步骤只在 `update-ref` 成功并完成 `sync_staging_worktree` 之后才执行；
+- 运行时的占位符用 `printf %q` 转义，所以配置里的命令**不能再给占位符加引号**。这条约束会影响 agent-canvas Task 11 的配置写法，已经记下。
+
+**偏差裁决**：
+- bats 测试名只用 ASCII，以 `J5x` 开头：**接受**。原因是 bats 1.13 在 bash 3.2 下不能解析非 ASCII 的测试名。
+- 为了让既有的版本一致性断言继续成立，连带改了几处版本串：**接受**。
+- `render_docs.py` 只在配置了 `post_steps` 时才往文档里多写一段：**接受**。
+
+结论：**达成**，`status` 置「已验收」。
