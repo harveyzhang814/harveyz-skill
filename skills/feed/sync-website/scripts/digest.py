@@ -1,21 +1,20 @@
 #!/usr/bin/env python3
 """Markdown rendering + CLI for sync-website's digest — mirrors
 sync-ytchannel/scripts/digest.py, with one addition: a channel that was
-recalibrated mid-run (see fetch_new_articles.py's docstring and
-SKILL.md's run procedure) gets an explicit tag on its heading, per
+recalibrated mid-run (see SKILL.md's run procedure and
+references/calibrate.md) gets an explicit tag on its heading, per
 docs/superpowers/specs/2026-09-02-sync-website-design.md §4.3 — without
 it, a silently-changed selector extracting nav links instead of articles
 would look like a normal digest.
 
 Usage: python3 digest.py < report.json
-Prints EMPTY, or WRITTEN: <path>.
+The digest is written to <report["archive_dir"]>/digest/ (archive_dir comes
+from `feedr sync fetch website`). Prints EMPTY, or WRITTEN: <path>.
 """
 import json
 import sys
 from datetime import datetime
 from pathlib import Path
-
-from config import get_data_dir
 
 
 def has_content(report: dict) -> bool:
@@ -77,7 +76,10 @@ def main():
         print("EMPTY")
         return
 
-    digests_dir = Path(get_data_dir()) / "digest"
+    if "archive_dir" not in report:
+        print("digest.py: report 缺少 archive_dir（应来自 feedr sync fetch website）", file=sys.stderr)
+        sys.exit(1)
+    digests_dir = Path(report["archive_dir"]) / "digest"
     digests_dir.mkdir(parents=True, exist_ok=True)
     run_time = datetime.fromisoformat(report["run_time"])
     timestamp = run_time.strftime("%Y%m%dT%H%M%S")

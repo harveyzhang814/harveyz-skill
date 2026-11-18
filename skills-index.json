@@ -142,8 +142,8 @@
       "path": "feed/sync-website",
       "bundle": "feed",
       "installScope": "project",
-      "contentHash": "3bff4f0e0f682803",
-      "contentVersion": "0.2.4"
+      "contentHash": "54f3125d7a63464a",
+      "contentVersion": "0.3.0"
     },
     {
       "path": "creative/capture-todo",
