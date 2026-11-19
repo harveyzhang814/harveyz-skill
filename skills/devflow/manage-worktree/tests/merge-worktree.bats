@@ -60,6 +60,20 @@ commit_in_wt() { echo feat > "$WT/b.txt" && git -C "$WT" add b.txt && git -C "$W
   [[ "$output" == *"init-workflow"* ]] || false
 }
 
+@test "deployed locally but base branch lacks resolved.env -> exit 4 naming the base branch" {
+  deploy_with ""
+  git -C "$HUB" reset -q --soft HEAD~1 && git -C "$HUB" reset -q
+  add_wt
+  cd "$WT"
+  before="$(git -C "$HUB" rev-parse staging)"
+  run bash "$SCRIPT"
+  [ "$status" -eq 4 ]
+  [[ "$output" == *"base-not-deployed"* ]] || false
+  [[ "$output" == *"staging"* ]] || false
+  [[ "$output" != *"尚未部署新版 init-workflow"* ]] || false
+  [ "$(git -C "$HUB" rev-parse staging)" = "$before" ]
+}
+
 @test "resolved.env without integration_branches -> exit 4 naming resolved-invalid" {
   deploy_with ""
   sed -e '/^integration_branches=/d' "$HUB/.hskill/init-workflow/resolved.env" > "$TMP/e.env"

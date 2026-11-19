@@ -210,7 +210,9 @@ def render(config, resolved, template):
     if integration != main_branch:
         faq.append(f'**Q：在 {integration} 上提交被拒绝怎么办？**\n'
                    f'A：你正在直接向 {integration} 提交。请新建分支，在新分支提交后再合并回 {integration}。')
-    release_p = [p for p in c['naming_patterns'] if 'release' in p]
+    # 热修复 FAQ 只在 release/* 从主分支切出时成立；从集成分支切出的 release/* 是常规发版切点
+    release_p = ([p for p in c['naming_patterns'] if 'release' in p]
+                 if resolved['base'].get('release') == main_branch else [])
     if release_p and target and target != main_branch:
         faq.append(f'**Q：需要紧急热修复直接上 {main_branch} 怎么办？**\n'
                    f'A：从 {main_branch} 切一个 `release/*` 分支，修复后按项目发布流程合并到 {main_branch}；'

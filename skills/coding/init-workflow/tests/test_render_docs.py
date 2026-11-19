@@ -306,3 +306,26 @@ def test_main_only_hotfix_faq_uses_merge_script(tmp_path):
     faq = h2_section(render_cfg(tmp_path, cfg), "常见问题")
     assert "scripts/merge-to-main.sh" in faq
     assert "反向合并" not in faq
+
+
+# ── release 从集成分支切出：热修复 FAQ 只在 base.release 是主分支时生成 ────────
+
+RELEASE_FROM_STAGING_CFG = STAGING_CFG.replace(
+    '        - staging\n        - "release/*"\n', '        - staging\n').replace(
+    '        - "doc/*"\n', '        - "doc/*"\n        - "release/*"\n')
+
+
+def test_release_from_staging_has_no_hotfix_faq(tmp_path):
+    doc = render_cfg(tmp_path, RELEASE_FROM_STAGING_CFG)
+    assert "紧急热修复" not in h2_section(doc, "常见问题")
+
+
+def test_release_from_staging_docs_follow_staging_base(tmp_path):
+    doc = render_cfg(tmp_path, RELEASE_FROM_STAGING_CFG)
+    model = h2_section(doc, "分支模型")
+    assert "| `release/<名称>` | 发版切点 | `staging` |" in model
+    block = model[model.index("```\n") + 4:]
+    block = block[:block.index("```")].rstrip("\n")
+    assert block.splitlines()[-1] == "       <- release/*"
+    assert "-b <分支> main" not in section(doc, "开始新工作")
+    assert rule_line(doc, "main") == "- **`main`** — 禁止直接提交。只接受来自 `staging` 的合并。"

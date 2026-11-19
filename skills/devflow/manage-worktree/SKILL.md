@@ -2,7 +2,7 @@
 name: manage-worktree
 description: "Prepare, enter, inspect, merge, or leave the git worktree a task works in — reuse the task's existing worktree or create one from an explicit, rule-derived base after one user confirmation, bind the session to it on Claude Code, Codex, or any other host, check it is a linked worktree on a named non-integration branch, inside an Agent Canvas node also report enter/leave to the node's worktree lease (optional, harmless elsewhere), and merge it into the repo's merge target through the repo's own merge script. Called by init-spec, develop-plan, and handoff; never pushes, removes worktrees, or deletes branches. Triggers: 'prepare a worktree', 'enter this worktree', 'check my worktree', 'merge this worktree'."
 user_invocable: true
-version: "0.3.0"
+version: "0.3.1"
 ---
 
 # 管理 worktree
@@ -36,9 +36,9 @@ version: "0.3.0"
 所有动作的取值（集成分支、基线、合并目标、worktree 目录）都来自 `.hskill/init-workflow/resolved.env`，以基线分支上已提交的那份为准，不读规则文件，也不 `source` 它（逐行读取）。`inspect-worktree.sh` 分两步取：
 
 1. 引导：依次取当前工作区根、主工作树根下的 `resolved.env`，用第一份得到 `base.<类型>`（「准备」用期望分支类型，其余动作用 `feature`；该键缺失时改用 `base.feature`，再缺失用第一个集成分支，仅用于定位第 2 步）；两处都没有，也按未部署处理。
-2. 权威：`git show <该基线分支>:.hskill/init-workflow/resolved.env`，以它的取值输出。这一份读不到（基线分支上没有此文件）→ 退出码 4。
+2. 权威：`git show <该基线分支>:.hskill/init-workflow/resolved.env`，以它的取值输出。这一份读不到（基线分支上没有此文件，或该分支在本地不存在）→ 退出码 4，`reason=base-not-deployed`，并输出 `base=<该基线分支>`。
 
-因此主工作树停在别的会话的分支上，或目标工作区是部署前建的分支，都不影响取值。任何取值都不按默认分支猜：`resolved.env` 没有 `base.<类型>` 时 `base` 为空；没有集成分支（`integration_branches` 缺失或为空）时整份视为无效，退出码 4。退出码 4 时各动作停下，提示先在该仓库（重新）部署 init-workflow。
+因此主工作树停在别的会话的分支上，或目标工作区是部署前建的分支，都不影响取值。任何取值都不按默认分支猜：`resolved.env` 没有 `base.<类型>` 时 `base` 为空；没有集成分支（`integration_branches` 缺失或为空）时整份视为无效，退出码 4。退出码 4 时各动作停下：仓库未部署或文件无效，提示先在该仓库（重新）部署 init-workflow；`base-not-deployed` 时仓库已部署，提示把部署合进 `base` 所指的分支，或核对该类型的基线是否推断正确。
 
 ## 画布节点内补调租约
 
@@ -94,7 +94,7 @@ bash <skill 目录>/scripts/inspect-worktree.sh [--path <目录>] [--type <分�
 | 1 | `verdict=fail` | 按 `reason` 逐项报告 |
 | 2 | 用法错误 | 修正调用参数后重跑 |
 | 3 | 目标路径不存在或不是 git 目录，`verdict=n/a` | 「准备」「检测」在当前目录遇到（非 git 目录）：返回“不适用”，不建、不进，调用方在当前目录继续；「进入」遇到：报告不通过 |
-| 4 | `resolved.env` 不可用，只输出 `resolved`、`verdict=n/a`、`reason` 三行：仓库未部署（`resolved=missing`、`reason=workflow-not-deployed`），或文件无效——缺 `integration_branches` 或其值为空（`resolved=<相对路径>`、`reason=resolved-invalid`）；非 git 目录先于此判断 | 所有动作停下，提示该仓库需（重新）部署 init-workflow，按 `reason` 说明原因，不继续、不兜底 |
+| 4 | `resolved.env` 不可用，只输出 `resolved`、`verdict=n/a`、`reason` 三行（`base-not-deployed` 另加 `base` 一行）：仓库未部署——目标工作区和主工作树都没有（`resolved=missing`、`reason=workflow-not-deployed`）；基线分支未部署——本地有，基线分支上读不到（`resolved=missing`、`base=<基线>`、`reason=base-not-deployed`）；或文件无效——缺 `integration_branches` 或其值为空（`resolved=<相对路径>`、`reason=resolved-invalid`）；非 git 目录先于此判断 | 所有动作停下，按 `reason` 说明原因，不继续、不兜底：`base-not-deployed` 提示把部署合进 `base` 所指的分支或核对基线；其余提示该仓库需（重新）部署 init-workflow |
 
 向调用方报告时，四个检测项逐项给出通过或不通过及原因。项目特有设置不在检测范围内，由项目指令规定。
 
@@ -125,7 +125,7 @@ bash <skill 目录>/scripts/merge-worktree.sh
 | 1 | 合并脚本出错（含 `merge.pre_checks` 未通过，脚本会打印失败的命令）；也可能是 `merge-worktree.sh` 自身的用法错误（带了参数）或检测脚本异常退出 | 报告输出，不合并 |
 | 2 | 真实冲突，冲突标记已落在当前工作区 | 解决冲突并提交后重新「合并」 |
 | 3 | 当前目录不是 git 目录 | 报告，不合并 |
-| 4 | 仓库未部署 `resolved.env`，或它无效（`resolved-invalid`） | 停下，提示先（重新）部署 init-workflow |
+| 4 | 仓库未部署 `resolved.env`，或它无效（`resolved-invalid`）；或基线分支上没有它（`base-not-deployed`） | 停下：前两种提示先（重新）部署 init-workflow；`base-not-deployed` 提示把部署合进输出点名的基线分支 |
 | 5 | 检测未通过：当前目录不是链接 worktree 的根目录（含其子目录）、detached HEAD、或处于集成分支 | 按输出的 `reason` 报告，不合并 |
 | 6 | `resolved.env` 没有合并目标 | 报告“本仓库未配置合并目标”，不合并 |
 | 7 | 本工作区缺合并脚本（本分支早于部署） | 提示先把 `<merge_target>` 并入本分支再「合并」，不退回 `git merge` |
