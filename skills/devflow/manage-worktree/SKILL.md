@@ -1,8 +1,8 @@
 ---
 name: manage-worktree
-description: "Prepare, enter, inspect, merge, or leave the git worktree a task works in — reuse the task's existing worktree or create one from an explicit, rule-derived base after one user confirmation, bind the session to it on Claude Code, Codex, or any other host, check it is a linked worktree on a named non-integration branch, inside an Agent Canvas node also report enter/leave to the node's worktree lease (optional, harmless elsewhere), and merge it into the repo's merge target through the repo's own merge script. Called by init-spec, develop-plan, and handoff; never pushes, removes worktrees, or deletes branches. Triggers: 'prepare a worktree', 'enter this worktree', 'check my worktree', 'merge this worktree'."
+description: "Prepare, enter, inspect, merge, or leave the git worktree a task works in — reuse the task's existing worktree or create one from an explicit, rule-derived base without asking, bind the session to it on Claude Code, Codex, or any other host, check it is a linked worktree on a named non-integration branch, inside an Agent Canvas node also report enter/leave to the node's worktree lease (optional, harmless elsewhere), and merge it into the repo's merge target through the repo's own merge script. Called by init-spec, develop-plan, and handoff; never pushes, removes worktrees, or deletes branches. Triggers: 'prepare a worktree', 'enter this worktree', 'check my worktree', 'merge this worktree'."
 user_invocable: true
-version: "0.3.1"
+version: "0.4.0"
 ---
 
 # 管理 worktree
@@ -147,14 +147,13 @@ bash <skill 目录>/scripts/merge-worktree.sh
 ### 新建（路径取 `default_path`）
 
 - **期望分支已存在，且没有被任何工作区 checkout** → `git worktree add <路径> <分支>`，不建分支，不问基线。
-- **其他情况**（含主工作树停在功能分支上、detached HEAD、集成分支、未给锚点的新会话）→ 新建前向用户一次确认基线、分支名和路径，确认后 `git worktree add <路径> -b <分支> <基线>`：
-  - 基线：取 `base`；当前所在分支若是非集成的命名分支，列为可选的另一基线。不从当前 HEAD 静默拉分支——那会夹带其他会话未合并的提交。`base` 为空时不新建（见停止条件）。
-  - 分支名：默认期望分支，须匹配命名模式。期望分支已存在但正被主工作树占用时，一个分支不能同时被两个工作区 checkout，确认时说明并请用户另取分支名。
+- **其他情况**（含主工作树停在功能分支上、detached HEAD、集成分支、未给锚点的新会话）→ 按下面的取值直接 `git worktree add <路径> -b <分支> <基线>`，不向用户确认；建好后在报告里写明基线、分支名和路径：
+  - 基线：只取 `base`。不从当前 HEAD 拉分支——那会夹带其他会话未合并的提交。`base` 为空时不新建（见停止条件）。
+  - 分支名：用期望分支，须匹配命名模式。期望分支已存在但正被主工作树占用时，一个分支不能同时被两个工作区 checkout，不新建，报告原因并请用户另取分支名。
 - **`.gitignore`**：worktree 目录的忽略规则由 init-workflow 部署时补写，本技能不检查、不改 `.gitignore`。
 
 停止条件：
 
-- 用户拒绝确认 → 不建；调用方停下，告诉用户可改选基线、分支名或路径后重来。
 - 基线推断不出（检测输出 `base` 为空，即 `resolved.env` 没有该分支类型的 `base.<类型>`），或基线分支在本地不存在（`git show-ref --verify refs/heads/<基线>` 失败）→ 不新建，报告原因，请用户指定基线；不拿默认分支或当前 HEAD 顶替。
 - 目标路径已存在 → 不覆盖，报告并请用户另选路径。
 
