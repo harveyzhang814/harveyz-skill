@@ -14,9 +14,9 @@ test('manage-worktree is registered in devflow with matching version and hash', 
   const index = JSON.parse(await readFile(resolve(root, 'skills-index.json'), 'utf8'))
   const entry = index.skills.find(s => s.path === 'devflow/manage-worktree')
   assert.match(body, /^name: manage-worktree$/m)
-  assert.match(body, /^version: ["']?0\.3\.1["']?$/m)
+  assert.match(body, /^version: ["']?0\.4\.0["']?$/m)
   assert.equal(entry.bundle, 'devflow')
-  assert.equal(entry.contentVersion, '0.3.1')
+  assert.equal(entry.contentVersion, '0.4.0')
   assert.equal(entry.contentHash, hash(body))
 })
 
@@ -28,7 +28,7 @@ test('manage-worktree states its actions, rules, hosts and boundaries', async ()
     '「合并」', 'scripts/merge-worktree.sh', 'resolved.env',
     '`.worktrees/<分支名，/ 换成 +>`',
     '锚点',
-    '新建前向用户一次确认基线、分支名和路径',
+    '不向用户确认',
     'EnterWorktree(path: "<工作区绝对路径>")', 'ExitWorktree(action: "keep")',
     'codex -C <工作区>', 'git -C <工作区>',
     '不清理 worktree、不删除分支', '绝不执行 `git worktree remove`',
@@ -46,6 +46,7 @@ test('manage-worktree no longer names the rule-file lookup chain or the old boun
   const body = await readFile(resolve(root, PATH), 'utf8')
   for (const gone of [
     '不合并、不清理 worktree、不删除分支',
+    '新建前向用户一次确认', 'after one user confirmation', '用户拒绝确认',
     '.hskill/init-workflow/workflow-config.yml', '.claude/workflow-config.yml', '`rule_file`',
   ]) assert.ok(!body.includes(gone), gone)
 })
