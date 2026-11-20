@@ -1,7 +1,7 @@
 ---
 name: sync-design
 description: Use after any UI source file change — detects changed view/component files via git diff and syncs them to high-fidelity HTML design backups. Also supports pre-development design phase: creates or updates design draft HTML based on user feature descriptions. Maintains a manifest as the source-of-truth mapping between source files, design drafts, and HTML previews. Trigger when user says "sync design", "update HTML preview", "design changed", "create design", "design this", "migrate design drafts", "configure design system", or the Chinese equivalents, or after UI code edits.
-version: "5.4.0"
+version: "5.5.0"
 user_invocable: true
 ---
 
@@ -69,10 +69,36 @@ user_invocable: true
 
 启用设计系统时，第 1–3 项换成依次读 `designSystem.standard`、`designSystem.tokens`、`designSystem.componentStyles`，第 4 项照旧。这几个文件少于 4 万字符时全量读；更大时先列目录（Markdown 标题、CSS 的分块注释），全量读通用规则（硬规则、不要做、例外之类的章节），再按目录读与本页面有关的章节（用到的组件、布局、所在板块），以及标准里点名为本类界面样本的文件。
 
+启用设计系统且登记了 `designSystem.query` 时，上一段不适用：第 1–3 项换成[按场景查询标准](#按场景查询标准)，不整份读 `standard`、`tokens`、`componentStyles`；第 4 项照旧。
+
 1. `manifest.config.designSpec`（若有）
 2. 所属平台的 `designSystemFile`（若有）
 3. 所属平台 `stackRef` 指向的 reference 中，与 `styleStrategy` 匹配的那一节；没有匹配的节、或 `styleStrategy` 为 `unknown`（或旧 manifest 里的 `null`）时跳过此项，读源文件自行判断
 4. 所属平台 `notes`（优先于 reference，记录项目特定约定）；`notes` 点名的关联文件（如视觉语言参照的源文件）在两种模式下都按需读
+
+### 按场景查询标准
+
+（启用设计系统且登记了 `designSystem.query` 时）
+
+在项目根运行 `<query> <参数>`。退出码 0 有命中，3 无命中（会列出最接近的词，可换词再查），2 用法错误。第一次查询前先跑 `<query> --list`，看本项目支持哪些参数、页面类型和词；`--list` 没声明的参数改用 `--search <词>`。
+
+| 时刻 | 查什么 |
+|---|---|
+| 开稿（设计阶段情况 A 步骤 1、情况 B 无完成稿步骤 2） | `--core`，再按页面所属类型 `--page <类型>`（类型不明时从 `--list` 里选最接近的）；可整份读返回的**一份**样本 |
+| 下笔每个局部前（设计模式） | 涉及的组件、区域各 `--topic <词>`；要选令牌而条目没给答案时 `--token <令牌名>`，要看有哪些令牌时 `--list` |
+| 同步（阶段 3 更新队列 b、新建队列 c） | 开头 `--core`；改动涉及的组件、区域逐个 `--topic`；改动里新出现的令牌 `--token` |
+| 旧写法整份转换（见[设计系统](#设计系统)） | 按稿内用到的组件逐个 `--topic` |
+| 生成后检查，守卫报违规 | 每个 `R<n>` 跑 `--rule R<n>`，按返回的条目修 |
+| `--topic` 退出码 3，或标准像是没说过 | `--search <词>`；有命中按命中的条目画，无命中按[标准缺口](#局部取舍与标准缺口)登记 |
+
+读结果：
+
+- 输出按路径分组（如 `§3.5 浮层与模态 › ⑤ 按钮区`），组下是条目原文 `C-xxx …`。超出预算时条目折叠为 `C-xxx（摘要）…`，判断不了就 `--rule C-xxx` 展开单条，或同一查询加 `--full`。
+- `→ <文件>:<行号或行号范围>` 只给位置：按行号局部读 `componentStyles`、`tokens` 的那几行。
+- `相关（未展开）：` 列的是交叉引用，用到时再 `--rule` 或 `--topic` 查，不自动展开。
+- 返回里有与当前局部有关的待讨论缺口时，`--rule <缺口编号>` 看全文，按它的拟议口径画，在摘要里注明引用了哪条缺口，不重复登记。
+
+查询结果不够时用 `--full`、`--rule` 展开，或按返回的行号局部读，不退回整份读 `standard`、`tokens`、`componentStyles`。
 
 ---
 
@@ -196,14 +222,18 @@ user_invocable: true
 （启用设计系统时，下笔写进稿子之前）
 
 - **局部取舍：** 某一局部有几种画法都合标准、用户没定（组件画法、几个色值或间距前后对比）时，先在 `designSystem.scratchDir` 做只含该局部的小对比视图（同样引用设计系统），用宿主能打开本地网页的方式直接打开给用户看（如画布节点的 open-browser 命令；没有这类能力就给出文件绝对路径），请用户选。一个页面的这类小项全部确认后，才写进设计稿。
-- **标准缺口：** 要画的东西需要标准里没有的规则、或现有界面的做法与标准冲突而标准没给替代时，不在稿里自创。按 `designSystem.gapsFile` 现有条目的格式（编号、状态等）追加一条，写明哪个页面、哪个局部、缺什么。编号取本地所有分支上出现过的最大号加一（`git grep -h -E '<编号的写法>' $(git for-each-ref --format='%(refname:short)' refs/heads) -- <gapsFile>`）：设计系统常在自己的分支上维护缺口清单，只看当前分支会撞号。告诉用户「这里要先在设计系统里定标准（按 `<dir>` 自己的改动流程），定了再回来画」，并说明缺口记在哪个分支。涉及缺口的局部先停，页面其余部分照常画；整页都依赖它时整页不出稿，删掉本次为它复制或新建、还没登记进 manifest 的稿子。
+- **标准缺口：** 要画的东西需要标准里没有的规则、或现有界面的做法与标准冲突而标准没给替代时，不在稿里自创，按下面登记：
+  1. **先查：** 判定“标准里没有”之前先搜：登记了 `designSystem.query` 时 `<query> --search <词>`；没登记（或它不支持 `--search`）时 `rg -n '<词>' <standard>`，再 `rg -n '^#.*<词>' <gapsFile>` 只搜缺口标题行。命中已有缺口（任何状态）时引用它，不新增。
+  2. **按说明区写：** 只读 `gapsFile` 开头到第一条条目之前的说明区，按它写的格式追加一条，写明哪个页面、哪个局部、缺什么；说明区没写格式时，才读最后一条条目当样例。不整份读缺口清单。
+  3. **取号：** 编号取本地所有分支上出现过的最大号加一：设计系统常在自己的分支上维护缺口清单，只看当前分支会撞号。说明区给了取号命令就用它；没给时用只输出最大号的写法：`git grep -h -oE '<编号的写法>' $(git for-each-ref --format='%(refname:short)' refs/heads) -- <gapsFile> | sort -t- -k2 -n | tail -1`（编号不是“前缀-数字”时按其数字部分排序）。
+  4. 告诉用户「这里要先在设计系统里定标准（按 `<dir>` 自己的改动流程），定了再回来画」，并说明缺口记在哪个分支。涉及缺口的局部先停，页面其余部分照常画；整页都依赖它时整页不出稿，删掉本次为它复制或新建、还没登记进 manifest 的稿子。
 
 ### 3. 生成后检查（启用设计系统时）
 
 对本次写过的每份稿子：
 
 1. **引用：** `python3 SKILL_DIR/scripts/design_html.py check <manifest>` 不报这些稿子「引用的文件不存在」。
-2. **守卫：** 在项目根运行 `designSystem.guard`，`{files}` 替换为这些稿子相对项目根的路径（逐个加引号，空格分隔）。有违规就当场修，重跑到 0 违规；修不了的（要标准没有的规则，或守卫误报）停下报告，并按上一节登记缺口。没登记 `guard` 时跳过，在摘要里写明「未跑守卫」。
+2. **守卫：** 在项目根运行 `designSystem.guard`，`{files}` 替换为这些稿子相对项目根的路径（逐个加引号，空格分隔）。有违规就当场修（登记了 `designSystem.query` 时先按[按场景查询标准](#按场景查询标准)查该 R 编号），重跑到 0 违规；修不了的（要标准没有的规则，或守卫误报）停下报告，并按上一节登记缺口。没登记 `guard` 时跳过，在摘要里写明「未跑守卫」。
 3. **主题：** 每份稿子在 `themes` 的每个主题下都看一遍渲染出来的画面，确认样式加载、文字可读、画面没有被截断或互相压住。登记了 `designSystem.screenshot` 时，在项目根对每个主题运行它：`{url}` 换成稿子的 `file://` 绝对地址接该主题的 `query`，`{out}` 换成临时目录里的图片路径，命令含 `{height}` 时按稿子长度给一个高度（截出来底部被截断就加大重截）；退出码 0 且图片存在才算截到，再读图片看。没登记时用宿主能渲染本地网页的能力看（浏览器或截图工具）。自己看不了时打开给用户看，等用户确认。截图只放临时目录，不入库。
 
 ### 4. 写回与摘要

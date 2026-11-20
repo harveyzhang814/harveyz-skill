@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- `sync-design` 5.5.0：`designSystem` 新增可选字段 `query`（标准查询命令前缀）。登记后，设计模式（开稿、下笔每个局部前、生成后检查）与同步模式（阶段 3、旧写法转换）都按场景查询标准条目（`--core`、`--page`、`--topic`、`--token`、`--rule`、`--search`、`--list`，可选 `--full`），不再整份读 `standard`、`tokens`、`componentStyles`；折叠的摘要用 `--rule` 或 `--full` 展开，组件样式与令牌只按返回的行号局部读。项目命令只实现部分参数时在 `--list` 声明，没声明的改用 `--search`。没登记 `query` 的项目，「标准上下文」的 4 万字符规则不变。登记标准缺口的步骤（不论是否登记 `query`）改为：先搜标准与已有缺口，命中就引用不新增；只读缺口清单开头的说明区按它的格式写，没写格式才读最后一条当样例，不整份读；取号用只输出最大号的命令（说明区给了就用它）。原写法只说“按现有条目的格式追加”，实际会整份读缺口清单，取号命令又输出所有分支上的全部编号行，在 agent-canvas 上可达数十万字符。`references/init.md` 字段表加 `query` 与参数契约，完成标准加“`<query> --list` 退出码 0”
+
 ### Fixed
 - `init-workflow` 5.1.1：生成的 `git-workflow.md` 只在 `base.release` 是主分支时才写“需要紧急热修复直接上 main → 从 main 切 `release/*`”这条 FAQ。原来只要命名规则里有 `release` 前缀就写，项目把 `release/*` 改为从集成分支切出（`staging` 的 `merge_from` 含 `release/*`）后，这条 FAQ 与分支表、兜底命令互相矛盾。`base.release` 仍是主分支的项目，生成结果不变；已部署的项目重新运行 init-workflow 只会更新 hooks 头部的版本号
 - `manage-worktree` 0.3.1：本地（目标工作区或主工作树）有 `resolved.env`、但基线分支上读不到时，检测改报 `reason=base-not-deployed`，并多输出一行 `base=<基线>`；退出码仍为 4。原来与“仓库未部署”共用 `workflow-not-deployed`，在基线分支早于部署时（如 agent-canvas 发 10.0.0 时 `base.release=main`，main 尚无这份文件）会误导人去重新部署。`merge-worktree.sh` 遇到时点名该分支，提示把部署合进去或核对基线
