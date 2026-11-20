@@ -12,7 +12,8 @@
 # 退出码：
 #   0 / 1 / 2  透传合并脚本：0 已合并或已包含；1 出错（含 pre_checks 未过）；2 冲突，标记已落在当前工作区
 #   3  当前目录不是 git 目录（带参数调用的用法错误按 1 处理，避免与冲突的 2 混淆）
-#   4  仓库未部署 resolved.env，或它无效（resolved-invalid）；先（重新）部署 init-workflow
+#   4  仓库未部署 resolved.env，或它无效（resolved-invalid）；先（重新）部署 init-workflow。
+#      基线分支上缺这份文件（base-not-deployed）时提示把部署合进该分支
 #   5  工作区检测未通过（不是链接 worktree 的根目录含子目录、detached HEAD、处于集成分支）
 #   6  本仓库未配置合并目标
 #   7  本工作区缺合并脚本（本分支早于部署）；不退回 git merge
@@ -44,6 +45,11 @@ case "$rc" in
     case "$out" in
       *reason=resolved-invalid*)
         echo "集成分支上的 .hskill/init-workflow/resolved.env 无效（reason=resolved-invalid：缺 integration_branches），不「合并」。" >&2 ;;
+      *reason=base-not-deployed*)
+        base_line="${out#*base=}"
+        echo "基线分支 ${base_line%%$'\n'*} 上没有 .hskill/init-workflow/resolved.env（reason=base-not-deployed），不「合并」。" >&2
+        echo "本地已部署：把部署合进该分支，或核对 resolved.env 的基线是否正确，再重来。" >&2
+        exit 4 ;;
       *)
         echo "该仓库的集成分支尚未部署新版 init-workflow（缺 .hskill/init-workflow/resolved.env），不「合并」。" >&2 ;;
     esac

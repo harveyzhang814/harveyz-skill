@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- `init-workflow` 5.1.1：生成的 `git-workflow.md` 只在 `base.release` 是主分支时才写“需要紧急热修复直接上 main → 从 main 切 `release/*`”这条 FAQ。原来只要命名规则里有 `release` 前缀就写，项目把 `release/*` 改为从集成分支切出（`staging` 的 `merge_from` 含 `release/*`）后，这条 FAQ 与分支表、兜底命令互相矛盾。`base.release` 仍是主分支的项目，生成结果不变；已部署的项目重新运行 init-workflow 只会更新 hooks 头部的版本号
+- `manage-worktree` 0.3.1：本地（目标工作区或主工作树）有 `resolved.env`、但基线分支上读不到时，检测改报 `reason=base-not-deployed`，并多输出一行 `base=<基线>`；退出码仍为 4。原来与“仓库未部署”共用 `workflow-not-deployed`，在基线分支早于部署时（如 agent-canvas 发 10.0.0 时 `base.release=main`，main 尚无这份文件）会误导人去重新部署。`merge-worktree.sh` 遇到时点名该分支，提示把部署合进去或核对基线
+
 ## [0.46.0] - 2026-11-18
 
 ### Added

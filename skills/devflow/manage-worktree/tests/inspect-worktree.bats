@@ -120,7 +120,7 @@ linked() { git -C "$REPO" worktree add -q -b "$1" "$TMP/wt" HEAD >/dev/null; ech
   [[ "$output" == *"base=staging"* ]] || false
 }
 
-@test "base branch lacks the file while bootstrap copy exists -> exit 4" {
+@test "base branch lacks the file while bootstrap copy exists -> exit 4 base-not-deployed" {
   git -C "$REPO" branch staging
   write_env "$REPO"
   git -C "$REPO" add -A && git -C "$REPO" commit -qm deploy-main-only
@@ -129,7 +129,21 @@ linked() { git -C "$REPO" worktree add -q -b "$1" "$TMP/wt" HEAD >/dev/null; ech
   run bash "$SCRIPT" --path "$wt"
   [ "$status" -eq 4 ]
   [[ "$output" == *"resolved=missing"* ]] || false
-  [[ "$output" == *"reason=workflow-not-deployed"* ]] || false
+  [[ "$output" == *"base=staging"* ]] || false
+  [[ "$output" == *"verdict=n/a"* ]] || false
+  [[ "$output" == *"reason=base-not-deployed"* ]] || false
+  [[ "$output" != *"workflow-not-deployed"* ]] || false
+}
+
+@test "base branch missing locally while bootstrap copy exists -> exit 4 base-not-deployed" {
+  write_env "$REPO"
+  git -C "$REPO" add -A && git -C "$REPO" commit -qm deploy-main-only
+  wt="$(linked feature/x)"
+  sed -i.bak 's/^base.release=.*/base.release=nowhere/' "$wt/.hskill/init-workflow/resolved.env"
+  run bash "$SCRIPT" --path "$wt" --type release
+  [ "$status" -eq 4 ]
+  [[ "$output" == *"base=nowhere"* ]] || false
+  [[ "$output" == *"reason=base-not-deployed"* ]] || false
 }
 
 @test "custom worktree_dir shapes default_path" {
