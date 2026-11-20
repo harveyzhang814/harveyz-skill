@@ -1,7 +1,7 @@
 ---
 name: sync-design
 description: Use after any UI source file change — detects changed view/component files via git diff and syncs them to high-fidelity HTML design backups. Also supports pre-development design phase: creates or updates design draft HTML based on user feature descriptions. Maintains a manifest as the source-of-truth mapping between source files, design drafts, and HTML previews. Trigger when user says "sync design", "update HTML preview", "design changed", "create design", "design this", "migrate design drafts", "configure design system", or the Chinese equivalents, or after UI code edits.
-version: "5.5.0"
+version: "5.5.1"
 user_invocable: true
 ---
 
@@ -80,12 +80,12 @@ user_invocable: true
 
 （启用设计系统且登记了 `designSystem.query` 时）
 
-在项目根运行 `<query> <参数>`。退出码 0 有命中，3 无命中（会列出最接近的词，可换词再查），2 用法错误。第一次查询前先跑 `<query> --list`，看本项目支持哪些参数、页面类型和词；`--list` 没声明的参数改用 `--search <词>`。命令跑不起来（找不到命令、退出码不是 0 / 2 / 3）时停下告诉用户，不退回整份读标准文件。
+在项目根运行 `<query> <参数>`。退出码 0 有命中，3 无命中（会列出最接近的词，可换词再查），2 用法错误。`<query> --list` 列出本项目支持的参数、页面类型、词和令牌名，输出很长，不默认先跑：只在页面类型不明、要看有哪些令牌，或某个参数报用法错误（退出码 2）要核对是否支持时才跑；`--list` 没声明的参数改用 `--search <词>`。命令跑不起来（找不到命令、退出码不是 0 / 2 / 3）时停下告诉用户，不退回整份读标准文件。
 
 | 时刻 | 查什么 |
 |---|---|
-| 开稿（设计阶段情况 A 步骤 1、情况 B 无完成稿步骤 2） | `--core`，再按页面所属类型 `--page <类型>`（类型不明时从 `--list` 里选最接近的）；可整份读返回的**一份**样本 |
-| 下笔每个局部前（设计模式） | 涉及的组件、区域各 `--topic <词>`；要选令牌而条目没给答案时 `--token <令牌名>`，要看有哪些令牌时 `--list` |
+| 开稿（设计阶段情况 A 步骤 1、情况 B 无完成稿步骤 2） | `--core`，再按页面所属类型 `--page <类型>`（类型不明时才跑 `--list` 选最接近的）。`--page` 给出的样本不整份读：画到哪个局部，就用类名或区块注释在样本里定位（`rg -n '<类名或注释>' <样本>`），只读命中的行号范围 |
+| 下笔每个局部前（设计模式） | 涉及的组件、区域各 `--topic <词>`；返回里与这一局部有关的 `C-xxx（摘要）` 先 `--rule C-xxx` 展开再画，无关的不展开；要选令牌而条目没给答案时 `--token <令牌名>`，要看有哪些令牌时才 `--list` |
 | 同步（阶段 3 更新队列 b、新建队列 c） | 开头 `--core`；改动涉及的组件、区域逐个 `--topic`；改动里新出现的令牌 `--token` |
 | 旧写法整份转换（见[设计系统](#设计系统)） | 按稿内用到的组件逐个 `--topic` |
 | 生成后检查，守卫报违规 | 每个 `R<n>` 跑 `--rule R<n>`，按返回的条目修 |
@@ -93,12 +93,12 @@ user_invocable: true
 
 读结果：
 
-- 输出按路径分组（如 `§3.5 浮层与模态 › ⑤ 按钮区`），组下是条目原文 `C-xxx …`。超出预算时条目折叠为 `C-xxx（摘要）…`，判断不了就 `--rule C-xxx` 展开单条，或同一查询加 `--full`。
-- `→ <文件>:<行号或行号范围>` 只给位置：按行号局部读 `componentStyles`、`tokens` 的那几行。
+- 输出按路径分组（如 `§3.5 浮层与模态 › ⑤ 按钮区`），组下是条目原文 `C-xxx …`。超出预算时条目折叠为 `C-xxx（摘要）…`：与当前要画的局部有关的，下笔前 `--rule C-xxx` 展开（`--rule` 一次只认一个编号，几个编号可在一条 shell 命令里用 `;` 连着跑），无关的不展开；要整组全文时同一查询加 `--full`。
+- `→ <文件>:<行号或行号范围>` 只给位置：只读 `componentStyles`、`tokens` 的这些行（如 `sed -n '<起>,<止>p' <文件>`），不整份 `cat`，也不对整份文件做宽泛的 `grep`。
 - `相关（未展开）：` 列的是交叉引用，不自动展开。其中的条目编号（`C-xxx`、`R<n>`、`D-xxx`、`G-xxx`）用到时 `--rule <编号>`；节名（如 `§4 令牌选择判据`）只是上下文指引，确实要看时对相关组件、区域的词（见 `--list`）跑 `--topic`。顺着 `相关` 查不到东西，不算标准缺口。
 - 返回里有与当前局部有关的待讨论缺口时，`--rule <缺口编号>` 看全文，按它的拟议口径画，在摘要里注明引用了哪条缺口，不重复登记。
 
-查询结果不够时用 `--full`、`--rule` 展开，或按返回的行号局部读，不退回整份读 `standard`、`tokens`、`componentStyles`。
+查询结果不够时用 `--full`、`--rule` 展开，或按返回的行号局部读，不退回整份读 `standard`、`tokens`、`componentStyles`，样本也不整份读。
 
 ---
 
@@ -221,7 +221,7 @@ user_invocable: true
 
 （启用设计系统时，下笔写进稿子之前）
 
-登记了 `designSystem.query` 时，下笔前先对这一局部涉及的每个组件、区域跑 `--topic`，要选令牌时 `--token`；要用的规则只给了 `（摘要）` 时 `--rule` 展开再画（见[按场景查询标准](#按场景查询标准)）。
+登记了 `designSystem.query` 时，下笔前先对这一局部涉及的每个组件、区域跑 `--topic`，要选令牌时 `--token`；要用的规则只给了 `（摘要）` 时 `--rule` 展开再画；要参考样本时只按行号读样本里这一局部（见[按场景查询标准](#按场景查询标准)）。
 
 - **局部取舍：** 某一局部有几种画法都合标准、用户没定（组件画法、几个色值或间距前后对比）时，先在 `designSystem.scratchDir` 做只含该局部的小对比视图（同样引用设计系统），用宿主能打开本地网页的方式直接打开给用户看（如画布节点的 open-browser 命令；没有这类能力就给出文件绝对路径），请用户选。一个页面的这类小项全部确认后，才写进设计稿。
 - **标准缺口：** 要画的东西需要标准里没有的规则、或现有界面的做法与标准冲突而标准没给替代时，不在稿里自创，按下面登记：

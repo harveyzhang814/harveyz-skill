@@ -250,8 +250,8 @@
       "path": "design/sync-design",
       "bundle": "design",
       "installScope": "project",
-      "contentHash": "42f20edbbe10be36",
-      "contentVersion": "5.5.0"
+      "contentHash": "20f7cc0942de8367",
+      "contentVersion": "5.5.1"
     },
     {
       "path": "mint/init-skill",
