@@ -390,8 +390,8 @@
       "path": "agent-canvas/dispatch-agent",
       "bundle": "agent-canvas",
       "installScope": "global",
-      "contentHash": "c93b72795255e079",
-      "contentVersion": "1.0.0"
+      "contentHash": "9ec12d6156fa307e",
+      "contentVersion": "1.1.0"
     },
     {
       "path": "agent-canvas/describe-node",

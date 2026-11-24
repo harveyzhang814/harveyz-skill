@@ -2,7 +2,7 @@
 name: dispatch-agent
 description: "Dispatch work to another claude-code/codex agent node on Agent Canvas and get its result back — create a new node or reuse a running one, send the task asking for a reply, receive the reply, and handle held, withdrawn, failed, or interrupted messages. Use when the user wants a task handed to another agent on the canvas, several tasks fanned out in parallel, or a quick answer from another node."
 user_invocable: true
-version: "1.0.0"
+version: "1.1.0"
 ---
 
 # 派活给另一个 agent（dispatch-agent）
@@ -24,7 +24,7 @@ version: "1.0.0"
 1. 已知 id 直接 `get_node`；只知道标题或主题时先 `search_nodes`。
 2. 看 `get_node` 返回的 `actions[]` 里 `send_message` 是否 `available: true`（只有进程在跑的
    claude-code / codex 节点可以收消息）。不可用时把 `reason` 告诉用户，不要私自改发给别的节点。
-3. 收件节点不是你直接创建的，发送时通常会在画布上弹审批卡片，由用户放行（与对方有交接关系、或用户已在本会话内始终允许时不弹）。
+3. 收件节点与你之间没有 active 的 `waits-for` 或 `hands-off-to`（不分方向），且用户没有在本会话内选「始终允许」时，发送会在画布上弹审批卡片，由用户放行。是不是你建的节点不再影响审批。
 
 **新建**——没有合适的现成节点：
 
@@ -34,8 +34,8 @@ version: "1.0.0"
 | 用户要求按任务类别自动选节点类型与模型 | `create_routed_pty_node`；先 `list_node_route_categories`、`describe_node_route_category` 选类别，不确定时先 `preview_node_route` |
 | 新会话是为实现画布上某个需求节点 | `derive_pty_from_requirement`（会自动连上 `implements`） |
 
-- 新节点是你的子节点，给它发消息不弹审批；消息会排队，等新会话启动完成才写入。派生链太深
-  （新节点是第 4 代及以后）时建节点本身会弹审批。
+- 新节点是你建的，给它发消息照样按上面第 3 条判定；要建等待关系，由你在发送前连 `waits-for`（本 skill 不强制）。消息会排队，等新会话启动完成才写入。
+- 派生层级只数 agent 发起的创建，遇到人发起的创建（Fork、`/branch`、界面派生等）就重新计数；新节点会是第 4 代及以后时，建节点本身会弹审批。
 - 新节点默认**不在画布上**，这是正常状态。用户要看它时用 `show_nodes` 放上去。
 - 走 CLI 时，`create-pty-node` 可以一步完成建节点和发消息；若它报“节点已经或可能已经建出、消息
   没发成”，先用 `search_nodes` 按标题核对，确认节点存在后再单独发消息，不要再建一个。
