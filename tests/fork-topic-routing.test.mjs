@@ -97,6 +97,9 @@ test('fork-topic handles a refused send', async () => {
   assert.ok(body.includes('不得给出 `messageId`'), 'no messageId when refused')
   assert.ok(body.includes('仅 `send` 成功时'), 'step 6 only on success')
   assert.ok(body.includes('等待边已保留'), 'wait edge kept after refusal')
+  for (const phrase of ['未成功', 'OUTCOME_UNKNOWN', '结果未知', 'EXECUTION_FAILED', 'INVALID_ARGUMENT', '非 0 退出码']) {
+    assert.ok(body.includes(phrase), phrase)
+  }
 })
 
 test('fork-topic mentions resolve-wait', async () => {
@@ -104,5 +107,5 @@ test('fork-topic mentions resolve-wait', async () => {
   assert.ok(body.includes('resolve-wait'))
   assert.ok(body.includes('不自动解除'), 'never auto-resolves')
   assert.ok(body.includes('经用户同意'), 'needs user consent')
-  assert.ok(!body.includes('resolve-wait <relationId>'), 'no literal <relationId> placeholder')
+  assert.ok(!/resolve-wait\s+<[^>]+>/.test(body), 'no angle-bracket placeholder after resolve-wait')
 })

@@ -39,6 +39,10 @@ version: "1.2.0"
 5. 把 prompt（只写 prompt 正文，不加代码块围栏）写进 `mktemp` 建的临时文件，文件在仓库之外，不进任何 git 目录。然后按顺序：
    1. **prompt 里写了交回要求时**，先连等待边（原会话等新会话），再发送：`agent-canvas-ctl link-nodes --from <自己的节点 id> --to <新节点 id> --type waits-for`。自己的节点 id 取自开头 `whoami` 的结果。连边成功：记下返回的 `relationId`。连边失败：把报错告诉用户，照常 `send`（这次会弹审批），不删节点、不重建。没有交回要求就不连边。
    2. `agent-canvas-ctl send <新节点 id> --file <临时文件>`。没有 active 的等待或交接关系时，`send` 会在画布上弹审批卡，命令阻塞到用户作答。
-   3. `send` 被拒（stderr 为 `APPROVAL_DENIED`）或超时（`APPROVAL_TIMEOUT`）：不重试、不删节点；告诉用户「节点已建、消息未发出」，并按「不在画布里」的格式输出代码块里的可粘贴 prompt，供用户贴进该节点。此时不走第 6 条：回复里不得声称消息已发出，也不得给出 `messageId`。若已连了等待边，保留不删，并补一句：等待边已保留，用户手动贴入 prompt 后照常等待，结论交回后可经用户同意，用 `agent-canvas-ctl resolve-wait <第 1 步记下的 relationId 的具体值>` 解除；不自动解除。
-6. **仅 `send` 成功时**：回复说明派给了哪个节点、`messageId`，结束本轮，不 sleep、不轮询。交回要求照常写在 prompt 里；不会自动回传，结论由用户到那个节点里取，再贴回主讨论。若连了等待边，补一句：结论贴回主讨论后，可经用户同意，用 `agent-canvas-ctl resolve-wait <第 1 步记下的 relationId 的具体值>` 解除等待；不自动解除。
+   3. **`send` 未成功**（被拒、超时或其他报错、非 0 退出码）：不重试、不删节点；按「不在画布里」的格式输出代码块里的可粘贴 prompt，供用户贴进该节点。此时不走第 6 条：回复里不得声称消息已发出，也不得给出 `messageId`。
+      - 被拒（stderr 为 `APPROVAL_DENIED`，App 提示「请勿重试」）或超时（`APPROVAL_TIMEOUT`）：明确不重试；告诉用户「节点已建、消息未发出」。
+      - `OUTCOME_UNKNOWN`（结果不明，消息可能已发出）：如实说「结果未知」，不硬说未发出；先到新节点里核对再决定，不自动重发。
+      - 其他报错（`EXECUTION_FAILED`、`INVALID_ARGUMENT` 等）：把报错原文告诉用户，并说「节点已建、消息未发出」。
+      - 已连了等待边的，一律保留不删，并补一句：等待边已保留，用户手动贴入 prompt 后照常等待，结论交回后可经用户同意，用 `agent-canvas-ctl resolve-wait` 加第 1 步记下的 relationId 具体值解除；不自动解除。
+6. **仅 `send` 成功时**：回复说明派给了哪个节点、`messageId`，结束本轮，不 sleep、不轮询。交回要求照常写在 prompt 里；不会自动回传，结论由用户到那个节点里取，再贴回主讨论。若连了等待边，补一句：结论贴回主讨论后，可经用户同意，用 `agent-canvas-ctl resolve-wait` 加第 1 步记下的 relationId 具体值解除等待；不自动解除。
 7. 建节点失败（含重试用尽，含退回的 `create-pty-node` 也失败）→ 把报错告诉用户，改为输出代码块里的可粘贴 prompt（同不在画布里的输出）。除上面规定的重试与退回外，不要换个参数再建一个；退出码 2 先 `agent-canvas-ctl search-nodes <标题关键词> --kind pty` 核对是不是已经建出来了（旧版 App 不认 `--kind` 时去掉它）。
