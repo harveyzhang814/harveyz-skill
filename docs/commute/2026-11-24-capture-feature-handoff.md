@@ -130,3 +130,18 @@ target_node: fbb207ec-66bf-47de-9d39-3e1dc31525ed
 打回两处核对：`manage.md` 第 2b 步条件已为「`capture-feature` 已安装时；未安装则跳过本步」，第 1 步条件未动；第 5 步已覆盖功能候选走 `capture-feature` 的 `update`。回归面同第 1 轮，`npm test` 绿。
 
 **结论：已验收。**
+
+## 补充：合并前沙箱 E2E（交出方，2026-11-24）
+
+用户要求合并前补 agent 层面的 E2E。夹具取 `~/Projects/route-work-e2e/fixture-template`（套件仓库只读），运行目录 `/tmp/capture-feature-e2e/run1/`（用后即弃）；两个 skill 取本分支 `HEAD` 的已提交内容装为夹具的项目级 skill；headless `claude -p`（2.1.311），环境按套件 `agentEnv` 去掉画布变量与 CLI，并加 `--setting-sources project,local`。不加此参数时，用户级 `~/.claude/skills/capture-vocab`（1.2.3）会覆盖项目级同名 skill，第一次运行因此作废。夹具含 2 条 vocab 机制词与 4 个功能对象。
+
+| 场景 | 输入 | 结果 |
+|---|---|---|
+| S1 避免叫法 | 「清单视图那块是怎么排序的？」 | PASS：依次 invoke capture-vocab → capture-feature；命中「待办列表」卡片；按代码线索 `grep` 符号 `sortInWorker` / `sortTasks`，未全仓搜索；回答用正式名称 |
+| S2 整句含 vocab 词与功能别称 | 「待办存储换了位置以后，勾掉一个任务会写到哪个文件？」 | PASS：vocab 命中「待办存储」，capture-feature 命中「完成待办」（别称「勾掉」）；两边合并作答，代码指向 `store.js#markDone` |
+| S3 机制词 | 「排序工作进程是什么？」 | PASS：vocab 命中；capture-feature 也被调用、未命中，不影响回答 |
+| S4 add 路由（3 轮） | `/capture-vocab add 完成进度` → `y` → `y` | PASS：第 1 轮查重同时查功能地图，按 2b 判为功能地图并请用户确认，未写入；第 2 轮跑 `dupcheck` / `suggest-parent` / `project-version`，选父节点「待办列表」，展示 JSON 请确认；第 3 轮 `put --new` 写入，`vocab.md` 未改；`check --code` 为 `ok`，`lookup` 卡片位置为「待办命令行 > 待办列表 > 完成进度」 |
+
+全程无整读 `features/` 目录。观察到的非阻断项：S4 第 1 轮 agent 先 `cat` 了整份 `vocab.md`，不是新改动引入的行为（capture-vocab 原有的 add 流程也会这样）；S4 第 2 轮没有 invoke capture-feature skill，而是直接读它的 `references/manage.md` 照着执行，结果一致；统计行的代码线索选了 `worker.js#sortTasks`（实际更贴切的是 `stats`），agent 自己标了不确定，由用户确认环节兜底。
+
+**部署注意**：用户级同名 skill 优先于项目级。Task 7 部署时两个 skill 要放进同一个用户级目录（`~/.claude/skills/`）。如果只把 capture-vocab 1.3.0 装成项目级，会被用户级的 1.2.3 遮住。
