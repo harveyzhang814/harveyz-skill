@@ -1,5 +1,5 @@
 ---
-status: 待验收
+status: 打回
 date: 2026-11-24
 author_model: claude-opus-5-5
 acceptance: hard
@@ -79,3 +79,26 @@ target_node: fbb207ec-66bf-47de-9d39-3e1dc31525ed
 - **延后的 Minor**：`tree --depth` 负数、`schema: 1.0` 通过校验、未知字段被静默丢弃、`code.path` 接受绝对路径或 `../`、别称自身重复不报、`project-version` 对数组型 `package.json` 崩溃与 `pyproject.toml` 取错段、并发写同一 id 共用 tmp 文件名。
 
 无红，无带红送验项。
+
+## 验收记录（交出方，2026-11-24，第 1 轮）
+
+在本工作区、分支 `feature/capture-feature`（HEAD `4940c11`）逐条重跑，未采信自测结论：
+
+1. 锚点 1 PASS：`python3 -m pytest skills/coding/capture-feature/tests skills/coding/capture-vocab/tests -q` → 74 passed；`git diff --stat ad8c043 -- skills/coding/capture-vocab/tests/test_vocab.py skills/coding/capture-vocab/scripts` 为空。
+2. 锚点 2 PASS：`npm test` exit 0。
+3. 锚点 3 PASS：1755 字节；43 行。
+4. 锚点 4 PASS：按公式重算 `62af7656880313d9`、`9b6632580ae311fb`，与 `skills-index.json` 一致；`files`、`bundleMeta`、`npm pack --dry-run` 均符合。
+5. 锚点 5 PASS：Spec §11 第 1–9 条均有对应测试且通过。
+
+回归面核对：改动面为 `skills/coding/capture-feature/**`、`skills/coding/capture-vocab/**`、`skills-index.json`、`package.json`、`CHANGELOG.md`、本文档与 spec 目录；被波及组件的既有回归即 `npm test`（含 `tests/skills.bats` 与 `run-skill-tests.sh`），已在第 2 条跑过，绿。`npm pack` 含 `__pycache__` 为既有现象（capture-vocab 同样，已 gitignore），非本次引入。
+
+偏离裁决：测试文件改名——接受；`dupcheck` / `suggest-parent` 无数据目录按空图——接受，交出方将在 Spec 补记次要决定 S16。
+
+### 打回记录
+
+**结论：打回。** 锚点 1–5 实跑均通过，但下列两处与计划 Task 5「Files」所写内容及 Spec §6.2 不符（锚点漏写了对这部分文案的判据，责任在交出方；用户决定按流程打回修正）：
+
+1. **`skills/coding/capture-vocab/references/manage.md` 第 2b 步的触发条件。** 判据原文（计划 Task 5 / Spec §6.2）：在第 2 步后插入归属判断，归功能地图且用户确认 → 停止本流程并 invoke `capture-feature` 的 `add <term>`；无“项目已有功能地图”这一前提。实际：写成「（项目有功能地图时）」，导致尚无 `.hskill/capture-feature/` 的项目永远不会路由，功能地图建不起来。**修法**：条件改为「`capture-feature` 已安装时」（未安装则跳过本步，按原流程继续）；第 1 步“同时 invoke capture-feature 跑 query”的条件保持为“项目有 `.hskill/capture-feature/` 时”不变。
+2. **同文件第 5 步三选一未覆盖功能候选。** 第 1 步把命中的功能并入第 5 步，但第 5 步「同一实体两个名字」只写了并进 vocab 的 `_Avoid_`。**修法**：补一句——候选是功能时，改为建议走 `capture-feature` 的 `update`，把新叫法并进该功能的 `aliases` 或 `avoid`。
+
+**复修后重跑范围**：锚点全集 1–5（改动虽只在文档，`capture-vocab` 的 `contentHash` 不受影响但 `npm test` 仍需复跑；若改动波及 `SKILL.md` 须重算 hash）。不得改动已有测试的断言；可为这两处新增文档断言测试（可选）。
