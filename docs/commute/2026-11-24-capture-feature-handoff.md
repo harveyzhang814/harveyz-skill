@@ -1,5 +1,5 @@
 ---
-status: 执行中
+status: 待验收
 date: 2026-11-24
 author_model: claude-opus-5-5
 acceptance: hard
@@ -102,3 +102,17 @@ target_node: fbb207ec-66bf-47de-9d39-3e1dc31525ed
 2. **同文件第 5 步三选一未覆盖功能候选。** 第 1 步把命中的功能并入第 5 步，但第 5 步「同一实体两个名字」只写了并进 vocab 的 `_Avoid_`。**修法**：补一句——候选是功能时，改为建议走 `capture-feature` 的 `update`，把新叫法并进该功能的 `aliases` 或 `avoid`。
 
 **复修后重跑范围**：锚点全集 1–5（改动虽只在文档，`capture-vocab` 的 `contentHash` 不受影响但 `npm test` 仍需复跑；若改动波及 `SKILL.md` 须重算 hash）。不得改动已有测试的断言；可为这两处新增文档断言测试（可选）。
+
+## 接手方复修自测记录（第 1 轮）
+
+按打回记录修了 `capture-vocab/references/manage.md` 两处：第 2b 步触发条件改为「`capture-feature` 已安装时；未安装则跳过本步」（第 1 步查重的条件未动）；第 5 步「同一实体两个名字」补上候选是功能时建议走 `capture-feature` 的 `update`，并进 `aliases` 或 `avoid`。先加两条文档断言测试（`test_add_routing_does_not_require_existing_feature_map`、`test_add_three_way_choice_covers_feature_candidates`），确认红（2 failed）后改文案转绿。没有改动任何已有测试的断言。
+
+范围：锚点全集 1–5 重跑（改动只在文档，`SKILL.md` 未动，hash 不变）：
+
+1. **锚点 1 PASS**：两个 tests 目录合跑 `python3 -m pytest … -v` → 76 passed；`test_vocab.py` 与 `scripts/` 相对 `ad8c043` 无改动。
+2. **锚点 2 PASS**：`npm test` 退出码 0（node 483 pass / 0 fail；custom skill tests 23/23）。
+3. **锚点 3 PASS**：1755 字节 ≤ 2641；43 行 ≤ 47。
+4. **锚点 4 PASS**：两个 `contentHash` 重算仍为 `62af7656880313d9`、`9b6632580ae311fb`，与 `skills-index.json` 一致；`npm pack --dry-run` 仍列出 `SKILL.md` 与 `scripts/feature.py`。
+5. **锚点 5 PASS**：Spec §11 第 1–9 条对应测试均通过。
+
+无红，无带红送验项。
