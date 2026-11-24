@@ -13,17 +13,22 @@ KEY_ORDER = ("schema", "id", "type", "name", "aliases", "avoid", "description", 
 VERSION_KEY_ORDER = ("introduced", "changed", "deprecated")
 
 
-def find_data_dir(create=False):
+def find_data_dir():
     cur = Path.cwd().resolve()
     while True:
         candidate = cur / ".hskill" / "capture-feature"
         if candidate.is_dir():
             return candidate
+        if (cur / ".git").exists() or cur.parent == cur:
+            return None
+        cur = cur.parent
+
+
+def find_git_root():
+    cur = Path.cwd().resolve()
+    while True:
         if (cur / ".git").exists():
-            if not create:
-                return None
-            (candidate / "features").mkdir(parents=True, exist_ok=True)
-            return candidate
+            return cur
         if cur.parent == cur:
             return None
         cur = cur.parent
@@ -43,13 +48,15 @@ def load_all(data_dir):
             data = json.loads(path.read_text(encoding="utf-8"))
             if not isinstance(data, dict):
                 raise ValueError("not a JSON object")
-            oid = data.get("id")
-            if not isinstance(oid, str):
-                raise ValueError("missing id")
+            errs = _field_errors(data)
+            if errs:
+                raise ValueError("; ".join(e[len("error: "):] for e in errs))
+            if data["id"] != path.stem:
+                raise ValueError(f"id {data['id']} does not match file name")
         except (ValueError, OSError) as e:
             print(f"skip: {path.name}: {e}", file=sys.stderr)
             continue
-        objs[oid] = data
+        objs[data["id"]] = data
     return objs
 
 
@@ -157,6 +164,18 @@ def _field_errors(obj):
         dep = versions.get("deprecated")
         if dep is not None and not isinstance(dep, str):
             errs.append("error: versions.deprecated must be a string or null")
+        stamps = [("introduced", versions.get("introduced"))]
+        if isinstance(dep, str):
+            stamps.append(("deprecated", dep))
+        if isinstance(changed, list):
+            stamps += [("changed.version", c.get("version")) for c in changed if isinstance(c, dict)]
+        for label, v in stamps:
+            if label == "introduced" and v == "unknown":
+                continue
+            try:
+                parse_version(v)
+            except (ValueError, TypeError):
+                errs.append(f"error: versions.{label} is not a parsable version: {v!r}")
     return errs
 
 
@@ -286,10 +305,13 @@ def cmd_show(args):
 
 
 def cmd_put(args):
-    data_dir = find_data_dir(create=True)
+    data_dir = find_data_dir()
     if data_dir is None:
-        print("no feature map")
-        return 2
+        root = find_git_root()
+        if root is None:
+            print("no feature map")
+            return 2
+        data_dir = root / ".hskill" / "capture-feature"
     try:
         obj = json.loads(sys.stdin.read())
     except ValueError as e:
@@ -298,6 +320,8 @@ def cmd_put(args):
     objs = load_all(data_dir)
     mode = "new" if args.new else "replace"
     errors, warnings = validate(obj, objs, mode)
+    if not errors and mode == "new" and (data_dir / "features" / f"{obj['id']}.json").exists():
+        errors.append(f"error: features/{obj['id']}.json already exists")
     for line in errors + warnings:
         print(line)
     if errors:
@@ -324,7 +348,7 @@ def cmd_remove(args):
     if children:
         print("has children: " + ", ".join(children))
         return 1
-    (data_dir / "features" / f"{args.id}.json").unlink()
+    (data_dir / "features" / f"{args.id}.json").unlink(missing_ok=True)
     print(f"removed {args.id}")
     return 0
 
@@ -414,8 +438,19 @@ def cmd_refs(args):
     return 0
 
 
+def _data_dir_or_empty():
+    data_dir = find_data_dir()
+    if data_dir is not None:
+        return data_dir
+    root = find_git_root()
+    if root is None:
+        print("no feature map")
+        return None
+    return root / ".hskill" / "capture-feature"
+
+
 def cmd_dupcheck(args):
-    data_dir = _require_data_dir()
+    data_dir = _data_dir_or_empty()
     if data_dir is None:
         return 2
     objs = load_all(data_dir)
@@ -438,7 +473,7 @@ def cmd_dupcheck(args):
 
 
 def cmd_suggest_parent(args):
-    data_dir = _require_data_dir()
+    data_dir = _data_dir_or_empty()
     if data_dir is None:
         return 2
     objs = load_all(data_dir)
