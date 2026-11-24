@@ -3,7 +3,7 @@ name: judge-release
 description: Judge the requirements of a stable release against their acceptance criteria — read each requirement's acceptance items, gather evidence in the real environment, record per-item verdicts and pass the requirement when every item passes; launched by the pending-acceptance banner; only usable inside an Agent Canvas node.
 disable-model-invocation: true
 user_invocable: true
-version: "1.1.0"
+version: "1.1.1"
 ---
 
 # 对照验收标准逐条下结论（judge-release）
@@ -52,11 +52,11 @@ agent-canvas-ctl --result-format=action-v1 get-node <需求节点id>
 回滚之后，有些需求的 `releasedIn` 还留着旧值，但它的交付提交已经不在当前运行的版本里。对**本项目所有**需求（不限于初始消息里的那几条）清掉这类残留：
 
 ```
-agent-canvas-ctl list-nodes                  → 只看 kind 为 requirement 的节点
+agent-canvas-ctl search-nodes --kind requirement --limit 30   → 列出需求节点
 agent-canvas-ctl --result-format=action-v1 get-node <需求节点id>   → 逐条看 releasedIn / deliveredCommit
 ```
 
-`list-nodes` 只列出未归档的节点，归档的需求不在清理范围里。对每条 `releasedIn` 有值的需求，在项目仓库里判断它的交付提交是否包含在运行提交里：
+`search-nodes` 只搜未归档的节点，归档的需求不在清理范围里。结果最多 30 条；返回里 `truncated` 为 true 时，汇报中如实写明还有多少条（`totalMatches`）没覆盖到，不要说成已全部清理。对每条 `releasedIn` 有值的需求，在项目仓库里判断它的交付提交是否包含在运行提交里：
 
 ```
 git merge-base --is-ancestor <交付提交> <运行提交>

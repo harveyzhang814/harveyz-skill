@@ -69,6 +69,7 @@
     "skills/feed/manage-creators/",
     "skills/feed/capture-opinion/",
     "skills/agent-canvas/agent-canvas-control/",
+    "skills/agent-canvas/dispatch-agent/",
     "skills/agent-canvas/describe-node/",
     "skills/agent-canvas/relate-node/",
     "skills/agent-canvas/capture-requirement/",
