@@ -230,6 +230,40 @@ def render_card(obj, all_objs):
     return "\n".join(lines)
 
 
+def parse_version(v):
+    parts = [p for p in re.split(r'\D+', v) if p]
+    if not parts:
+        raise ValueError(f"unparsable version: {v}")
+    return tuple(int(p) for p in parts)
+
+
+def exists_at(obj, version):
+    target = parse_version(version)
+    v = obj["versions"]
+    if v["introduced"] != "unknown" and parse_version(v["introduced"]) > target:
+        return False
+    dep = v.get("deprecated")
+    if dep and parse_version(dep) <= target:
+        return False
+    return True
+
+
+def _strip_line_suffix(path):
+    return re.sub(r':\d+$', '', path)
+
+
+def classify_path(query, candidate):
+    q = _strip_line_suffix(query)
+    c = _strip_line_suffix(candidate)
+    if q == c:
+        return "same-file"
+    if c.endswith('/') and q.startswith(c):
+        return "dir-contains"
+    if q.endswith('/') and c.startswith(q):
+        return "dir-contains"
+    return None
+
+
 def _require_data_dir():
     data_dir = find_data_dir()
     if data_dir is None:
@@ -294,6 +328,91 @@ def cmd_remove(args):
     return 0
 
 
+def cmd_lookup(args):
+    data_dir = _require_data_dir()
+    if data_dir is None:
+        return 2
+    objs = load_all(data_dir)
+    query = normalize(args.term)
+    hits = []
+    if len(query) >= 2:
+        hits = [o for o in objs.values() if any(bidir_match(normalize(k), query) for k in match_keys(o) if k)]
+    if not hits:
+        print(f"no match: {args.term}")
+        return 1
+    if len(hits) > 3:
+        print(f"{len(hits)} matches: {', '.join(h['name'] for h in hits)}")
+        return 0
+    print("\n".join(render_card(h, objs) for h in hits))
+    return 0
+
+
+def cmd_tree(args):
+    data_dir = _require_data_dir()
+    if data_dir is None:
+        return 2
+    objs = load_all(data_dir)
+    if args.id:
+        if args.id not in objs:
+            print(f"no such id: {args.id}")
+            return 1
+        starts = [objs[args.id]]
+    else:
+        starts = [o for o in objs.values() if o.get("parent") is None]
+
+    def walk(o, depth, limit):
+        print("  " * depth + f"{o['name']} [{o['type']}] {o['id']}")
+        if depth >= limit:
+            return
+        for child in objs.values():
+            if child.get("parent") == o["id"]:
+                walk(child, depth + 1, limit)
+
+    for o in starts:
+        walk(o, 0, args.depth)
+    return 0
+
+
+def cmd_list(args):
+    data_dir = _require_data_dir()
+    if data_dir is None:
+        return 2
+    objs = load_all(data_dir)
+    if args.at:
+        try:
+            parse_version(args.at)
+            selected = [o for o in objs.values() if exists_at(o, args.at)]
+        except ValueError as e:
+            print(f"error: {e}")
+            return 2
+    else:
+        selected = list(objs.values())
+    for o in selected:
+        if args.type and o["type"] != args.type:
+            continue
+        print(f"{o['id']} | {o['name']} | {o['type']} | {o.get('parent') or ''} | {','.join(o.get('aliases') or [])}")
+    return 0
+
+
+def cmd_refs(args):
+    data_dir = _require_data_dir()
+    if data_dir is None:
+        return 2
+    objs = load_all(data_dir)
+    found = False
+    for o in objs.values():
+        for c in o.get("code") or []:
+            tier = classify_path(args.path, c["path"])
+            if tier:
+                sym = f"#{c['symbol']}" if c.get("symbol") else ""
+                print(f"{o['id']} | {o['name']} | {tier} | {c['path']}{sym}")
+                found = True
+    if not found:
+        print(f"no refs: {args.path}")
+        return 1
+    return 0
+
+
 def build_parser():
     p = argparse.ArgumentParser(prog="feature.py")
     sub = p.add_subparsers(dest="cmd")
@@ -308,6 +427,20 @@ def build_parser():
     sp = sub.add_parser("remove")
     sp.add_argument("id")
     sp.set_defaults(fn=cmd_remove)
+    sp = sub.add_parser("lookup")
+    sp.add_argument("term")
+    sp.set_defaults(fn=cmd_lookup)
+    sp = sub.add_parser("tree")
+    sp.add_argument("id", nargs="?")
+    sp.add_argument("--depth", type=int, default=1)
+    sp.set_defaults(fn=cmd_tree)
+    sp = sub.add_parser("list")
+    sp.add_argument("--type", choices=TYPES)
+    sp.add_argument("--at")
+    sp.set_defaults(fn=cmd_list)
+    sp = sub.add_parser("refs")
+    sp.add_argument("path")
+    sp.set_defaults(fn=cmd_refs)
     return p
 
 
