@@ -97,9 +97,20 @@ test('fork-topic handles a refused send', async () => {
   assert.ok(body.includes('不得给出 `messageId`'), 'no messageId when refused')
   assert.ok(body.includes('仅 `send` 成功时'), 'step 6 only on success')
   assert.ok(body.includes('等待边已保留'), 'wait edge kept after refusal')
-  for (const phrase of ['未成功', 'OUTCOME_UNKNOWN', '结果未知', 'EXECUTION_FAILED', 'INVALID_ARGUMENT', '非 0 退出码']) {
-    assert.ok(body.includes(phrase), phrase)
+  assert.ok(body.includes('未成功'), 'unified send-failed branch')
+  const lines = body.split('\n')
+  const notExecuted = lines.find(l => l.includes('APPROVAL_DENIED') && l.includes('明确未执行'))
+  assert.ok(notExecuted, 'not-executed class line')
+  for (const phrase of ['APPROVAL_TIMEOUT', 'INVALID_ARGUMENT', 'PRECONDITION_FAILED', 'NOT_APPLICABLE', '节点已建、消息未发出', '贴进新节点']) {
+    assert.ok(notExecuted.includes(phrase), `not-executed class: ${phrase}`)
   }
+  const unknown = lines.find(l => l.includes('OUTCOME_UNKNOWN') && l.includes('结果不明'))
+  assert.ok(unknown, 'unknown-outcome class line')
+  for (const phrase of ['EXECUTION_FAILED', '其他非 0 退出码', '结果未知', '先到新节点核对', '确认没收到再贴', '不自动重发']) {
+    assert.ok(unknown.includes(phrase), `unknown-outcome class: ${phrase}`)
+  }
+  assert.ok(!notExecuted.includes('EXECUTION_FAILED'), 'EXECUTION_FAILED is not "not executed"')
+  assert.ok(body.includes('结果不明时先确认没收到'), 'wait-edge hint is conditional')
 })
 
 test('fork-topic mentions resolve-wait', async () => {
