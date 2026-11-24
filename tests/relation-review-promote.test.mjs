@@ -46,3 +46,8 @@ test('relation-review codePinned examples match the current pinned set', async (
   }
   assert.ok(!body.includes('spawns'), '正文不再出现 spawns')
 })
+
+test('relation-review maps node kind to tier layer', async () => {
+  const lines = (await readSkill(SKILL)).split('\n')
+  assert.ok(lines.some(l => l.includes('`pty`') && l.includes('会话') && l.includes('requirement') && l.includes('markdown') && l.includes('intent') && l.includes('对象')), 'kind 与层的对应')
+})

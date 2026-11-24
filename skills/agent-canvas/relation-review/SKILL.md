@@ -92,6 +92,8 @@ relation_promote {
 
 **`tier`、`useWhen`、`notFor` 缺任何一项，整次调用被拒，什么都不写**；`versus` 可选。`tier` 只能取 `role` / `collaboration` / `structure`，不能用 `origin` 或 `unclassified`。层按端点组合定：会话→对象是 `role`，会话↔会话是 `collaboration`，对象↔对象是 `structure`。
 
+kind 与层的对应：`pty` 是会话，其余节点 kind（`requirement`、`markdown`、`intent` 等）是对象。
+
 `endpoints` 里的 `from`/`to` 是节点 **kind**（比如 `pty`/`requirement`），不是节点 id——
 跟 `evidence` 里的 `relationId` 是两种不同的标识符，不要混用。`evidence` 列出的应该是这一簇里
 全部符合条件的关系（不止 3 条门槛数量，攒了多少条证据就列多少条——升格后这些关系的 `type`
