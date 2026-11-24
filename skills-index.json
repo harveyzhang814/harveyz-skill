@@ -411,8 +411,8 @@
       "path": "agent-canvas/capture-requirement",
       "bundle": "agent-canvas",
       "installScope": "project",
-      "contentHash": "5c61259950a022cc",
-      "contentVersion": "2.1.2"
+      "contentHash": "a74c0b4a228e4efd",
+      "contentVersion": "2.2.0"
     },
     {
       "path": "agent-canvas/capture-intent",
