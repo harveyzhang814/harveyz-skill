@@ -31,3 +31,9 @@ test('dispatch-agent spawn depth resets at human-initiated creation', async () =
   assert.ok(lines.some(l => l.includes('人发起') && l.includes('Fork') && l.includes('/branch')), '人发起举例')
   assert.ok(lines.some(l => l.includes('第 4 代及以后') && l.includes('建节点本身') && l.includes('审批')), '第 4 代及以后建节点弹审批')
 })
+
+test('dispatch-agent wait edge direction and user-approved resolve', async () => {
+  const lines = (await readSkill(SKILL)).split('\n')
+  assert.ok(lines.some(l => l.includes('自己 → 收件节点') && l.includes('waits-for')), '等待边方向')
+  assert.ok(lines.some(l => l.includes('resolve_wait') && l.includes('resolve-wait') && l.includes('经用户同意') && l.includes('不自动')), '经用户同意才解除')
+})
