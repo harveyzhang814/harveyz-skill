@@ -1,0 +1,61 @@
+---
+status: 待执行
+date: 2026-11-24
+author_model: claude-opus-5-5
+acceptance: hard
+workspace_mode: same-workspace
+branch: feature/capture-feature
+worktree: /Users/harveyzhang96/Projects/harveyz-skill/.worktrees/feature+capture-feature
+base_commit: ad8c0438c9071b197dca2a2f3eee55fc7f96ee4d
+source_node: 710f0c34-464f-41d2-a735-fac19dd73eb1
+target_node: fbb207ec-66bf-47de-9d39-3e1dc31525ed
+---
+
+# 交接：按计划实现 capture-feature 与 capture-vocab 1.3.0（Task 1–6）
+
+**交接目的**：接手方在本工作区按已确认的实施计划完成 Task 1–6（新 skill capture-feature 的脚本、文档、capture-vocab 联动、登记发布准备），交回原 session 验收；Task 7 不做。
+
+---
+
+## 关键决定（别改动）
+
+全部决定以 Spec 与决定记录为准，以下是最容易被执行中“顺手改掉”的几条：
+
+- 存储是一个对象一个 JSON 文件（D14），层级用固定字段 `parent`、单父（D12、D17）——不要改成单文件、SQLite 或通用关系列表。
+- `aliases` 与 `avoid` 是两个字段，`avoid` 每项 `{name, note}`，都参与匹配（D18）。
+- 有功能地图时 capture-vocab 每次 `query` 与 `add` 查重都 **invoke capture-feature skill**（D19），不是让 `vocab.py` 直接读 JSON，也不是调兄弟脚本。因此 capture-feature 的 `SKILL.md` 必须 ≤ 2641 字节、只留查词路径，写操作细节全部放 `references/`。
+- 代码线索只记路径 + 可选符号名，不记行号（D13）；`check` 只报告不修复。
+- 计划的 `Global Constraints` 里的输出文案、退出码、序列化键顺序、版本号（capture-feature `0.1.0`、capture-vocab `1.3.0`）是验收断言的一部分，逐字遵守。
+
+## 范围铁律
+
+- **in**：计划 Task 1–6。
+- **out**：Task 7（合并到 staging、部署到 `~/.claude/skills/`、agent-canvas 试点迁移）——由原 session 在用户说“合并”后做。不碰 agent-canvas 仓库；不改 Spec、决定记录；不改计划中的接口签名、测试名、断言与 `Global Constraints`。计划与代码库现状冲突或无法照做 → 停下，打回原 session（见仓库 AGENTS.md「计划后交接给执行模型」第 3 条）。
+
+## 相关文档索引
+
+- 计划（执行依据，开头 `REQUIRED SUB-SKILL: superpowers:executing-plans`）：`.hskill/spec/2026-11-24-capture-feature/2026-11-24-capture-feature-plan.md`
+- Spec v0.1（已批准，权威）：`.hskill/spec/2026-11-24-capture-feature/2026-11-24-capture-feature-spec.md`
+- 决定记录：`.hskill/spec/2026-11-24-capture-feature/2026-11-24-capture-feature-record.md`
+- 参照实现与测试风格：`skills/coding/capture-vocab/scripts/vocab.py`、`skills/coding/capture-vocab/tests/test_vocab.py`
+- skill 格式规范：`docs/reference/skill-spec.md`；测试指南：`docs/reference/testing-guide.md`
+
+## 受影响文件/落点
+
+- 新建：`skills/coding/capture-feature/`（`SKILL.md`、`scripts/feature.py`、`references/manage.md`、`references/migrate.md`、`tests/conftest.py`、`tests/test_put.py`、`tests/test_query.py`、`tests/test_check.py`、`tests/test_skill_doc.py`）
+- 修改：`skills/coding/capture-vocab/SKILL.md`、`references/manage.md`、`references/project-setup.md`，新建 `skills/coding/capture-vocab/tests/test_skill_doc.py`
+- 修改：`skills-index.json`、`package.json`、`CHANGELOG.md`
+
+## 工作流约定
+
+见 `.hskill/handoff/config.md` 的 `workflow` 段。要点：不建 worktree、不建分支，用 `manage-worktree`「进入」本文 frontmatter 的 `worktree`；提交信息用 Conventional Commits（`docs` 不是 `doc`）；不合并、不 push；做完停手。执行技能若建议新建 worktree，跳过。
+
+## 最小验收锚点
+
+全部为硬判据，在本工作区运行：
+
+1. 计划 Task 1–6 每个 Task 的测试文件存在，测试名与断言与计划写定的一致，且 `python3 -m pytest skills/coding/capture-feature/tests skills/coding/capture-vocab/tests -v` 全部通过（含 capture-vocab 原有 `test_vocab.py` 未被修改）。
+2. `npm test` 退出码 0。
+3. `wc -c < skills/coding/capture-feature/SKILL.md` ≤ 2641；`wc -l < skills/coding/capture-vocab/SKILL.md` ≤ 47。
+4. `skills-index.json` 中 capture-feature 条目存在（`installScope: project`、`contentVersion: "0.1.0"`），capture-vocab `contentVersion` 为 `"1.3.0"`，两者 `contentHash` 等于计划 Task 6 Step 1 命令的输出；`package.json` 的 `files` 含 `skills/coding/capture-feature/`；`npm pack --dry-run` 列出 `skills/coding/capture-feature/SKILL.md` 与 `scripts/feature.py`。
+5. Spec §11 第 1–9 条逐条满足（第 10–12 条属 Task 7，不在本次验收）。
