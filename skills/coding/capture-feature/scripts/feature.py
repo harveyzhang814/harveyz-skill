@@ -3,6 +3,7 @@ import argparse
 import json
 import os
 import re
+import subprocess
 import sys
 from pathlib import Path
 
@@ -413,6 +414,156 @@ def cmd_refs(args):
     return 0
 
 
+def cmd_dupcheck(args):
+    data_dir = _require_data_dir()
+    if data_dir is None:
+        return 2
+    objs = load_all(data_dir)
+    mine = [normalize(k) for k in [args.name] + list(args.alias or []) if normalize(k)]
+    rows = []
+    for o in objs.values():
+        theirs = [normalize(k) for k in match_keys(o) if normalize(k)]
+        if set(mine) & set(theirs):
+            rows.append(f"exact | {o['id']}")
+        elif any(len(m) >= 2 and len(t) >= 2 and bidir_match(m, t) for m in mine for t in theirs):
+            rows.append(f"fuzzy | {o['id']}")
+    vocab = project_root(data_dir) / ".hskill" / "capture-vocab" / "vocab.md"
+    if vocab.is_file():
+        for title in re.findall(r'^## (.+)$', vocab.read_text(encoding="utf-8"), re.MULTILINE):
+            if normalize(title) in mine:
+                rows.append(f"vocab | {title.strip()}")
+    for row in rows:
+        print(row)
+    return 1 if rows else 0
+
+
+def cmd_suggest_parent(args):
+    data_dir = _require_data_dir()
+    if data_dir is None:
+        return 2
+    objs = load_all(data_dir)
+    name = normalize(args.name)
+    rank = {"same-file": 0, "dir-contains": 1, "name": 2}
+    best = {}
+
+    def offer(o, reason):
+        if o["id"] not in best or rank[reason] < rank[best[o["id"]][1]]:
+            best[o["id"]] = (o, reason)
+
+    for o in objs.values():
+        for path in args.path or []:
+            for c in o.get("code") or []:
+                tier = classify_path(path, c["path"])
+                if tier:
+                    offer(o, tier)
+        keys = [normalize(k) for k in [o["name"]] + list(o.get("aliases") or [])]
+        if any(len(k) >= 2 and k in name for k in keys):
+            offer(o, "name")
+    ranked = sorted(best.values(), key=lambda t: (rank[t[1]], t[0]["name"]))[:5]
+    if not ranked:
+        print("no candidates")
+        return 1
+    for o, reason in ranked:
+        print(f"{o['id']} | {o['name']} | {reason}")
+    return 0
+
+
+def cmd_project_version(args):
+    cur = Path.cwd().resolve()
+    root = cur
+    while True:
+        if (cur / ".git").exists():
+            root = cur
+            break
+        if cur.parent == cur:
+            break
+        cur = cur.parent
+    pkg = root / "package.json"
+    if pkg.is_file():
+        try:
+            v = json.loads(pkg.read_text(encoding="utf-8")).get("version")
+            if isinstance(v, str) and v:
+                print(v)
+                return 0
+        except ValueError:
+            pass
+    pyp = root / "pyproject.toml"
+    if pyp.is_file():
+        m = re.search(r'^version\s*=\s*"([^"]+)"', pyp.read_text(encoding="utf-8"), re.MULTILINE)
+        if m:
+            print(m.group(1))
+            return 0
+    try:
+        out = subprocess.run(
+            ["git", "describe", "--tags", "--abbrev=0"], cwd=root, capture_output=True, text=True
+        )
+        if out.returncode == 0 and out.stdout.strip():
+            print(out.stdout.strip())
+            return 0
+    except OSError:
+        pass
+    print("unknown")
+    return 1
+
+
+def cmd_check(args):
+    data_dir = _require_data_dir()
+    if data_dir is None:
+        return 2
+    root = project_root(data_dir)
+    fdir = data_dir / "features"
+    problems = []
+    valid = {}
+    for path in sorted(fdir.glob("*.json")) if fdir.is_dir() else []:
+        stem = path.stem
+        try:
+            data = json.loads(path.read_text(encoding="utf-8"))
+        except (ValueError, OSError) as e:
+            problems.append(f"invalid | {stem} | {e}")
+            continue
+        errs = _field_errors(data)
+        if errs:
+            problems.append(f"invalid | {stem} | " + "; ".join(e[len('error: '):] for e in errs))
+            continue
+        if data["id"] != stem:
+            problems.append(f"id-mismatch | {stem} | file name does not match id {data['id']}")
+        valid[data["id"]] = data
+    for o in valid.values():
+        if o["parent"] is not None and o["parent"] not in valid:
+            problems.append(f"missing-parent | {o['id']} | parent {o['parent']} does not exist")
+    for o in valid.values():
+        seen = {o["id"]}
+        cur = o["parent"]
+        while cur is not None and cur in valid:
+            if cur in seen:
+                if cur == o["id"]:
+                    problems.append(f"cycle | {o['id']} | parent chain returns to itself")
+                break
+            seen.add(cur)
+            cur = valid[cur]["parent"]
+    by_name = {}
+    for o in valid.values():
+        by_name.setdefault(normalize(o["name"]), []).append(o["id"])
+    for ids in by_name.values():
+        for dup in ids[1:]:
+            problems.append(f"duplicate-name | {dup} | same name as {ids[0]}")
+    if args.code:
+        for o in valid.values():
+            for c in o["code"]:
+                target = root / c["path"]
+                if not target.exists():
+                    problems.append(f"code-missing | {o['id']} | {c['path']}")
+                elif c.get("symbol") and target.is_file():
+                    text = target.read_text(encoding="utf-8", errors="replace")
+                    if c["symbol"] not in text:
+                        problems.append(f"symbol-missing | {o['id']} | {c['path']}#{c['symbol']}")
+    if problems:
+        print("\n".join(problems))
+        return 1
+    print("ok")
+    return 0
+
+
 def build_parser():
     p = argparse.ArgumentParser(prog="feature.py")
     sub = p.add_subparsers(dest="cmd")
@@ -441,6 +592,19 @@ def build_parser():
     sp = sub.add_parser("refs")
     sp.add_argument("path")
     sp.set_defaults(fn=cmd_refs)
+    sp = sub.add_parser("dupcheck")
+    sp.add_argument("name")
+    sp.add_argument("--alias", action="append")
+    sp.set_defaults(fn=cmd_dupcheck)
+    sp = sub.add_parser("suggest-parent")
+    sp.add_argument("--name", required=True)
+    sp.add_argument("--path", action="append")
+    sp.set_defaults(fn=cmd_suggest_parent)
+    sp = sub.add_parser("project-version")
+    sp.set_defaults(fn=cmd_project_version)
+    sp = sub.add_parser("check")
+    sp.add_argument("--code", action="store_true")
+    sp.set_defaults(fn=cmd_check)
     return p
 
 
