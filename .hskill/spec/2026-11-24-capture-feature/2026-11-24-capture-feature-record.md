@@ -5,6 +5,8 @@
 
 **需求批准：** 用户 2026-11-24 确认 question-me 需求摘要（答复“确认”，含“落点放在 harveyz-skill”），批准 D1–D13（其中 D10 后被 D19 取代）；D15–D16 为未决，状态“已提出”。D14、D17 于方案审查中由用户选择批准（答复“1选a，2选最简单的层级关系”）。D18、D19 于构建者检查后由用户选择批准（答复“1，a / 2，C，所以skill要注意精简和渐进式披露”）。
 
+**Spec 批准：** `2026-11-24-capture-feature-spec.md` v0.1 于 2026-11-24 获用户批准（答复“批准，写plan”），覆盖当前决定 D1–D9、D11–D14、D17–D19 及 Spec 第 10 节次要决定 S1–S15（S13 已被 D19 取代）；D15、D16 仍为未决。
+
 ## 当前决定
 
 ### D1 capture-vocab 的延伸：维护用户可感知的功能词汇及其层级
@@ -46,7 +48,7 @@
 
 ### D7 独立 skill `capture-feature`，capture-vocab 路由过去
 
-- **决定：** 拆成独立 skill（暂名 `capture-feature`），自有数据与脚本；capture-vocab 继续只管领域术语，`add` 时若判定为用户可感知的功能则路由给功能地图；查词时两边都查（见 D10）。
+- **决定：** 拆成独立 skill（暂名 `capture-feature`），自有数据与脚本；capture-vocab 继续只管领域术语，`add` 时若判定为用户可感知的功能则路由给功能地图；查词时两边都查（见 D19）。
 - **状态：** 已批准（question-me 摘要确认）
 - **来源：** 用户选择——问题：“功能地图在形态上和 capture-vocab 怎么相处？”选项：A 独立 skill / B capture-vocab 子命令 / C 取代 vocab.md。答复：“A，拆成独立 skill”。
 - **依据：** capture-vocab 的 `SKILL.md` 每次 invoke 全文注入上下文，刻意只留查词路径（`skills/coding/capture-vocab/SKILL.md` 维护者注）。
