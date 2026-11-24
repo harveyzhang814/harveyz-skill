@@ -59,15 +59,16 @@ _Reference_: src/models/order.ts:42, docs/business/order-flow.md
 
 **分层查重，按成本从低到高，严格顺序：**
 
-1. 跑 `vocab.py lookup "<term>"`，**然后看命中的 section 名是不是就是 `<term>`**（见下面的「exit 0 ≠ 该术语存在」）：
+1. 跑 `vocab.py lookup "<term>"`，**然后看命中的 section 名是不是就是 `<term>`**（见下面的「exit 0 ≠ 该术语存在」）。项目有 `.hskill/capture-feature/` 时，同时 invoke `capture-feature` 跑 `query "<term>"`，命中的功能也算查重候选，并入第 5 步三选一，防止新增术语与功能的名称或别称重名：
    - **名字相等** → 输出"术语 '<term>' 已存在，请用 `update` 修改"并退出
    - **命中了但名字不等** → **不要报"已存在"**。这是查重候选，带着它直接跳到第 5 步判三选一（这类多半是「同一实体两个名字」，正是本流程最该抓住的那种重复）
    - **exit 1** → 继续第 2 步
 2. 从当前对话上下文推断该词的**定义 / Avoid / Reference**（Reference 留空则跳过第 3 层）
+2b. **归属判断**（`capture-feature` 已安装时；未安装则跳过本步）：按「用户能不能直接看到或操作它」判断这个词归功能地图还是术语表，把结论告诉用户。归功能地图且用户确认 → **停止本流程**，invoke `capture-feature` 的 `add <term>`，带上已推断的定义和代码线索；归术语表或用户不同意 → 按原流程继续
 3. 对推断出的每个 Reference 路径，跑 `vocab.py refs "<path>"`，收集分档候选（`same-file` / `dir-contains`）
 4. **仅当第 1、3 步均空手**（`lookup` 未命中 且 `refs` 无候选）时，才跑 `vocab.py list`，比对全量术语名+别名找语义相近候选；否则跳过这一步，不付这个 O(N) 成本
 5. 对已得到的候选（第 3 或第 4 步产出的）逐个 `lookup` 取完整定义，**必须显式判一个结论并说给用户**，三选一：
-   - **同一实体两个名字** → 建议改用 `update`，把新叫法并进该条目的 `_Avoid_`
+   - **同一实体两个名字** → 建议改用 `update`，把新叫法并进该条目的 `_Avoid_`；候选是功能时，改为建议走 `capture-feature` 的 `update`，把新叫法并进该功能的 `aliases` 或 `avoid`
    - **父子实体各有其名** → 正常新增，建议在两条定义里互相点名
    - **无关** → 正常新增
 6. 展示条目 + 查重结论，等用户确认（`y` 或直接输入修改内容），格式：

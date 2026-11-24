@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - `sync-design` 5.5.0：`designSystem` 新增可选字段 `query`（标准查询命令前缀）。登记后，设计模式（开稿、下笔每个局部前、生成后检查）与同步模式（阶段 3、旧写法转换）都按场景查询标准条目（`--core`、`--page`、`--topic`、`--token`、`--rule`、`--search`、`--list`，可选 `--full`），不再整份读 `standard`、`tokens`、`componentStyles`；折叠的摘要用 `--rule` 或 `--full` 展开，组件样式与令牌只按返回的行号局部读。项目命令只实现部分参数时在 `--list` 声明，没声明的改用 `--search`。没登记 `query` 的项目，「标准上下文」的 4 万字符规则不变。登记标准缺口的步骤（不论是否登记 `query`）改为：先搜标准与已有缺口，命中就引用不新增；只读缺口清单开头的说明区按它的格式写，没写格式才读最后一条当样例，不整份读；取号用只输出最大号的命令（说明区给了就用它）。原写法只说“按现有条目的格式追加”，实际会整份读缺口清单，取号命令又输出所有分支上的全部编号行，在 agent-canvas 上可达数十万字符。`references/init.md` 字段表加 `query` 与参数契约，完成标准加“`<query> --list` 退出码 0”
+- `capture-feature` 0.1.0：新 skill，项目级产品功能地图。只收用户能直接看到或操作的界面区域、功能、交互入口，用单父 `parent` 表达层级，每个功能可记多条「路径 + 符号」代码线索（不记行号）与引入/变更/废弃版本；一个对象一个 JSON 文件，存于 `.hskill/capture-feature/features/`，经 `feature.py`（仅标准库）的 `lookup`、`show`、`tree`、`list --at`、`refs`、`dupcheck`、`suggest-parent`、`project-version`、`put`、`remove`、`check --code` 读写，只把命中卡片交给 agent。`aliases`（通用别称）与 `avoid`（应避免的叫法及原因）分开存且都参与匹配。`SKILL.md` 只留查词路径，写操作与迁移办法在 `references/`。属于 coding bundle，`installScope: project`
+
+### Changed
+- `capture-vocab` 1.3.0：项目存在 `.hskill/capture-feature/` 时，`query` 在 `vocab.py lookup` 之后再 invoke `capture-feature` 查一遍并合并结果，两边都未命中才按字面理解；`add` 查重同时查功能地图，并在推断定义后加归属判断（用户能否直接看到或操作），归功能地图且用户确认就转交 `capture-feature add`。`vocab.py` 与 `vocab.md` 格式不变；`SKILL.md` 只多 1 行。未安装 capture-feature 时提示「功能地图存在但 capture-feature 未安装」
 
 ### Fixed
 - `sync-design` 5.5.1：登记了 `designSystem.query` 时进一步收窄读入量。在 agent-canvas 用 5.5.0 重画三份稿子做机制验证，读入量为整份读标准的 27%、38%、39%（门槛 20%），且漏了规则；大头是每次先跑 `--list`、整份读样本 HTML（有时两份）、对 `sample.css` 宽泛 `grep`，以及折叠的 `（摘要）` 条目从不展开。现在：`--list` 只在页面类型不明、要看令牌清单或参数报用法错误时才跑；样本不整份读，按当前局部用类名或区块注释定位后只读命中的行号范围；`sample.css`、`tokens.css` 只读查询返回的行号范围，不整份 `cat`、不宽泛 `grep`；与当前局部有关的 `C-xxx（摘要）` 下笔前用 `--rule` 展开，无关的不展开。没登记 `query` 的项目行为不变
