@@ -425,8 +425,8 @@
       "path": "agent-canvas/relation-review",
       "bundle": "agent-canvas",
       "installScope": "project",
-      "contentHash": "8d5888629b9721fb",
-      "contentVersion": "1.1.1"
+      "contentHash": "68d13ab8fe0dc27c",
+      "contentVersion": "1.2.0"
     },
     {
       "path": "agent-canvas/close-node",

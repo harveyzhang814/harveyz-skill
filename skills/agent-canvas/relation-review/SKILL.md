@@ -2,7 +2,7 @@
 name: relation-review
 description: Global-Pilot-only relation-type governance loop — scans the pending queue and runs proposed types through four gates before promotion; invoked on a cron schedule, must not be manually called from a project canvas node.
 user_invocable: false
-version: "1.1.1"
+version: "1.2.0"
 ---
 
 # Relation 类型治理循环（relation-review）
@@ -41,6 +41,8 @@ version: "1.1.1"
 
 打回时必须**明说是关卡一**，否则同一提案会反复被提上来。
 
+通过时，关卡一的结论要沉淀成 `useWhen`（什么情形该用它）和 `notFor`（什么情形不该用它）的素材，第四步要填。
+
 ### 关卡二 · 聚类关（用例门槛）
 
 判据：同一语义在待议区累计 **≥ `PROMOTE_N`（3）条**，且 **来自 ≥2 个不同节点**
@@ -57,6 +59,8 @@ version: "1.1.1"
 **有一个现有 type 举不出区分案例，就不是新 type，是那个已有 type 的实例**——打回，
 并建议把这批关系改用 `agent-canvas-ctl update-relation <relationId> --type <已有type>`
 归到它名下（不要自己批量执行，写进审议报告让下一步的人工事后核查时看到）。
+
+关卡三的结论就是 `versus`（与相邻类型怎么选）的素材，同时可作 `notFor` 的补充。比对现有类型时，可以引用 `relation-guide` 返回的 `selection.byType`（各类型的 useWhen / notFor / versus）作为判据依据，但仍须举出真实 `relationId`，不能只引用判据文字。
 
 优先核对每条候选自带的 `why`（建关系时写明的"为什么现有 type 装不下"）。**不要找 `despite`**：
 它只在写入时校验，不进 `relation_review_queue` 的返回，审议时读不到。
@@ -76,11 +80,17 @@ relation_promote {
   reading: "<谓语读法>",
   endpoints: [{ from: "<fromKind>", to: "<toKind>" }, ...],
   evidence: [{ cwd: "<cwd>", relationId: "<relationId>" }, ...],
-  gateReasoning: "<四道关卡论证全文，含每一关的判断依据>"
+  gateReasoning: "<四道关卡论证全文，含每一关的判断依据>",
+  tier: "<role | collaboration | structure 三选一>",
+  useWhen: "<什么情形该用它>",
+  notFor: "<什么情形不该用它>",
+  versus: "<与相邻类型怎么选>"   // 可选，其余字段都必填
 }
 ```
 
 返回 `{changelogId}`。
+
+**`tier`、`useWhen`、`notFor` 缺任何一项，整次调用被拒，什么都不写**；`versus` 可选。`tier` 只能取 `role` / `collaboration` / `structure`，不能用 `origin` 或 `unclassified`。层按端点组合定：会话→对象是 `role`，会话↔会话是 `collaboration`，对象↔对象是 `structure`。
 
 `endpoints` 里的 `from`/`to` 是节点 **kind**（比如 `pty`/`requirement`），不是节点 id——
 跟 `evidence` 里的 `relationId` 是两种不同的标识符，不要混用。`evidence` 列出的应该是这一簇里
@@ -107,7 +117,7 @@ relation 数据**，只改注册表条目的 `status`/`supersededBy`：
   不存在会被拒绝。
 - **发现一个现存 type 已经没有意义**（比如从未被真实使用、或语义已被更好的 type 完全覆盖）：
   `relation_deprecate { name: "<type>", gateReasoning: "<为什么判定过时>", evidence?: ["<relationId>", ...] }`
-  有代码消费点（`codePinned`，如 `spawns`/`implements`/`unspecified`）的 type 会被硬拒绝，
+  有代码消费点（`codePinned`，如 `implements`/`waits-for`/`unspecified`）的 type 会被硬拒绝，
   不要尝试废弃它们。
 - **发现一个现存 type 的名字本身有误导性**：
   `relation_rename { from: "<旧名字>", to: "<新名字>", gateReasoning: "<为什么需要改名>", evidence?: ["<relationId>", ...] }`
