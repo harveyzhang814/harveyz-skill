@@ -1,5 +1,5 @@
 ---
-status: 打回
+status: 执行中
 date: 2026-11-24
 author_model: claude-opus-5-5
 acceptance: hard
