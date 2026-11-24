@@ -47,3 +47,15 @@ test('capture-requirement old refusal wording is replaced', async () => {
   assert.ok(!body.includes('第 1 步会直接拒绝'))
   assert.ok(body.includes('不该走到第 1 步'))
 })
+
+test('capture-requirement treats any non-zero claim exit as refused', async () => {
+  const body = await readSkill(SKILL)
+  const lines = body.split('\n')
+  assert.ok(lines.some(l => l.includes('非 0 退出') && l.includes('一律')), '非 0 退出一律按认领被拒')
+  assert.ok(lines.some(l => l.includes('条目写入失败') && l.includes('撤回')), '条目写入失败、App 撤回 implements 也算被拒')
+})
+
+test('capture-requirement step 0 takes <自己> from whoami', async () => {
+  const body = await readSkill(SKILL)
+  assert.ok(body.split('\n').some(l => l.includes('whoami') && l.includes('<自己>') && l.includes('nodeId')))
+})

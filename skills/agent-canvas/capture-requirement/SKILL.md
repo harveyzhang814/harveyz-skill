@@ -12,7 +12,7 @@ version: "2.2.0"
 
 ## 怎么做
 
-先做第 0 步；没有可认领的需求时才走第 1–3 步。
+先做第 0 步；没有可认领的需求时才走第 1–3 步。第 0 步的 `<自己>` 取 `agent-canvas-ctl whoami` 返回的节点 id（`node-relations` 的 nodeId 是必填）。
 
 ```
 0. agent-canvas-ctl node-relations <自己> --direction out --type implements
@@ -37,7 +37,7 @@ version: "2.2.0"
 第 0 步的认领按回执处理（`claim-requirement` 返回 `{ implementsAdded, acceptanceWritten, existingItemCount, itemCount, notes }`）：
 
 - `existingItemCount > 0` 且 `acceptanceWritten: false`：如实报告「需求已有 N 条验收条目，未覆盖」。只有用户明确要求覆盖时才加 `--replace-acceptance`。
-- 认领被拒（需求不是 `open` / `in_progress`，或本会话已实现另一条需求）：如实报出需求当前状态与错误后停下，不新建需求、不重试。
+- `claim-requirement` 只要非 0 退出，一律按认领被拒处理，包括需求不是 `open` / `in_progress`、本会话已实现另一条需求、条目写入失败、App 已撤回本次补的 implements：如实报出需求当前状态与错误后停下，不走第 1–3 步，不新建需求、不重试。
 - 认领路径不写 `realizes`。
 
 第 1 步**只撰写、不落盘**。传 `--spec` 时必须是绝对路径；不传时按本会话记录自动发现（Claude 节点会走证据 + 裁判，但仍应
