@@ -1,5 +1,5 @@
 ---
-status: 待验收
+status: 已验收
 date: 2026-11-24
 author_model: claude-opus-5-5
 acceptance: hard
@@ -116,3 +116,17 @@ target_node: fbb207ec-66bf-47de-9d39-3e1dc31525ed
 5. **锚点 5 PASS**：Spec §11 第 1–9 条对应测试均通过。
 
 无红，无带红送验项。
+
+## 验收记录（交出方，2026-11-24，第 2 轮）
+
+在本工作区（HEAD `eea74c0`）逐条重跑：
+
+1. 锚点 1 PASS：76 passed；`test_vocab.py` 与 `scripts/` 相对 `ad8c043` 无改动。新增两条文档断言测试与打回记录的修法一致。
+2. 锚点 2 PASS：`npm test` exit 0。
+3. 锚点 3 PASS：1755 字节；43 行。
+4. 锚点 4 PASS：hash 重算 `62af7656880313d9`、`9b6632580ae311fb`，与 `skills-index.json` 一致；`npm pack --dry-run` 列出 `SKILL.md` 与 `scripts/feature.py`。
+5. 锚点 5 PASS。
+
+打回两处核对：`manage.md` 第 2b 步条件已为「`capture-feature` 已安装时；未安装则跳过本步」，第 1 步条件未动；第 5 步已覆盖功能候选走 `capture-feature` 的 `update`。回归面同第 1 轮，`npm test` 绿。
+
+**结论：已验收。**

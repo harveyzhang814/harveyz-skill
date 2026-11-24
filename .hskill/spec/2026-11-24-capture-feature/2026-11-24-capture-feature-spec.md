@@ -237,7 +237,7 @@ flowchart TD
 
 | 情况 | 行为 |
 |---|---|
-| 项目没有 `.hskill/capture-feature/` | `lookup` 等只读命令 exit 2，输出 `no feature map`；capture-vocab 不会调用 capture-feature，因为它先判断目录是否存在 |
+| 项目没有 `.hskill/capture-feature/` | `lookup` 等只读命令 exit 2（`dupcheck`、`suggest-parent` 例外，见 S16），输出 `no feature map`；capture-vocab 不会调用 capture-feature，因为它先判断目录是否存在 |
 | 有功能地图但 capture-feature 没装 | capture-vocab 只用 vocab 结果回答，并提示「功能地图存在但 capture-feature 未安装」 |
 | 某个对象文件 JSON 损坏 | 只读命令跳过它，stderr 输出 `skip: <file>: <原因>`，其他对象照常；`check` 报 `invalid` |
 | `put` 校验失败 | 不写入任何文件，exit 1 |
@@ -263,6 +263,7 @@ flowchart TD
 - **S13** （已被 D19 取代，编号保留不复用。）
 - **S14** capture-feature 初版版本号定为 `0.1.0`。
 - **S15** 迁移时允许新建 vocab 里没有、但层级需要的父节点，在清单里标「新增」并逐条确认，与 D12「agent 提议、用户确认」一致。
+- **S16** `dupcheck` 与 `suggest-parent` 在数据目录尚不存在（但能定位到 `.git`）时按空地图处理、照常输出（`dupcheck` 仍检查 vocab 标题），不按 §9 的只读命令规则 exit 2；否则首次 `add` 与迁移时查重失效。（实施中由接手方提出，交出方验收时确认，2026-11-24 补记；不改变已批准结果。）
 
 ## 11. 验收标准
 
