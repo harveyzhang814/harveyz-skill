@@ -84,6 +84,8 @@ test('fork-topic links waits-for before send only when a return is requested', a
   assert.ok(link < send, 'waits-for link comes before send')
   const paragraphs = body.split(/\n\s*\n/)
   assert.ok(paragraphs.some(p => p.includes('交回要求') && p.includes('waits-for')), '交回要求 and waits-for in one paragraph')
+  assert.ok(body.includes('没有交回要求就不连边'), 'no link without a return request')
+  assert.ok(body.includes('记下返回的 `relationId`'), 'records relationId')
 })
 
 test('fork-topic handles a refused send', async () => {
@@ -91,8 +93,16 @@ test('fork-topic handles a refused send', async () => {
   for (const phrase of ['APPROVAL_DENIED', 'APPROVAL_TIMEOUT', '消息未发出', '可粘贴 prompt', '不重试']) {
     assert.ok(body.includes(phrase), phrase)
   }
+  assert.ok(body.includes('不得声称消息已发出'), 'no claim of delivery')
+  assert.ok(body.includes('不得给出 `messageId`'), 'no messageId when refused')
+  assert.ok(body.includes('仅 `send` 成功时'), 'step 6 only on success')
+  assert.ok(body.includes('等待边已保留'), 'wait edge kept after refusal')
 })
 
 test('fork-topic mentions resolve-wait', async () => {
-  assert.ok((await read(SKILL)).includes('resolve-wait'))
+  const body = await read(SKILL)
+  assert.ok(body.includes('resolve-wait'))
+  assert.ok(body.includes('不自动解除'), 'never auto-resolves')
+  assert.ok(body.includes('经用户同意'), 'needs user consent')
+  assert.ok(!body.includes('resolve-wait <relationId>'), 'no literal <relationId> placeholder')
 })

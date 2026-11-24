@@ -244,6 +244,11 @@
           "id": "paste-prompt",
           "source": "reply",
           "text": "回复里有放在代码块里的可粘贴 prompt，并说明节点已建、消息未发出"
+        },
+        {
+          "id": "no-sent-claim",
+          "source": "reply",
+          "text": "回复没有声称消息已发出，也没有给出 messageId"
         }
       ]
     }
