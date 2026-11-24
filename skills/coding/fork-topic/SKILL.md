@@ -39,9 +39,9 @@ version: "1.2.0"
 5. 把 prompt（只写 prompt 正文，不加代码块围栏）写进 `mktemp` 建的临时文件，文件在仓库之外，不进任何 git 目录。然后按顺序：
    1. **prompt 里写了交回要求时**，先连等待边（原会话等新会话），再发送：`agent-canvas-ctl link-nodes --from <自己的节点 id> --to <新节点 id> --type waits-for`。自己的节点 id 取自开头 `whoami` 的结果。连边成功：记下返回的 `relationId`。连边失败：把报错告诉用户，照常 `send`（这次会弹审批），不删节点、不重建。没有交回要求就不连边。
    2. `agent-canvas-ctl send <新节点 id> --file <临时文件>`。没有 active 的等待或交接关系时，`send` 会在画布上弹审批卡，命令阻塞到用户作答。
-   3. **`send` 未成功**（按 stderr 的错误码分两类，非 0 退出码都算）：两类共同规则：不重试、不删节点；按「不在画布里」的格式输出代码块里的可粘贴 prompt；不走第 6 条，回复里不得声称消息已发出，也不得给出 `messageId`。
-      - 明确未执行（`APPROVAL_DENIED`、`APPROVAL_TIMEOUT`、`INVALID_ARGUMENT`、`PRECONDITION_FAILED`、`NOT_APPLICABLE`；被拒时 App 提示「请勿重试」）：告诉用户「节点已建、消息未发出」，请用户把 prompt 贴进新节点。
-      - 结果不明（`OUTCOME_UNKNOWN`、`EXECUTION_FAILED`，以及其他非 0 退出码）：如实说明「结果未知」，把报错原文告诉用户，请用户先到新节点核对是否已经收到；prompt 仍然给出，但写明「确认没收到再贴」，不自动重发。
+   3. **`send` 未成功**（非 0 退出码都算；分类以 stderr 文本为准，错误码只作补充——命令行失败时 stderr 通常只有中文提示、不带错误码）：两类共同规则：不重试、不删节点；按「不在画布里」的格式输出代码块里的可粘贴 prompt；不走第 6 条，回复里不得声称消息已发出，也不得给出 `messageId`。
+      - 明确未执行（stderr 含「请勿重试」，或含「被用户拒绝」「审批超时」「被策略规则」；stderr 含 `APPROVAL_DENIED`、`APPROVAL_TIMEOUT`、`INVALID_ARGUMENT`、`PRECONDITION_FAILED`、`NOT_APPLICABLE`、`TARGET_NOT_FOUND` 等码时也归这一类）：告诉用户「节点已建、消息未发出」，请用户把 prompt 贴进新节点。
+      - 结果不明（其余非 0 退出，含 `OUTCOME_UNKNOWN`、`EXECUTION_FAILED`，以及看不出类别的报错）：如实说明「结果未知」，把报错原文告诉用户，请用户先到新节点核对是否已经收到；prompt 仍然给出，「确认没收到再贴」写在代码块外的说明里，不写进 prompt；不自动重发。
       - 已连了等待边的，一律保留不删，并补一句：等待边已保留，用户手动贴入（结果不明时先确认没收到）prompt 后照常等待，结论交回后可经用户同意，用 `agent-canvas-ctl resolve-wait` 加第 1 步记下的 relationId 具体值解除；不自动解除。
 6. **仅 `send` 成功时**：回复说明派给了哪个节点、`messageId`，结束本轮，不 sleep、不轮询。交回要求照常写在 prompt 里；不会自动回传，结论由用户到那个节点里取，再贴回主讨论。若连了等待边，补一句：结论贴回主讨论后，可经用户同意，用 `agent-canvas-ctl resolve-wait` 加第 1 步记下的 relationId 具体值解除等待；不自动解除。
 7. 建节点失败（含重试用尽，含退回的 `create-pty-node` 也失败）→ 把报错告诉用户，改为输出代码块里的可粘贴 prompt（同不在画布里的输出）。除上面规定的重试与退回外，不要换个参数再建一个；退出码 2 先 `agent-canvas-ctl search-nodes <标题关键词> --kind pty` 核对是不是已经建出来了（旧版 App 不认 `--kind` 时去掉它）。

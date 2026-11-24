@@ -7,7 +7,7 @@
 #   routed       路由命令全部可用
 #   old-app      模拟没有路由命令的旧版 App：三个路由子命令报「未知子命令」
 #   reject-once  第 1 次 create-routed-pty-node 被 INVALID_ARGUMENT 拒绝，之后放行
-#   send-denied  路由命令可用，但 send 被用户拒绝：stderr 输出 APPROVAL_DENIED，退出码 1
+#   send-denied  路由命令可用，但 send 被用户拒绝：stderr 照真实 App 输出两行中文（不带错误码），退出码 1
 # 未知模式退出码 2。
 #
 # stdout 只打三行，后续 eval 逐行消费：
@@ -99,7 +99,8 @@ case "$SUB" in
     echo '{"relationId":"rel-1"}' ;;
   send)
     if [ "$MODE" = "send-denied" ]; then
-      echo "APPROVAL_DENIED: 消息 msg-1 被用户拒绝，请勿重试" >&2
+      echo "⏳ 等待画布审批，请查看发起方节点上的确认卡片（画布外终端发起时在窗口右下角）" >&2
+      echo "消息 msg-1 被用户拒绝，请勿重试" >&2
       exit 1
     fi
     echo '{"messageId":"msg-1","status":"queued"}' ;;

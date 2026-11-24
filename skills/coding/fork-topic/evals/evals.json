@@ -224,7 +224,7 @@
       "id": 7,
       "name": "fork-canvas-send-denied",
       "prompt": "先运行 `bash <skill 目录>/../handoff/evals/fixtures/canvas-stub/setup.sh send-denied`（<skill 目录> 指本 skill 所在目录，handoff 是它的同级目录），它会打印三行：STUB_BIN、STUB_LOG、WORKTREE。本次运行里你执行的每一条画布命令（agent-canvas-ctl、agent-canvas-arrange）前面都必须加上 `PATH=<STUB_BIN>:$PATH`，例如 `PATH=<STUB_BIN>:$PATH agent-canvas-ctl whoami`，一条都不能漏——漏了就会打到真实画布上。你当前就在一个 Agent Canvas 节点里（用桩的 whoami 即可确认）。当前工作目录用 setup 打印的 WORKTREE。我们在讨论新的缓存方案。已经定了：用进程内 LRU，不上 Redis——Redis 被否决是因为单机部署、多一个运维依赖不值。我说过不接受引入新的外部服务。讨论中冒出一个支线：缓存失效策略到底用 TTL 还是事件驱动，这个要单独讨论。现有缓存实现在 src/cache/lru.js，之前关于失效的讨论记在 docs/adr/0007-cache.md。帮我把失效策略这个支线分出去。",
-      "expected_output": "send 被用户拒绝（stderr 为 APPROVAL_DENIED，退出码 1）：不重试 send，不 delete-node，保留已建的节点；回复告知节点已建、消息未发出，并在代码块里给出可粘贴 prompt。断言全部走 transcript：画布命令全部由桩应答，桩的调用日志（STUB_LOG）可作旁证。",
+      "expected_output": "send 被用户拒绝（stderr 只有中文提示「消息 msg-1 被用户拒绝，请勿重试」、不带错误码，退出码 1；按 stderr 文本识别为明确未执行）：不重试 send，不 delete-node，保留已建的节点；回复告知节点已建、消息未发出，并在代码块里给出可粘贴 prompt。断言全部走 transcript：画布命令全部由桩应答，桩的调用日志（STUB_LOG）可作旁证。",
       "files": [
         "../handoff/evals/fixtures/canvas-stub/setup.sh"
       ],
