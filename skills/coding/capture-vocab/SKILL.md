@@ -1,6 +1,6 @@
 ---
 name: capture-vocab
-version: "1.2.3"
+version: "1.3.0"
 description: Use when you need to look up, add, update, or remove project-specific domain terms — invoke with /capture-vocab query|add|update|remove <term>, or whenever an unfamiliar project-coined noun appears and you need its definition, against a shared vocabulary file at .hskill/capture-vocab/vocab.md
 user_invocable: true
 ---
@@ -23,10 +23,11 @@ user_invocable: true
 也用于「agent 拿不准某个词指什么」这个高频场景，参数可以是一个词，也可以是用户的一整句话。
 
 1. 跑 `python3 SKILL_DIR/scripts/vocab.py lookup "<词或整句>"`
-2. **exit 0** → 按输出的 section 定义理解/回答
-3. **输出 `N matches: a, b, c, d`**（命中超过 3 条时的降级档）→ 挑最相关的那个再 `lookup` 一次
-4. **exit 1**（`no match`）→ 该词没有定义，按字面理解，不必追问；用户显式跑 `query` 时再跑一次 `list` 列出全部术语名供其挑选
-5. **exit 2 或脚本不可用**（如 python3 缺失）→ 退回读取整份 `vocab.md`，用 `## <term>` 标题手动定位（大小写不敏感）
+2. **项目有 `.hskill/capture-feature/` 时**，不论结果如何，再 invoke `capture-feature` 用同一输入跑 `query`，两边结果合起来回答；该 skill 未安装则提示「功能地图存在但 capture-feature 未安装」
+3. **exit 0** → 按输出的 section 定义理解/回答
+4. **输出 `N matches: a, b, c, d`**（命中超过 3 条时的降级档）→ 挑最相关的那个再 `lookup` 一次
+5. **exit 1**（`no match`）→ 该词没有定义；**两边都未命中**才按字面理解，不必追问；用户显式跑 `query` 时再跑一次 `list` 列出全部术语名供其挑选
+6. **exit 2 或脚本不可用**（如 python3 缺失）→ 退回读取整份 `vocab.md`，用 `## <term>` 标题手动定位（大小写不敏感）
 
 匹配规则是「两边归一化后任一方是另一方的子串」，术语名和 `_Avoid_` 里的短别名都算。**接不住语义近似**——用户说「右边那个滑出来的框」而术语叫「工作区」，除非 `_Avoid_` 里写了那个叫法，否则查不到。
 
