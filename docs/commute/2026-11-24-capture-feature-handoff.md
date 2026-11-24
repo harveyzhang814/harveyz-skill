@@ -1,5 +1,5 @@
 ---
-status: 执行中
+status: 待验收
 date: 2026-11-24
 author_model: claude-opus-5-5
 acceptance: hard
@@ -59,3 +59,23 @@ target_node: fbb207ec-66bf-47de-9d39-3e1dc31525ed
 3. `wc -c < skills/coding/capture-feature/SKILL.md` ≤ 2641；`wc -l < skills/coding/capture-vocab/SKILL.md` ≤ 47。
 4. `skills-index.json` 中 capture-feature 条目存在（`installScope: project`、`contentVersion: "0.1.0"`），capture-vocab `contentVersion` 为 `"1.3.0"`，两者 `contentHash` 等于计划 Task 6 Step 1 命令的输出；`package.json` 的 `files` 含 `skills/coding/capture-feature/`；`npm pack --dry-run` 列出 `skills/coding/capture-feature/SKILL.md` 与 `scripts/feature.py`。
 5. Spec §11 第 1–9 条逐条满足（第 10–12 条属 Task 7，不在本次验收）。
+
+## 接手方自测记录（2026-11-24）
+
+在本工作区、分支 `feature/capture-feature` 实跑，判成败的命令均未接管道：
+
+1. **锚点 1 PASS**：`python3 -m pytest skills/coding/capture-feature/tests skills/coding/capture-vocab/tests -v` → 74 passed。capture-vocab 原有 `test_vocab.py` 与 `scripts/` 相对 `ad8c043` 无改动。
+2. **锚点 2 PASS**：`npm test` 退出码 0（node 483 pass / 0 fail；custom skill tests 23/23；capture-feature pytest 51 passed、capture-vocab 23 passed）。
+3. **锚点 3 PASS**：capture-feature `SKILL.md` 1755 字节（≤2641）；capture-vocab `SKILL.md` 43 行（≤47）。
+4. **锚点 4 PASS**：`skills-index.json` 中 capture-feature（`installScope: project`、`contentVersion: "0.1.0"`、hash `62af7656880313d9`）与 capture-vocab（`1.3.0`、`9b6632580ae311fb`）；两个 hash 均按计划公式重算一致；`package.json` `files` 含 `skills/coding/capture-feature/`；`npm pack --dry-run` 列出 `SKILL.md` 与 `scripts/feature.py`（共 15 个文件）。
+5. **锚点 5 PASS**：Spec §11 第 1–9 条对应测试均存在并通过。
+
+### 偏离与裁决（供验收方复核）
+
+- **测试文件改名**：计划让两个 skill 各有一个 `test_skill_doc.py`，而锚点 1 把两个目录放进同一条 pytest 命令，pytest 报 `import file mismatch`。把 capture-vocab 的那份改名为 `tests/test_vocab_skill_doc.py`，测试名与断言未动。
+- **`dupcheck` / `suggest-parent`**：数据目录不存在但有 `.git` 时按空图处理（`dupcheck` 仍查 vocab），不再 exit 2。原因：首次 `add` 与迁移时 vocab 查重不能失效。偏离 Spec §9 字面，仅这两个命令。
+- **capture-vocab `manage.md` 的归属判断**插为「2b」，没有重编号，避免打乱对第 5/6 步的既有引用。
+- **整分支审查**（独立 reviewer）发现的 1 条 Critical、4 条 Important 已用先红后绿的测试修复（`tests/test_review_fixes.py`）：损坏或缺字段 JSON 导致 Traceback、校验失败的 `put` 残留数据目录、`put --new` 覆盖文件名与 id 不一致的文件、版本号不可解析的对象写入后使 `list --at` 不可用。
+- **延后的 Minor**：`tree --depth` 负数、`schema: 1.0` 通过校验、未知字段被静默丢弃、`code.path` 接受绝对路径或 `../`、别称自身重复不报、`project-version` 对数组型 `package.json` 崩溃与 `pyproject.toml` 取错段、并发写同一 id 共用 tmp 文件名。
+
+无红，无带红送验项。
