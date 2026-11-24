@@ -404,8 +404,8 @@
       "path": "agent-canvas/relate-node",
       "bundle": "agent-canvas",
       "installScope": "project",
-      "contentHash": "1181492c24b6ca28",
-      "contentVersion": "1.0.3"
+      "contentHash": "7fce98bf264bdbe3",
+      "contentVersion": "1.1.0"
     },
     {
       "path": "agent-canvas/capture-requirement",
