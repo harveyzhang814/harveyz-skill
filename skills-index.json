@@ -355,8 +355,8 @@
       "path": "coding/fork-topic",
       "bundle": "coding",
       "installScope": "global",
-      "contentHash": "307070387b842be3",
-      "contentVersion": "1.1.1"
+      "contentHash": "3650d0483cd0436e",
+      "contentVersion": "1.2.0"
     },
     {
       "path": "coding/full-recap",

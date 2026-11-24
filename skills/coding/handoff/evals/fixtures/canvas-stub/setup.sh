@@ -3,10 +3,11 @@
 # 供 handoff / fork-topic 的路由 eval 使用：eval 测的是 agent 会不会走对路由流程、
 # 会不会如实填 --params，不应真的去碰画布。
 #
-# 用法：bash setup.sh <routed|old-app|reject-once>
+# 用法：bash setup.sh <routed|old-app|reject-once|send-denied>
 #   routed       路由命令全部可用
 #   old-app      模拟没有路由命令的旧版 App：三个路由子命令报「未知子命令」
 #   reject-once  第 1 次 create-routed-pty-node 被 INVALID_ARGUMENT 拒绝，之后放行
+#   send-denied  路由命令可用，但 send 被用户拒绝：stderr 输出 APPROVAL_DENIED，退出码 1
 # 未知模式退出码 2。
 #
 # stdout 只打三行，后续 eval 逐行消费：
@@ -20,8 +21,8 @@ set -euo pipefail
 
 MODE="${1:-}"
 case "$MODE" in
-  routed|old-app|reject-once) ;;
-  *) echo "未知模式: ${MODE:-<空>}（可选 routed|old-app|reject-once）" >&2; exit 2 ;;
+  routed|old-app|reject-once|send-denied) ;;
+  *) echo "未知模式: ${MODE:-<空>}（可选 routed|old-app|reject-once|send-denied）" >&2; exit 2 ;;
 esac
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -97,6 +98,10 @@ case "$SUB" in
   link-nodes)
     echo '{"relationId":"rel-1"}' ;;
   send)
+    if [ "$MODE" = "send-denied" ]; then
+      echo "APPROVAL_DENIED: 消息 msg-1 被用户拒绝，请勿重试" >&2
+      exit 1
+    fi
     echo '{"messageId":"msg-1","status":"queued"}' ;;
   search-nodes)
     echo '{"results":[]}' ;;

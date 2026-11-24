@@ -10,11 +10,11 @@ const read = p => readFile(resolve(root, p), 'utf8')
 const hash = b => createHash('sha256').update(b.replace(/^version:.*$/m, 'version: __HASH_PLACEHOLDER__')).digest('hex').slice(0, 16)
 const SKILL = 'skills/coding/fork-topic/SKILL.md'
 
-test('fork-topic version and index hash are 1.1.1', async () => {
+test('fork-topic version and index hash are 1.2.0', async () => {
   const body = await read(SKILL)
   const entry = JSON.parse(await read('skills-index.json')).skills.find(s => s.path === 'coding/fork-topic')
-  assert.match(body, /^version: ["']?1\.1\.1["']?$/m)
-  assert.equal(entry.contentVersion, '1.1.1')
+  assert.match(body, /^version: ["']?1\.2\.0["']?$/m)
+  assert.equal(entry.contentVersion, '1.2.0')
   assert.equal(entry.contentHash, hash(body))
 })
 
@@ -42,10 +42,10 @@ test('fork-topic keeps the fallback and named-model rules', async () => {
   assert.ok(routed >= 0 && direct > routed, 'create-pty-node first appears after create-routed-pty-node')
 })
 
-test('fork-topic never links nodes or copies routing field standards', async () => {
+test('fork-topic never uses expect-reply or copies routing field standards', async () => {
   const body = await read(SKILL)
   for (const term of [
-    'link-nodes', '--expect-reply',
+    '--expect-reply',
     'openDecisions', 'precedent', 'detailDifficulty', 'impact', 'scale',
     'openness', 'informationGap', 'reasoningDepth', '## 目标', '## 问题',
   ]) assert.ok(!body.includes(term), term)
@@ -73,4 +73,26 @@ test('fork-topic reads help only on error and spells out the routed flags', asyn
   assert.ok(body.includes('报错时再查 `agent-canvas-ctl help <命令>`'), 'help only on error')
   assert.ok(!body.includes('命令用法以 `agent-canvas-ctl help <命令>` 为准'), 'old help-first wording gone')
   for (const phrase of ['--params 字段=级别', '--evidence 名称=路径', '`## <段名>`']) assert.ok(body.includes(phrase), phrase)
+})
+
+test('fork-topic links waits-for before send only when a return is requested', async () => {
+  const body = await read(SKILL)
+  const link = body.indexOf('--type waits-for')
+  const send = body.indexOf('agent-canvas-ctl send')
+  assert.ok(link >= 0, '--type waits-for')
+  assert.ok(send >= 0, 'agent-canvas-ctl send')
+  assert.ok(link < send, 'waits-for link comes before send')
+  const paragraphs = body.split(/\n\s*\n/)
+  assert.ok(paragraphs.some(p => p.includes('交回要求') && p.includes('waits-for')), '交回要求 and waits-for in one paragraph')
+})
+
+test('fork-topic handles a refused send', async () => {
+  const body = await read(SKILL)
+  for (const phrase of ['APPROVAL_DENIED', 'APPROVAL_TIMEOUT', '消息未发出', '可粘贴 prompt', '不重试']) {
+    assert.ok(body.includes(phrase), phrase)
+  }
+})
+
+test('fork-topic mentions resolve-wait', async () => {
+  assert.ok((await read(SKILL)).includes('resolve-wait'))
 })

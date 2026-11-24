@@ -2,7 +2,7 @@
 name: fork-topic
 description: "Fork a side topic out of the current discussion into a concise prompt for another agent session. When outside a canvas node it outputs paste-ready text only; inside an Agent Canvas node it instead creates a think node and sends the prompt there. Never writes repo files, creates branches, or does acceptance. Use handoff instead when the work must come back for formal acceptance. Only on the user's request; do not suggest it unprompted. Triggers: '/fork-topic', 'fork this topic', 'split this off into a new session', 'spin off a side discussion', 'take these conclusions into a new topic'."
 user_invocable: true
-version: "1.1.1"
+version: "1.2.0"
 ---
 
 # fork-topic — 把支线话题分出去
@@ -36,6 +36,9 @@ version: "1.1.1"
    - 路由命令报未知子命令（旧版 App：退出码 1，stderr 以 `未知子命令:` 开头）或 `PRECONDITION_FAILED` → `--node-type claude-code`，并告诉用户路由不可用、已退回。
 3. 路由报 `INVALID_ARGUMENT` 不退回：按报错修正后重试路由，最多重试两次，仍不过按第 7 条处理。报错表示没建出节点，所以全程仍只有一个新节点。
 4. `agent-canvas-arrange put <新节点 id>` 放上画布（建出来默认不在画布上）。
-5. 把 prompt（只写 prompt 正文，不加代码块围栏）写进 `mktemp` 建的临时文件，文件在仓库之外，不进任何 git 目录；然后 `agent-canvas-ctl send <新节点 id> --file <临时文件>`。
-6. 回复说明派给了哪个节点、`messageId`，结束本轮，不 sleep、不轮询。交回要求照常写在 prompt 里；不会自动回传，结论由用户到那个节点里取，再贴回主讨论。
+5. 把 prompt（只写 prompt 正文，不加代码块围栏）写进 `mktemp` 建的临时文件，文件在仓库之外，不进任何 git 目录。然后按顺序：
+   1. **prompt 里写了交回要求时**，先连等待边（原会话等新会话），再发送：`agent-canvas-ctl link-nodes --from <自己的节点 id> --to <新节点 id> --type waits-for`。自己的节点 id 取自开头 `whoami` 的结果。连边失败：把报错告诉用户，照常发送，不删节点、不重建。没有交回要求就不连边。
+   2. `agent-canvas-ctl send <新节点 id> --file <临时文件>`。没有 active 的等待或交接关系时，`send` 会在画布上弹审批卡，命令阻塞到用户作答。
+   3. `send` 被拒（stderr 为 `APPROVAL_DENIED`）或超时（`APPROVAL_TIMEOUT`）：不重试、不删节点；告诉用户「节点已建、消息未发出」，并按「不在画布里」的格式输出代码块里的可粘贴 prompt，供用户贴进该节点。
+6. 回复说明派给了哪个节点、`messageId`，结束本轮，不 sleep、不轮询。交回要求照常写在 prompt 里；不会自动回传，结论由用户到那个节点里取，再贴回主讨论。若连了等待边，补一句：结论贴回主讨论后，可经用户同意，用 `agent-canvas-ctl resolve-wait <relationId>` 解除等待；不自动解除。
 7. 建节点失败（含重试用尽，含退回的 `create-pty-node` 也失败）→ 把报错告诉用户，改为输出代码块里的可粘贴 prompt（同不在画布里的输出）。除上面规定的重试与退回外，不要换个参数再建一个；退出码 2 先 `agent-canvas-ctl search-nodes <标题关键词> --kind pty` 核对是不是已经建出来了（旧版 App 不认 `--kind` 时去掉它）。
