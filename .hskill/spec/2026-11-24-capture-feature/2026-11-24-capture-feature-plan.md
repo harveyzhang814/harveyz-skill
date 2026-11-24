@@ -1,6 +1,6 @@
 # capture-feature 实施计划
 
-> **For agentic workers:** REQUIRED SUB-SKILL: 使用 [执行交接时确定的执行技能] 逐项实施；用 `- [ ]` 跟踪步骤。
+> **For agentic workers:** REQUIRED SUB-SKILL: 使用 superpowers:executing-plans 逐项实施；用 `- [ ]` 跟踪步骤。
 
 **Goal:** 新建跨项目的产品功能地图 skill `capture-feature`（脚本 + 精简 SKILL.md + references），改造 capture-vocab 1.3.0 使其查词与新增时联动功能地图，登记发布，并在 agent-canvas 完成试点迁移。
 
