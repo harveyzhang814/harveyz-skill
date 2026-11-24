@@ -29,6 +29,7 @@ const RULES = [
   { name: 'spawns 出现', hit: l => /spawns/.test(l) },
   { name: '子节点', hit: l => /子节点/.test(l) },
   { name: 'spawns/hands-off-to', hit: l => /spawns\s*[/、,，]\s*hands-off-to/.test(l) },
+  { name: '血缘', hit: l => /血缘/.test(l) },
   { name: 'depends-on 出现', hit: l => /depends-on/.test(l) },
 ]
 

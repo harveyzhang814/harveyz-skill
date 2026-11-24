@@ -29,11 +29,12 @@ version: "1.1.0"
    - `context.requirementNodes`：画布上的需求节点候选。
    - `context.candidateDocs`：同 cwd 下的 markdown/html/text 节点候选。
 2. **按 `phase` 对应的 type 列表逐个比对**（不是自由联想）：对每个候选 type，问「`context`
-   里有没有一个具体的候选对象（需求节点/文档节点/血缘链上的节点），配得上这个 type 的读法」。
+   里有没有一个具体的候选对象（需求节点/文档节点/来历链上的节点），配得上这个 type 的读法」。
    配不上就跳过，不要为了凑数硬建。
 3. **选型**：候选类型拿不准时（会话→文档要在 `references` / `produces` 之间选，会话↔会话要在
    `waits-for` / `hands-off-to` 之间选），调 `agent-canvas-ctl relation-guide --from <自己> --to <候选>`，
-   按返回的 `pair` 候选与判据选；返回标为「已确定」时直接用。
+   按返回的 `pair` 候选与判据选；返回 `pair.determined: true`（已确定）时直接用。
+   `waits-for` 由发起等待的一方（fork-topic、派活方）当场写，本 skill 不写 `waits-for`；会话↔会话只核对 `hands-off-to`。
 4. 对通过判据的每一条，调 `agent-canvas-ctl link-nodes --from <id> --to <id> --type <t> [--label <s>]`。
    传矩阵外的组合会报错并回传该端点对的合法 type 列表。**如果连报错列出的合法 type 都没有
    一个装得下**（不是"选一个将就"，是确实没有语义相符的），改用

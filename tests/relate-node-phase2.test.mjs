@@ -37,3 +37,11 @@ test('relate-node no longer calls spawns the system type', async () => {
   assert.ok(!body.includes('spawns/hands-off-to 血缘链'))
   assert.ok(!body.includes('`spawns`——'))
 })
+
+test('relate-node does not write waits-for and reads pair.determined', async () => {
+  const body = await readSkill(SKILL)
+  assert.ok(body.split('\n').some(l => l.includes('不写 `waits-for`') && l.includes('hands-off-to')), '不写 waits-for，会话↔会话只核对 hands-off-to')
+  assert.ok(body.includes('pair.determined: true'))
+  assert.ok(!body.includes('血缘'))
+  assert.ok(body.includes('来历链'))
+})
