@@ -1,13 +1,13 @@
 ---
 name: capture-feature
-version: "0.1.0"
-description: Use when looking up or adding user-perceivable product features, UI surfaces, interaction entries, their hierarchy and code locations — invoke with /capture-feature query|add|update|remove|check <term>; normally routed from capture-vocab, against the feature map at .hskill/capture-feature/
+version: "0.2.0"
+description: Use when looking up or adding product features and user-interactive interfaces, their hierarchy and code locations — invoke with /capture-feature query|add|update|remove|check <term>; normally routed from capture-vocab, against the feature map at .hskill/capture-feature/
 user_invocable: true
 ---
 
 # Feature Map
 
-项目级产品功能地图：界面区域、功能、交互入口，单父层级，附代码线索与版本。数据在 `<project-root>/.hskill/capture-feature/features/<id>.json`，只经脚本读写。
+项目级产品功能地图：`feature`（功能）与 `interface`（可交互界面）两类对象，各自单父成树，附代码线索与版本。数据在 `<project-root>/.hskill/capture-feature/features/<id>.json`，只经脚本读写。
 
 `SKILL_DIR` 为本 skill 的安装目录（含 `scripts/`）。
 

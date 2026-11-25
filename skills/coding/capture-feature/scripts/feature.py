@@ -8,7 +8,7 @@ import sys
 from pathlib import Path
 
 ID_RE = re.compile(r'^[a-z0-9]+(-[a-z0-9]+)*$')
-TYPES = ("surface", "feature", "entry")
+TYPES = ("feature", "interface")
 KEY_ORDER = ("schema", "id", "type", "name", "aliases", "avoid", "description", "parent", "code", "versions")
 VERSION_KEY_ORDER = ("introduced", "changed", "deprecated")
 
@@ -127,7 +127,7 @@ def _field_errors(obj):
     if not isinstance(oid, str) or not ID_RE.match(oid):
         errs.append("error: id must match ^[a-z0-9]+(-[a-z0-9]+)*$")
     if obj.get("type") not in TYPES:
-        errs.append("error: type must be one of surface, feature, entry")
+        errs.append("error: type must be one of feature, interface")
     if not _is_str(obj.get("name")):
         errs.append("error: name must be a non-empty string")
     if not _is_str(obj.get("description")):
@@ -193,6 +193,10 @@ def validate(obj, all_objs, mode):
     parent = obj["parent"]
     if parent is not None and parent != oid and parent not in others:
         errors.append(f"error: parent does not exist: {parent}")
+    elif parent in others and others[parent].get("type") != obj["type"]:
+        errors.append(
+            f"error: parent type mismatch: {oid} is {obj['type']} but parent {parent} is {others[parent].get('type')}"
+        )
     merged = dict(others)
     merged[oid] = obj
     seen = {oid}
@@ -566,6 +570,10 @@ def cmd_check(args):
     for o in valid.values():
         if o["parent"] is not None and o["parent"] not in valid:
             problems.append(f"missing-parent | {o['id']} | parent {o['parent']} does not exist")
+        elif o["parent"] is not None and valid[o["parent"]]["type"] != o["type"]:
+            problems.append(
+                f"parent-type-mismatch | {o['id']} | {o['type']} under {valid[o['parent']]['type']} {o['parent']}"
+            )
     for o in valid.values():
         seen = {o["id"]}
         cur = o["parent"]

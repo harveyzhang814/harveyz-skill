@@ -5,12 +5,12 @@ from conftest import dumps, features_dir, make_project, obj, run_feature
 
 def base_objects():
     return [
-        obj("app-window", "应用窗口", type="surface"),
+        obj("app-window", "应用窗口", type="interface"),
         obj(
             "workspace",
             "工作区",
             "app-window",
-            type="surface",
+            type="interface",
             aliases=["右侧面板"],
             avoid=[{"name": "抽屉", "note": None}],
             code=[{"path": "src/PanelArea.tsx", "symbol": "PanelArea"}],

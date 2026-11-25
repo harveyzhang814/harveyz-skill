@@ -10,7 +10,7 @@ def test_skill_md_line_budget():
 
 
 def test_version_bumped():
-    assert 'version: "1.3.0"' in SKILL_MD.read_text(encoding="utf-8")
+    assert 'version: "1.3.1"' in SKILL_MD.read_text(encoding="utf-8")
 
 
 def test_query_invokes_capture_feature():
@@ -35,3 +35,9 @@ def test_add_routing_does_not_require_existing_feature_map():
 def test_add_three_way_choice_covers_feature_candidates():
     text = MANAGE_MD.read_text(encoding="utf-8")
     assert "capture-feature" in text.split("5. 对已得到的候选")[1].split("6. 展示条目")[0]
+
+
+def test_add_routing_uses_d20_criterion():
+    line = next(l for l in MANAGE_MD.read_text(encoding="utf-8").splitlines() if l.startswith("2b."))
+    assert "直接看到或操作" not in line
+    assert "功能" in line and "界面" in line and "定位" in line

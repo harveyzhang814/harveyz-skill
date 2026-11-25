@@ -4,7 +4,7 @@
 
 ## 步骤
 
-1. **拟清单。** 逐条读 `vocab.md`，按「用户能不能直接看到或操作」分成「迁移」和「保留」两组。对每个迁移项拟好 `id`、`type`、`parent`、`code`、`aliases`、`avoid`、`description`。`introduced` 一律填 `"unknown"`。
+1. **拟清单。** 逐条读 `vocab.md`，按归属判据分成「迁移」和「保留」两组：用户能用的功能 → `feature`，用户能在上面做动作的交互界面（含交互入口）→ `interface`，只承担定位的视觉元素、机制、概念 → 保留在 vocab。父节点须与自己同类型。对每个迁移项拟好 `id`、`type`、`parent`、`code`、`aliases`、`avoid`、`description`。`introduced` 一律填 `"unknown"`。
 2. **一次性列出清单**，逐条请用户确认。表头：
 
    | 词条 | 归属 | 新增 | type | id | parent | aliases | avoid | code |

@@ -3,12 +3,12 @@ from conftest import make_project, obj, run_feature
 
 def fixture_objects(extra=()):
     return [
-        obj("app-window", "应用窗口", type="surface"),
+        obj("app-window", "应用窗口", type="interface"),
         obj(
             "workspace",
             "工作区",
             "app-window",
-            type="surface",
+            type="interface",
             aliases=["右侧面板"],
             avoid=[
                 {"name": "抽屉", "note": None},
@@ -21,9 +21,9 @@ def fixture_objects(extra=()):
                 "deprecated": None,
             },
         ),
-        obj("tab", "Tab", "workspace"),
-        obj("view", "视图", "workspace"),
-        obj("tab-bar", "Tab 栏", "tab", type="entry"),
+        obj("tab", "Tab", "workspace", type="interface"),
+        obj("view", "视图", "workspace", type="interface"),
+        obj("tab-bar", "Tab 栏", "tab", type="interface"),
         obj(
             "legacy",
             "旧面板",
@@ -42,7 +42,7 @@ def test_lookup_by_name_prints_card(tmp_path):
     assert r.returncode == 0
     out = r.stdout
     for line in [
-        "## 工作区  [surface]  id=workspace",
+        "## 工作区  [interface]  id=workspace",
         "别称: 右侧面板",
         "避免: 抽屉；Workspace（代码内部名，不向用户暴露）",
         "位置: 应用窗口 > 工作区",
@@ -108,9 +108,9 @@ def test_tree_default_depth_1(tmp_path):
     r = run_feature(["tree"], project(tmp_path))
     assert r.returncode == 0
     lines = r.stdout.splitlines()
-    assert "应用窗口 [surface] app-window" in lines
+    assert "应用窗口 [interface] app-window" in lines
     assert "旧面板 [feature] legacy" in lines
-    assert "  工作区 [surface] workspace" in lines
+    assert "  工作区 [interface] workspace" in lines
     assert "Tab" not in r.stdout
 
 
@@ -121,11 +121,11 @@ def test_tree_subtree_depth_2(tmp_path):
 
 
 def test_list_type_filter(tmp_path):
-    r = run_feature(["list", "--type", "entry"], project(tmp_path))
+    r = run_feature(["list", "--type", "feature"], project(tmp_path))
     assert r.returncode == 0
     lines = r.stdout.splitlines()
     assert len(lines) == 1
-    assert lines[0].rstrip() == "tab-bar | Tab 栏 | entry | tab |"
+    assert lines[0].rstrip() == "legacy | 旧面板 | feature |  |"
 
 
 def ids(out):
