@@ -19,8 +19,9 @@
 # 调用方据此不新建 worktree。
 #
 # 退出码：0 pass / 1 fail / 2 用法错误 / 3 目标不是 git 目录（此时 verdict=n/a）/
-#         4 resolved.env 不可用，只输出三行 resolved、verdict=n/a、reason：
-#           reason=workflow-not-deployed  仓库未部署（resolved=missing）
+#         4 resolved.env 不可用，只输出 resolved、verdict=n/a、reason（base-not-deployed 另有 base）：
+#           reason=workflow-not-deployed  仓库未部署：目标工作区、主工作树都没有（resolved=missing）
+#           reason=base-not-deployed      本地有，基线分支上读不到（resolved=missing、base=<基线>）
 #           reason=resolved-invalid       文件在但缺 integration_branches 或其值为空
 #                                         （resolved=<相对路径>）
 # 非 git 先于退出码 4 判断。
@@ -28,7 +29,7 @@
 # 策略来源：两步读取 resolved.env，不解析任何规则文件、不 source 它（逐行读取）。
 #   ① 引导：依次取目标工作区根、主工作树根下的 resolved.env，用第一份得到 base.<--type>
 #      （没有则 base.feature，再没有则第一个集成分支，只用于定位②）；
-#   ② 权威：git show <基线分支>:.hskill/init-workflow/resolved.env 的内容为准。
+#   ② 权威：git show <基线分支>:.hskill/init-workflow/resolved.env 的内容为准；读不到报 base-not-deployed。
 # 主工作树停在别的分支、或目标工作区早于部署，都不影响取值。
 #
 # 只读：不建、不删、不改任何 worktree、分支或配置。
@@ -112,15 +113,21 @@ if [[ -n "$boot" ]]; then
   [[ -z "$boot_base" ]] && invalid
 fi
 
-# ── ② 权威：基线分支上已提交的那份；取不到视为未部署 ─────────────────────────
-env_text=""
-if [[ -n "$boot" && -n "$boot_base" ]]; then
-  env_text="$(git -C "$root" show "$boot_base:$resolved_rel" 2>/dev/null || true)"
-fi
-if [[ -z "$env_text" ]]; then
+# ── ② 权威：基线分支上已提交的那份 ──────────────────────────────────────────
+# 本地一份都没有 → 仓库未部署；本地有、基线分支上读不到（分支上没有这份文件或分支不存在）
+# → 基线分支未部署，多输出一行 base 指明是哪条分支。
+if [[ -z "$boot" ]]; then
   echo "resolved=missing"
   echo "verdict=n/a"
   echo "reason=workflow-not-deployed"
+  exit 4
+fi
+env_text="$(git -C "$root" show "$boot_base:$resolved_rel" 2>/dev/null || true)"
+if [[ -z "$env_text" ]]; then
+  echo "resolved=missing"
+  echo "base=$boot_base"
+  echo "verdict=n/a"
+  echo "reason=base-not-deployed"
   exit 4
 fi
 

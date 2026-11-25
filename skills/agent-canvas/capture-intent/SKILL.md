@@ -2,7 +2,7 @@
 name: capture-intent
 description: "Capture a need the user mentions for later as an Agent Canvas requirement node. Triggers on casual phrasing like 'we should do X later', 'note this requirement', 'add this to the backlog', 'remember to build X'. Writes to the current canvas by default, or to another project's running canvas when the user names it. Not for the requirement the current session is implementing (use capture-requirement)."
 user_invocable: true
-version: "1.3.2"
+version: "1.3.3"
 ---
 
 # 记录意图（capture-intent）
@@ -26,7 +26,7 @@ version: "1.3.2"
 ## 2. 确定目标画布
 
 - 用户没点名别的项目 → 当前画布，命令不带 `--canvas`。
-- 点名了别的项目 → 按 agent-canvas-control「寻址」一节定位：`--canvas <路径> resolve-canvas` 退出码为 0 才算定下，有多条候选就让用户选；之后每条命令都在子命令之前带同一个 `--canvas`。
+- 点名了别的项目 → 按 `agent-canvas-ctl help resolve-canvas` 写明的寻址规则定位：`--canvas <路径> resolve-canvas` 退出码为 0 才算定下，有多条候选就让用户选；之后每条命令都在子命令之前带同一个 `--canvas`。
 - 可用画布清单里没有该项目 → 报告「<项目> 的画布没开，记不进去」并停止。不改写到别的画布，不碰 `~/.agent-canvas/`，也不回退到 TODO.md 或 capture-todo。
 
 ## 3. 取字段映射

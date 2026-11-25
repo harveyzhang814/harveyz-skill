@@ -1,16 +1,17 @@
 ---
 name: external-closeout
-description: Close out a named Agent Canvas claude-code/codex node from an external agent session without waking it — get a read-only verdict first (blocked or ready), then, only after the user confirms, run the lifecycle closeout (recheck, stop, migrate the claude session back to the repo root, hide) through one command. It does not merge, submit requirements, or touch worktrees or documents. Use when the user, in a session outside the target node, asks to close or finish out that node.
+description: Close out a named Agent Canvas claude-code/codex node from an external agent session without waking it — get a read-only verdict first (blocked or ready), then, only after the user confirms, run the lifecycle closeout (recheck, stop, migrate the claude session back to the repo root, hide, remove worktree) through one command; in step 5 the App deletes merged worktrees the target held that nobody else uses (branches are kept). It does not merge, submit requirements, or touch documents. Use when the user, in a session outside the target node, asks to close or finish out that node.
 disable-model-invocation: true
 user_invocable: true
-version: "2.0.0"
+version: "2.1.0"
 ---
 
 # 外部收尾（external-closeout）
 
 > 判定与收尾的全部规则都在应用里（判定由 `get-closeout-verdict` 给出，
 > 收尾由 `run-closeout` 执行），这份 skill 只教你按顺序调命令、把结果原样交给用户。
-> 收尾只管节点生命周期（停止、会话迁回、隐藏）：不合并、不送审、不动 worktree 与文档。
+> 收尾只管节点生命周期（停止、会话迁回、隐藏）；第 5 步由 App 删除目标占用、已合并且无人用的 worktree（分支保留）。
+> 不合并、不送审、不动文档。
 
 用户在**目标节点之外**的 agent 会话里点名一个节点，要求不唤醒它就把它收尾。你先拿**只读判定**，
 用户确认后再一条命令执行收尾。**全程不往目标会话写入任何东西，也不读它。**
@@ -47,16 +48,19 @@ agent-canvas-ctl get-closeout-verdict <目标 nodeId>
 agent-canvas-ctl run-closeout <目标 nodeId> --wait
 ```
 
-- 固定四步：复查、停止、迁回会话、隐藏。没有审批卡片，通过判定后直接开始。
+- 固定五步：复查、停止、迁回会话、隐藏、删除 worktree。没有审批卡片，通过判定后直接开始。
+- 收尾第 5 步「删除 worktree」：复查通过后、停止之前，App 按目标身份查出它占用的 worktree；进程退出、占用失效后逐个交给
+  App 的删除检查，没有其他占用者、没有窗口或会话困在其中、干净且已并入集成分支才删，分支保留。每个 worktree 的结果
+  （已删、拒绝及原因、失败及原因）都写在第 5 步的说明里；查不到占用时记为跳过。第 5 步只记完成或跳过，**不影响退出码**。
 - 卡住或缺事实：命令直接拒绝；读报错，按第 4 步处理。
-- `--wait` 会逐步打印进度：`✔ 3/4 迁回会话` 是完成，`– …（原因）` 是跳过，`✘ …：原因` 是失败；最后打印执行记录 JSON。
+- `--wait` 会逐步打印进度：`✔ 3/5 迁回会话` 是完成，`– …（原因）` 是跳过，`✘ …：原因` 是失败；最后打印执行记录 JSON。
   **把执行记录里的 `text` 原样贴给用户。** 退出码 0 = 已完成，1 = 已停止或被拒绝（卡住 / 缺事实）。
 - 命令已成功返回后，不要为核对再调 `get-closeout-verdict` 或别的命令。
 
 ### 4. 失败处置
 
 每一行都是同一个动作：**读停止原因 → 告诉用户 → 等用户决定**。不盲目重试，不强杀，不自己换办法。
-第 1、2 步失败时节点尚未停止；第 3 步失败时节点已停止、未隐藏，留在画布上提醒人处理。
+第 1、2 步失败时节点尚未停止；第 3 步失败时节点已停止、未隐藏，留在画布上提醒人处理。收尾第 5 步不记失败，它列出的拒绝或失败见下表「收尾第 5 步」一行。
 
 | 情形 | 处置 |
 |---|---|
@@ -71,6 +75,7 @@ agent-canvas-ctl run-closeout <目标 nodeId> --wait
 | 迁回：`attachments-incomplete` | **会话本身已回到仓库根，可恢复**；留在原处的是同名附属物，失败信息列出它们的绝对路径。重跑时迁回返回 `already-in-root`，算完成并隐藏节点，**接受这个结果**；附属物对恢复会话的影响没有查，留在原处 |
 | 迁回：`session-missing` | 磁盘上找不到该会话；无法修复，报告即可 |
 | 迁回：`node-not-found` / `error: <msg>` | 节点或迁回本身异常；原样报告 |
+| 收尾第 5 步列出的「拒绝 / 失败」 | 只报告（已随 `text` 原样贴出），不重试、不另行处理；不手写 `git worktree remove`、不删分支。worktree 留给分支栏清理或人处理 |
 | 其余 `✘` | 报告「已做到哪一步、没做什么」和原因 |
 
 重跑 `run-closeout` 是安全的：已完成的步骤会被跳过，从失败的那一步继续。
@@ -99,4 +104,5 @@ agent-canvas-ctl wait-closeout-run <目标 nodeId> --run-id <runId> [--after-ste
 - **不往目标会话注入任何东西**：不发消息、不发斜杠命令、不写目标终端；也不读它的会话内容。
 - **不自己拼收尾步骤**：判定看 `get-closeout-verdict`，执行只用 `run-closeout`，不绕过它去做单个动作。
 - **不调 `capture-requirement`**：立项只在闸门 2 发生一次。
-- 合并、送审、worktree 清理、文档与关系更新都不属于收尾；用户问起，说明本 skill 不做这些，由节点所在任务按 AGENTS.md 流程处理。
+- 合并、送审、文档与关系更新都不属于收尾；用户问起，说明本 skill 不做这些，由节点所在任务按 AGENTS.md 流程处理。
+  worktree 只由第 5 步经 App 的删除检查删除；本 skill 不另删、不强删。

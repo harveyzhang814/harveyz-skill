@@ -2,8 +2,12 @@
 name: agent-canvas-control
 description: Control Agent Canvas node entities and layout from claude-code/codex/pi nodes — create, query, update, delete nodes, put or hide them on the canvas, and send messages or slash commands to other claude-code/codex nodes (dispatch work to a new node, or to one already running) and get their replies back; also usable from shell/hermes-tui nodes or terminals outside the canvas via `--canvas`/`resolve-canvas`/`resolve`.
 user_invocable: true
-version: "1.4.0"
+version: "1.5.0"
+deprecated: true
+deprecated_reason: "Superseded by native canvas tools (mcp__agent_canvas__*, CLI fallback agent-canvas-ctl help) and the dispatch-agent skill; kept until the App that stops installing it is stable."
 ---
+
+> **已弃用**：画布能力已直接作为画布工具提供（MCP server `agent_canvas`，Claude Code 里是 `mcp__agent_canvas__*`），没有工具时用 `agent-canvas-ctl help` 查命令；派活并取回结果的流程改用 `dispatch-agent`。本 skill 只为旧版 App 保留，新版 App 不再安装它。
 
 # 操控节点与画布（agent-canvas-control）
 
