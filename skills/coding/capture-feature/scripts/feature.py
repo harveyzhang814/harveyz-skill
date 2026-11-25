@@ -9,8 +9,10 @@ from pathlib import Path
 
 ID_RE = re.compile(r'^[a-z0-9]+(-[a-z0-9]+)*$')
 TYPES = ("feature", "interface")
-KEY_ORDER = ("schema", "id", "type", "name", "aliases", "avoid", "description", "parent", "code", "versions")
+KEY_ORDER = ("schema", "id", "type", "name", "name_en", "aliases", "avoid", "description", "parent", "code", "versions")
 VERSION_KEY_ORDER = ("introduced", "changed", "deprecated")
+CJK_RE = re.compile(r'[\u3040-\u30ff\u3400-\u9fff\uf900-\ufaff\uac00-\ud7af]')
+LATIN_RE = re.compile(r'[A-Za-z]')
 
 
 def find_data_dir():
@@ -76,7 +78,7 @@ def bidir_match(a, b):
 
 
 def match_keys(obj):
-    keys = [obj.get("name", "")]
+    keys = [obj.get("name", ""), obj.get("name_en", "")]
     keys += list(obj.get("aliases") or [])
     keys += [a.get("name", "") for a in (obj.get("avoid") or [])]
     return keys
@@ -94,6 +96,7 @@ def canonical(obj):
         "id": obj["id"],
         "type": obj["type"],
         "name": obj["name"],
+        "name_en": obj["name_en"],
         "aliases": list(obj.get("aliases") or []),
         "avoid": [{"name": a["name"], "note": a.get("note")} for a in (obj.get("avoid") or [])],
         "description": obj["description"],
@@ -130,6 +133,12 @@ def _field_errors(obj):
         errs.append("error: type must be one of feature, interface")
     if not _is_str(obj.get("name")):
         errs.append("error: name must be a non-empty string")
+    elif LATIN_RE.search(obj["name"]):
+        errs.append("error: name must be Chinese only (put the English name in name_en)")
+    if not _is_str(obj.get("name_en")):
+        errs.append("error: name_en must be a non-empty string")
+    elif CJK_RE.search(obj["name_en"]) or not LATIN_RE.search(obj["name_en"]):
+        errs.append("error: name_en must be English only (Latin letters, no Chinese)")
     if not _is_str(obj.get("description")):
         errs.append("error: description must be a non-empty string")
     if "parent" not in obj:
@@ -139,6 +148,8 @@ def _field_errors(obj):
     aliases = obj.get("aliases", [])
     if not isinstance(aliases, list) or not all(_is_str(a) for a in aliases):
         errs.append("error: aliases must be a list of non-empty strings")
+    elif any(CJK_RE.search(a) and LATIN_RE.search(a) for a in aliases):
+        errs.append("error: aliases must not mix Chinese and English in one alias")
     avoid = obj.get("avoid", [])
     if not isinstance(avoid, list) or not all(
         isinstance(a, dict) and _is_str(a.get("name")) and (a.get("note") is None or isinstance(a.get("note"), str))
@@ -211,7 +222,11 @@ def validate(obj, all_objs, mode):
     for other in others.values():
         if normalize(other.get("name", "")) == nname:
             errors.append(f"error: name already used by {other['id']}: {obj['name']}")
-    own = {normalize(k) for k in [obj["name"]] + list(obj.get("aliases") or []) + [a["name"] for a in obj.get("avoid") or []]}
+    nname_en = normalize(obj["name_en"])
+    for other in others.values():
+        if nname_en in (normalize(other.get("name", "")), normalize(other.get("name_en", ""))):
+            errors.append(f"error: name_en already used by {other['id']}: {obj['name_en']}")
+    own = {normalize(k) for k in [obj["name"], obj["name_en"]] + list(obj.get("aliases") or []) + [a["name"] for a in obj.get("avoid") or []]}
     for other in others.values():
         overlap = own & {normalize(k) for k in match_keys(other)}
         for k in sorted(overlap):
@@ -233,7 +248,7 @@ def _chain(obj, all_objs):
 
 
 def render_card(obj, all_objs):
-    lines = [f"## {obj['name']}  [{obj['type']}]  id={obj['id']}", obj["description"]]
+    lines = [f"## {obj['name']} / {obj['name_en']}  [{obj['type']}]  id={obj['id']}", obj["description"]]
     if obj.get("aliases"):
         lines.append("别称: " + ", ".join(obj["aliases"]))
     if obj.get("avoid"):

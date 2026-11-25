@@ -1,6 +1,6 @@
 ---
 name: capture-feature
-version: "0.2.0"
+version: "0.3.0"
 description: Use when looking up or adding product features and user-interactive interfaces, their hierarchy and code locations — invoke with /capture-feature query|add|update|remove|check <term>; normally routed from capture-vocab, against the feature map at .hskill/capture-feature/
 user_invocable: true
 ---

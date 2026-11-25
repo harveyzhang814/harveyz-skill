@@ -19,7 +19,7 @@ def test_skill_md_within_budget():
 def test_frontmatter():
     fm = {k.strip(): v.strip().strip('"') for k, v in frontmatter().items()}
     assert fm["name"] == "capture-feature"
-    assert fm["version"] == "0.2.0"
+    assert fm["version"] == "0.3.0"
     assert fm["user_invocable"] == "true"
     assert fm["description"] and not CJK_RE.search(fm["description"])
 

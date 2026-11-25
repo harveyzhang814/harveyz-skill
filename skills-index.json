@@ -188,7 +188,7 @@
       "bundle": "coding",
       "installScope": "project",
       "contentHash": "c1b31187c6bc1f1c",
-      "contentVersion": "0.2.0"
+      "contentVersion": "0.3.0"
     },
     {
       "path": "coding/rephrase",
