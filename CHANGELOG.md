@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.47.0] - 2026-11-25
+
 ### Added
 - `sync-design` 5.5.0：`designSystem` 新增可选字段 `query`（标准查询命令前缀）。登记后，设计模式（开稿、下笔每个局部前、生成后检查）与同步模式（阶段 3、旧写法转换）都按场景查询标准条目（`--core`、`--page`、`--topic`、`--token`、`--rule`、`--search`、`--list`，可选 `--full`），不再整份读 `standard`、`tokens`、`componentStyles`；折叠的摘要用 `--rule` 或 `--full` 展开，组件样式与令牌只按返回的行号局部读。项目命令只实现部分参数时在 `--list` 声明，没声明的改用 `--search`。没登记 `query` 的项目，「标准上下文」的 4 万字符规则不变。登记标准缺口的步骤（不论是否登记 `query`）改为：先搜标准与已有缺口，命中就引用不新增；只读缺口清单开头的说明区按它的格式写，没写格式才读最后一条当样例，不整份读；取号用只输出最大号的命令（说明区给了就用它）。原写法只说“按现有条目的格式追加”，实际会整份读缺口清单，取号命令又输出所有分支上的全部编号行，在 agent-canvas 上可达数十万字符。`references/init.md` 字段表加 `query` 与参数契约，完成标准加“`<query> --list` 退出码 0”
 - `capture-feature` 0.1.0：新 skill，项目级产品功能地图。只收用户能直接看到或操作的界面区域、功能、交互入口，用单父 `parent` 表达层级，每个功能可记多条「路径 + 符号」代码线索（不记行号）与引入/变更/废弃版本；一个对象一个 JSON 文件，存于 `.hskill/capture-feature/features/`，经 `feature.py`（仅标准库）的 `lookup`、`show`、`tree`、`list --at`、`refs`、`dupcheck`、`suggest-parent`、`project-version`、`put`、`remove`、`check --code` 读写，只把命中卡片交给 agent。`aliases`（通用别称）与 `avoid`（应避免的叫法及原因）分开存且都参与匹配。`SKILL.md` 只留查词路径，写操作与迁移办法在 `references/`。属于 coding bundle，`installScope: project`
