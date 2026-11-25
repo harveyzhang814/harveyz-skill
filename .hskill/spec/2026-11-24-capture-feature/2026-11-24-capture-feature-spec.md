@@ -317,3 +317,5 @@ flowchart TD
 
 已部署的 0.1.0 数据兼容性：只有 sandbox 与本仓库测试夹具用过 `surface` / `entry`；agent-canvas 试点尚未写入任何对象，因此不需要数据迁移脚本。
 
+
+**v0.2 验证记录（2026-11-24）**：`python3 -m pytest skills/coding/capture-feature/tests skills/coding/capture-vocab/tests` 84 passed（先红：改测试后 26 failed，均因旧类型枚举或文档未改）；`npm test` exit 0。沙箱 E2E（夹具同 v0.1 的 route-work-e2e 待办夹具，运行目录 `/tmp/capture-feature-e2e/run2/`，`claude -p --setting-sources project,local`）：`/capture-vocab add 批量完成`（功能）→ 判归功能地图、拟作 `mark-done`（feature）的子节点、等用户确认、未写入；`/capture-vocab add 列表页脚`（只承担定位的位置名）→ 判为「只承担定位的视觉元素」留术语表、等用户确认、未写入。
