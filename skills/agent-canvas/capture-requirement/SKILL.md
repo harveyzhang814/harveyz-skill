@@ -2,7 +2,7 @@
 name: capture-requirement
 description: File the requirement the current session is implementing as a standalone requirement node and link an implements relation to it — call once after Gate 2 is finalized; only usable inside an Agent Canvas node.
 user_invocable: true
-version: "2.1.2"
+version: "2.2.0"
 ---
 
 # 需求立项（capture-requirement）
@@ -12,7 +12,15 @@ version: "2.1.2"
 
 ## 怎么做
 
+先做第 0 步；没有可认领的需求时才走第 1–3 步。第 0 步的 `<自己>` 取 `agent-canvas-ctl whoami` 返回的节点 id（`node-relations` 的 nodeId 是必填）。
+
 ```
+0. agent-canvas-ctl node-relations <自己> --direction out --type implements
+   - 已有 implements（如从需求派生的会话）→ 认领这条需求，不新建：
+       agent-canvas-ctl claim-requirement <该需求节点 id> --acceptance-spec <spec 绝对路径>
+   - 没有，但用户指定了画布上已有的需求 → 同样 claim-requirement
+   - 都没有 → 走下面第 1–3 步
+
 1. agent-canvas-ctl draft-requirement [--spec <绝对路径>]
    → { callerNodeId, title, description, priority, status, specUsed }
 
@@ -26,11 +34,17 @@ version: "2.1.2"
      --from <第 1 步的 callerNodeId> --to <第 2 步的 create.nodeId> --type implements
 ```
 
+第 0 步的认领按回执处理（`claim-requirement` 返回 `{ implementsAdded, acceptanceWritten, existingItemCount, itemCount, notes }`）：
+
+- `existingItemCount > 0` 且 `acceptanceWritten: false`：如实报告「需求已有 N 条验收条目，未覆盖」。只有用户明确要求覆盖时才加 `--replace-acceptance`。
+- `claim-requirement` 只要非 0 退出，一律按认领被拒处理，包括需求不是 `open` / `in_progress`、本会话已实现另一条需求、条目写入失败、App 已撤回本次补的 implements：如实报出需求当前状态与错误后停下，不走第 1–3 步，不新建需求、不重试。
+- 认领路径不写 `realizes`。
+
 第 1 步**只撰写、不落盘**。传 `--spec` 时必须是绝对路径；不传时按本会话记录自动发现（Claude 节点会走证据 + 裁判，但仍应
 显式传 `--spec`：验收 spec 选错的代价比标题高）。
 第 1 步以非零退出码报错时，说明这三种情况之一：没读到 spec、本节点已 implements 过某个
-需求节点（不重铸编号）、或本节点上一次调用还没返回；报错本身已说明是哪一种，直接把错误
-如实报出，不要重试或跳过。
+需求节点（不重铸编号；已 implements 时应走第 0 步，不该走到第 1 步）、或本节点上一次调用还没返回；
+报错本身已说明是哪一种，直接把错误如实报出，不要重试或跳过。
 
 第 1 步的 `description` 已含素材里明确的验收内容（没有独立的验收字段），第 2 步不再传验收文字。
 
@@ -64,7 +78,7 @@ version: "2.1.2"
 ## 什么时候调
 
 **只在闸门 2 定稿后调一次**，收尾时不调：到收尾时上下文已经被实现细节占满，重写出来的需求
-会偏向实现叙述。本节点已 implements 某个需求节点时，第 1 步会直接拒绝。
+会偏向实现叙述。本节点已 implements 某个需求节点时，走第 0 步认领，不走第 1 步。
 
 handoff：交出方在闸门 2 调；接手方**不调**。第 1 步只检查**本节点自己**的 implements 边，拦不住
 接手方重复调用，只能靠这条约定。
