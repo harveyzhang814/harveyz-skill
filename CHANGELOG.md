@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `capture-feature` 0.1.0：新 skill，项目级产品功能地图。只收用户能直接看到或操作的界面区域、功能、交互入口，用单父 `parent` 表达层级，每个功能可记多条「路径 + 符号」代码线索（不记行号）与引入/变更/废弃版本；一个对象一个 JSON 文件，存于 `.hskill/capture-feature/features/`，经 `feature.py`（仅标准库）的 `lookup`、`show`、`tree`、`list --at`、`refs`、`dupcheck`、`suggest-parent`、`project-version`、`put`、`remove`、`check --code` 读写，只把命中卡片交给 agent。`aliases`（通用别称）与 `avoid`（应避免的叫法及原因）分开存且都参与匹配。`SKILL.md` 只留查词路径，写操作与迁移办法在 `references/`。属于 coding bundle，`installScope: project`
 
 ### Changed
+- `capture-feature` 0.3.0：中英文名分开。`name` 只放中文名，新增必填 `name_en` 只放英文名，写入时拒绝 `name` 含拉丁字母、`name_en` 含中文、单条别称中英混用（`avoid` 不限，用来记录要避免的混用旧叫法）；`name_en` 参与查词与查重，卡片标题显示「中文名 / English Name」。
 - `capture-feature` 0.2.0：对象类型改为 `feature`（用户能做的事）与 `interface`（用户能在上面做动作的交互界面，含交互入口），命名对齐 PRO 的 Feature 与 visual Interface；`surface`、`entry` 不再接受。两类对象各成一棵树，`put` 拒绝跨类型的父节点，`check` 新增 `parent-type-mismatch`。只承担定位的视觉元素留在 capture-vocab。
 - `capture-vocab` 1.3.1：`add` 的归属判断改为「功能或可交互界面进功能地图，只承担定位的视觉元素、机制、概念留术语表」，与 capture-feature 0.2.0 一致。
 - `capture-vocab` 1.3.0：项目存在 `.hskill/capture-feature/` 时，`query` 在 `vocab.py lookup` 之后再 invoke `capture-feature` 查一遍并合并结果，两边都未命中才按字面理解；`add` 查重同时查功能地图，并在推断定义后加归属判断（用户能否直接看到或操作），归功能地图且用户确认就转交 `capture-feature add`。`vocab.py` 与 `vocab.md` 格式不变；`SKILL.md` 只多 1 行。未安装 capture-feature 时提示「功能地图存在但 capture-feature 未安装」

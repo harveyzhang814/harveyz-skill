@@ -21,6 +21,7 @@
   "id": "workspace",
   "type": "interface",
   "name": "工作区",
+  "name_en": "Work Area",
   "aliases": ["右侧面板"],
   "avoid": [{"name": "抽屉", "note": null}, {"name": "Workspace", "note": "代码内部名，不向用户暴露"}],
   "description": "右侧可拖拽调宽的滑出区域，内部承载所有 Tab。",
@@ -34,9 +35,10 @@
 |---|---|
 | `id` | 必填，`^[a-z0-9]+(-[a-z0-9]+)*$`，等于文件名，创建后不可改 |
 | `type` | 必填，`feature` / `interface` |
-| `name` | 必填，产品侧称谓；归一化后不得与其他对象重名 |
-| `aliases` | 默认 `[]`；可以通用的别称，每项一个叫法，不写说明 |
-| `avoid` | 默认 `[]`；应避免的叫法，`{name, note}`，`note` 写为什么避免、该用什么；`name` 也参与匹配 |
+| `name` | 必填，产品侧**中文**名，不得含拉丁字母；归一化后不得与其他对象重名 |
+| `name_en` | 必填，**英文**名，不得含中文、至少含一个拉丁字母；不得与其他对象的 `name` / `name_en` 重名。界面上只有英文的名字，也要给出对应中文名放 `name` |
+| `aliases` | 默认 `[]`；可以通用的别称，每项一个叫法，不写说明；中英文别称都可以，但**单项不得中英混用** |
+| `avoid` | 默认 `[]`；应避免的叫法，`{name, note}`，`note` 写为什么避免、该用什么；`name` 也参与匹配；中英混用的旧叫法（如「Dashboard 窗口」）正应记在这里 |
 | `description` | 必填，一到两句话 |
 | `parent` | 必填，父对象 id 或 `null`（根）；父对象须与自己同 `type`；沿父链不得成环 |
 | `code` | 默认 `[]`；`{path, symbol?}`，路径相对项目根，**不记行号** |
@@ -50,7 +52,7 @@
    - `exact | <id>` → 报「已存在」，建议改用 `update`
    - `vocab | <标题>` → 这个词还在术语表里，建议按 `references/migrate.md` 迁过来再从 vocab 删除，由用户决定
    - 只有 `fuzzy | <id>` → 逐个 `show <id>`，**必须显式判一个结论并说给用户**，三选一：同一实体另一个名字（并入别称，走 `update`）/ 父子关系 / 无关
-2. 先判类型：用户能做的事 → `feature`；用户能在上面做动作的界面或交互入口 → `interface`；只承担定位、或是机制概念 → 不进地图，告诉用户改走 capture-vocab。再从对话上下文推断 `name`、`aliases`、`avoid`、`description`、`code`（只写路径与符号）
+2. 先判类型：用户能做的事 → `feature`；用户能在上面做动作的界面或交互入口 → `interface`；只承担定位、或是机制概念 → 不进地图，告诉用户改走 capture-vocab。再从对话上下文推断 `name`（中文）、`name_en`（英文）、`aliases`、`avoid`、`description`、`code`（只写路径与符号）
 3. `feature.py suggest-parent --name "<名>" [--path P …]`，从候选（`id | name | reason`，reason 为 `same-file` / `dir-contains` / `name`）中**只选同类型的**作为父节点，或判定为根，说明理由；`no candidates` 时多半是根
 4. `feature.py project-version` 取版本填 `versions.introduced`；输出 `unknown`（exit 1）或这是存量功能时填 `"unknown"`，并告诉用户
 5. 展示完整拟写对象（JSON）、所选父节点、查重结论，等用户确认或修改

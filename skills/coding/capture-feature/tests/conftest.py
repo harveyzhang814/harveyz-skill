@@ -20,6 +20,7 @@ def obj(id, name, parent=None, **kw):
         "id": id,
         "type": "feature",
         "name": name,
+        "name_en": " ".join(part.capitalize() for part in id.split("-")),
         "aliases": [],
         "avoid": [],
         "description": "d",

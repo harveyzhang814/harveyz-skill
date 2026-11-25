@@ -14,6 +14,7 @@ def test_put_new_writes_canonical_bytes(tmp_path):
         "parent": None,
         "description": "右侧面板",
         "name": "工作区",
+        "name_en": "Work Area",
         "type": "interface",
         "id": "workspace",
         "schema": 1,
@@ -29,6 +30,7 @@ def test_put_new_writes_canonical_bytes(tmp_path):
                 "id": "workspace",
                 "type": "interface",
                 "name": "工作区",
+                "name_en": "Work Area",
                 "aliases": [],
                 "avoid": [{"name": "抽屉", "note": None}],
                 "description": "右侧面板",
@@ -97,8 +99,8 @@ def test_put_replace_rejects_cycle(tmp_path):
 
 
 def test_put_rejects_duplicate_name(tmp_path):
-    root = make_project(tmp_path, [obj("a", "Work Space")])
-    r = run_feature(["put", "--new"], root, stdin=dumps(obj("b", " work space ")))
+    root = make_project(tmp_path, [obj("a", "工作区")])
+    r = run_feature(["put", "--new"], root, stdin=dumps(obj("b", " 工作区 ")))
     assert r.returncode == 1
     assert not (features_dir(root) / "b.json").exists()
 
@@ -138,7 +140,7 @@ def test_show_existing_and_missing(tmp_path):
     root = make_project(tmp_path, [obj("workspace", "工作区", type="interface")])
     r = run_feature(["show", "workspace"], root)
     assert r.returncode == 0
-    assert "## 工作区  [interface]  id=workspace" in r.stdout
+    assert "## 工作区 / Workspace  [interface]  id=workspace" in r.stdout
     r = run_feature(["show", "nope"], root)
     assert r.returncode == 1
     assert r.stdout.strip() == "no such id: nope"

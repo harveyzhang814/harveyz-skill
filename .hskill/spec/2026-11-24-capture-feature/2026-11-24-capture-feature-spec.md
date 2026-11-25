@@ -1,10 +1,10 @@
 # Spec：capture-feature——跨项目通用的产品功能地图
 
-- **版本：** v0.2
-- **审查状态：** v0.2 已批准（2026-11-24，用户答复“批准，继续”），批准范围：第 13 节所列修订及 D20、S17；v0.1 已批准（2026-11-24，用户答复“批准，写plan”），批准范围：全文，含次要决定 S1–S15（S13 已被 D19 取代）
+- **版本：** v0.3
+- **审查状态：** v0.3 已批准（2026-11-24，用户答复“修订方案和双语命名都确认”），批准范围：第 13 节 v0.3 修订、D21、S18–S20；v0.2 已批准（2026-11-24，用户答复“批准，继续”），批准范围：第 13 节所列修订及 D20、S17；v0.1 已批准（2026-11-24，用户答复“批准，写plan”），批准范围：全文，含次要决定 S1–S15（S13 已被 D19 取代）
 - **修订说明：** v0.2 按 D20 把对象分为 `feature` 与 `interface` 两类、各自成树，取代 D8 与 S4；改动见第 13 节
-- **决定记录：** `2026-11-24-capture-feature-record.md`（当前决定 D1–D7、D9、D11–D14、D17–D20；D8、D10 已失效；未决 D15、D16）
-- **次要决定：** 第 10 节 S1–S17，由 Agent 决定，随本 Spec 一并送审
+- **决定记录：** `2026-11-24-capture-feature-record.md`（当前决定 D1–D7、D9、D11–D14、D17–D21；D8、D10 已失效；未决 D15、D16）
+- **次要决定：** 第 10 节 S1–S20，由 Agent 决定，随本 Spec 一并送审
 
 ## 1. 意图与目标
 
@@ -73,6 +73,7 @@ capture-vocab 仍是查词的唯一入口。它新增两个行为：`add` 时如
   "id": "workspace",
   "type": "interface",
   "name": "工作区",
+  "name_en": "Work Area",
   "aliases": ["右侧面板"],
   "avoid": [
     {"name": "抽屉", "note": null},
@@ -99,6 +100,7 @@ capture-vocab 仍是查词的唯一入口。它新增两个行为：`add` 时如
 | `id` | 字符串 | 是 | 匹配 `^[a-z0-9]+(-[a-z0-9]+)*$`，等于文件名去掉 `.json`，创建后不可改（S5） |
 | `type` | 枚举 | 是 | `feature`（功能：用户能做的事）/ `interface`（交互界面：用户能在上面做动作的页面、面板、编辑器，以及按钮、菜单项、快捷键等交互入口）（D20） |
 | `name` | 字符串 | 是 | 产品侧称谓，非空；归一化后不能与其他对象的 `name` 相同 |
+| `name_en` | 字符串 | 是 | 英文名：不得含中日韩文字，至少含一个拉丁字母；归一化后不得与其他对象的 `name` 或 `name_en` 相同（D21）。`name` 相应规定为只放中文名，不得含拉丁字母 |
 | `aliases` | 字符串数组 | 否，默认 `[]` | 可以通用的别称，参与匹配。每项是一个独立的叫法，不写说明文字（D18） |
 | `avoid` | 对象数组 | 否，默认 `[]` | 应避免的叫法，每项 `{"name": 非空字符串, "note": 字符串或 null}`；`name` 参与匹配，`note` 说明为什么避免、该用什么。回复、文档和 commit 里不要使用这些叫法（D18） |
 | `description` | 字符串 | 是 | 一到两句话的定义 |
@@ -144,7 +146,7 @@ capture-vocab 仍是查词的唯一入口。它新增两个行为：`add` 时如
 ### 5.1 卡片格式
 
 ```
-## 工作区  [interface]  id=workspace
+## 工作区 / Work Area  [interface]  id=workspace
 右侧可拖拽调宽的滑出区域，内部承载所有 Tab。
 别称: 右侧面板
 避免: 抽屉；Drawer；Workspace（代码内部名，不向用户暴露）
@@ -266,6 +268,9 @@ flowchart TD
 - **S14** capture-feature 初版版本号定为 `0.1.0`。
 - **S15** 迁移时允许新建 vocab 里没有、但层级需要的父节点，在清单里标「新增」并逐条确认，与 D12「agent 提议、用户确认」一致。
 - **S17** 卡片标题与 `tree` 行里的 `[type]` 照旧显示 `[feature]` / `[interface]`，不另加中文标签，保持输出稳定、与 PRO 类型名一致。
+- **S18** `avoid` 不受中英混用限制：它记录的正是要避免的旧叫法，常见的旧叫法本身就是混用的（如「Dashboard 窗口」「Alt+单击」）。
+- **S19** 只有卡片标题显示英文名；`tree`、`list`、`refs`、`dupcheck`、`suggest-parent` 的输出格式不变，仍用中文名，保持输出稳定。
+- **S20** 不升 `schema` 版本：新增必填字段前没有任何已部署的功能地图数据（agent-canvas 试点尚未写入），缺 `name_en` 的旧对象会按 invalid 报出。
 - **S16** `dupcheck` 与 `suggest-parent` 在数据目录尚不存在（但能定位到 `.git`）时按空地图处理、照常输出（`dupcheck` 仍检查 vocab 标题），不按 §9 的只读命令规则 exit 2；否则首次 `add` 与迁移时查重失效。（实施中由接手方提出，交出方验收时确认，2026-11-24 补记；不改变已批准结果。）
 
 ## 11. 验收标准
@@ -296,6 +301,8 @@ flowchart TD
 13. （v0.2）`put`：`type` 为 `surface`、`entry` 或其他非 `feature`/`interface` 的值时 exit 1、零写入；`interface` 挂到 `feature` 下（或反之）时 exit 1、`error:` 行指明父节点类型不同、零写入。`check`：手工写入的跨类型父节点报 `parent-type-mismatch | <id> | …`。`list --type interface` 只列 interface。
 14. （v0.2）capture-feature 版本 `0.2.0`、capture-vocab 版本 `1.3.1`；两个 skill 的文档里不再出现 `surface`、`entry`、「用户能不能直接看到或操作」；capture-vocab `manage.md` 第 2b 步与 capture-feature `references/manage.md`、`references/migrate.md` 的判据与 D20 一致。
 
+15. （v0.3）`put`：缺 `name_en`、`name` 含拉丁字母、`name_en` 含中文或不含拉丁字母、某条 `aliases` 中英混用时 exit 1、零写入；`avoid` 含中英混用的叫法仍可写入；`name_en` 与其他对象的 `name_en` 归一化后相同时拒绝。`lookup` 用英文名能命中，卡片标题为 `## <name> / <name_en>  [<type>]  id=<id>`。capture-feature 版本 `0.3.0`。
+
 ## 12. 已核实前提与未决事项
 
 - **已核实**：hskill 安装器用 `copyDir` 递归复制整个 skill 目录（`lib/installer.js`），`scripts/` 会一起装进项目。
@@ -319,3 +326,16 @@ flowchart TD
 
 
 **v0.2 验证记录（2026-11-24）**：`python3 -m pytest skills/coding/capture-feature/tests skills/coding/capture-vocab/tests` 84 passed（先红：改测试后 26 failed，均因旧类型枚举或文档未改）；`npm test` exit 0。沙箱 E2E（夹具同 v0.1 的 route-work-e2e 待办夹具，运行目录 `/tmp/capture-feature-e2e/run2/`，`claude -p --setting-sources project,local`）：`/capture-vocab add 批量完成`（功能）→ 判归功能地图、拟作 `mark-done`（feature）的子节点、等用户确认、未写入；`/capture-vocab add 列表页脚`（只承担定位的位置名）→ 判为「只承担定位的视觉元素」留术语表、等用户确认、未写入。
+
+### v0.3（2026-11-24，已批准）
+
+起因：用户审阅试点清单时提出命名要中英文分开、不混用（D21）。
+
+| 位置 | v0.2 | v0.3 |
+|---|---|---|
+| 名称字段 | `name` 一个，中英不限 | `name` 只放中文；新增必填 `name_en` 只放英文 |
+| 写入校验 | — | 拒绝 `name` 含拉丁字母、`name_en` 含中文、`aliases` 单项混用；`avoid` 不限（S18） |
+| 匹配 | name / aliases / avoid | 另加 `name_en` |
+| 卡片标题 | `## 工作区  [interface]  id=…` | `## 工作区 / Work Area  [interface]  id=…`（其余输出不变，S19） |
+| 版本 | capture-feature 0.2.0 | 0.3.0（capture-vocab 不变） |
+
